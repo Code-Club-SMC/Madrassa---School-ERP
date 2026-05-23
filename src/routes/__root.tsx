@@ -9,6 +9,8 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { ThemeProvider } from "@/components/theme-provider";
+import { SystemProvider } from "@/components/system-context";
 
 function NotFoundComponent() {
   return (
@@ -72,11 +74,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "MSMIS — Madrassa & School Management" },
+      { name: "description", content: "Bilingual Urdu/English management system for madrassas and schools." },
+      { property: "og:title", content: "MSMIS — Management System" },
+      { property: "og:description", content: "Admissions, attendance, fees, exams and reporting in one place." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
@@ -96,7 +97,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="ur" dir="rtl">
       <head>
         <HeadContent />
       </head>
@@ -113,7 +114,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <ThemeProvider>
+        <SystemProvider>
+          <Outlet />
+        </SystemProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

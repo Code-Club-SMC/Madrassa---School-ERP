@@ -9,38 +9,366 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ChangePasswordRouteImport } from './routes/change-password'
+import { Route as ApplyRouteImport } from './routes/apply'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated.users'
+import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated.teachers'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated.reports'
+import { Route as AuthenticatedParentsRouteImport } from './routes/_authenticated.parents'
+import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated.inventory'
+import { Route as AuthenticatedIdCardsRouteImport } from './routes/_authenticated.id-cards'
+import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated.finance'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
+import { Route as AuthenticatedAdmissionRouteImport } from './routes/_authenticated.admission'
+import { Route as AuthenticatedSchoolStudentsRouteImport } from './routes/_authenticated.school.students'
+import { Route as AuthenticatedSchoolFeesRouteImport } from './routes/_authenticated.school.fees'
+import { Route as AuthenticatedSchoolExamsRouteImport } from './routes/_authenticated.school.exams'
+import { Route as AuthenticatedSchoolAttendanceRouteImport } from './routes/_authenticated.school.attendance'
+import { Route as AuthenticatedMadrassaStudentsRouteImport } from './routes/_authenticated.madrassa.students'
+import { Route as AuthenticatedMadrassaFeesRouteImport } from './routes/_authenticated.madrassa.fees'
+import { Route as AuthenticatedMadrassaCategoriesRouteImport } from './routes/_authenticated.madrassa.categories'
+import { Route as AuthenticatedMadrassaAttendanceRouteImport } from './routes/_authenticated.madrassa.attendance'
+import { Route as AuthenticatedAdmissionQueueRouteImport } from './routes/_authenticated.admission.queue'
+import { Route as AuthenticatedAdmissionNewRouteImport } from './routes/_authenticated.admission.new'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangePasswordRoute = ChangePasswordRouteImport.update({
+  id: '/change-password',
+  path: '/change-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApplyRoute = ApplyRouteImport.update({
+  id: '/apply',
+  path: '/apply',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedTeachersRoute = AuthenticatedTeachersRouteImport.update({
+  id: '/teachers',
+  path: '/teachers',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedParentsRoute = AuthenticatedParentsRouteImport.update({
+  id: '/parents',
+  path: '/parents',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedInventoryRoute = AuthenticatedInventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedIdCardsRoute = AuthenticatedIdCardsRouteImport.update({
+  id: '/id-cards',
+  path: '/id-cards',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAdmissionRoute = AuthenticatedAdmissionRouteImport.update({
+  id: '/admission',
+  path: '/admission',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSchoolStudentsRoute =
+  AuthenticatedSchoolStudentsRouteImport.update({
+    id: '/school/students',
+    path: '/school/students',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSchoolFeesRoute = AuthenticatedSchoolFeesRouteImport.update({
+  id: '/school/fees',
+  path: '/school/fees',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSchoolExamsRoute =
+  AuthenticatedSchoolExamsRouteImport.update({
+    id: '/school/exams',
+    path: '/school/exams',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSchoolAttendanceRoute =
+  AuthenticatedSchoolAttendanceRouteImport.update({
+    id: '/school/attendance',
+    path: '/school/attendance',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMadrassaStudentsRoute =
+  AuthenticatedMadrassaStudentsRouteImport.update({
+    id: '/madrassa/students',
+    path: '/madrassa/students',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMadrassaFeesRoute =
+  AuthenticatedMadrassaFeesRouteImport.update({
+    id: '/madrassa/fees',
+    path: '/madrassa/fees',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMadrassaCategoriesRoute =
+  AuthenticatedMadrassaCategoriesRouteImport.update({
+    id: '/madrassa/categories',
+    path: '/madrassa/categories',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMadrassaAttendanceRoute =
+  AuthenticatedMadrassaAttendanceRouteImport.update({
+    id: '/madrassa/attendance',
+    path: '/madrassa/attendance',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdmissionQueueRoute =
+  AuthenticatedAdmissionQueueRouteImport.update({
+    id: '/queue',
+    path: '/queue',
+    getParentRoute: () => AuthenticatedAdmissionRoute,
+  } as any)
+const AuthenticatedAdmissionNewRoute =
+  AuthenticatedAdmissionNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedAdmissionRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/apply': typeof ApplyRoute
+  '/change-password': typeof ChangePasswordRoute
+  '/login': typeof LoginRoute
+  '/admission': typeof AuthenticatedAdmissionRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/finance': typeof AuthenticatedFinanceRoute
+  '/id-cards': typeof AuthenticatedIdCardsRoute
+  '/inventory': typeof AuthenticatedInventoryRoute
+  '/parents': typeof AuthenticatedParentsRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/teachers': typeof AuthenticatedTeachersRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/admission/new': typeof AuthenticatedAdmissionNewRoute
+  '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
+  '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
+  '/madrassa/categories': typeof AuthenticatedMadrassaCategoriesRoute
+  '/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
+  '/madrassa/students': typeof AuthenticatedMadrassaStudentsRoute
+  '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
+  '/school/exams': typeof AuthenticatedSchoolExamsRoute
+  '/school/fees': typeof AuthenticatedSchoolFeesRoute
+  '/school/students': typeof AuthenticatedSchoolStudentsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/apply': typeof ApplyRoute
+  '/change-password': typeof ChangePasswordRoute
+  '/login': typeof LoginRoute
+  '/admission': typeof AuthenticatedAdmissionRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/finance': typeof AuthenticatedFinanceRoute
+  '/id-cards': typeof AuthenticatedIdCardsRoute
+  '/inventory': typeof AuthenticatedInventoryRoute
+  '/parents': typeof AuthenticatedParentsRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/teachers': typeof AuthenticatedTeachersRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/admission/new': typeof AuthenticatedAdmissionNewRoute
+  '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
+  '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
+  '/madrassa/categories': typeof AuthenticatedMadrassaCategoriesRoute
+  '/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
+  '/madrassa/students': typeof AuthenticatedMadrassaStudentsRoute
+  '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
+  '/school/exams': typeof AuthenticatedSchoolExamsRoute
+  '/school/fees': typeof AuthenticatedSchoolFeesRoute
+  '/school/students': typeof AuthenticatedSchoolStudentsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/apply': typeof ApplyRoute
+  '/change-password': typeof ChangePasswordRoute
+  '/login': typeof LoginRoute
+  '/_authenticated/admission': typeof AuthenticatedAdmissionRouteWithChildren
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/finance': typeof AuthenticatedFinanceRoute
+  '/_authenticated/id-cards': typeof AuthenticatedIdCardsRoute
+  '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
+  '/_authenticated/parents': typeof AuthenticatedParentsRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/teachers': typeof AuthenticatedTeachersRoute
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/_authenticated/admission/new': typeof AuthenticatedAdmissionNewRoute
+  '/_authenticated/admission/queue': typeof AuthenticatedAdmissionQueueRoute
+  '/_authenticated/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
+  '/_authenticated/madrassa/categories': typeof AuthenticatedMadrassaCategoriesRoute
+  '/_authenticated/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
+  '/_authenticated/madrassa/students': typeof AuthenticatedMadrassaStudentsRoute
+  '/_authenticated/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
+  '/_authenticated/school/exams': typeof AuthenticatedSchoolExamsRoute
+  '/_authenticated/school/fees': typeof AuthenticatedSchoolFeesRoute
+  '/_authenticated/school/students': typeof AuthenticatedSchoolStudentsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/apply'
+    | '/change-password'
+    | '/login'
+    | '/admission'
+    | '/dashboard'
+    | '/finance'
+    | '/id-cards'
+    | '/inventory'
+    | '/parents'
+    | '/reports'
+    | '/settings'
+    | '/teachers'
+    | '/users'
+    | '/admission/new'
+    | '/admission/queue'
+    | '/madrassa/attendance'
+    | '/madrassa/categories'
+    | '/madrassa/fees'
+    | '/madrassa/students'
+    | '/school/attendance'
+    | '/school/exams'
+    | '/school/fees'
+    | '/school/students'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/apply'
+    | '/change-password'
+    | '/login'
+    | '/admission'
+    | '/dashboard'
+    | '/finance'
+    | '/id-cards'
+    | '/inventory'
+    | '/parents'
+    | '/reports'
+    | '/settings'
+    | '/teachers'
+    | '/users'
+    | '/admission/new'
+    | '/admission/queue'
+    | '/madrassa/attendance'
+    | '/madrassa/categories'
+    | '/madrassa/fees'
+    | '/madrassa/students'
+    | '/school/attendance'
+    | '/school/exams'
+    | '/school/fees'
+    | '/school/students'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/apply'
+    | '/change-password'
+    | '/login'
+    | '/_authenticated/admission'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/finance'
+    | '/_authenticated/id-cards'
+    | '/_authenticated/inventory'
+    | '/_authenticated/parents'
+    | '/_authenticated/reports'
+    | '/_authenticated/settings'
+    | '/_authenticated/teachers'
+    | '/_authenticated/users'
+    | '/_authenticated/admission/new'
+    | '/_authenticated/admission/queue'
+    | '/_authenticated/madrassa/attendance'
+    | '/_authenticated/madrassa/categories'
+    | '/_authenticated/madrassa/fees'
+    | '/_authenticated/madrassa/students'
+    | '/_authenticated/school/attendance'
+    | '/_authenticated/school/exams'
+    | '/_authenticated/school/fees'
+    | '/_authenticated/school/students'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  ApplyRoute: typeof ApplyRoute
+  ChangePasswordRoute: typeof ChangePasswordRoute
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/change-password': {
+      id: '/change-password'
+      path: '/change-password'
+      fullPath: '/change-password'
+      preLoaderRoute: typeof ChangePasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/apply': {
+      id: '/apply'
+      path: '/apply'
+      fullPath: '/apply'
+      preLoaderRoute: typeof ApplyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +376,218 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/teachers': {
+      id: '/_authenticated/teachers'
+      path: '/teachers'
+      fullPath: '/teachers'
+      preLoaderRoute: typeof AuthenticatedTeachersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/parents': {
+      id: '/_authenticated/parents'
+      path: '/parents'
+      fullPath: '/parents'
+      preLoaderRoute: typeof AuthenticatedParentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/inventory': {
+      id: '/_authenticated/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof AuthenticatedInventoryRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/id-cards': {
+      id: '/_authenticated/id-cards'
+      path: '/id-cards'
+      fullPath: '/id-cards'
+      preLoaderRoute: typeof AuthenticatedIdCardsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/finance': {
+      id: '/_authenticated/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof AuthenticatedFinanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admission': {
+      id: '/_authenticated/admission'
+      path: '/admission'
+      fullPath: '/admission'
+      preLoaderRoute: typeof AuthenticatedAdmissionRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/school/students': {
+      id: '/_authenticated/school/students'
+      path: '/school/students'
+      fullPath: '/school/students'
+      preLoaderRoute: typeof AuthenticatedSchoolStudentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/school/fees': {
+      id: '/_authenticated/school/fees'
+      path: '/school/fees'
+      fullPath: '/school/fees'
+      preLoaderRoute: typeof AuthenticatedSchoolFeesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/school/exams': {
+      id: '/_authenticated/school/exams'
+      path: '/school/exams'
+      fullPath: '/school/exams'
+      preLoaderRoute: typeof AuthenticatedSchoolExamsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/school/attendance': {
+      id: '/_authenticated/school/attendance'
+      path: '/school/attendance'
+      fullPath: '/school/attendance'
+      preLoaderRoute: typeof AuthenticatedSchoolAttendanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/madrassa/students': {
+      id: '/_authenticated/madrassa/students'
+      path: '/madrassa/students'
+      fullPath: '/madrassa/students'
+      preLoaderRoute: typeof AuthenticatedMadrassaStudentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/madrassa/fees': {
+      id: '/_authenticated/madrassa/fees'
+      path: '/madrassa/fees'
+      fullPath: '/madrassa/fees'
+      preLoaderRoute: typeof AuthenticatedMadrassaFeesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/madrassa/categories': {
+      id: '/_authenticated/madrassa/categories'
+      path: '/madrassa/categories'
+      fullPath: '/madrassa/categories'
+      preLoaderRoute: typeof AuthenticatedMadrassaCategoriesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/madrassa/attendance': {
+      id: '/_authenticated/madrassa/attendance'
+      path: '/madrassa/attendance'
+      fullPath: '/madrassa/attendance'
+      preLoaderRoute: typeof AuthenticatedMadrassaAttendanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admission/queue': {
+      id: '/_authenticated/admission/queue'
+      path: '/queue'
+      fullPath: '/admission/queue'
+      preLoaderRoute: typeof AuthenticatedAdmissionQueueRouteImport
+      parentRoute: typeof AuthenticatedAdmissionRoute
+    }
+    '/_authenticated/admission/new': {
+      id: '/_authenticated/admission/new'
+      path: '/new'
+      fullPath: '/admission/new'
+      preLoaderRoute: typeof AuthenticatedAdmissionNewRouteImport
+      parentRoute: typeof AuthenticatedAdmissionRoute
+    }
   }
 }
 
+interface AuthenticatedAdmissionRouteChildren {
+  AuthenticatedAdmissionNewRoute: typeof AuthenticatedAdmissionNewRoute
+  AuthenticatedAdmissionQueueRoute: typeof AuthenticatedAdmissionQueueRoute
+}
+
+const AuthenticatedAdmissionRouteChildren: AuthenticatedAdmissionRouteChildren =
+  {
+    AuthenticatedAdmissionNewRoute: AuthenticatedAdmissionNewRoute,
+    AuthenticatedAdmissionQueueRoute: AuthenticatedAdmissionQueueRoute,
+  }
+
+const AuthenticatedAdmissionRouteWithChildren =
+  AuthenticatedAdmissionRoute._addFileChildren(
+    AuthenticatedAdmissionRouteChildren,
+  )
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdmissionRoute: typeof AuthenticatedAdmissionRouteWithChildren
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
+  AuthenticatedIdCardsRoute: typeof AuthenticatedIdCardsRoute
+  AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
+  AuthenticatedParentsRoute: typeof AuthenticatedParentsRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRoute
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedMadrassaAttendanceRoute: typeof AuthenticatedMadrassaAttendanceRoute
+  AuthenticatedMadrassaCategoriesRoute: typeof AuthenticatedMadrassaCategoriesRoute
+  AuthenticatedMadrassaFeesRoute: typeof AuthenticatedMadrassaFeesRoute
+  AuthenticatedMadrassaStudentsRoute: typeof AuthenticatedMadrassaStudentsRoute
+  AuthenticatedSchoolAttendanceRoute: typeof AuthenticatedSchoolAttendanceRoute
+  AuthenticatedSchoolExamsRoute: typeof AuthenticatedSchoolExamsRoute
+  AuthenticatedSchoolFeesRoute: typeof AuthenticatedSchoolFeesRoute
+  AuthenticatedSchoolStudentsRoute: typeof AuthenticatedSchoolStudentsRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdmissionRoute: AuthenticatedAdmissionRouteWithChildren,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
+  AuthenticatedIdCardsRoute: AuthenticatedIdCardsRoute,
+  AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
+  AuthenticatedParentsRoute: AuthenticatedParentsRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedTeachersRoute: AuthenticatedTeachersRoute,
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedMadrassaAttendanceRoute: AuthenticatedMadrassaAttendanceRoute,
+  AuthenticatedMadrassaCategoriesRoute: AuthenticatedMadrassaCategoriesRoute,
+  AuthenticatedMadrassaFeesRoute: AuthenticatedMadrassaFeesRoute,
+  AuthenticatedMadrassaStudentsRoute: AuthenticatedMadrassaStudentsRoute,
+  AuthenticatedSchoolAttendanceRoute: AuthenticatedSchoolAttendanceRoute,
+  AuthenticatedSchoolExamsRoute: AuthenticatedSchoolExamsRoute,
+  AuthenticatedSchoolFeesRoute: AuthenticatedSchoolFeesRoute,
+  AuthenticatedSchoolStudentsRoute: AuthenticatedSchoolStudentsRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  ApplyRoute: ApplyRoute,
+  ChangePasswordRoute: ChangePasswordRoute,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
