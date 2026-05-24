@@ -81,22 +81,22 @@ export function AppSidebar() {
   const isActive = (url: string) => pathname === url || pathname.startsWith(url + "/");
 
   const renderItem = (item: NavItem) => (
-    <SidebarMenuItem key={item.url}>
+    <SidebarMenuItem key={item.url} className="mb-0.5">
       <SidebarMenuButton
         asChild
         isActive={isActive(item.url)}
         tooltip={collapsed ? item.en : undefined}
         className={cn(
-          "h-11 data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
-          "data-[active=true]:relative data-[active=true]:before:absolute data-[active=true]:before:top-1.5 data-[active=true]:before:bottom-1.5 data-[active=true]:before:start-0 data-[active=true]:before:w-[2px] data-[active=true]:before:bg-sidebar-primary data-[active=true]:before:rounded-full",
+          "h-14 gap-3 px-3 data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
+          "data-[active=true]:relative data-[active=true]:before:absolute data-[active=true]:before:top-2 data-[active=true]:before:bottom-2 data-[active=true]:before:start-0 data-[active=true]:before:w-[3px] data-[active=true]:before:bg-sidebar-primary data-[active=true]:before:rounded-full",
         )}
       >
         <Link to={item.url}>
-          <item.icon className="h-4 w-4 shrink-0" />
+          <item.icon className="h-[18px] w-[18px] shrink-0" />
           {!collapsed && (
-            <div className="flex flex-col leading-none">
-              <span className="font-urdu text-sm">{item.ur}</span>
-              <span className="text-[10px] text-muted-foreground -mt-0.5">{item.en}</span>
+            <div className="flex flex-col leading-tight gap-0.5 min-w-0">
+              <span className="font-urdu text-base truncate">{item.ur}</span>
+              <span className="text-[11px] text-muted-foreground truncate">{item.en}</span>
             </div>
           )}
         </Link>
