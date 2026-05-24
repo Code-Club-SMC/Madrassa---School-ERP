@@ -77,11 +77,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "MSMIS — Madrassa & School Management" },
       { name: "description", content: "Bilingual Urdu/English management system for madrassas and schools." },
-      { property: "og:title", content: "MSMIS — Management System" },
-      { property: "og:description", content: "Admissions, attendance, fees, exams and reporting in one place." },
+      { property: "og:title", content: "MSMIS — Madrassa & School Management" },
+      { property: "og:description", content: "Bilingual Urdu/English management system for madrassas and schools." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "MSMIS — Madrassa & School Management" },
+      { name: "twitter:description", content: "Bilingual Urdu/English management system for madrassas and schools." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/83cfbf6e-6d73-4001-807a-9431c6d97e0e/id-preview-b07e84b2--7cd5d0ec-41f7-4413-a839-4a68594e16a5.lovable.app-1779600878655.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/83cfbf6e-6d73-4001-807a-9431c6d97e0e/id-preview-b07e84b2--7cd5d0ec-41f7-4413-a839-4a68594e16a5.lovable.app-1779600878655.png" },
     ],
     links: [
       {
