@@ -1,9 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Users2 } from "lucide-react";
-import { PlaceholderPage } from "@/components/shared/placeholder-page";
+import { PageHeader } from "@/components/shared/page-header";
+import { StudentsTable } from "@/components/students/students-table";
 
 export const Route = createFileRoute("/_authenticated/madrassa/students")({
   component: () => (
-    <PlaceholderPage title="Students — Madrassa" titleUrdu="مدرسہ — طلبہ" icon={Users2} />
+    <>
+      <PageHeader
+        title="Madrassa Students"
+        titleUrdu="مدرسہ کے طلبہ"
+        description="Manage all enrolled students across Hifz, Nazira, and Alimiyat programs."
+      />
+      <StudentsTable system="madrassa" />
+    </>
   ),
 });
