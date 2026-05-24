@@ -210,8 +210,8 @@ export function StudentsTable({ system }: Props) {
                 <TableCell colSpan={7} className="py-12">
                   <EmptyState
                     icon={Users2}
-                    title="No students found"
-                    titleUrdu="کوئی طالبِ علم نہیں ملا"
+                    heading="No students found"
+                    headingUrdu="کوئی طالبِ علم نہیں ملا"
                     description="Try adjusting your filters or add a new student."
                   />
                 </TableCell>
