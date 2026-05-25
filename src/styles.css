@@ -205,4 +205,13 @@
 
   /* Khatm-ul-Quran certificate — A4 landscape */
   .khatm-cert { width: 297mm; height: 210mm; padding: 18mm; border: 6px double #b8860b; background: #fffdf5 !important; }
+
+  /* Donation receipt — A5 landscape on A4 */
+  .donation-receipt-print { width: 210mm; min-height: 148mm; }
+
+  /* Salary slip wrapper */
+  .salary-slip-print { width: 210mm; min-height: 297mm; }
+
+  /* Override Tailwind .hidden so print-target contents become visible */
+  .print-target.hidden { display: block !important; }
 }
