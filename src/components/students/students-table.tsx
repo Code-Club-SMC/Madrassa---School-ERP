@@ -395,7 +395,7 @@ export function StudentsTable({ system }: Props) {
 }
 
 function PromoteDialog({ student, onClose, onConfirm }: { student: Student | null; onClose: () => void; onConfirm: (s: Student["status"]) => void }) {
-  const [choice, setChoice] = useState<"promoted" | "demoted">("promoted");
+  const [choice, setChoice] = useState<"active" | "inactive">("active");
   return (
     <Dialog open={!!student} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
@@ -405,8 +405,8 @@ function PromoteDialog({ student, onClose, onConfirm }: { student: Student | nul
           <Select value={choice} onValueChange={(v) => setChoice(v as typeof choice)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="promoted">⬆ Promote to next class/darja</SelectItem>
-              <SelectItem value="demoted">⬇ Demote — repeat current</SelectItem>
+              <SelectItem value="active">⬆ Promote to next class/darja</SelectItem>
+              <SelectItem value="inactive">⬇ Demote — repeat current</SelectItem>
             </SelectContent>
           </Select>
           <Label>Reason · وجہ (optional)</Label>
