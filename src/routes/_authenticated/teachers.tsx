@@ -87,7 +87,7 @@ function TeachersPage() {
                 </div>
                 <div className="flex gap-1">
                   <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="View profile">
-                    <Link to="/teachers"><Eye className="h-3.5 w-3.5" /></Link>
+                    <Link to="/teachers/$id" params={{ id: t.id }}><Eye className="h-3.5 w-3.5" /></Link>
                   </Button>
                   <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="ID card">
                     <Link to="/id-cards"><IdCard className="h-3.5 w-3.5" /></Link>
