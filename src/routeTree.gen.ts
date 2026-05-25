@@ -16,7 +16,6 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
-import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedParentsRouteImport } from './routes/_authenticated/parents'
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
@@ -25,6 +24,7 @@ import { Route as AuthenticatedHolidaysRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
+import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authenticated/admission/index'
 import { Route as AuthenticatedSettingsWebsiteRouteImport } from './routes/_authenticated/settings/website'
 import { Route as AuthenticatedSettingsAcademicYearRouteImport } from './routes/_authenticated/settings/academic-year'
@@ -80,11 +80,6 @@ const AuthenticatedTeachersRoute = AuthenticatedTeachersRouteImport.update({
   path: '/teachers',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -125,6 +120,12 @@ const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSettingsIndexRoute =
+  AuthenticatedSettingsIndexRouteImport.update({
+    id: '/settings/',
+    path: '/settings/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdmissionIndexRoute =
   AuthenticatedAdmissionIndexRouteImport.update({
     id: '/admission/',
@@ -133,15 +134,15 @@ const AuthenticatedAdmissionIndexRoute =
   } as any)
 const AuthenticatedSettingsWebsiteRoute =
   AuthenticatedSettingsWebsiteRouteImport.update({
-    id: '/website',
-    path: '/website',
-    getParentRoute: () => AuthenticatedSettingsRoute,
+    id: '/settings/website',
+    path: '/settings/website',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedSettingsAcademicYearRoute =
   AuthenticatedSettingsAcademicYearRouteImport.update({
-    id: '/academic-year',
-    path: '/academic-year',
-    getParentRoute: () => AuthenticatedSettingsRoute,
+    id: '/settings/academic-year',
+    path: '/settings/academic-year',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedSchoolTimetableRoute =
   AuthenticatedSchoolTimetableRouteImport.update({
@@ -258,7 +259,6 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof AuthenticatedInventoryRoute
   '/parents': typeof AuthenticatedParentsRoute
   '/reports': typeof AuthenticatedReportsRoute
-  '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRoute
   '/users': typeof AuthenticatedUsersRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
@@ -281,6 +281,7 @@ export interface FileRoutesByFullPath {
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
+  '/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -295,7 +296,6 @@ export interface FileRoutesByTo {
   '/inventory': typeof AuthenticatedInventoryRoute
   '/parents': typeof AuthenticatedParentsRoute
   '/reports': typeof AuthenticatedReportsRoute
-  '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRoute
   '/users': typeof AuthenticatedUsersRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
@@ -318,6 +318,7 @@ export interface FileRoutesByTo {
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
+  '/settings': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -334,7 +335,6 @@ export interface FileRoutesById {
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
   '/_authenticated/parents': typeof AuthenticatedParentsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
-  '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/teachers': typeof AuthenticatedTeachersRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/admission/new': typeof AuthenticatedAdmissionNewRoute
@@ -357,6 +357,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
   '/_authenticated/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
+  '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -373,7 +374,6 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/parents'
     | '/reports'
-    | '/settings'
     | '/teachers'
     | '/users'
     | '/admission/new'
@@ -396,6 +396,7 @@ export interface FileRouteTypes {
     | '/settings/academic-year'
     | '/settings/website'
     | '/admission/'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -410,7 +411,6 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/parents'
     | '/reports'
-    | '/settings'
     | '/teachers'
     | '/users'
     | '/admission/new'
@@ -433,6 +433,7 @@ export interface FileRouteTypes {
     | '/settings/academic-year'
     | '/settings/website'
     | '/admission'
+    | '/settings'
   id:
     | '__root__'
     | '/'
@@ -448,7 +449,6 @@ export interface FileRouteTypes {
     | '/_authenticated/inventory'
     | '/_authenticated/parents'
     | '/_authenticated/reports'
-    | '/_authenticated/settings'
     | '/_authenticated/teachers'
     | '/_authenticated/users'
     | '/_authenticated/admission/new'
@@ -471,6 +471,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/academic-year'
     | '/_authenticated/settings/website'
     | '/_authenticated/admission/'
+    | '/_authenticated/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -532,13 +533,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeachersRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/settings': {
-      id: '/_authenticated/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/reports': {
       id: '/_authenticated/reports'
       path: '/reports'
@@ -595,6 +589,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAuditRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/settings/': {
+      id: '/_authenticated/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admission/': {
       id: '/_authenticated/admission/'
       path: '/admission'
@@ -604,17 +605,17 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/settings/website': {
       id: '/_authenticated/settings/website'
-      path: '/website'
+      path: '/settings/website'
       fullPath: '/settings/website'
       preLoaderRoute: typeof AuthenticatedSettingsWebsiteRouteImport
-      parentRoute: typeof AuthenticatedSettingsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings/academic-year': {
       id: '/_authenticated/settings/academic-year'
-      path: '/academic-year'
+      path: '/settings/academic-year'
       fullPath: '/settings/academic-year'
       preLoaderRoute: typeof AuthenticatedSettingsAcademicYearRouteImport
-      parentRoute: typeof AuthenticatedSettingsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/school/timetable': {
       id: '/_authenticated/school/timetable'
@@ -738,22 +739,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedSettingsRouteChildren {
-  AuthenticatedSettingsAcademicYearRoute: typeof AuthenticatedSettingsAcademicYearRoute
-  AuthenticatedSettingsWebsiteRoute: typeof AuthenticatedSettingsWebsiteRoute
-}
-
-const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
-  AuthenticatedSettingsAcademicYearRoute:
-    AuthenticatedSettingsAcademicYearRoute,
-  AuthenticatedSettingsWebsiteRoute: AuthenticatedSettingsWebsiteRoute,
-}
-
-const AuthenticatedSettingsRouteWithChildren =
-  AuthenticatedSettingsRoute._addFileChildren(
-    AuthenticatedSettingsRouteChildren,
-  )
-
 interface AuthenticatedRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -763,7 +748,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
   AuthenticatedParentsRoute: typeof AuthenticatedParentsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
-  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedAdmissionNewRoute: typeof AuthenticatedAdmissionNewRoute
@@ -783,7 +767,10 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSchoolStudentsRoute: typeof AuthenticatedSchoolStudentsRoute
   AuthenticatedSchoolSubjectsRoute: typeof AuthenticatedSchoolSubjectsRoute
   AuthenticatedSchoolTimetableRoute: typeof AuthenticatedSchoolTimetableRoute
+  AuthenticatedSettingsAcademicYearRoute: typeof AuthenticatedSettingsAcademicYearRoute
+  AuthenticatedSettingsWebsiteRoute: typeof AuthenticatedSettingsWebsiteRoute
   AuthenticatedAdmissionIndexRoute: typeof AuthenticatedAdmissionIndexRoute
+  AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -795,7 +782,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
   AuthenticatedParentsRoute: AuthenticatedParentsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
-  AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedTeachersRoute: AuthenticatedTeachersRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedAdmissionNewRoute: AuthenticatedAdmissionNewRoute,
@@ -815,7 +801,11 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSchoolStudentsRoute: AuthenticatedSchoolStudentsRoute,
   AuthenticatedSchoolSubjectsRoute: AuthenticatedSchoolSubjectsRoute,
   AuthenticatedSchoolTimetableRoute: AuthenticatedSchoolTimetableRoute,
+  AuthenticatedSettingsAcademicYearRoute:
+    AuthenticatedSettingsAcademicYearRoute,
+  AuthenticatedSettingsWebsiteRoute: AuthenticatedSettingsWebsiteRoute,
   AuthenticatedAdmissionIndexRoute: AuthenticatedAdmissionIndexRoute,
+  AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -832,3 +822,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
