@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Plus, Package, AlertTriangle, ShoppingCart, Gift, Pencil, History, Trash2 } from "lucide-react";
+import { Search, Plus, Package, AlertTriangle, ShoppingCart, Gift, Pencil, History, Trash2, GraduationCap, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
-import { inventoryItems as seedItems, type InventoryItem } from "@/mock";
+import { inventoryItems as seedItems, students, type InventoryItem } from "@/mock";
 import { formatPKR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,7 @@ function InventoryPage() {
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState<InventoryItem | null>(null);
+  const [graduationOpen, setGraduationOpen] = useState(false);
 
   const filtered = useMemo(() => items.filter((i) =>
     !q || i.name.toLowerCase().includes(q.toLowerCase()) || i.nameUrdu.includes(q) || i.category.toLowerCase().includes(q.toLowerCase())
@@ -69,6 +71,7 @@ function InventoryPage() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => recordTxn("purchased")}><ShoppingCart className="h-3.5 w-3.5" />Record Purchase</Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => recordTxn("donated")}><Gift className="h-3.5 w-3.5" />Record Donation</Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setGraduationOpen(true)}><GraduationCap className="h-3.5 w-3.5" />Graduation Gift</Button>
             <Button size="sm" className="gap-1.5" onClick={openAdd}><Plus className="h-3.5 w-3.5" />Add Item</Button>
           </div>
         }
@@ -144,6 +147,15 @@ function InventoryPage() {
       </Card>
 
       <ItemDialog open={dialogOpen} onOpenChange={setDialogOpen} initial={editing} onSave={save} />
+
+      <GraduationDialog
+        open={graduationOpen}
+        onOpenChange={setGraduationOpen}
+        items={items}
+        onDistribute={(itemId, qty) => {
+          setItems((prev) => prev.map((x) => x.id === itemId ? { ...x, quantity: Math.max(0, x.quantity - qty) } : x));
+        }}
+      />
 
       <Dialog open={!!historyOpen} onOpenChange={(v) => !v && setHistoryOpen(null)}>
         <DialogContent>
