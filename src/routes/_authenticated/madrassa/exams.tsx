@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ClipboardList, Plus, Calendar, Grid3x3, FileText, BookMarked } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -47,6 +47,7 @@ const TYPE_LABEL: Record<MType, string> = {
 };
 
 function MadrassaExamsPage() {
+  const navigate = useNavigate();
   const [series, setSeries] = useState<Series[]>(SEED);
   const [tab, setTab] = useState<"internal" | "board">("internal");
   const [open, setOpen] = useState(false);
@@ -94,7 +95,7 @@ function MadrassaExamsPage() {
             </div>
             <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-border">
               <Button size="sm" variant="outline" className="text-xs" onClick={() => toast.info("Schedule view — coming up in detail page")}>Schedule</Button>
-              <Button size="sm" variant="outline" className="text-xs" onClick={() => setSeating(s)}>Seating</Button>
+              <Button size="sm" variant="outline" className="text-xs" onClick={() => navigate({ to: "/madrassa/exams/$id/seating", params: { id: s.id } })}>Seating</Button>
               <Button size="sm" variant="outline" className="text-xs" onClick={() => toast.info(s.status === "Completed" ? "Opening results…" : "Marks entry opens after exam date")}>{s.status === "Completed" ? "Results" : "Marks"}</Button>
             </div>
           </Card>
