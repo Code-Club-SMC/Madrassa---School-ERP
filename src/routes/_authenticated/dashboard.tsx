@@ -287,7 +287,7 @@ function DashboardPage() {
                   <p className="text-sm font-medium truncate">{a.title}</p>
                   <p className="font-urdu text-xs text-muted-foreground truncate">{a.titleUrdu}</p>
                 </div>
-                <p className="text-xs text-muted-foreground shrink-0">{relativeTime(a.at)}</p>
+                <p className="text-xs text-muted-foreground shrink-0" suppressHydrationWarning>{relativeTime(a.at)}</p>
                 <ChevronLeft className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity rtl:rotate-180" />
               </div>
             );

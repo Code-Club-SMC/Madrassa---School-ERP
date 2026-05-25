@@ -14,26 +14,26 @@ import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as ApplyRouteImport } from './routes/apply'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated.users'
-import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated.teachers'
-import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated.settings'
-import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated.reports'
-import { Route as AuthenticatedParentsRouteImport } from './routes/_authenticated.parents'
-import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated.inventory'
-import { Route as AuthenticatedIdCardsRouteImport } from './routes/_authenticated.id-cards'
-import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated.finance'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated.dashboard'
-import { Route as AuthenticatedAdmissionRouteImport } from './routes/_authenticated.admission'
-import { Route as AuthenticatedSchoolStudentsRouteImport } from './routes/_authenticated.school.students'
-import { Route as AuthenticatedSchoolFeesRouteImport } from './routes/_authenticated.school.fees'
-import { Route as AuthenticatedSchoolExamsRouteImport } from './routes/_authenticated.school.exams'
-import { Route as AuthenticatedSchoolAttendanceRouteImport } from './routes/_authenticated.school.attendance'
-import { Route as AuthenticatedMadrassaStudentsRouteImport } from './routes/_authenticated.madrassa.students'
-import { Route as AuthenticatedMadrassaFeesRouteImport } from './routes/_authenticated.madrassa.fees'
-import { Route as AuthenticatedMadrassaCategoriesRouteImport } from './routes/_authenticated.madrassa.categories'
-import { Route as AuthenticatedMadrassaAttendanceRouteImport } from './routes/_authenticated.madrassa.attendance'
-import { Route as AuthenticatedAdmissionQueueRouteImport } from './routes/_authenticated.admission.queue'
-import { Route as AuthenticatedAdmissionNewRouteImport } from './routes/_authenticated.admission.new'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedParentsRouteImport } from './routes/_authenticated/parents'
+import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
+import { Route as AuthenticatedIdCardsRouteImport } from './routes/_authenticated/id-cards'
+import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authenticated/admission/index'
+import { Route as AuthenticatedSchoolStudentsRouteImport } from './routes/_authenticated/school/students'
+import { Route as AuthenticatedSchoolFeesRouteImport } from './routes/_authenticated/school/fees'
+import { Route as AuthenticatedSchoolExamsRouteImport } from './routes/_authenticated/school/exams'
+import { Route as AuthenticatedSchoolAttendanceRouteImport } from './routes/_authenticated/school/attendance'
+import { Route as AuthenticatedMadrassaStudentsRouteImport } from './routes/_authenticated/madrassa/students'
+import { Route as AuthenticatedMadrassaFeesRouteImport } from './routes/_authenticated/madrassa/fees'
+import { Route as AuthenticatedMadrassaCategoriesRouteImport } from './routes/_authenticated/madrassa/categories'
+import { Route as AuthenticatedMadrassaAttendanceRouteImport } from './routes/_authenticated/madrassa/attendance'
+import { Route as AuthenticatedAdmissionQueueRouteImport } from './routes/_authenticated/admission/queue'
+import { Route as AuthenticatedAdmissionNewRouteImport } from './routes/_authenticated/admission/new'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -104,11 +104,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedAdmissionRoute = AuthenticatedAdmissionRouteImport.update({
-  id: '/admission',
-  path: '/admission',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
+const AuthenticatedAdmissionIndexRoute =
+  AuthenticatedAdmissionIndexRouteImport.update({
+    id: '/admission/',
+    path: '/admission/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSchoolStudentsRoute =
   AuthenticatedSchoolStudentsRouteImport.update({
     id: '/school/students',
@@ -158,15 +159,15 @@ const AuthenticatedMadrassaAttendanceRoute =
   } as any)
 const AuthenticatedAdmissionQueueRoute =
   AuthenticatedAdmissionQueueRouteImport.update({
-    id: '/queue',
-    path: '/queue',
-    getParentRoute: () => AuthenticatedAdmissionRoute,
+    id: '/admission/queue',
+    path: '/admission/queue',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAdmissionNewRoute =
   AuthenticatedAdmissionNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => AuthenticatedAdmissionRoute,
+    id: '/admission/new',
+    path: '/admission/new',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -174,7 +175,6 @@ export interface FileRoutesByFullPath {
   '/apply': typeof ApplyRoute
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
-  '/admission': typeof AuthenticatedAdmissionRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/id-cards': typeof AuthenticatedIdCardsRoute
@@ -194,13 +194,13 @@ export interface FileRoutesByFullPath {
   '/school/exams': typeof AuthenticatedSchoolExamsRoute
   '/school/fees': typeof AuthenticatedSchoolFeesRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
+  '/admission/': typeof AuthenticatedAdmissionIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/apply': typeof ApplyRoute
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
-  '/admission': typeof AuthenticatedAdmissionRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/finance': typeof AuthenticatedFinanceRoute
   '/id-cards': typeof AuthenticatedIdCardsRoute
@@ -220,6 +220,7 @@ export interface FileRoutesByTo {
   '/school/exams': typeof AuthenticatedSchoolExamsRoute
   '/school/fees': typeof AuthenticatedSchoolFeesRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
+  '/admission': typeof AuthenticatedAdmissionIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -228,7 +229,6 @@ export interface FileRoutesById {
   '/apply': typeof ApplyRoute
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
-  '/_authenticated/admission': typeof AuthenticatedAdmissionRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/id-cards': typeof AuthenticatedIdCardsRoute
@@ -248,6 +248,7 @@ export interface FileRoutesById {
   '/_authenticated/school/exams': typeof AuthenticatedSchoolExamsRoute
   '/_authenticated/school/fees': typeof AuthenticatedSchoolFeesRoute
   '/_authenticated/school/students': typeof AuthenticatedSchoolStudentsRoute
+  '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -256,7 +257,6 @@ export interface FileRouteTypes {
     | '/apply'
     | '/change-password'
     | '/login'
-    | '/admission'
     | '/dashboard'
     | '/finance'
     | '/id-cards'
@@ -276,13 +276,13 @@ export interface FileRouteTypes {
     | '/school/exams'
     | '/school/fees'
     | '/school/students'
+    | '/admission/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/apply'
     | '/change-password'
     | '/login'
-    | '/admission'
     | '/dashboard'
     | '/finance'
     | '/id-cards'
@@ -302,6 +302,7 @@ export interface FileRouteTypes {
     | '/school/exams'
     | '/school/fees'
     | '/school/students'
+    | '/admission'
   id:
     | '__root__'
     | '/'
@@ -309,7 +310,6 @@ export interface FileRouteTypes {
     | '/apply'
     | '/change-password'
     | '/login'
-    | '/_authenticated/admission'
     | '/_authenticated/dashboard'
     | '/_authenticated/finance'
     | '/_authenticated/id-cards'
@@ -329,6 +329,7 @@ export interface FileRouteTypes {
     | '/_authenticated/school/exams'
     | '/_authenticated/school/fees'
     | '/_authenticated/school/students'
+    | '/_authenticated/admission/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -439,11 +440,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/admission': {
-      id: '/_authenticated/admission'
+    '/_authenticated/admission/': {
+      id: '/_authenticated/admission/'
       path: '/admission'
-      fullPath: '/admission'
-      preLoaderRoute: typeof AuthenticatedAdmissionRouteImport
+      fullPath: '/admission/'
+      preLoaderRoute: typeof AuthenticatedAdmissionIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/school/students': {
@@ -504,39 +505,22 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/admission/queue': {
       id: '/_authenticated/admission/queue'
-      path: '/queue'
+      path: '/admission/queue'
       fullPath: '/admission/queue'
       preLoaderRoute: typeof AuthenticatedAdmissionQueueRouteImport
-      parentRoute: typeof AuthenticatedAdmissionRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admission/new': {
       id: '/_authenticated/admission/new'
-      path: '/new'
+      path: '/admission/new'
       fullPath: '/admission/new'
       preLoaderRoute: typeof AuthenticatedAdmissionNewRouteImport
-      parentRoute: typeof AuthenticatedAdmissionRoute
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
-interface AuthenticatedAdmissionRouteChildren {
-  AuthenticatedAdmissionNewRoute: typeof AuthenticatedAdmissionNewRoute
-  AuthenticatedAdmissionQueueRoute: typeof AuthenticatedAdmissionQueueRoute
-}
-
-const AuthenticatedAdmissionRouteChildren: AuthenticatedAdmissionRouteChildren =
-  {
-    AuthenticatedAdmissionNewRoute: AuthenticatedAdmissionNewRoute,
-    AuthenticatedAdmissionQueueRoute: AuthenticatedAdmissionQueueRoute,
-  }
-
-const AuthenticatedAdmissionRouteWithChildren =
-  AuthenticatedAdmissionRoute._addFileChildren(
-    AuthenticatedAdmissionRouteChildren,
-  )
-
 interface AuthenticatedRouteChildren {
-  AuthenticatedAdmissionRoute: typeof AuthenticatedAdmissionRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedIdCardsRoute: typeof AuthenticatedIdCardsRoute
@@ -546,6 +530,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedAdmissionNewRoute: typeof AuthenticatedAdmissionNewRoute
+  AuthenticatedAdmissionQueueRoute: typeof AuthenticatedAdmissionQueueRoute
   AuthenticatedMadrassaAttendanceRoute: typeof AuthenticatedMadrassaAttendanceRoute
   AuthenticatedMadrassaCategoriesRoute: typeof AuthenticatedMadrassaCategoriesRoute
   AuthenticatedMadrassaFeesRoute: typeof AuthenticatedMadrassaFeesRoute
@@ -554,10 +540,10 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSchoolExamsRoute: typeof AuthenticatedSchoolExamsRoute
   AuthenticatedSchoolFeesRoute: typeof AuthenticatedSchoolFeesRoute
   AuthenticatedSchoolStudentsRoute: typeof AuthenticatedSchoolStudentsRoute
+  AuthenticatedAdmissionIndexRoute: typeof AuthenticatedAdmissionIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAdmissionRoute: AuthenticatedAdmissionRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedIdCardsRoute: AuthenticatedIdCardsRoute,
@@ -567,6 +553,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTeachersRoute: AuthenticatedTeachersRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedAdmissionNewRoute: AuthenticatedAdmissionNewRoute,
+  AuthenticatedAdmissionQueueRoute: AuthenticatedAdmissionQueueRoute,
   AuthenticatedMadrassaAttendanceRoute: AuthenticatedMadrassaAttendanceRoute,
   AuthenticatedMadrassaCategoriesRoute: AuthenticatedMadrassaCategoriesRoute,
   AuthenticatedMadrassaFeesRoute: AuthenticatedMadrassaFeesRoute,
@@ -575,6 +563,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSchoolExamsRoute: AuthenticatedSchoolExamsRoute,
   AuthenticatedSchoolFeesRoute: AuthenticatedSchoolFeesRoute,
   AuthenticatedSchoolStudentsRoute: AuthenticatedSchoolStudentsRoute,
+  AuthenticatedAdmissionIndexRoute: AuthenticatedAdmissionIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
