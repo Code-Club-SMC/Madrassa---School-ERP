@@ -23,6 +23,7 @@ import {
   Globe,
   School,
   BookMarked,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@/types";
@@ -53,6 +54,7 @@ export const navItems: NavItem[] = [
   { group: "madrassa", url: "/madrassa/subjects", icon: Library, en: "Subjects", ur: "مضامین", roles: ADMINS },
   { group: "madrassa", url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
   { group: "madrassa", url: "/madrassa/categories", icon: Layers, en: "Categories", ur: "اقسام", roles: ADMINS },
+  { group: "madrassa", url: "/madrassa/hifz", icon: Sparkles, en: "Hifz Tracker", ur: "حفظ ٹریکر", roles: ANY_STAFF },
 
   // ---------- SCHOOL ----------
   { group: "school", url: "/school/students", icon: Users2, en: "Students", ur: "طلبہ", roles: ANY_STAFF },
