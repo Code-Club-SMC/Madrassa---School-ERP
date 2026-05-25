@@ -16,6 +16,7 @@ import { Route as ApplyRouteImport } from './routes/apply'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WebsiteIndexRouteImport } from './routes/website.index'
+import { Route as WebsiteGalleryRouteImport } from './routes/website.gallery'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -95,6 +96,11 @@ const IndexRoute = IndexRouteImport.update({
 const WebsiteIndexRoute = WebsiteIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => WebsiteRoute,
+} as any)
+const WebsiteGalleryRoute = WebsiteGalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
   getParentRoute: () => WebsiteRoute,
 } as any)
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
@@ -377,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/website/gallery': typeof WebsiteGalleryRoute
   '/website/': typeof WebsiteIndexRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
@@ -430,6 +437,7 @@ export interface FileRoutesByTo {
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/website/gallery': typeof WebsiteGalleryRoute
   '/website': typeof WebsiteIndexRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
@@ -486,6 +494,7 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRouteWithChildren
   '/_authenticated/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/website/gallery': typeof WebsiteGalleryRoute
   '/website/': typeof WebsiteIndexRoute
   '/_authenticated/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/_authenticated/admission/queue': typeof AuthenticatedAdmissionQueueRoute
@@ -542,6 +551,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/teachers'
     | '/users'
+    | '/website/gallery'
     | '/website/'
     | '/admission/new'
     | '/admission/queue'
@@ -595,6 +605,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/teachers'
     | '/users'
+    | '/website/gallery'
     | '/website'
     | '/admission/new'
     | '/admission/queue'
@@ -650,6 +661,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/teachers'
     | '/_authenticated/users'
+    | '/website/gallery'
     | '/website/'
     | '/_authenticated/admission/new'
     | '/_authenticated/admission/queue'
@@ -747,6 +759,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/website/'
       preLoaderRoute: typeof WebsiteIndexRouteImport
+      parentRoute: typeof WebsiteRoute
+    }
+    '/website/gallery': {
+      id: '/website/gallery'
+      path: '/gallery'
+      fullPath: '/website/gallery'
+      preLoaderRoute: typeof WebsiteGalleryRouteImport
       parentRoute: typeof WebsiteRoute
     }
     '/_authenticated/users': {
@@ -1252,10 +1271,12 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 interface WebsiteRouteChildren {
+  WebsiteGalleryRoute: typeof WebsiteGalleryRoute
   WebsiteIndexRoute: typeof WebsiteIndexRoute
 }
 
 const WebsiteRouteChildren: WebsiteRouteChildren = {
+  WebsiteGalleryRoute: WebsiteGalleryRoute,
   WebsiteIndexRoute: WebsiteIndexRoute,
 }
 
