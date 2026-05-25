@@ -163,3 +163,40 @@
     letter-spacing: 0;
   }
 }
+
+/* ==================== Print Stylesheet (§28) ====================
+   Wraps for printable surfaces: .print-target  (DMC, ID cards, receipts,
+   salary slips, seating plans, balance sheets). The trigger button calls
+   window.print(). In screen mode the .print-target sits inside a Dialog/
+   Sheet; in print mode everything else collapses. */
+@media print {
+  body * { visibility: hidden !important; }
+  .print-target, .print-target * { visibility: visible !important; }
+  .print-target {
+    position: absolute !important;
+    inset: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-target * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .print-page-break { page-break-after: always; break-after: page; }
+
+  /* DMC / Result Card — A4 portrait */
+  .dmc-card { width: 210mm; min-height: 297mm; padding: 14mm; }
+
+  /* ID Card — CR80 credit-card */
+  .id-card-print { width: 85.6mm; height: 53.98mm; border: 1px solid #000; border-radius: 3mm; overflow: hidden; }
+
+  /* Salary slip — A5 */
+  .salary-slip { width: 148mm; min-height: 210mm; padding: 12mm; }
+
+  /* Seating grid */
+  .seating-grid-print { display: grid; gap: 4mm; page-break-inside: avoid; }
+}
