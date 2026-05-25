@@ -214,7 +214,7 @@ function InterviewsPage() {
                     <TableRow key={w.appId}>
                       <TableCell><Badge variant="outline" className="font-mono">#{w.rank}</Badge></TableCell>
                       <TableCell><p className="font-urdu text-sm font-semibold leading-tight">{a.nameUrdu}</p><p className="text-[11px] text-muted-foreground">{a.refNo} · {formatDate(a.submittedAt)}</p></TableCell>
-                      <TableCell><p className="text-sm">{a.categoryOrClass}</p><p className="font-urdu text-xs text-muted-foreground">{a.categoryOrClassUrdu}</p></TableCell>
+                      <TableCell><p className="text-sm">{a.categoryOrClass}</p></TableCell>
                       <TableCell className="text-xs text-muted-foreground">{w.reason}</TableCell>
                       <TableCell className="text-end"><Button size="sm" variant="outline" className="gap-1.5 h-7 text-[10px]" onClick={() => promote(w.appId)}><ArrowUpRight className="h-3 w-3" />Promote</Button></TableCell>
                     </TableRow>
