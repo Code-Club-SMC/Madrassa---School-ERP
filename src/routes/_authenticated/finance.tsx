@@ -214,6 +214,126 @@ function BreakdownCard({ title, urdu, data }: { title: string; urdu: string; dat
   );
 }
 
+function BalanceSheet({ scope, incomeBreakdown, expenseBreakdown, totals }: { scope: Scope; incomeBreakdown: { name: string; nameUrdu: string; value: number }[]; expenseBreakdown: { name: string; nameUrdu: string; value: number }[]; totals: { income: number; expense: number; net: number; rate: number } }) {
+  const period = new Date().toLocaleDateString("en-PK", { month: "long", year: "numeric" });
+  const assets = [
+    { label: "Cash at Bank · بینک نقد", urdu: "بینک", value: Math.round(totals.net * 0.62) + 480000 },
+    { label: "Fees Receivable · واجب الادا فیس", urdu: "فیس واجب", value: 320000 },
+    { label: "Inventory Stock · سامان", urdu: "سامان", value: 180000 },
+    { label: "Equipment & Furniture", urdu: "فرنیچر", value: 950000 },
+  ];
+  const liabilities = [
+    { label: "Salaries Payable · تنخواہ", urdu: "تنخواہ واجب", value: 240000 },
+    { label: "Utilities Payable", urdu: "یوٹیلیٹیز", value: 65000 },
+    { label: "Vendor Dues", urdu: "وینڈر", value: 120000 },
+  ];
+  const totalAssets = assets.reduce((a, b) => a + b.value, 0);
+  const totalLiab = liabilities.reduce((a, b) => a + b.value, 0);
+  const equity = totalAssets - totalLiab;
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="p-4 border-b border-border flex items-center justify-between">
+        <div>
+          <h3 className="font-heading font-semibold">Balance Sheet · {scope === "both" ? "Combined" : scope === "school" ? "School" : "Madrassa"}</h3>
+          <p className="font-urdu text-sm text-muted-foreground">بیلنس شیٹ · {period}</p>
+        </div>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}><Printer className="h-4 w-4" />Print</Button>
+      </div>
+      <div className="balance-sheet-print print-target p-6">
+        <div className="text-center border-b border-border pb-3 mb-4">
+          <p className="font-urdu text-2xl font-bold">{institution.nameUrdu}</p>
+          <p className="font-heading text-base">{institution.nameEnglish}</p>
+          <p className="text-xs text-muted-foreground mt-1">Balance Sheet · بیلنس شیٹ · {period}</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+          <div>
+            <h4 className="font-semibold mb-2 border-b border-border pb-1">Assets · اثاثے</h4>
+            <table className="w-full">
+              <tbody>
+                {assets.map((a) => (
+                  <tr key={a.label} className="border-b border-border/40">
+                    <td className="py-1.5"><div>{a.label}</div></td>
+                    <td className="py-1.5 text-end font-mono">{formatPKR(a.value)}</td>
+                  </tr>
+                ))}
+                <tr className="font-semibold bg-muted/30"><td className="py-2 px-1">Total Assets · کل اثاثے</td><td className="py-2 text-end font-mono">{formatPKR(totalAssets)}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2 border-b border-border pb-1">Liabilities & Equity · واجبات اور اہلیت</h4>
+            <table className="w-full">
+              <tbody>
+                {liabilities.map((a) => (
+                  <tr key={a.label} className="border-b border-border/40">
+                    <td className="py-1.5">{a.label}</td>
+                    <td className="py-1.5 text-end font-mono">{formatPKR(a.value)}</td>
+                  </tr>
+                ))}
+                <tr className="border-b border-border/40"><td className="py-1.5">Total Liabilities · کل واجبات</td><td className="py-1.5 text-end font-mono">{formatPKR(totalLiab)}</td></tr>
+                <tr className="border-b border-border/40"><td className="py-1.5">Equity / Trust Fund · ٹرسٹ فنڈ</td><td className="py-1.5 text-end font-mono">{formatPKR(equity)}</td></tr>
+                <tr className="font-semibold bg-muted/30"><td className="py-2 px-1">Total · کل</td><td className="py-2 text-end font-mono">{formatPKR(totalLiab + equity)}</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+          <MiniStat label="Period Income" urdu="آمدنی" value={formatPKR(totals.income)} />
+          <MiniStat label="Period Expense" urdu="اخراجات" value={formatPKR(totals.expense)} />
+          <MiniStat label="Net Surplus" urdu="بچت" value={formatPKR(totals.net)} highlight={totals.net >= 0} />
+          <MiniStat label="Equity Ratio" urdu="ایکویٹی" value={`${Math.round((equity / Math.max(totalAssets, 1)) * 100)}%`} />
+        </div>
+
+        <div className="mt-4">
+          <h4 className="font-semibold text-sm mb-2">Income Categories · آمدنی کی اقسام</h4>
+          <table className="w-full text-xs">
+            <tbody>
+              {incomeBreakdown.map((c) => (
+                <tr key={c.name} className="border-b border-border/40">
+                  <td className="py-1"><span className="capitalize">{c.name}</span> · <span className="font-urdu">{c.nameUrdu}</span></td>
+                  <td className="py-1 text-end font-mono">{formatPKR(c.value)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-3">
+          <h4 className="font-semibold text-sm mb-2">Expense Categories · اخراجات کی اقسام</h4>
+          <table className="w-full text-xs">
+            <tbody>
+              {expenseBreakdown.map((c) => (
+                <tr key={c.name} className="border-b border-border/40">
+                  <td className="py-1"><span className="capitalize">{c.name}</span> · <span className="font-urdu">{c.nameUrdu}</span></td>
+                  <td className="py-1 text-end font-mono">{formatPKR(c.value)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="grid grid-cols-3 gap-12 mt-10 text-xs">
+          <div className="text-center border-t border-border pt-1">Prepared by · تیار کنندہ</div>
+          <div className="text-center border-t border-border pt-1">Auditor · آڈیٹر</div>
+          <div className="text-center border-t border-border pt-1 font-urdu">مہتمم / Principal</div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function MiniStat({ label, urdu, value, highlight }: { label: string; urdu: string; value: string; highlight?: boolean }) {
+  return (
+    <div className="border border-border rounded p-3">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="font-urdu text-xs text-muted-foreground">{urdu}</p>
+      <p className={cn("font-mono text-base font-bold mt-1", highlight && "text-chart-5 dark:text-chart-1")}>{value}</p>
+    </div>
+  );
+}
+
 function AddTxnDialog({ open, onOpenChange, onAdd, defaultSystem }: { open: boolean; onOpenChange: (v: boolean) => void; onAdd: (r: FinanceRecord) => void; defaultSystem: System }) {
   const [form, setForm] = useState({
     type: "income" as "income" | "expense",
