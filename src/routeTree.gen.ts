@@ -62,6 +62,7 @@ import { Route as AuthenticatedMadrassaAttendanceRouteImport } from './routes/_a
 import { Route as AuthenticatedFinanceDonationsRouteImport } from './routes/_authenticated/finance_.donations'
 import { Route as AuthenticatedAdmissionQueueRouteImport } from './routes/_authenticated/admission/queue'
 import { Route as AuthenticatedAdmissionNewRouteImport } from './routes/_authenticated/admission/new'
+import { Route as AuthenticatedAdmissionInterviewsRouteImport } from './routes/_authenticated/admission/interviews'
 import { Route as AuthenticatedSchoolExamsBoardRouteImport } from './routes/_authenticated/school/exams.board'
 import { Route as AuthenticatedSchoolExamsIdRouteImport } from './routes/_authenticated/school/exams.$id'
 import { Route as AuthenticatedMadrassaExamsBoardRouteImport } from './routes/_authenticated/madrassa/exams.board'
@@ -366,6 +367,12 @@ const AuthenticatedAdmissionNewRoute =
     path: '/admission/new',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdmissionInterviewsRoute =
+  AuthenticatedAdmissionInterviewsRouteImport.update({
+    id: '/admission/interviews',
+    path: '/admission/interviews',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSchoolExamsBoardRoute =
   AuthenticatedSchoolExamsBoardRouteImport.update({
     id: '/board',
@@ -435,6 +442,7 @@ export interface FileRoutesByFullPath {
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
   '/website/': typeof WebsiteIndexRoute
+  '/admission/interviews': typeof AuthenticatedAdmissionInterviewsRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
   '/finance/donations': typeof AuthenticatedFinanceDonationsRoute
@@ -496,6 +504,7 @@ export interface FileRoutesByTo {
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
   '/website': typeof WebsiteIndexRoute
+  '/admission/interviews': typeof AuthenticatedAdmissionInterviewsRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
   '/finance/donations': typeof AuthenticatedFinanceDonationsRoute
@@ -560,6 +569,7 @@ export interface FileRoutesById {
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
   '/website/': typeof WebsiteIndexRoute
+  '/_authenticated/admission/interviews': typeof AuthenticatedAdmissionInterviewsRoute
   '/_authenticated/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/_authenticated/admission/queue': typeof AuthenticatedAdmissionQueueRoute
   '/_authenticated/finance_/donations': typeof AuthenticatedFinanceDonationsRoute
@@ -624,6 +634,7 @@ export interface FileRouteTypes {
     | '/website/contact'
     | '/website/gallery'
     | '/website/'
+    | '/admission/interviews'
     | '/admission/new'
     | '/admission/queue'
     | '/finance/donations'
@@ -685,6 +696,7 @@ export interface FileRouteTypes {
     | '/website/contact'
     | '/website/gallery'
     | '/website'
+    | '/admission/interviews'
     | '/admission/new'
     | '/admission/queue'
     | '/finance/donations'
@@ -748,6 +760,7 @@ export interface FileRouteTypes {
     | '/website/contact'
     | '/website/gallery'
     | '/website/'
+    | '/_authenticated/admission/interviews'
     | '/_authenticated/admission/new'
     | '/_authenticated/admission/queue'
     | '/_authenticated/finance_/donations'
@@ -1173,6 +1186,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdmissionNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admission/interviews': {
+      id: '/_authenticated/admission/interviews'
+      path: '/admission/interviews'
+      fullPath: '/admission/interviews'
+      preLoaderRoute: typeof AuthenticatedAdmissionInterviewsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/school/exams/board': {
       id: '/_authenticated/school/exams/board'
       path: '/board'
@@ -1344,6 +1364,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRouteWithChildren
   AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRouteWithChildren
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
+  AuthenticatedAdmissionInterviewsRoute: typeof AuthenticatedAdmissionInterviewsRoute
   AuthenticatedAdmissionNewRoute: typeof AuthenticatedAdmissionNewRoute
   AuthenticatedAdmissionQueueRoute: typeof AuthenticatedAdmissionQueueRoute
   AuthenticatedFinanceDonationsRoute: typeof AuthenticatedFinanceDonationsRoute
@@ -1386,6 +1407,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRouteWithChildren,
   AuthenticatedTeachersRoute: AuthenticatedTeachersRouteWithChildren,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
+  AuthenticatedAdmissionInterviewsRoute: AuthenticatedAdmissionInterviewsRoute,
   AuthenticatedAdmissionNewRoute: AuthenticatedAdmissionNewRoute,
   AuthenticatedAdmissionQueueRoute: AuthenticatedAdmissionQueueRoute,
   AuthenticatedFinanceDonationsRoute: AuthenticatedFinanceDonationsRoute,
@@ -1447,13 +1469,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

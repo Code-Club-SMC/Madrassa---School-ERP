@@ -106,6 +106,7 @@ Object.assign(PAGE_TITLES, {
   "/admission/queue": { en: "Application Queue", ur: "درخواستوں کی قطار" },
   "/teachers/salary": { en: "Salary Slips", ur: "تنخواہ سلپ" },
   "/finance/donations": { en: "Donations", ur: "عطیات" },
+  "/admission/interviews": { en: "Interviews & Waitlist", ur: "انٹرویو" },
   "/settings/templates": { en: "Message Templates", ur: "پیغام سانچے" },
   "/settings/backup": { en: "Backup & Restore", ur: "بیک اپ" },
 });
