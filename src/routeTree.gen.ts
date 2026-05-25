@@ -15,6 +15,7 @@ import { Route as ChangePasswordRouteImport } from './routes/change-password'
 import { Route as ApplyRouteImport } from './routes/apply'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WebsiteIndexRouteImport } from './routes/website.index'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
@@ -90,6 +91,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const WebsiteIndexRoute = WebsiteIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WebsiteRoute,
 } as any)
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   id: '/users',
@@ -360,7 +366,7 @@ export interface FileRoutesByFullPath {
   '/apply': typeof ApplyRoute
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
-  '/website': typeof WebsiteRoute
+  '/website': typeof WebsiteRouteWithChildren
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/finance': typeof AuthenticatedFinanceRoute
@@ -371,6 +377,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/website/': typeof WebsiteIndexRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
   '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
@@ -413,7 +420,6 @@ export interface FileRoutesByTo {
   '/apply': typeof ApplyRoute
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
-  '/website': typeof WebsiteRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/finance': typeof AuthenticatedFinanceRoute
@@ -424,6 +430,7 @@ export interface FileRoutesByTo {
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/website': typeof WebsiteIndexRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
   '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
@@ -468,7 +475,7 @@ export interface FileRoutesById {
   '/apply': typeof ApplyRoute
   '/change-password': typeof ChangePasswordRoute
   '/login': typeof LoginRoute
-  '/website': typeof WebsiteRoute
+  '/website': typeof WebsiteRouteWithChildren
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/finance': typeof AuthenticatedFinanceRoute
@@ -479,6 +486,7 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRouteWithChildren
   '/_authenticated/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/website/': typeof WebsiteIndexRoute
   '/_authenticated/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/_authenticated/admission/queue': typeof AuthenticatedAdmissionQueueRoute
   '/_authenticated/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
@@ -534,6 +542,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/teachers'
     | '/users'
+    | '/website/'
     | '/admission/new'
     | '/admission/queue'
     | '/madrassa/attendance'
@@ -576,7 +585,6 @@ export interface FileRouteTypes {
     | '/apply'
     | '/change-password'
     | '/login'
-    | '/website'
     | '/audit'
     | '/dashboard'
     | '/finance'
@@ -587,6 +595,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/teachers'
     | '/users'
+    | '/website'
     | '/admission/new'
     | '/admission/queue'
     | '/madrassa/attendance'
@@ -641,6 +650,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/teachers'
     | '/_authenticated/users'
+    | '/website/'
     | '/_authenticated/admission/new'
     | '/_authenticated/admission/queue'
     | '/_authenticated/madrassa/attendance'
@@ -685,7 +695,7 @@ export interface RootRouteChildren {
   ApplyRoute: typeof ApplyRoute
   ChangePasswordRoute: typeof ChangePasswordRoute
   LoginRoute: typeof LoginRoute
-  WebsiteRoute: typeof WebsiteRoute
+  WebsiteRoute: typeof WebsiteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -731,6 +741,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/website/': {
+      id: '/website/'
+      path: '/'
+      fullPath: '/website/'
+      preLoaderRoute: typeof WebsiteIndexRouteImport
+      parentRoute: typeof WebsiteRoute
     }
     '/_authenticated/users': {
       id: '/_authenticated/users'
@@ -1234,13 +1251,24 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface WebsiteRouteChildren {
+  WebsiteIndexRoute: typeof WebsiteIndexRoute
+}
+
+const WebsiteRouteChildren: WebsiteRouteChildren = {
+  WebsiteIndexRoute: WebsiteIndexRoute,
+}
+
+const WebsiteRouteWithChildren =
+  WebsiteRoute._addFileChildren(WebsiteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   ApplyRoute: ApplyRoute,
   ChangePasswordRoute: ChangePasswordRoute,
   LoginRoute: LoginRoute,
-  WebsiteRoute: WebsiteRoute,
+  WebsiteRoute: WebsiteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
