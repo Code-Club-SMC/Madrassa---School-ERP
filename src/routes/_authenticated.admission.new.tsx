@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { UserPlus } from "lucide-react";
-import { PlaceholderPage } from "@/components/shared/placeholder-page";
+import { PageHeader } from "@/components/shared/page-header";
+import { AdmissionWizard } from "@/components/admission/admission-wizard";
 
 export const Route = createFileRoute("/_authenticated/admission/new")({
   component: () => (
-    <PlaceholderPage title="New Admission" titleUrdu="نیا داخلہ" icon={UserPlus} />
+    <>
+      <PageHeader title="New Admission" titleUrdu="نیا داخلہ" description="Complete the five-step admission form to enroll a new student." />
+      <AdmissionWizard />
+    </>
   ),
 });
