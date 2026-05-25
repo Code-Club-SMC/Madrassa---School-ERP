@@ -22,6 +22,7 @@ import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedParentsRouteImport } from './routes/_authenticated/parents'
+import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
 import { Route as AuthenticatedIdCardsRouteImport } from './routes/_authenticated/id-cards'
 import { Route as AuthenticatedHolidaysRouteImport } from './routes/_authenticated/holidays'
@@ -129,6 +130,12 @@ const AuthenticatedParentsRoute = AuthenticatedParentsRouteImport.update({
   path: '/parents',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedNotificationsRoute =
+  AuthenticatedNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedInventoryRoute = AuthenticatedInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -385,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/holidays': typeof AuthenticatedHolidaysRoute
   '/id-cards': typeof AuthenticatedIdCardsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
   '/parents': typeof AuthenticatedParentsRoute
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
@@ -440,6 +448,7 @@ export interface FileRoutesByTo {
   '/holidays': typeof AuthenticatedHolidaysRoute
   '/id-cards': typeof AuthenticatedIdCardsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
   '/parents': typeof AuthenticatedParentsRoute
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
@@ -498,6 +507,7 @@ export interface FileRoutesById {
   '/_authenticated/holidays': typeof AuthenticatedHolidaysRoute
   '/_authenticated/id-cards': typeof AuthenticatedIdCardsRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
+  '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/parents': typeof AuthenticatedParentsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRouteWithChildren
   '/_authenticated/teachers': typeof AuthenticatedTeachersRouteWithChildren
@@ -556,6 +566,7 @@ export interface FileRouteTypes {
     | '/holidays'
     | '/id-cards'
     | '/inventory'
+    | '/notifications'
     | '/parents'
     | '/reports'
     | '/teachers'
@@ -611,6 +622,7 @@ export interface FileRouteTypes {
     | '/holidays'
     | '/id-cards'
     | '/inventory'
+    | '/notifications'
     | '/parents'
     | '/reports'
     | '/teachers'
@@ -668,6 +680,7 @@ export interface FileRouteTypes {
     | '/_authenticated/holidays'
     | '/_authenticated/id-cards'
     | '/_authenticated/inventory'
+    | '/_authenticated/notifications'
     | '/_authenticated/parents'
     | '/_authenticated/reports'
     | '/_authenticated/teachers'
@@ -813,6 +826,13 @@ declare module '@tanstack/react-router' {
       path: '/parents'
       fullPath: '/parents'
       preLoaderRoute: typeof AuthenticatedParentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/notifications': {
+      id: '/_authenticated/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/inventory': {
@@ -1219,6 +1239,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHolidaysRoute: typeof AuthenticatedHolidaysRoute
   AuthenticatedIdCardsRoute: typeof AuthenticatedIdCardsRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
+  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedParentsRoute: typeof AuthenticatedParentsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRouteWithChildren
   AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRouteWithChildren
@@ -1255,6 +1276,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHolidaysRoute: AuthenticatedHolidaysRoute,
   AuthenticatedIdCardsRoute: AuthenticatedIdCardsRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
+  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedParentsRoute: AuthenticatedParentsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRouteWithChildren,
   AuthenticatedTeachersRoute: AuthenticatedTeachersRouteWithChildren,
