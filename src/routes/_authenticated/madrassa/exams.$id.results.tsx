@@ -70,7 +70,7 @@ function MadrassaResults() {
                 <TableCell className="text-end font-mono text-sm font-medium">{r.obt}/{r.max}</TableCell>
                 <TableCell className="text-end font-mono text-sm">{r.pct}%</TableCell>
                 <TableCell><Badge variant="outline" className={cn(r.grade.tone, "font-urdu")}>{r.grade.g}</Badge></TableCell>
-                <TableCell className="text-end"><Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setOpen(r.s)}><FileText className="h-3.5 w-3.5" /></Button></TableCell>
+                <TableCell className="text-end"><Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setOpen(r.s)} aria-label="View result card"><FileText className="h-3.5 w-3.5" aria-hidden="true" /></Button></TableCell>
               </TableRow>
             ))}
           </TableBody>

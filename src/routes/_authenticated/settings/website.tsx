@@ -66,7 +66,7 @@ function WebsiteCMS() {
                 <div key={g.id} className="relative rounded-xl overflow-hidden border border-border group">
                   <img src={g.url} alt={g.caption} className="w-full aspect-video object-cover" />
                   <div className="p-2 text-xs">{g.caption}</div>
-                  <Button size="icon" variant="destructive" className="h-7 w-7 absolute top-2 end-2 opacity-0 group-hover:opacity-100" onClick={() => setGallery(gallery.filter((x) => x.id !== g.id))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" variant="destructive" className="h-7 w-7 absolute top-2 end-2 opacity-0 group-hover:opacity-100 focus:opacity-100" onClick={() => setGallery(gallery.filter((x) => x.id !== g.id))} aria-label="Remove gallery image"><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /></Button>
                 </div>
               ))}
             </div>
@@ -80,7 +80,7 @@ function WebsiteCMS() {
               <div key={n.id} className="grid sm:grid-cols-[1fr_1fr_auto] gap-2 items-center p-3 rounded-lg border border-border">
                 <Input value={n.en} onChange={(e) => setNotices(notices.map((x, j) => j === i ? { ...x, en: e.target.value } : x))} placeholder="English" />
                 <Input value={n.ur} className="font-urdu" onChange={(e) => setNotices(notices.map((x, j) => j === i ? { ...x, ur: e.target.value } : x))} placeholder="Urdu" />
-                <Button size="icon" variant="ghost" onClick={() => setNotices(notices.filter((x) => x.id !== n.id))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => setNotices(notices.filter((x) => x.id !== n.id))} aria-label="Remove notice"><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /></Button>
               </div>
             ))}
             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setNotices([...notices, { id: `n${Date.now()}`, en: "New notice", ur: "نیا اعلان" }])}><Plus className="h-3.5 w-3.5" />Add Notice</Button>

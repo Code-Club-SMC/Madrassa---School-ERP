@@ -110,7 +110,7 @@ function DonationsPage() {
                 <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{d.purpose}</TableCell>
                 <TableCell className="text-xs uppercase">{d.method}</TableCell>
                 <TableCell className="text-end font-mono font-bold text-primary">{formatPKR(d.amountPaisa / 100)}</TableCell>
-                <TableCell className="text-end"><Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => print(d.id)}><Printer className="h-3.5 w-3.5" /></Button></TableCell>
+                <TableCell className="text-end"><Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => print(d.id)} aria-label={`Print donation receipt ${d.id}`}><Printer className="h-3.5 w-3.5" aria-hidden="true" /></Button></TableCell>
               </TableRow>
             ))}
           </TableBody>

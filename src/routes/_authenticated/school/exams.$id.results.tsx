@@ -111,7 +111,7 @@ function ResultsPage() {
                 <TableCell className="text-end font-mono text-sm font-medium">{r.totalObt}/{r.totalMax}</TableCell>
                 <TableCell className="text-end font-mono text-sm">{r.pct}%</TableCell>
                 <TableCell><Badge variant="outline" className={cn(r.grade.tone, "font-mono text-xs")}>{r.grade.g}</Badge></TableCell>
-                <TableCell className="text-end"><Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDmcOpen(r.s)}><FileText className="h-3.5 w-3.5" /></Button></TableCell>
+                <TableCell className="text-end"><Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDmcOpen(r.s)} aria-label="View DMC"><FileText className="h-3.5 w-3.5" aria-hidden="true" /></Button></TableCell>
               </TableRow>
             ))}
           </TableBody>

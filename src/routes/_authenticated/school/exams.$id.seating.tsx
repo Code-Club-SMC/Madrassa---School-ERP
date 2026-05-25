@@ -387,7 +387,7 @@ function Stepper({ label, value, setValue }: { label: string; value: number; set
     <div>
       <Label className="text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
       <div className="mt-1.5 flex items-center gap-1">
-        <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setValue(value - 1)}><Minus className="h-3.5 w-3.5" /></Button>
+        <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setValue(value - 1)} aria-label={`Decrease ${label}`}><Minus className="h-3.5 w-3.5" aria-hidden="true" /></Button>
         <Input
           type="number"
           value={value}
@@ -396,7 +396,7 @@ function Stepper({ label, value, setValue }: { label: string; value: number; set
           onChange={(e) => setValue(parseInt(e.target.value || "0", 10) || 0)}
           className="text-center font-mono"
         />
-        <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setValue(value + 1)}><Plus className="h-3.5 w-3.5" /></Button>
+        <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => setValue(value + 1)} aria-label={`Increase ${label}`}><Plus className="h-3.5 w-3.5" aria-hidden="true" /></Button>
       </div>
     </div>
   );
