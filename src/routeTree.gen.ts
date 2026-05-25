@@ -31,6 +31,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authenticated/admission/index'
+import { Route as AuthenticatedTeachersSalaryRouteImport } from './routes/_authenticated/teachers.salary'
 import { Route as AuthenticatedTeachersIdRouteImport } from './routes/_authenticated/teachers.$id'
 import { Route as AuthenticatedStudentsIdRouteImport } from './routes/_authenticated/students.$id'
 import { Route as AuthenticatedSettingsWebsiteRouteImport } from './routes/_authenticated/settings/website'
@@ -178,6 +179,12 @@ const AuthenticatedAdmissionIndexRoute =
     id: '/admission/',
     path: '/admission/',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedTeachersSalaryRoute =
+  AuthenticatedTeachersSalaryRouteImport.update({
+    id: '/salary',
+    path: '/salary',
+    getParentRoute: () => AuthenticatedTeachersRoute,
   } as any)
 const AuthenticatedTeachersIdRoute = AuthenticatedTeachersIdRouteImport.update({
   id: '/$id',
@@ -434,6 +441,7 @@ export interface FileRoutesByFullPath {
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
+  '/teachers/salary': typeof AuthenticatedTeachersSalaryRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/madrassa/exams/$id': typeof AuthenticatedMadrassaExamsIdRouteWithChildren
@@ -491,6 +499,7 @@ export interface FileRoutesByTo {
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
+  '/teachers/salary': typeof AuthenticatedTeachersSalaryRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/madrassa/exams/$id': typeof AuthenticatedMadrassaExamsIdRouteWithChildren
@@ -551,6 +560,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/_authenticated/students/$id': typeof AuthenticatedStudentsIdRoute
   '/_authenticated/teachers/$id': typeof AuthenticatedTeachersIdRoute
+  '/_authenticated/teachers/salary': typeof AuthenticatedTeachersSalaryRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/madrassa/exams/$id': typeof AuthenticatedMadrassaExamsIdRouteWithChildren
@@ -611,6 +621,7 @@ export interface FileRouteTypes {
     | '/settings/website'
     | '/students/$id'
     | '/teachers/$id'
+    | '/teachers/salary'
     | '/admission/'
     | '/settings/'
     | '/madrassa/exams/$id'
@@ -668,6 +679,7 @@ export interface FileRouteTypes {
     | '/settings/website'
     | '/students/$id'
     | '/teachers/$id'
+    | '/teachers/salary'
     | '/admission'
     | '/settings'
     | '/madrassa/exams/$id'
@@ -727,6 +739,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/website'
     | '/_authenticated/students/$id'
     | '/_authenticated/teachers/$id'
+    | '/_authenticated/teachers/salary'
     | '/_authenticated/admission/'
     | '/_authenticated/settings/'
     | '/_authenticated/madrassa/exams/$id'
@@ -903,6 +916,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admission/'
       preLoaderRoute: typeof AuthenticatedAdmissionIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/teachers/salary': {
+      id: '/_authenticated/teachers/salary'
+      path: '/salary'
+      fullPath: '/teachers/salary'
+      preLoaderRoute: typeof AuthenticatedTeachersSalaryRouteImport
+      parentRoute: typeof AuthenticatedTeachersRoute
     }
     '/_authenticated/teachers/$id': {
       id: '/_authenticated/teachers/$id'
@@ -1171,10 +1191,12 @@ const AuthenticatedReportsRouteWithChildren =
 
 interface AuthenticatedTeachersRouteChildren {
   AuthenticatedTeachersIdRoute: typeof AuthenticatedTeachersIdRoute
+  AuthenticatedTeachersSalaryRoute: typeof AuthenticatedTeachersSalaryRoute
 }
 
 const AuthenticatedTeachersRouteChildren: AuthenticatedTeachersRouteChildren = {
   AuthenticatedTeachersIdRoute: AuthenticatedTeachersIdRoute,
+  AuthenticatedTeachersSalaryRoute: AuthenticatedTeachersSalaryRoute,
 }
 
 const AuthenticatedTeachersRouteWithChildren =
