@@ -26,6 +26,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authenticated/admission/index'
+import { Route as AuthenticatedTeachersIdRouteImport } from './routes/_authenticated/teachers.$id'
 import { Route as AuthenticatedSettingsWebsiteRouteImport } from './routes/_authenticated/settings/website'
 import { Route as AuthenticatedSettingsAcademicYearRouteImport } from './routes/_authenticated/settings/academic-year'
 import { Route as AuthenticatedSchoolTimetableRouteImport } from './routes/_authenticated/school/timetable'
@@ -140,6 +141,11 @@ const AuthenticatedAdmissionIndexRoute =
     path: '/admission/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedTeachersIdRoute = AuthenticatedTeachersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedTeachersRoute,
+} as any)
 const AuthenticatedSettingsWebsiteRoute =
   AuthenticatedSettingsWebsiteRouteImport.update({
     id: '/settings/website',
@@ -315,7 +321,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof AuthenticatedInventoryRoute
   '/parents': typeof AuthenticatedParentsRoute
   '/reports': typeof AuthenticatedReportsRoute
-  '/teachers': typeof AuthenticatedTeachersRoute
+  '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
@@ -336,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
+  '/teachers/$id': typeof AuthenticatedTeachersIdRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/madrassa/exams/$id': typeof AuthenticatedMadrassaExamsIdRouteWithChildren
@@ -360,7 +367,7 @@ export interface FileRoutesByTo {
   '/inventory': typeof AuthenticatedInventoryRoute
   '/parents': typeof AuthenticatedParentsRoute
   '/reports': typeof AuthenticatedReportsRoute
-  '/teachers': typeof AuthenticatedTeachersRoute
+  '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
@@ -381,6 +388,7 @@ export interface FileRoutesByTo {
   '/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
+  '/teachers/$id': typeof AuthenticatedTeachersIdRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/madrassa/exams/$id': typeof AuthenticatedMadrassaExamsIdRouteWithChildren
@@ -407,7 +415,7 @@ export interface FileRoutesById {
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
   '/_authenticated/parents': typeof AuthenticatedParentsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
-  '/_authenticated/teachers': typeof AuthenticatedTeachersRoute
+  '/_authenticated/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/_authenticated/admission/queue': typeof AuthenticatedAdmissionQueueRoute
@@ -428,6 +436,7 @@ export interface FileRoutesById {
   '/_authenticated/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/_authenticated/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
   '/_authenticated/settings/website': typeof AuthenticatedSettingsWebsiteRoute
+  '/_authenticated/teachers/$id': typeof AuthenticatedTeachersIdRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/madrassa/exams/$id': typeof AuthenticatedMadrassaExamsIdRouteWithChildren
@@ -475,6 +484,7 @@ export interface FileRouteTypes {
     | '/school/timetable'
     | '/settings/academic-year'
     | '/settings/website'
+    | '/teachers/$id'
     | '/admission/'
     | '/settings/'
     | '/madrassa/exams/$id'
@@ -520,6 +530,7 @@ export interface FileRouteTypes {
     | '/school/timetable'
     | '/settings/academic-year'
     | '/settings/website'
+    | '/teachers/$id'
     | '/admission'
     | '/settings'
     | '/madrassa/exams/$id'
@@ -566,6 +577,7 @@ export interface FileRouteTypes {
     | '/_authenticated/school/timetable'
     | '/_authenticated/settings/academic-year'
     | '/_authenticated/settings/website'
+    | '/_authenticated/teachers/$id'
     | '/_authenticated/admission/'
     | '/_authenticated/settings/'
     | '/_authenticated/madrassa/exams/$id'
@@ -706,6 +718,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admission/'
       preLoaderRoute: typeof AuthenticatedAdmissionIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/teachers/$id': {
+      id: '/_authenticated/teachers/$id'
+      path: '/$id'
+      fullPath: '/teachers/$id'
+      preLoaderRoute: typeof AuthenticatedTeachersIdRouteImport
+      parentRoute: typeof AuthenticatedTeachersRoute
     }
     '/_authenticated/settings/website': {
       id: '/_authenticated/settings/website'
@@ -899,6 +918,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedTeachersRouteChildren {
+  AuthenticatedTeachersIdRoute: typeof AuthenticatedTeachersIdRoute
+}
+
+const AuthenticatedTeachersRouteChildren: AuthenticatedTeachersRouteChildren = {
+  AuthenticatedTeachersIdRoute: AuthenticatedTeachersIdRoute,
+}
+
+const AuthenticatedTeachersRouteWithChildren =
+  AuthenticatedTeachersRoute._addFileChildren(
+    AuthenticatedTeachersRouteChildren,
+  )
+
 interface AuthenticatedMadrassaExamsIdRouteChildren {
   AuthenticatedMadrassaExamsIdMarksRoute: typeof AuthenticatedMadrassaExamsIdMarksRoute
   AuthenticatedMadrassaExamsIdResultsRoute: typeof AuthenticatedMadrassaExamsIdResultsRoute
@@ -978,7 +1010,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
   AuthenticatedParentsRoute: typeof AuthenticatedParentsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
-  AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRoute
+  AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRouteWithChildren
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedAdmissionNewRoute: typeof AuthenticatedAdmissionNewRoute
   AuthenticatedAdmissionQueueRoute: typeof AuthenticatedAdmissionQueueRoute
@@ -1012,7 +1044,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
   AuthenticatedParentsRoute: AuthenticatedParentsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
-  AuthenticatedTeachersRoute: AuthenticatedTeachersRoute,
+  AuthenticatedTeachersRoute: AuthenticatedTeachersRouteWithChildren,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedAdmissionNewRoute: AuthenticatedAdmissionNewRoute,
   AuthenticatedAdmissionQueueRoute: AuthenticatedAdmissionQueueRoute,
@@ -1052,13 +1084,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
