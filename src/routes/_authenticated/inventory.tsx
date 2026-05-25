@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Plus, Package, AlertTriangle, ShoppingCart, Gift, Pencil, History, Trash2 } from "lucide-react";
+import { Search, Plus, Package, AlertTriangle, ShoppingCart, Gift, Pencil, History, Trash2, GraduationCap, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
-import { inventoryItems as seedItems, type InventoryItem } from "@/mock";
+import { inventoryItems as seedItems, students, type InventoryItem } from "@/mock";
 import { formatPKR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +33,7 @@ function InventoryPage() {
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState<InventoryItem | null>(null);
+  const [graduationOpen, setGraduationOpen] = useState(false);
 
   const filtered = useMemo(() => items.filter((i) =>
     !q || i.name.toLowerCase().includes(q.toLowerCase()) || i.nameUrdu.includes(q) || i.category.toLowerCase().includes(q.toLowerCase())
@@ -69,6 +71,7 @@ function InventoryPage() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => recordTxn("purchased")}><ShoppingCart className="h-3.5 w-3.5" />Record Purchase</Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => recordTxn("donated")}><Gift className="h-3.5 w-3.5" />Record Donation</Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setGraduationOpen(true)}><GraduationCap className="h-3.5 w-3.5" />Graduation Gift</Button>
             <Button size="sm" className="gap-1.5" onClick={openAdd}><Plus className="h-3.5 w-3.5" />Add Item</Button>
           </div>
         }
@@ -145,6 +148,15 @@ function InventoryPage() {
 
       <ItemDialog open={dialogOpen} onOpenChange={setDialogOpen} initial={editing} onSave={save} />
 
+      <GraduationDialog
+        open={graduationOpen}
+        onOpenChange={setGraduationOpen}
+        items={items}
+        onDistribute={(itemId, qty) => {
+          setItems((prev) => prev.map((x) => x.id === itemId ? { ...x, quantity: Math.max(0, x.quantity - qty) } : x));
+        }}
+      />
+
       <Dialog open={!!historyOpen} onOpenChange={(v) => !v && setHistoryOpen(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Transaction History — {historyOpen?.name}</DialogTitle></DialogHeader>
@@ -206,6 +218,107 @@ function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; on
             if (!f.name.trim()) { toast.error("Name is required"); return; }
             onSave({ ...f, id: f.id || `inv-${Date.now()}` });
           }}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function GraduationDialog({ open, onOpenChange, items, onDistribute }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  items: InventoryItem[];
+  onDistribute: (itemId: string, qty: number) => void;
+}) {
+  const eligible = useMemo(() => students.filter((s) => s.status === "graduated" || s.system === "madrassa").slice(0, 12), []);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [giftItem, setGiftItem] = useState<string>(items[0]?.id ?? "");
+  const [perStudent, setPerStudent] = useState(1);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (open) { setSelectedIds([]); setDone(false); setGiftItem(items[0]?.id ?? ""); setPerStudent(1); }
+  }, [open, items]);
+
+  function toggle(id: string) {
+    setSelectedIds((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
+  }
+
+  const item = items.find((i) => i.id === giftItem);
+  const totalNeeded = selectedIds.length * perStudent;
+  const insufficient = item ? totalNeeded > item.quantity : false;
+
+  function distribute() {
+    if (!item) return;
+    if (selectedIds.length === 0) { toast.error("Select at least one student"); return; }
+    if (insufficient) { toast.error(`Not enough stock — need ${totalNeeded}, have ${item.quantity}`); return; }
+    onDistribute(item.id, totalNeeded);
+    setDone(true);
+    toast.success(`Distributed ${totalNeeded} ${item.unit} of ${item.name} to ${selectedIds.length} students`);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Gift className="h-4 w-4" />Graduation Gift Distribution · رخصتی تحائف</DialogTitle>
+          <DialogDescription>Track inventory deducted as graduation gifts. Auto-creates a stock movement entry.</DialogDescription>
+        </DialogHeader>
+
+        {done ? (
+          <div className="py-10 text-center">
+            <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
+            <p className="font-heading text-lg font-bold">Gifts distributed</p>
+            <p className="font-urdu text-sm text-muted-foreground" dir="rtl">تحائف تقسیم ہو گئے</p>
+            <p className="text-xs text-muted-foreground mt-2">{selectedIds.length} students · {item?.name} × {perStudent} each</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-4">
+            <Card className="p-3 max-h-[360px] overflow-y-auto">
+              <p className="text-xs text-muted-foreground mb-2">Select graduating students · فارغ التحصیل طلبہ</p>
+              <div className="space-y-1">
+                {eligible.map((s) => (
+                  <label key={s.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-pointer">
+                    <Checkbox checked={selectedIds.includes(s.id)} onCheckedChange={() => toggle(s.id)} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-urdu text-sm truncate" dir="rtl">{s.nameUrdu}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">{s.rollNo} · {s.system}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </Card>
+
+            <div className="space-y-3">
+              <div>
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Gift item</Label>
+                <Select value={giftItem} onValueChange={setGiftItem}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{items.map((i) => <SelectItem key={i.id} value={i.id}>{i.name} ({i.quantity} {i.unit})</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Quantity per student</Label>
+                <Input type="number" min={1} value={perStudent} onChange={(e) => setPerStudent(Math.max(1, +e.target.value || 1))} />
+              </div>
+              <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Recipients</span><span className="font-mono">{selectedIds.length}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Total needed</span><span className={cn("font-mono", insufficient && "text-destructive")}>{totalNeeded}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">In stock</span><span className="font-mono">{item?.quantity ?? 0}</span></div>
+              </div>
+              {insufficient && (
+                <div className="flex gap-2 items-start text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                  Not enough stock for this distribution.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{done ? "Close" : "Cancel"}</Button>
+          {!done && <Button onClick={distribute} disabled={insufficient || selectedIds.length === 0}>Distribute</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>
