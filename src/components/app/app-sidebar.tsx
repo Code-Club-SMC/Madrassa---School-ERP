@@ -1,23 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import {
-  LayoutDashboard,
-  FileSignature,
-  Users2,
-  CalendarCheck,
-  Banknote,
-  Layers,
-  GraduationCap,
-  ClipboardList,
-  IdCard,
-  BarChart3,
-  Package,
-  Wallet,
-  HeartHandshake,
-  Settings,
-  ShieldUser,
-  LogOut,
-  School,
-} from "lucide-react";
+import { LogOut, School } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -36,47 +18,21 @@ import { Button } from "@/components/ui/button";
 import { useSystem } from "@/components/system-context";
 import { currentUser, institution } from "@/mock";
 import { cn } from "@/lib/utils";
-
-type NavItem = { url: string; icon: typeof LayoutDashboard; en: string; ur: string };
-
-const globalNav: NavItem[] = [
-  { url: "/dashboard", icon: LayoutDashboard, en: "Dashboard", ur: "ڈیش بورڈ" },
-  { url: "/admission", icon: FileSignature, en: "Admission", ur: "داخلہ" },
-];
-
-const madrassaNav: NavItem[] = [
-  { url: "/madrassa/students", icon: Users2, en: "Students", ur: "طلبہ" },
-  { url: "/madrassa/attendance", icon: CalendarCheck, en: "Attendance", ur: "حاضری" },
-  { url: "/madrassa/fees", icon: Banknote, en: "Fees", ur: "فیس" },
-  { url: "/madrassa/categories", icon: Layers, en: "Categories", ur: "اقسام" },
-];
-
-const schoolNav: NavItem[] = [
-  { url: "/school/students", icon: Users2, en: "Students", ur: "طلبہ" },
-  { url: "/school/attendance", icon: CalendarCheck, en: "Attendance", ur: "حاضری" },
-  { url: "/school/fees", icon: Banknote, en: "Fees", ur: "فیس" },
-  { url: "/school/exams", icon: ClipboardList, en: "Examinations", ur: "امتحانات" },
-];
-
-const sharedNav: NavItem[] = [
-  { url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ" },
-  { url: "/id-cards", icon: IdCard, en: "ID Cards", ur: "شناختی کارڈ" },
-  { url: "/reports", icon: BarChart3, en: "Reports", ur: "رپورٹس" },
-  { url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری" },
-  { url: "/finance", icon: Wallet, en: "Finance", ur: "مالیات" },
-  { url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین" },
-];
-
-const adminNav: NavItem[] = [
-  { url: "/users", icon: ShieldUser, en: "Users", ur: "صارفین" },
-  { url: "/settings", icon: Settings, en: "Settings", ur: "ترتیبات" },
-];
+import { visibleFor, type NavItem } from "@/lib/nav-config";
+import type { UserRole } from "@/types";
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { system, setSystem } = useSystem();
+  const role = currentUser.role as UserRole;
+
+  const globalNav = visibleFor(role, "global");
+  const madrassaNav = visibleFor(role, "madrassa");
+  const schoolNav = visibleFor(role, "school");
+  const sharedNav = visibleFor(role, "shared");
+  const adminNav = visibleFor(role, "admin");
 
   const isActive = (url: string) => pathname === url || pathname.startsWith(url + "/");
 
@@ -153,7 +109,7 @@ export function AppSidebar() {
           </div>
         )}
 
-        <SidebarGroup>
+        <SidebarGroup key={system} className="animate-in fade-in-50 duration-300">
           {!collapsed && (
             <SidebarGroupLabel className="font-urdu text-sm">
               {system === "madrassa" ? "مدرسہ" : "اسکول"}
