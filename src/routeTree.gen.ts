@@ -45,6 +45,14 @@ import { Route as AuthenticatedMadrassaCategoriesRouteImport } from './routes/_a
 import { Route as AuthenticatedMadrassaAttendanceRouteImport } from './routes/_authenticated/madrassa/attendance'
 import { Route as AuthenticatedAdmissionQueueRouteImport } from './routes/_authenticated/admission/queue'
 import { Route as AuthenticatedAdmissionNewRouteImport } from './routes/_authenticated/admission/new'
+import { Route as AuthenticatedSchoolExamsBoardRouteImport } from './routes/_authenticated/school/exams.board'
+import { Route as AuthenticatedSchoolExamsIdRouteImport } from './routes/_authenticated/school/exams.$id'
+import { Route as AuthenticatedMadrassaExamsBoardRouteImport } from './routes/_authenticated/madrassa/exams.board'
+import { Route as AuthenticatedMadrassaExamsIdRouteImport } from './routes/_authenticated/madrassa/exams.$id'
+import { Route as AuthenticatedSchoolExamsIdSeatingRouteImport } from './routes/_authenticated/school/exams.$id.seating'
+import { Route as AuthenticatedSchoolExamsIdResultsRouteImport } from './routes/_authenticated/school/exams.$id.results'
+import { Route as AuthenticatedMadrassaExamsIdResultsRouteImport } from './routes/_authenticated/madrassa/exams.$id.results'
+import { Route as AuthenticatedMadrassaExamsIdMarksRouteImport } from './routes/_authenticated/madrassa/exams.$id.marks'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -245,6 +253,54 @@ const AuthenticatedAdmissionNewRoute =
     path: '/admission/new',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedSchoolExamsBoardRoute =
+  AuthenticatedSchoolExamsBoardRouteImport.update({
+    id: '/board',
+    path: '/board',
+    getParentRoute: () => AuthenticatedSchoolExamsRoute,
+  } as any)
+const AuthenticatedSchoolExamsIdRoute =
+  AuthenticatedSchoolExamsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedSchoolExamsRoute,
+  } as any)
+const AuthenticatedMadrassaExamsBoardRoute =
+  AuthenticatedMadrassaExamsBoardRouteImport.update({
+    id: '/board',
+    path: '/board',
+    getParentRoute: () => AuthenticatedMadrassaExamsRoute,
+  } as any)
+const AuthenticatedMadrassaExamsIdRoute =
+  AuthenticatedMadrassaExamsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedMadrassaExamsRoute,
+  } as any)
+const AuthenticatedSchoolExamsIdSeatingRoute =
+  AuthenticatedSchoolExamsIdSeatingRouteImport.update({
+    id: '/seating',
+    path: '/seating',
+    getParentRoute: () => AuthenticatedSchoolExamsIdRoute,
+  } as any)
+const AuthenticatedSchoolExamsIdResultsRoute =
+  AuthenticatedSchoolExamsIdResultsRouteImport.update({
+    id: '/results',
+    path: '/results',
+    getParentRoute: () => AuthenticatedSchoolExamsIdRoute,
+  } as any)
+const AuthenticatedMadrassaExamsIdResultsRoute =
+  AuthenticatedMadrassaExamsIdResultsRouteImport.update({
+    id: '/results',
+    path: '/results',
+    getParentRoute: () => AuthenticatedMadrassaExamsIdRoute,
+  } as any)
+const AuthenticatedMadrassaExamsIdMarksRoute =
+  AuthenticatedMadrassaExamsIdMarksRouteImport.update({
+    id: '/marks',
+    path: '/marks',
+    getParentRoute: () => AuthenticatedMadrassaExamsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -266,14 +322,14 @@ export interface FileRoutesByFullPath {
   '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
   '/madrassa/categories': typeof AuthenticatedMadrassaCategoriesRoute
   '/madrassa/classes': typeof AuthenticatedMadrassaClassesRoute
-  '/madrassa/exams': typeof AuthenticatedMadrassaExamsRoute
+  '/madrassa/exams': typeof AuthenticatedMadrassaExamsRouteWithChildren
   '/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
   '/madrassa/students': typeof AuthenticatedMadrassaStudentsRoute
   '/madrassa/subjects': typeof AuthenticatedMadrassaSubjectsRoute
   '/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
   '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/school/classes': typeof AuthenticatedSchoolClassesRoute
-  '/school/exams': typeof AuthenticatedSchoolExamsRoute
+  '/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
   '/school/fees': typeof AuthenticatedSchoolFeesRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
   '/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
@@ -282,6 +338,14 @@ export interface FileRoutesByFullPath {
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/madrassa/exams/$id': typeof AuthenticatedMadrassaExamsIdRouteWithChildren
+  '/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
+  '/school/exams/$id': typeof AuthenticatedSchoolExamsIdRouteWithChildren
+  '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
+  '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
+  '/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
+  '/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
+  '/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -303,14 +367,14 @@ export interface FileRoutesByTo {
   '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
   '/madrassa/categories': typeof AuthenticatedMadrassaCategoriesRoute
   '/madrassa/classes': typeof AuthenticatedMadrassaClassesRoute
-  '/madrassa/exams': typeof AuthenticatedMadrassaExamsRoute
+  '/madrassa/exams': typeof AuthenticatedMadrassaExamsRouteWithChildren
   '/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
   '/madrassa/students': typeof AuthenticatedMadrassaStudentsRoute
   '/madrassa/subjects': typeof AuthenticatedMadrassaSubjectsRoute
   '/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
   '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/school/classes': typeof AuthenticatedSchoolClassesRoute
-  '/school/exams': typeof AuthenticatedSchoolExamsRoute
+  '/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
   '/school/fees': typeof AuthenticatedSchoolFeesRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
   '/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
@@ -319,6 +383,14 @@ export interface FileRoutesByTo {
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
+  '/madrassa/exams/$id': typeof AuthenticatedMadrassaExamsIdRouteWithChildren
+  '/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
+  '/school/exams/$id': typeof AuthenticatedSchoolExamsIdRouteWithChildren
+  '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
+  '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
+  '/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
+  '/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
+  '/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -342,14 +414,14 @@ export interface FileRoutesById {
   '/_authenticated/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
   '/_authenticated/madrassa/categories': typeof AuthenticatedMadrassaCategoriesRoute
   '/_authenticated/madrassa/classes': typeof AuthenticatedMadrassaClassesRoute
-  '/_authenticated/madrassa/exams': typeof AuthenticatedMadrassaExamsRoute
+  '/_authenticated/madrassa/exams': typeof AuthenticatedMadrassaExamsRouteWithChildren
   '/_authenticated/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
   '/_authenticated/madrassa/students': typeof AuthenticatedMadrassaStudentsRoute
   '/_authenticated/madrassa/subjects': typeof AuthenticatedMadrassaSubjectsRoute
   '/_authenticated/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
   '/_authenticated/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/_authenticated/school/classes': typeof AuthenticatedSchoolClassesRoute
-  '/_authenticated/school/exams': typeof AuthenticatedSchoolExamsRoute
+  '/_authenticated/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
   '/_authenticated/school/fees': typeof AuthenticatedSchoolFeesRoute
   '/_authenticated/school/students': typeof AuthenticatedSchoolStudentsRoute
   '/_authenticated/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
@@ -358,6 +430,14 @@ export interface FileRoutesById {
   '/_authenticated/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/_authenticated/madrassa/exams/$id': typeof AuthenticatedMadrassaExamsIdRouteWithChildren
+  '/_authenticated/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
+  '/_authenticated/school/exams/$id': typeof AuthenticatedSchoolExamsIdRouteWithChildren
+  '/_authenticated/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
+  '/_authenticated/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
+  '/_authenticated/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
+  '/_authenticated/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
+  '/_authenticated/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -397,6 +477,14 @@ export interface FileRouteTypes {
     | '/settings/website'
     | '/admission/'
     | '/settings/'
+    | '/madrassa/exams/$id'
+    | '/madrassa/exams/board'
+    | '/school/exams/$id'
+    | '/school/exams/board'
+    | '/madrassa/exams/$id/marks'
+    | '/madrassa/exams/$id/results'
+    | '/school/exams/$id/results'
+    | '/school/exams/$id/seating'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -434,6 +522,14 @@ export interface FileRouteTypes {
     | '/settings/website'
     | '/admission'
     | '/settings'
+    | '/madrassa/exams/$id'
+    | '/madrassa/exams/board'
+    | '/school/exams/$id'
+    | '/school/exams/board'
+    | '/madrassa/exams/$id/marks'
+    | '/madrassa/exams/$id/results'
+    | '/school/exams/$id/results'
+    | '/school/exams/$id/seating'
   id:
     | '__root__'
     | '/'
@@ -472,6 +568,14 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/website'
     | '/_authenticated/admission/'
     | '/_authenticated/settings/'
+    | '/_authenticated/madrassa/exams/$id'
+    | '/_authenticated/madrassa/exams/board'
+    | '/_authenticated/school/exams/$id'
+    | '/_authenticated/school/exams/board'
+    | '/_authenticated/madrassa/exams/$id/marks'
+    | '/_authenticated/madrassa/exams/$id/results'
+    | '/_authenticated/school/exams/$id/results'
+    | '/_authenticated/school/exams/$id/seating'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -736,8 +840,134 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdmissionNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/school/exams/board': {
+      id: '/_authenticated/school/exams/board'
+      path: '/board'
+      fullPath: '/school/exams/board'
+      preLoaderRoute: typeof AuthenticatedSchoolExamsBoardRouteImport
+      parentRoute: typeof AuthenticatedSchoolExamsRoute
+    }
+    '/_authenticated/school/exams/$id': {
+      id: '/_authenticated/school/exams/$id'
+      path: '/$id'
+      fullPath: '/school/exams/$id'
+      preLoaderRoute: typeof AuthenticatedSchoolExamsIdRouteImport
+      parentRoute: typeof AuthenticatedSchoolExamsRoute
+    }
+    '/_authenticated/madrassa/exams/board': {
+      id: '/_authenticated/madrassa/exams/board'
+      path: '/board'
+      fullPath: '/madrassa/exams/board'
+      preLoaderRoute: typeof AuthenticatedMadrassaExamsBoardRouteImport
+      parentRoute: typeof AuthenticatedMadrassaExamsRoute
+    }
+    '/_authenticated/madrassa/exams/$id': {
+      id: '/_authenticated/madrassa/exams/$id'
+      path: '/$id'
+      fullPath: '/madrassa/exams/$id'
+      preLoaderRoute: typeof AuthenticatedMadrassaExamsIdRouteImport
+      parentRoute: typeof AuthenticatedMadrassaExamsRoute
+    }
+    '/_authenticated/school/exams/$id/seating': {
+      id: '/_authenticated/school/exams/$id/seating'
+      path: '/seating'
+      fullPath: '/school/exams/$id/seating'
+      preLoaderRoute: typeof AuthenticatedSchoolExamsIdSeatingRouteImport
+      parentRoute: typeof AuthenticatedSchoolExamsIdRoute
+    }
+    '/_authenticated/school/exams/$id/results': {
+      id: '/_authenticated/school/exams/$id/results'
+      path: '/results'
+      fullPath: '/school/exams/$id/results'
+      preLoaderRoute: typeof AuthenticatedSchoolExamsIdResultsRouteImport
+      parentRoute: typeof AuthenticatedSchoolExamsIdRoute
+    }
+    '/_authenticated/madrassa/exams/$id/results': {
+      id: '/_authenticated/madrassa/exams/$id/results'
+      path: '/results'
+      fullPath: '/madrassa/exams/$id/results'
+      preLoaderRoute: typeof AuthenticatedMadrassaExamsIdResultsRouteImport
+      parentRoute: typeof AuthenticatedMadrassaExamsIdRoute
+    }
+    '/_authenticated/madrassa/exams/$id/marks': {
+      id: '/_authenticated/madrassa/exams/$id/marks'
+      path: '/marks'
+      fullPath: '/madrassa/exams/$id/marks'
+      preLoaderRoute: typeof AuthenticatedMadrassaExamsIdMarksRouteImport
+      parentRoute: typeof AuthenticatedMadrassaExamsIdRoute
+    }
   }
 }
+
+interface AuthenticatedMadrassaExamsIdRouteChildren {
+  AuthenticatedMadrassaExamsIdMarksRoute: typeof AuthenticatedMadrassaExamsIdMarksRoute
+  AuthenticatedMadrassaExamsIdResultsRoute: typeof AuthenticatedMadrassaExamsIdResultsRoute
+}
+
+const AuthenticatedMadrassaExamsIdRouteChildren: AuthenticatedMadrassaExamsIdRouteChildren =
+  {
+    AuthenticatedMadrassaExamsIdMarksRoute:
+      AuthenticatedMadrassaExamsIdMarksRoute,
+    AuthenticatedMadrassaExamsIdResultsRoute:
+      AuthenticatedMadrassaExamsIdResultsRoute,
+  }
+
+const AuthenticatedMadrassaExamsIdRouteWithChildren =
+  AuthenticatedMadrassaExamsIdRoute._addFileChildren(
+    AuthenticatedMadrassaExamsIdRouteChildren,
+  )
+
+interface AuthenticatedMadrassaExamsRouteChildren {
+  AuthenticatedMadrassaExamsIdRoute: typeof AuthenticatedMadrassaExamsIdRouteWithChildren
+  AuthenticatedMadrassaExamsBoardRoute: typeof AuthenticatedMadrassaExamsBoardRoute
+}
+
+const AuthenticatedMadrassaExamsRouteChildren: AuthenticatedMadrassaExamsRouteChildren =
+  {
+    AuthenticatedMadrassaExamsIdRoute:
+      AuthenticatedMadrassaExamsIdRouteWithChildren,
+    AuthenticatedMadrassaExamsBoardRoute: AuthenticatedMadrassaExamsBoardRoute,
+  }
+
+const AuthenticatedMadrassaExamsRouteWithChildren =
+  AuthenticatedMadrassaExamsRoute._addFileChildren(
+    AuthenticatedMadrassaExamsRouteChildren,
+  )
+
+interface AuthenticatedSchoolExamsIdRouteChildren {
+  AuthenticatedSchoolExamsIdResultsRoute: typeof AuthenticatedSchoolExamsIdResultsRoute
+  AuthenticatedSchoolExamsIdSeatingRoute: typeof AuthenticatedSchoolExamsIdSeatingRoute
+}
+
+const AuthenticatedSchoolExamsIdRouteChildren: AuthenticatedSchoolExamsIdRouteChildren =
+  {
+    AuthenticatedSchoolExamsIdResultsRoute:
+      AuthenticatedSchoolExamsIdResultsRoute,
+    AuthenticatedSchoolExamsIdSeatingRoute:
+      AuthenticatedSchoolExamsIdSeatingRoute,
+  }
+
+const AuthenticatedSchoolExamsIdRouteWithChildren =
+  AuthenticatedSchoolExamsIdRoute._addFileChildren(
+    AuthenticatedSchoolExamsIdRouteChildren,
+  )
+
+interface AuthenticatedSchoolExamsRouteChildren {
+  AuthenticatedSchoolExamsIdRoute: typeof AuthenticatedSchoolExamsIdRouteWithChildren
+  AuthenticatedSchoolExamsBoardRoute: typeof AuthenticatedSchoolExamsBoardRoute
+}
+
+const AuthenticatedSchoolExamsRouteChildren: AuthenticatedSchoolExamsRouteChildren =
+  {
+    AuthenticatedSchoolExamsIdRoute:
+      AuthenticatedSchoolExamsIdRouteWithChildren,
+    AuthenticatedSchoolExamsBoardRoute: AuthenticatedSchoolExamsBoardRoute,
+  }
+
+const AuthenticatedSchoolExamsRouteWithChildren =
+  AuthenticatedSchoolExamsRoute._addFileChildren(
+    AuthenticatedSchoolExamsRouteChildren,
+  )
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
@@ -755,14 +985,14 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMadrassaAttendanceRoute: typeof AuthenticatedMadrassaAttendanceRoute
   AuthenticatedMadrassaCategoriesRoute: typeof AuthenticatedMadrassaCategoriesRoute
   AuthenticatedMadrassaClassesRoute: typeof AuthenticatedMadrassaClassesRoute
-  AuthenticatedMadrassaExamsRoute: typeof AuthenticatedMadrassaExamsRoute
+  AuthenticatedMadrassaExamsRoute: typeof AuthenticatedMadrassaExamsRouteWithChildren
   AuthenticatedMadrassaFeesRoute: typeof AuthenticatedMadrassaFeesRoute
   AuthenticatedMadrassaStudentsRoute: typeof AuthenticatedMadrassaStudentsRoute
   AuthenticatedMadrassaSubjectsRoute: typeof AuthenticatedMadrassaSubjectsRoute
   AuthenticatedMadrassaTimetableRoute: typeof AuthenticatedMadrassaTimetableRoute
   AuthenticatedSchoolAttendanceRoute: typeof AuthenticatedSchoolAttendanceRoute
   AuthenticatedSchoolClassesRoute: typeof AuthenticatedSchoolClassesRoute
-  AuthenticatedSchoolExamsRoute: typeof AuthenticatedSchoolExamsRoute
+  AuthenticatedSchoolExamsRoute: typeof AuthenticatedSchoolExamsRouteWithChildren
   AuthenticatedSchoolFeesRoute: typeof AuthenticatedSchoolFeesRoute
   AuthenticatedSchoolStudentsRoute: typeof AuthenticatedSchoolStudentsRoute
   AuthenticatedSchoolSubjectsRoute: typeof AuthenticatedSchoolSubjectsRoute
@@ -789,14 +1019,14 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMadrassaAttendanceRoute: AuthenticatedMadrassaAttendanceRoute,
   AuthenticatedMadrassaCategoriesRoute: AuthenticatedMadrassaCategoriesRoute,
   AuthenticatedMadrassaClassesRoute: AuthenticatedMadrassaClassesRoute,
-  AuthenticatedMadrassaExamsRoute: AuthenticatedMadrassaExamsRoute,
+  AuthenticatedMadrassaExamsRoute: AuthenticatedMadrassaExamsRouteWithChildren,
   AuthenticatedMadrassaFeesRoute: AuthenticatedMadrassaFeesRoute,
   AuthenticatedMadrassaStudentsRoute: AuthenticatedMadrassaStudentsRoute,
   AuthenticatedMadrassaSubjectsRoute: AuthenticatedMadrassaSubjectsRoute,
   AuthenticatedMadrassaTimetableRoute: AuthenticatedMadrassaTimetableRoute,
   AuthenticatedSchoolAttendanceRoute: AuthenticatedSchoolAttendanceRoute,
   AuthenticatedSchoolClassesRoute: AuthenticatedSchoolClassesRoute,
-  AuthenticatedSchoolExamsRoute: AuthenticatedSchoolExamsRoute,
+  AuthenticatedSchoolExamsRoute: AuthenticatedSchoolExamsRouteWithChildren,
   AuthenticatedSchoolFeesRoute: AuthenticatedSchoolFeesRoute,
   AuthenticatedSchoolStudentsRoute: AuthenticatedSchoolStudentsRoute,
   AuthenticatedSchoolSubjectsRoute: AuthenticatedSchoolSubjectsRoute,
