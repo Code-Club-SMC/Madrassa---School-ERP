@@ -318,6 +318,10 @@ function StepGuardian({ form, update, isPublic }: { form: FormState; update: <K 
 }
 
 function StepReview({ form, goTo }: { form: FormState; goTo: (n: number) => void }) {
+  return <StepReviewInner form={form} goTo={goTo} />;
+}
+
+function StepReviewInner({ form, goTo }: { form: FormState; goTo: (n: number) => void }) {
   const row = (label: string, urdu: string, value: string) => (
     <div className="flex justify-between items-start py-2 border-b border-border/50 last:border-0 gap-3">
       <div className="min-w-0">
@@ -354,11 +358,6 @@ function StepReview({ form, goTo }: { form: FormState; goTo: (n: number) => void
         {row("Phone", "فون", form.guardianPhone)}
         {form.siblings.length > 0 && row("Siblings", "بہن بھائی", form.siblings.map((s) => s.nameUrdu).join("، "))}
       </SectionCard>
-      <label className="flex items-start gap-3 p-4 rounded-xl bg-muted/50 cursor-pointer">
-        <Checkbox checked={form.declaration} onCheckedChange={(v) => goTo(5) /* keep */} onClick={(e) => { e.preventDefault(); }} />
-        <span className="font-urdu text-sm leading-loose">میں اقرار کرتا ہوں کہ تمام معلومات درست ہیں اور ادارے کے ضوابط قبول ہیں۔</span>
-      </label>
-      <DeclarationCheckbox checked={form.declaration} onChange={(v) => { /* binding via parent */ const ev = new CustomEvent("declaration", { detail: v }); window.dispatchEvent(ev); }} />
     </div>
   );
 }
@@ -373,8 +372,4 @@ function SectionCard({ title, urdu, onEdit, children }: { title: string; urdu: s
       <CardContent className="pt-0">{children}</CardContent>
     </Card>
   );
-}
-
-function DeclarationCheckbox({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return null; // placeholder; declaration handled in StepReview via parent state lift if needed
 }
