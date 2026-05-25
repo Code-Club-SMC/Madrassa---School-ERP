@@ -1,19 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download, Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
-import { financeRecords as initialFinance, incomeVsExpense, feeRecords, type FinanceRecord, type System } from "@/mock";
+import { financeRecords as initialFinance, incomeVsExpense, feeRecords, institution, type FinanceRecord, type System } from "@/mock";
 import { formatPKR, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +30,7 @@ function FinanceDashboard() {
   const [records, setRecords] = useState<FinanceRecord[]>(initialFinance);
   const [scope, setScope] = useState<Scope>("both");
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"overview" | "balance">("overview");
 
   const scoped = useMemo(
     () => (scope === "both" ? records : records.filter((r) => r.system === scope || r.system === "both")),
@@ -81,15 +82,30 @@ function FinanceDashboard() {
         }
       />
 
-      <Card className="p-2 mb-4 inline-flex">
-        <Tabs value={scope} onValueChange={(v) => setScope(v as Scope)}>
-          <TabsList>
-            <TabsTrigger value="both">Combined · مشترکہ</TabsTrigger>
-            <TabsTrigger value="school">School · اسکول</TabsTrigger>
-            <TabsTrigger value="madrassa">Madrassa · مدرسہ</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </Card>
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <Card className="p-2 inline-flex">
+          <Tabs value={scope} onValueChange={(v) => setScope(v as Scope)}>
+            <TabsList>
+              <TabsTrigger value="both">Combined · مشترکہ</TabsTrigger>
+              <TabsTrigger value="school">School · اسکول</TabsTrigger>
+              <TabsTrigger value="madrassa">Madrassa · مدرسہ</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </Card>
+        <Card className="p-2 inline-flex">
+          <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>
+            <TabsList>
+              <TabsTrigger value="overview">Overview · جائزہ</TabsTrigger>
+              <TabsTrigger value="balance">Balance Sheet · بیلنس شیٹ</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </Card>
+      </div>
+
+      {view === "balance" ? (
+        <BalanceSheet scope={scope} incomeBreakdown={incomeBreakdown} expenseBreakdown={expenseBreakdown} totals={totals} />
+      ) : (
+        <>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <KPI icon={TrendingUp} label="Income" urdu="آمدنی" value={formatPKR(totals.income)} tone="positive" />
@@ -155,6 +171,8 @@ function FinanceDashboard() {
           </TableBody>
         </Table>
       </Card>
+        </>
+      )}
     </div>
   );
 }
