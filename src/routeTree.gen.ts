@@ -69,6 +69,7 @@ import { Route as AuthenticatedMadrassaExamsBoardRouteImport } from './routes/_a
 import { Route as AuthenticatedMadrassaExamsIdRouteImport } from './routes/_authenticated/madrassa/exams.$id'
 import { Route as AuthenticatedSchoolExamsIdSeatingRouteImport } from './routes/_authenticated/school/exams.$id.seating'
 import { Route as AuthenticatedSchoolExamsIdResultsRouteImport } from './routes/_authenticated/school/exams.$id.results'
+import { Route as AuthenticatedMadrassaExamsIdSeatingRouteImport } from './routes/_authenticated/madrassa/exams.$id.seating'
 import { Route as AuthenticatedMadrassaExamsIdResultsRouteImport } from './routes/_authenticated/madrassa/exams.$id.results'
 import { Route as AuthenticatedMadrassaExamsIdMarksRouteImport } from './routes/_authenticated/madrassa/exams.$id.marks'
 
@@ -409,6 +410,12 @@ const AuthenticatedSchoolExamsIdResultsRoute =
     path: '/results',
     getParentRoute: () => AuthenticatedSchoolExamsIdRoute,
   } as any)
+const AuthenticatedMadrassaExamsIdSeatingRoute =
+  AuthenticatedMadrassaExamsIdSeatingRouteImport.update({
+    id: '/seating',
+    path: '/seating',
+    getParentRoute: () => AuthenticatedMadrassaExamsIdRoute,
+  } as any)
 const AuthenticatedMadrassaExamsIdResultsRoute =
   AuthenticatedMadrassaExamsIdResultsRouteImport.update({
     id: '/results',
@@ -482,6 +489,7 @@ export interface FileRoutesByFullPath {
   '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
   '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
   '/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
+  '/madrassa/exams/$id/seating': typeof AuthenticatedMadrassaExamsIdSeatingRoute
   '/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
   '/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
 }
@@ -544,6 +552,7 @@ export interface FileRoutesByTo {
   '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
   '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
   '/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
+  '/madrassa/exams/$id/seating': typeof AuthenticatedMadrassaExamsIdSeatingRoute
   '/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
   '/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
 }
@@ -609,6 +618,7 @@ export interface FileRoutesById {
   '/_authenticated/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
   '/_authenticated/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
   '/_authenticated/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
+  '/_authenticated/madrassa/exams/$id/seating': typeof AuthenticatedMadrassaExamsIdSeatingRoute
   '/_authenticated/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
   '/_authenticated/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
 }
@@ -674,6 +684,7 @@ export interface FileRouteTypes {
     | '/school/exams/board'
     | '/madrassa/exams/$id/marks'
     | '/madrassa/exams/$id/results'
+    | '/madrassa/exams/$id/seating'
     | '/school/exams/$id/results'
     | '/school/exams/$id/seating'
   fileRoutesByTo: FileRoutesByTo
@@ -736,6 +747,7 @@ export interface FileRouteTypes {
     | '/school/exams/board'
     | '/madrassa/exams/$id/marks'
     | '/madrassa/exams/$id/results'
+    | '/madrassa/exams/$id/seating'
     | '/school/exams/$id/results'
     | '/school/exams/$id/seating'
   id:
@@ -800,6 +812,7 @@ export interface FileRouteTypes {
     | '/_authenticated/school/exams/board'
     | '/_authenticated/madrassa/exams/$id/marks'
     | '/_authenticated/madrassa/exams/$id/results'
+    | '/_authenticated/madrassa/exams/$id/seating'
     | '/_authenticated/school/exams/$id/results'
     | '/_authenticated/school/exams/$id/seating'
   fileRoutesById: FileRoutesById
@@ -1235,6 +1248,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSchoolExamsIdResultsRouteImport
       parentRoute: typeof AuthenticatedSchoolExamsIdRoute
     }
+    '/_authenticated/madrassa/exams/$id/seating': {
+      id: '/_authenticated/madrassa/exams/$id/seating'
+      path: '/seating'
+      fullPath: '/madrassa/exams/$id/seating'
+      preLoaderRoute: typeof AuthenticatedMadrassaExamsIdSeatingRouteImport
+      parentRoute: typeof AuthenticatedMadrassaExamsIdRoute
+    }
     '/_authenticated/madrassa/exams/$id/results': {
       id: '/_authenticated/madrassa/exams/$id/results'
       path: '/results'
@@ -1285,6 +1305,7 @@ const AuthenticatedTeachersRouteWithChildren =
 interface AuthenticatedMadrassaExamsIdRouteChildren {
   AuthenticatedMadrassaExamsIdMarksRoute: typeof AuthenticatedMadrassaExamsIdMarksRoute
   AuthenticatedMadrassaExamsIdResultsRoute: typeof AuthenticatedMadrassaExamsIdResultsRoute
+  AuthenticatedMadrassaExamsIdSeatingRoute: typeof AuthenticatedMadrassaExamsIdSeatingRoute
 }
 
 const AuthenticatedMadrassaExamsIdRouteChildren: AuthenticatedMadrassaExamsIdRouteChildren =
@@ -1293,6 +1314,8 @@ const AuthenticatedMadrassaExamsIdRouteChildren: AuthenticatedMadrassaExamsIdRou
       AuthenticatedMadrassaExamsIdMarksRoute,
     AuthenticatedMadrassaExamsIdResultsRoute:
       AuthenticatedMadrassaExamsIdResultsRoute,
+    AuthenticatedMadrassaExamsIdSeatingRoute:
+      AuthenticatedMadrassaExamsIdSeatingRoute,
   }
 
 const AuthenticatedMadrassaExamsIdRouteWithChildren =

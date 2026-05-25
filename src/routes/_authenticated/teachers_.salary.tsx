@@ -109,7 +109,7 @@ function SalaryPage() {
                 <TableCell className="text-end">
                   <div className="flex justify-end gap-1">
                     {!r.a.paid && <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => { update(r.teacher.id, { paid: true, paidOn: new Date().toISOString().slice(0, 10) }); toast.success(`Paid to ${r.teacher.name}`); }}>Mark Paid</Button>}
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => print(r.teacher.id)} title="Print slip"><Printer className="h-3.5 w-3.5" /></Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => print(r.teacher.id)} title="Print slip" aria-label={`Print salary slip for ${r.teacher.name}`}><Printer className="h-3.5 w-3.5" aria-hidden="true" /></Button>
                   </div>
                 </TableCell>
               </TableRow>

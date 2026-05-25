@@ -86,13 +86,13 @@ function TeachersPage() {
                   <p className="font-mono text-[11px] mt-0.5">{formatPKR(t.monthlySalaryPaisa / 100)}/mo</p>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="View profile">
+                  <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="View profile" aria-label="View profile">
                     <Link to="/teachers/$id" params={{ id: t.id }}><Eye className="h-3.5 w-3.5" /></Link>
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="ID card">
+                  <Button size="icon" variant="ghost" className="h-8 w-8" asChild title="ID card" aria-label="ID card">
                     <Link to="/id-cards"><IdCard className="h-3.5 w-3.5" /></Link>
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" title="Mark attendance"><CalendarCheck className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" title="Mark attendance" aria-label="Mark attendance"><CalendarCheck className="h-3.5 w-3.5" /></Button>
                 </div>
               </div>
             </Card>

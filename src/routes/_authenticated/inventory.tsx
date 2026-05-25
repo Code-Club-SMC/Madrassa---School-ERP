@@ -134,9 +134,9 @@ function InventoryPage() {
                   <TableCell className="text-end font-mono text-sm">{formatPKR(i.value)}</TableCell>
                   <TableCell className="text-end">
                     <div className="flex justify-end gap-1">
-                      <Button size="icon" variant="ghost" className="h-7 w-7" title="Edit" onClick={() => openEdit(i)}><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" title="History" onClick={() => setHistoryOpen(i)}><History className="h-3.5 w-3.5" /></Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Delete" onClick={() => remove(i.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" title="Edit" aria-label="Edit" onClick={() => openEdit(i)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" title="History" aria-label="History" onClick={() => setHistoryOpen(i)}><History className="h-3.5 w-3.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Delete" aria-label="Delete" onClick={() => remove(i.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>

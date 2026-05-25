@@ -9,7 +9,7 @@ export const Route = createFileRoute("/website")({
 
 function WebsiteShell() {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-dvh flex flex-col bg-background">
       <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4">
           <Link to="/website" className="flex items-center gap-2">

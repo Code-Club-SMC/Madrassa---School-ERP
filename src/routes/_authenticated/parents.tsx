@@ -129,7 +129,7 @@ function ParentsPortal() {
               </div>
               <div className="flex gap-1.5">
                 <Input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Type a message…" className="h-9 text-sm" />
-                <Button size="icon" className="h-9 w-9" onClick={send}><Send className="h-4 w-4" /></Button>
+                <Button size="icon" className="h-9 w-9" onClick={send} aria-label="Send message"><Send className="h-4 w-4" aria-hidden="true" /></Button>
               </div>
             </Card>
           </div>
