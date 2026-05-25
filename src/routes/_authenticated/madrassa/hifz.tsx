@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BookMarked, Save, TrendingUp } from "lucide-react";
+import { BookMarked, Save, TrendingUp, Award, Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -12,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { students } from "@/mock/students";
+import { institution } from "@/mock";
 
 export const Route = createFileRoute("/_authenticated/madrassa/hifz")({
   component: HifzTracker,
@@ -50,15 +52,24 @@ function HifzTracker() {
               <TableHead>Today's Sabaq · سبق</TableHead>
               <TableHead>Sabqi · سبقی</TableHead>
               <TableHead>Manzil · منزل</TableHead>
-              <TableHead className="text-end">Update</TableHead>
+              <TableHead className="text-end">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {hifzStudents.map((s) => {
               const p = progress[s.id];
+              const isKhatm = p.juz >= 30;
               return (
                 <TableRow key={s.id}>
-                  <TableCell><p className="font-medium text-sm">{s.name}</p><p className="font-urdu text-sm text-muted-foreground">{s.nameUrdu}</p></TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="font-medium text-sm">{s.name}</p>
+                        <p className="font-urdu text-sm text-muted-foreground">{s.nameUrdu}</p>
+                      </div>
+                      {isKhatm && <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 gap-1"><Award className="h-3 w-3" />Hafiz</Badge>}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="w-24">
                       <Progress value={(p.juz / 30) * 100} className="h-2" />
@@ -69,7 +80,10 @@ function HifzTracker() {
                   <TableCell><p className="font-urdu text-sm">{p.sabqi}</p></TableCell>
                   <TableCell><p className="font-urdu text-sm">{p.manzil}</p></TableCell>
                   <TableCell className="text-end">
-                    <UpdateDialog student={s.name} initial={p} onSave={(d) => { setProgress((prev) => ({ ...prev, [s.id]: d })); toast.success("Hifz log updated for " + s.name); }} />
+                    <div className="flex items-center justify-end gap-1.5">
+                      {isKhatm && <KhatmDialog student={s} />}
+                      <UpdateDialog student={s.name} initial={p} onSave={(d) => { setProgress((prev) => ({ ...prev, [s.id]: d })); toast.success("Hifz log updated for " + s.name); }} />
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -78,6 +92,64 @@ function HifzTracker() {
         </Table>
       </Card>
     </div>
+  );
+}
+
+function KhatmDialog({ student }: { student: { id: string; name: string; nameUrdu: string; guardianNameUrdu: string; rollNo: string } }) {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [chiefGuest, setChiefGuest] = useState("مفتی محمد صاحب");
+  const [venue, setVenue] = useState("جامع مسجد، مدرسہ ہال");
+  const [duaImam, setDuaImam] = useState("شیخ الحدیث صاحب");
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="default" className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"><Award className="h-3.5 w-3.5" />Khatm</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader><DialogTitle className="font-urdu">تقریبِ ختمِ قرآن · Khatm-ul-Quran Ceremony</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div><label className="text-xs text-muted-foreground">Ceremony Date · تاریخ</label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div><label className="text-xs text-muted-foreground">Venue · مقام</label><Input className="font-urdu" value={venue} onChange={(e) => setVenue(e.target.value)} /></div>
+          <div><label className="text-xs text-muted-foreground">Chief Guest · مہمانِ خصوصی</label><Input className="font-urdu" value={chiefGuest} onChange={(e) => setChiefGuest(e.target.value)} /></div>
+          <div><label className="text-xs text-muted-foreground">Dua Imam · امامِ دعا</label><Input className="font-urdu" value={duaImam} onChange={(e) => setDuaImam(e.target.value)} /></div>
+        </div>
+
+        <div className="khatm-cert print-target border-2 border-amber-600/40 rounded-lg p-8 bg-amber-50/30 dark:bg-amber-950/10">
+          <div className="text-center">
+            <p className="font-urdu text-2xl text-amber-700 dark:text-amber-400">بسم اللہ الرحمٰن الرحیم</p>
+            <p className="font-urdu text-3xl font-bold mt-2">{institution.nameUrdu}</p>
+            <p className="font-heading text-sm text-muted-foreground">{institution.nameEnglish}</p>
+            <div className="my-6 inline-block border-y-2 border-amber-600/40 py-2 px-8">
+              <p className="font-urdu text-2xl font-bold">سندِ ختمِ قرآنِ کریم</p>
+              <p className="text-xs text-muted-foreground">Certificate of Hifz Completion</p>
+            </div>
+            <p className="font-urdu text-base leading-loose">
+              یہ سند بنام <span className="font-bold text-lg underline">{student.nameUrdu}</span>{" "}
+              ولد <span className="font-bold">{student.guardianNameUrdu}</span> (رول نمبر {student.rollNo})
+              عطا کی جاتی ہے کہ موصوف نے بحمدہٖ تعالیٰ قرآنِ مجید کے تیسوں (۳۰) پاروں کا حفظ مکمل کر لیا ہے۔
+            </p>
+            <p className="font-urdu text-base leading-loose mt-3">
+              تقریبِ ختم بتاریخ <span className="font-mono">{date}</span> بمقام <span className="font-bold">{venue}</span>{" "}
+              زیرِ صدارت <span className="font-bold">{chiefGuest}</span> منعقد ہوئی، اور دعا{" "}
+              <span className="font-bold">{duaImam}</span> نے فرمائی۔
+            </p>
+            <p className="font-urdu text-sm mt-4 text-amber-700 dark:text-amber-400">جزاہ اللہ خیراً · اللہ تعالیٰ قبول فرمائے</p>
+          </div>
+          <div className="grid grid-cols-3 gap-12 mt-12 text-xs">
+            <div className="text-center border-t-2 border-amber-700/40 pt-1 font-urdu">استادِ حفظ</div>
+            <div className="text-center border-t-2 border-amber-700/40 pt-1 font-urdu">شیخ الحدیث</div>
+            <div className="text-center border-t-2 border-amber-700/40 pt-1 font-urdu">مہتمم صاحب</div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Close</Button>
+          <Button variant="outline" className="gap-1.5" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" />Print Certificate</Button>
+          <Button className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white" onClick={() => { toast.success(`Khatm ceremony recorded for ${student.name}`); setOpen(false); }}><Award className="h-3.5 w-3.5" />Record Ceremony</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
