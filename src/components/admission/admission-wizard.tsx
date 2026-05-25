@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImagePlus, Pencil, CheckCircle2, ArrowLeft, ArrowRight, Loader2, Search, Plus, X } from "lucide-react";
-import { AdmissionStepper, ADMISSION_STEPS } from "./admission-stepper";
+import { AdmissionStepper } from "./admission-stepper";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { cn } from "@/lib/utils";
 import { madrassaCategories, schoolClasses, students, type System } from "@/mock";
@@ -104,6 +104,13 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
         {step === 4 && <StepGuardian form={form} update={update} isPublic={isPublic} />}
         {step === 5 && <StepReview form={form} goTo={setStep} />}
       </div>
+
+      {step === 5 && (
+        <label className="mt-6 flex items-start gap-3 p-4 rounded-xl bg-muted/50 cursor-pointer">
+          <Checkbox checked={form.declaration} onCheckedChange={(v) => update("declaration", v === true)} />
+          <span className="font-urdu text-sm leading-loose">میں اقرار کرتا ہوں کہ تمام معلومات درست ہیں اور ادارے کے ضوابط قبول ہیں۔</span>
+        </label>
+      )}
 
       <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
         <Button variant="outline" disabled={step === 1} onClick={() => setStep((s) => s - 1)}>
