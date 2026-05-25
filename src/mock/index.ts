@@ -228,3 +228,228 @@ export const institution = {
   nameUrdu: "جامعہ انوار القرآن",
   motto: "علم نور ہے",
 };
+
+// ---------- Attendance ----------
+export type AttendanceStatus = "present" | "absent" | "late";
+export type AttendanceRecord = {
+  id: string;
+  studentId: string;
+  date: string;
+  status: AttendanceStatus;
+};
+
+export function generateAttendance(studentId: string, days = 90): AttendanceRecord[] {
+  const out: AttendanceRecord[] = [];
+  const today = new Date();
+  for (let i = days; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    if (d.getDay() === 5) continue; // skip Fridays
+    const r = Math.random();
+    out.push({
+      id: `att-${studentId}-${i}`,
+      studentId,
+      date: d.toISOString().slice(0, 10),
+      status: r > 0.14 ? "present" : r > 0.07 ? "late" : "absent",
+    });
+  }
+  return out;
+}
+
+// ---------- Fees ----------
+export type FeeStatus = "paid" | "unpaid" | "partial" | "waived" | "overdue";
+export type FeeRecord = {
+  id: string;
+  studentId: string;
+  rollNo: string;
+  nameUrdu: string;
+  subgroup: string;
+  monthlyFee: number;
+  paidAmount: number;
+  paidOn: string | null;
+  month: string;
+  status: FeeStatus;
+};
+
+export const feeRecords: FeeRecord[] = students.slice(0, 24).map((s, i) => {
+  const paid = i % 7 === 0 ? 0 : i % 5 === 0 ? Math.round(s.monthlyFee / 2) : s.monthlyFee;
+  const status: FeeStatus = paid === 0 ? (i % 3 === 0 ? "overdue" : "unpaid") : paid < s.monthlyFee ? "partial" : "paid";
+  return {
+    id: `fee-${s.id}`,
+    studentId: s.id,
+    rollNo: s.rollNo,
+    nameUrdu: s.nameUrdu,
+    subgroup: s.subcategoryId ?? s.classId ?? "—",
+    monthlyFee: s.monthlyFee,
+    paidAmount: paid,
+    paidOn: paid > 0 ? new Date(Date.now() - i * 86400000).toISOString() : null,
+    month: new Date().toISOString().slice(0, 7),
+    status,
+  };
+});
+
+// ---------- Exams ----------
+export type ExamStatus = "upcoming" | "active" | "completed";
+export type ExamSubject = { id: string; name: string; nameUrdu: string; totalMarks: number; passingMarks: number };
+export type ExamSeries = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  type: "quarterly" | "midyear" | "annual";
+  status: ExamStatus;
+  startDate: string;
+  endDate: string;
+  subjects: ExamSubject[];
+};
+
+export const examSeries: ExamSeries[] = [
+  {
+    id: "exam-q1-2025",
+    name: "Quarterly · Q1 2025",
+    nameUrdu: "سہ ماہی امتحان",
+    type: "quarterly",
+    status: "completed",
+    startDate: "2025-03-10",
+    endDate: "2025-03-22",
+    subjects: [
+      { id: "sub-1", name: "Urdu", nameUrdu: "اردو", totalMarks: 100, passingMarks: 40 },
+      { id: "sub-2", name: "English", nameUrdu: "انگریزی", totalMarks: 100, passingMarks: 40 },
+      { id: "sub-3", name: "Mathematics", nameUrdu: "حساب", totalMarks: 100, passingMarks: 40 },
+      { id: "sub-4", name: "Islamiyat", nameUrdu: "اسلامیات", totalMarks: 100, passingMarks: 40 },
+      { id: "sub-5", name: "Science", nameUrdu: "سائنس", totalMarks: 100, passingMarks: 40 },
+    ],
+  },
+  {
+    id: "exam-mid-2025",
+    name: "Mid-Year 2025",
+    nameUrdu: "نیم سالہ امتحان",
+    type: "midyear",
+    status: "active",
+    startDate: "2025-06-10",
+    endDate: "2025-06-25",
+    subjects: [
+      { id: "sub-6", name: "Urdu", nameUrdu: "اردو", totalMarks: 100, passingMarks: 40 },
+      { id: "sub-7", name: "English", nameUrdu: "انگریزی", totalMarks: 100, passingMarks: 40 },
+      { id: "sub-8", name: "Mathematics", nameUrdu: "حساب", totalMarks: 100, passingMarks: 40 },
+    ],
+  },
+  {
+    id: "exam-annual-2025",
+    name: "Annual 2025",
+    nameUrdu: "سالانہ امتحان",
+    type: "annual",
+    status: "upcoming",
+    startDate: "2025-12-01",
+    endDate: "2025-12-18",
+    subjects: [],
+  },
+];
+
+export function generateResults(seriesId: string, schoolOnly = true) {
+  const series = examSeries.find((s) => s.id === seriesId);
+  if (!series || series.subjects.length === 0) return [];
+  return students
+    .filter((s) => (schoolOnly ? s.system === "school" : true))
+    .slice(0, 18)
+    .map((s, i) => {
+      const marks = series.subjects.map((sub) => Math.round(sub.passingMarks + Math.random() * (sub.totalMarks - sub.passingMarks - 5 + (i % 3) * 10)));
+      const total = marks.reduce((a, b) => a + b, 0);
+      const max = series.subjects.reduce((a, b) => a + b.totalMarks, 0);
+      const pct = (total / max) * 100;
+      const grade = pct >= 90 ? "A+" : pct >= 80 ? "A" : pct >= 70 ? "B" : pct >= 60 ? "C" : "F";
+      return { student: s, marks, total, max, pct, grade };
+    });
+}
+
+// ---------- Finance ----------
+export type FinanceType = "income" | "expense";
+export type FinanceCategory = "fees" | "donation" | "charity" | "inventory" | "salary" | "misc";
+export type FinanceRecord = {
+  id: string;
+  date: string;
+  type: FinanceType;
+  category: FinanceCategory;
+  categoryUrdu: string;
+  description: string;
+  amount: number;
+  source: string;
+};
+
+const financeCats: { c: FinanceCategory; u: string }[] = [
+  { c: "fees", u: "فیس" },
+  { c: "donation", u: "عطیہ" },
+  { c: "charity", u: "صدقات" },
+  { c: "inventory", u: "سامان" },
+  { c: "salary", u: "تنخواہ" },
+  { c: "misc", u: "متفرق" },
+];
+
+export const financeRecords: FinanceRecord[] = Array.from({ length: 32 }).map((_, i) => {
+  const isIncome = i % 3 !== 0;
+  const cat = financeCats[i % financeCats.length];
+  return {
+    id: `fin-${i}`,
+    date: new Date(Date.now() - i * 86400000 * 3).toISOString().slice(0, 10),
+    type: isIncome ? "income" : "expense",
+    category: cat.c,
+    categoryUrdu: cat.u,
+    description: isIncome ? "Monthly collection / donation received" : "Operating expense / inventory purchase",
+    amount: isIncome ? 15000 + (i % 6) * 5000 : 4000 + (i % 5) * 2500,
+    source: isIncome ? (i % 2 ? "Fee Module" : "Donation") : "Vendor",
+  };
+});
+
+export const incomeVsExpense = Array.from({ length: 12 }).map((_, i) => {
+  const m = new Date();
+  m.setMonth(m.getMonth() - (11 - i));
+  return {
+    month: m.toLocaleString("en-US", { month: "short" }),
+    income: 85000 + Math.round(Math.sin(i) * 15000 + i * 3000),
+    expense: 60000 + Math.round(Math.cos(i) * 12000 + i * 1500),
+  };
+});
+
+// ---------- Inventory ----------
+export type InventoryItem = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  category: string;
+  quantity: number;
+  unit: string;
+  type: "purchased" | "donated" | "gift";
+  value: number;
+  lowStockThreshold: number;
+};
+
+export const inventoryItems: InventoryItem[] = [
+  { id: "inv-1", name: "Quran (Hardcover)", nameUrdu: "قرآن مجید", category: "Books", quantity: 18, unit: "copies", type: "donated", value: 12000, lowStockThreshold: 20 },
+  { id: "inv-2", name: "Notebooks", nameUrdu: "کاپیاں", category: "Stationery", quantity: 240, unit: "pcs", type: "purchased", value: 24000, lowStockThreshold: 100 },
+  { id: "inv-3", name: "Pens (Blue)", nameUrdu: "نیلے قلم", category: "Stationery", quantity: 8, unit: "boxes", type: "purchased", value: 4800, lowStockThreshold: 10 },
+  { id: "inv-4", name: "Prayer Mats", nameUrdu: "جانمازیں", category: "Mosque", quantity: 65, unit: "pcs", type: "donated", value: 32500, lowStockThreshold: 30 },
+  { id: "inv-5", name: "White Boards", nameUrdu: "وائٹ بورڈ", category: "Classroom", quantity: 12, unit: "pcs", type: "purchased", value: 18000, lowStockThreshold: 5 },
+  { id: "inv-6", name: "Markers", nameUrdu: "مارکر", category: "Stationery", quantity: 4, unit: "boxes", type: "gift", value: 1600, lowStockThreshold: 6 },
+  { id: "inv-7", name: "Tasbeeh", nameUrdu: "تسبیح", category: "Mosque", quantity: 180, unit: "pcs", type: "donated", value: 9000, lowStockThreshold: 50 },
+  { id: "inv-8", name: "Sport Equipment", nameUrdu: "کھیلوں کا سامان", category: "Sports", quantity: 22, unit: "sets", type: "purchased", value: 44000, lowStockThreshold: 10 },
+];
+
+// ---------- Announcements ----------
+export type Announcement = {
+  id: string;
+  title: string;
+  titleUrdu: string;
+  body: string;
+  bodyUrdu: string;
+  date: string;
+  audience: "all" | "parents" | "teachers";
+};
+
+export const announcements: Announcement[] = [
+  { id: "n1", title: "Eid Holidays Notice", titleUrdu: "عید کی چھٹیوں کا اعلان", body: "Institution will remain closed from 1st to 5th Shawwal.", bodyUrdu: "ادارہ یکم تا 5 شوال بند رہے گا۔", date: new Date(Date.now() - 86400000 * 2).toISOString(), audience: "all" },
+  { id: "n2", title: "Mid-Year Exam Schedule", titleUrdu: "نیم سالہ امتحان کا شیڈول", body: "Mid-year examinations begin on 10th June. Datesheet attached.", bodyUrdu: "نیم سالہ امتحانات 10 جون سے شروع ہوں گے۔", date: new Date(Date.now() - 86400000 * 5).toISOString(), audience: "parents" },
+  { id: "n3", title: "Parent–Teacher Meeting", titleUrdu: "والدین اور اساتذہ کی نشست", body: "PTM scheduled for Saturday 11 AM in the main hall.", bodyUrdu: "ہفتہ کے دن صبح 11 بجے مین ہال میں۔", date: new Date(Date.now() - 86400000 * 8).toISOString(), audience: "parents" },
+  { id: "n4", title: "Donation Drive", titleUrdu: "عطیات کی مہم", body: "Help us furnish the new Hifz wing.", bodyUrdu: "نئے حفظ ونگ کی تکمیل میں ہمارا ساتھ دیں۔", date: new Date(Date.now() - 86400000 * 12).toISOString(), audience: "all" },
+];
+
+// ---------- Parents / Children link ----------
+export const mockChildren = students.slice(0, 3);
