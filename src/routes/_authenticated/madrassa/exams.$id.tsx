@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Calendar, Grid3x3, Users, Printer, Pencil, BookMarked } from "lucide-react";
+import { ArrowLeft, Calendar, Grid3x3, Users, Printer, Pencil, BookMarked, Users2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ function MadrassaExamDetail() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" />Print Date Sheet</Button>
             <Link to="/madrassa/exams/$id/marks" params={{ id }}><Button size="sm" className="gap-1.5"><Pencil className="h-3.5 w-3.5" />Enter Marks</Button></Link>
+            <Link to="/madrassa/exams/$id/seating" params={{ id }}><Button variant="outline" size="sm" className="gap-1.5"><Users2 className="h-3.5 w-3.5" />Halqa Viva</Button></Link>
             <Link to="/madrassa/exams/$id/results" params={{ id }}><Button variant="outline" size="sm">Results</Button></Link>
           </div>
         }
