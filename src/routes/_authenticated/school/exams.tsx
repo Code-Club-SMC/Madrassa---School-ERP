@@ -1,9 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { ClipboardList, Plus, Calendar, Grid3x3, FileText } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/school/exams")({
@@ -19,7 +25,7 @@ type Series = {
   subjects: number;
 };
 
-const SERIES: Series[] = [
+const SEED: Series[] = [
   { id: "ex-q1", name: "First Quarterly 2025", nameUrdu: "پہلا سہ ماہی امتحان", type: "quarterly", status: "Completed", startDate: "2025-06-10", endDate: "2025-06-20", classes: ["Grade 1–5"], subjects: 6 },
   { id: "ex-mid", name: "Mid-Term / Half-Yearly 2025", nameUrdu: "نصف سالہ امتحان", type: "halfyearly", status: "Completed", startDate: "2025-09-15", endDate: "2025-09-28", classes: ["Grade 1–10"], subjects: 8 },
   { id: "ex-q3", name: "Third Quarterly 2025", nameUrdu: "تیسرا سہ ماہی امتحان", type: "quarterly", status: "Active", startDate: "2025-12-05", endDate: "2025-12-15", classes: ["Grade 1–8"], subjects: 6 },
@@ -42,17 +48,20 @@ const TYPE_LABEL: Record<Series["type"], string> = {
 };
 
 function ExamsPage() {
+  const [series, setSeries] = useState<Series[]>(SEED);
+  const [newOpen, setNewOpen] = useState(false);
+  const [seating, setSeating] = useState<Series | null>(null);
   return (
     <div>
       <PageHeader
         title="School Examinations"
         titleUrdu="امتحانات — اسکول"
         description="Pakistani exam cycle — Monthly, Quarterly, Half-Yearly, Annual + BISE board preparatory exams for Grade 9–12."
-        actions={<Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" />New Exam Series</Button>}
+        actions={<Button size="sm" className="gap-1.5" onClick={() => setNewOpen(true)}><Plus className="h-4 w-4" />New Exam Series</Button>}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {SERIES.map((s) => (
+        {series.map((s) => (
           <Card key={s.id} className="p-5 flex flex-col hover:border-primary/40 transition-colors">
             <div className="flex items-start justify-between gap-2 mb-3">
               <div className="min-w-0">
@@ -74,9 +83,9 @@ function ExamsPage() {
             </div>
 
             <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-border">
-              <Button size="sm" variant="outline" className="text-xs">Schedule</Button>
-              <Button size="sm" variant="outline" className="text-xs">Seating</Button>
-              <Button size="sm" variant="outline" className="text-xs">Results</Button>
+              <Button size="sm" variant="outline" className="text-xs" onClick={() => toast.info("Schedule view — exam detail page")}>Schedule</Button>
+              <Button size="sm" variant="outline" className="text-xs" onClick={() => setSeating(s)}>Seating</Button>
+              <Button size="sm" variant="outline" className="text-xs" onClick={() => toast.info(s.status === "Completed" ? "Opening results…" : "Marks entry opens after exam date")}>{s.status === "Completed" ? "Results" : "Marks"}</Button>
             </div>
           </Card>
         ))}
@@ -93,6 +102,27 @@ function ExamsPage() {
           </div>
         </div>
       </Card>
+
+      <NewSeriesDialog open={newOpen} onOpenChange={setNewOpen} onAdd={(s) => setSeries((p) => [s, ...p])} />
+
+      <Dialog open={!!seating} onOpenChange={(v) => !v && setSeating(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Seating Plan — {seating?.name}</DialogTitle></DialogHeader>
+          <p className="font-urdu text-sm text-muted-foreground -mt-2">{seating?.nameUrdu} · نشست بندی</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+            {["Hall A", "Hall B", "Room 1", "Room 2"].map((r) => (
+              <Card key={r} className="p-3">
+                <p className="text-xs font-semibold">{r}</p>
+                <div className="grid grid-cols-4 gap-1 mt-2">
+                  {Array.from({ length: 16 }).map((_, i) => <div key={i} className="aspect-square rounded bg-primary/10 text-primary text-[9px] flex items-center justify-center font-mono">{i + 1}</div>)}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">16 seats · class colour-coded</p>
+              </Card>
+            ))}
+          </div>
+          <DialogFooter><Button variant="outline" onClick={() => window.print()}>Print</Button><Button onClick={() => setSeating(null)}>Close</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -103,5 +133,48 @@ function Row({ icon, label, value }: { icon: React.ReactNode; label: string; val
       <span className="inline-flex items-center gap-1.5 text-muted-foreground">{icon}{label}</span>
       <span className="text-foreground">{value}</span>
     </div>
+  );
+}
+
+function NewSeriesDialog({ open, onOpenChange, onAdd }: { open: boolean; onOpenChange: (v: boolean) => void; onAdd: (s: Series) => void }) {
+  const [f, setF] = useState({ name: "", nameUrdu: "", type: "quarterly" as Series["type"], startDate: "", endDate: "", subjects: 6 });
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>New Exam Series · نیا امتحان</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>Name</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="e.g. First Quarterly 2026" /></div>
+            <div><Label className="font-urdu">اردو نام</Label><Input dir="rtl" className="font-urdu" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} /></div>
+          </div>
+          <div><Label>Type</Label>
+            <Select value={f.type} onValueChange={(v) => setF({ ...f, type: v as Series["type"] })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly">Monthly Test · ماہانہ</SelectItem>
+                <SelectItem value="quarterly">Quarterly · سہ ماہی</SelectItem>
+                <SelectItem value="halfyearly">Half-Yearly · نصف سالہ</SelectItem>
+                <SelectItem value="annual">Annual · سالانہ</SelectItem>
+                <SelectItem value="board">BISE Board Prep · بورڈ</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div><Label>Start</Label><Input type="date" value={f.startDate} onChange={(e) => setF({ ...f, startDate: e.target.value })} /></div>
+            <div><Label>End</Label><Input type="date" value={f.endDate} onChange={(e) => setF({ ...f, endDate: e.target.value })} /></div>
+            <div><Label>Subjects</Label><Input type="number" value={f.subjects} onChange={(e) => setF({ ...f, subjects: +e.target.value })} /></div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={() => {
+            if (!f.name.trim() || !f.startDate || !f.endDate) { toast.error("Name and dates required"); return; }
+            onAdd({ id: `ex-${Date.now()}`, name: f.name, nameUrdu: f.nameUrdu || f.name, type: f.type, status: "Upcoming", startDate: f.startDate, endDate: f.endDate, classes: ["All Classes"], subjects: f.subjects });
+            toast.success("Exam series created");
+            onOpenChange(false);
+          }}>Create</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

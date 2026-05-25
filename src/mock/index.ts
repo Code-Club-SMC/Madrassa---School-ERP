@@ -373,6 +373,7 @@ export type FinanceRecord = {
   description: string;
   amount: number;
   source: string;
+  system: System;
 };
 
 const financeCats: { c: FinanceCategory; u: string }[] = [
@@ -387,6 +388,7 @@ const financeCats: { c: FinanceCategory; u: string }[] = [
 export const financeRecords: FinanceRecord[] = Array.from({ length: 32 }).map((_, i) => {
   const isIncome = i % 3 !== 0;
   const cat = financeCats[i % financeCats.length];
+  const system: System = i % 3 === 0 ? "school" : i % 3 === 1 ? "madrassa" : "both";
   return {
     id: `fin-${i}`,
     date: new Date(Date.now() - i * 86400000 * 3).toISOString().slice(0, 10),
@@ -396,6 +398,7 @@ export const financeRecords: FinanceRecord[] = Array.from({ length: 32 }).map((_
     description: isIncome ? "Monthly collection / donation received" : "Operating expense / inventory purchase",
     amount: isIncome ? 15000 + (i % 6) * 5000 : 4000 + (i % 5) * 2500,
     source: isIncome ? (i % 2 ? "Fee Module" : "Donation") : "Vendor",
+    system,
   };
 });
 
@@ -406,6 +409,10 @@ export const incomeVsExpense = Array.from({ length: 12 }).map((_, i) => {
     month: m.toLocaleString("en-US", { month: "short" }),
     income: 85000 + Math.round(Math.sin(i) * 15000 + i * 3000),
     expense: 60000 + Math.round(Math.cos(i) * 12000 + i * 1500),
+    schoolIncome: 50000 + Math.round(Math.sin(i) * 9000 + i * 1800),
+    madrassaIncome: 35000 + Math.round(Math.sin(i + 1) * 7000 + i * 1100),
+    schoolExpense: 36000 + Math.round(Math.cos(i) * 7000 + i * 900),
+    madrassaExpense: 24000 + Math.round(Math.cos(i + 1) * 5000 + i * 650),
   };
 });
 

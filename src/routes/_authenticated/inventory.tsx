@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, Plus, Package, AlertTriangle, ShoppingCart, Gift, Pencil, History, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
-import { inventoryItems } from "@/mock";
+import { inventoryItems as seedItems, type InventoryItem } from "@/mock";
 import { formatPKR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -24,16 +28,36 @@ const typeStyle: Record<string, string> = {
 
 function InventoryPage() {
   const [q, setQ] = useState("");
+  const [items, setItems] = useState<InventoryItem[]>(seedItems);
+  const [editing, setEditing] = useState<InventoryItem | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState<InventoryItem | null>(null);
 
-  const filtered = useMemo(() => inventoryItems.filter((i) =>
+  const filtered = useMemo(() => items.filter((i) =>
     !q || i.name.toLowerCase().includes(q.toLowerCase()) || i.nameUrdu.includes(q) || i.category.toLowerCase().includes(q.toLowerCase())
-  ), [q]);
+  ), [q, items]);
 
   const totals = useMemo(() => ({
-    items: inventoryItems.length,
-    lowStock: inventoryItems.filter((i) => i.quantity <= i.lowStockThreshold).length,
-    value: inventoryItems.reduce((a, i) => a + i.value, 0),
-  }), []);
+    items: items.length,
+    lowStock: items.filter((i) => i.quantity <= i.lowStockThreshold).length,
+    value: items.reduce((a, i) => a + i.value, 0),
+  }), [items]);
+
+  function openAdd() { setEditing(null); setDialogOpen(true); }
+  function openEdit(it: InventoryItem) { setEditing(it); setDialogOpen(true); }
+  function save(it: InventoryItem) {
+    setItems((p) => editing ? p.map((x) => x.id === it.id ? it : x) : [it, ...p]);
+    toast.success(editing ? "Item updated" : "Item added");
+    setDialogOpen(false);
+  }
+  function remove(id: string) {
+    setItems((p) => p.filter((x) => x.id !== id));
+    toast.success("Item deleted");
+  }
+  function recordTxn(type: InventoryItem["type"]) {
+    setEditing({ id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type, value: 0, lowStockThreshold: 5 });
+    setDialogOpen(true);
+  }
 
   return (
     <div>
@@ -43,9 +67,9 @@ function InventoryPage() {
         description="Books, stationery, mosque and classroom assets."
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5"><ShoppingCart className="h-3.5 w-3.5" />Record Purchase</Button>
-            <Button variant="outline" size="sm" className="gap-1.5"><Gift className="h-3.5 w-3.5" />Record Donation</Button>
-            <Button size="sm" className="gap-1.5"><Plus className="h-3.5 w-3.5" />Add Item</Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => recordTxn("purchased")}><ShoppingCart className="h-3.5 w-3.5" />Record Purchase</Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => recordTxn("donated")}><Gift className="h-3.5 w-3.5" />Record Donation</Button>
+            <Button size="sm" className="gap-1.5" onClick={openAdd}><Plus className="h-3.5 w-3.5" />Add Item</Button>
           </div>
         }
       />
@@ -107,9 +131,9 @@ function InventoryPage() {
                   <TableCell className="text-end font-mono text-sm">{formatPKR(i.value)}</TableCell>
                   <TableCell className="text-end">
                     <div className="flex justify-end gap-1">
-                      <Button size="icon" variant="ghost" className="h-7 w-7" title="Edit"><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" title="History"><History className="h-3.5 w-3.5" /></Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Delete"><Trash2 className="h-3.5 w-3.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" title="Edit" onClick={() => openEdit(i)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" title="History" onClick={() => setHistoryOpen(i)}><History className="h-3.5 w-3.5" /></Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" title="Delete" onClick={() => remove(i.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -118,6 +142,72 @@ function InventoryPage() {
           </TableBody>
         </Table>
       </Card>
+
+      <ItemDialog open={dialogOpen} onOpenChange={setDialogOpen} initial={editing} onSave={save} />
+
+      <Dialog open={!!historyOpen} onOpenChange={(v) => !v && setHistoryOpen(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Transaction History — {historyOpen?.name}</DialogTitle></DialogHeader>
+          <div className="text-sm space-y-2">
+            <p className="text-muted-foreground text-xs font-urdu">{historyOpen?.nameUrdu} · لین دین کی تاریخ</p>
+            <div className="rounded border border-border divide-y">
+              {[
+                { d: "2026-05-12", n: `+${historyOpen?.quantity ?? 0} ${historyOpen?.unit}`, t: historyOpen?.type === "donated" ? "Donation received" : "Stock added" },
+                { d: "2026-04-02", n: "-3", t: "Issued to Class 5" },
+                { d: "2026-03-20", n: "-2", t: "Issued to Hifz wing" },
+              ].map((r, i) => (
+                <div key={i} className="flex justify-between p-2 text-xs"><span className="font-mono text-muted-foreground">{r.d}</span><span>{r.t}</span><span className="font-mono">{r.n}</span></div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter><Button onClick={() => setHistoryOpen(null)}>Close</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; onOpenChange: (v: boolean) => void; initial: InventoryItem | null; onSave: (i: InventoryItem) => void }) {
+  const [f, setF] = useState<InventoryItem>({ id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 });
+  useEffect(() => { if (open) setF(initial ?? { id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 }); }, [open, initial]);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>{initial?.id ? "Edit Item" : "Add Item"} · {initial?.id ? "ترمیم" : "نئی شے"}</DialogTitle></DialogHeader>
+        <div className="grid gap-3">
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>Name</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+            <div><Label className="font-urdu">اردو نام</Label><Input className="font-urdu" dir="rtl" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>Category</Label>
+              <Select value={f.category} onValueChange={(v) => setF({ ...f, category: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{["Books", "Stationery", "Mosque", "Classroom", "Electronics", "Other"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Type</Label>
+              <Select value={f.type} onValueChange={(v) => setF({ ...f, type: v as InventoryItem["type"] })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="purchased">Purchased</SelectItem><SelectItem value="donated">Donated</SelectItem><SelectItem value="gift">Gift</SelectItem></SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div><Label>Quantity</Label><Input type="number" value={f.quantity} onChange={(e) => setF({ ...f, quantity: +e.target.value })} /></div>
+            <div><Label>Unit</Label><Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} /></div>
+            <div><Label>Low @</Label><Input type="number" value={f.lowStockThreshold} onChange={(e) => setF({ ...f, lowStockThreshold: +e.target.value })} /></div>
+          </div>
+          <div><Label>Value (PKR)</Label><Input type="number" value={f.value} onChange={(e) => setF({ ...f, value: +e.target.value })} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={() => {
+            if (!f.name.trim()) { toast.error("Name is required"); return; }
+            onSave({ ...f, id: f.id || `inv-${Date.now()}` });
+          }}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

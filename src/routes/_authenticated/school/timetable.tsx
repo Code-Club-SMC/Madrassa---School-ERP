@@ -3,6 +3,12 @@ import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Printer } from "lucide-react";
+import { toast } from "sonner";
 import { schoolClasses } from "@/mock";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/school/timetable")({
   component: SchoolTimetablePage,
 });
 
-const periods = [
+const initialPeriods = [
   { time: "08:00 → 08:40", label: "Assembly", urdu: "اسمبلی", subjects: ["Assembly", "Assembly", "Assembly", "Assembly", "Assembly", "Assembly"] },
   { time: "08:40 → 09:20", label: "Period 1", urdu: "پہلا پیریڈ", subjects: ["Urdu", "English", "Math", "Science", "Islamiat", "Urdu"] },
   { time: "09:20 → 10:00", label: "Period 2", urdu: "دوسرا پیریڈ", subjects: ["English", "Math", "Urdu", "S.Studies", "Math", "English"] },
@@ -26,7 +32,19 @@ const daysUr = ["پیر", "منگل", "بدھ", "جمعرات", "جمعہ", "ہ�
 
 function SchoolTimetablePage() {
   const [cls, setCls] = useState(schoolClasses[0]?.id ?? "");
+  const [tables, setTables] = useState<Record<string, typeof initialPeriods>>({});
+  const periods = tables[cls] ?? initialPeriods;
+  const [edit, setEdit] = useState<{ row: number; col: number; value: string } | null>(null);
   const current = schoolClasses.find((c) => c.id === cls);
+
+  function updateCell(row: number, col: number, value: string) {
+    setTables((p) => {
+      const base = p[cls] ?? initialPeriods.map((r) => ({ ...r, subjects: [...r.subjects] }));
+      const next = base.map((r, i) => i === row ? { ...r, subjects: r.subjects.map((s, j) => j === col ? value : s) } : r);
+      return { ...p, [cls]: next };
+    });
+    toast.success("Period updated");
+  }
 
   return (
     <div>
@@ -35,14 +53,17 @@ function SchoolTimetablePage() {
         titleUrdu="نظامِ اوقات"
         description="Weekly class schedule. Sunday is closed."
         actions={
-          <Select value={cls} onValueChange={setCls}>
-            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Select class" /></SelectTrigger>
-            <SelectContent>
-              {schoolClasses.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name} · <span className="font-urdu ms-1">{c.nameUrdu}</span></SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={cls} onValueChange={setCls}>
+              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Select class" /></SelectTrigger>
+              <SelectContent>
+                {schoolClasses.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name} · <span className="font-urdu ms-1">{c.nameUrdu}</span></SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" />Print</Button>
+          </div>
         }
       />
 
@@ -81,7 +102,15 @@ function SchoolTimetablePage() {
                   const muted = ["Break", "Prayer", "Assembly"].includes(subj);
                   return (
                     <td key={j} className="p-2 text-center">
-                      <div className={cn("rounded-md px-2 py-1.5 text-xs", muted ? "bg-muted/50 text-muted-foreground" : "bg-primary/10 text-primary font-medium")}>{subj}</div>
+                      <button
+                        type="button"
+                        disabled={muted}
+                        onClick={() => setEdit({ row: i, col: j, value: subj })}
+                        className={cn(
+                          "w-full rounded-md px-2 py-1.5 text-xs transition-colors",
+                          muted ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : "bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer",
+                        )}
+                      >{subj}</button>
                     </td>
                   );
                 })}
@@ -90,6 +119,20 @@ function SchoolTimetablePage() {
           </tbody>
         </table>
       </Card>
+
+      <Dialog open={!!edit} onOpenChange={(v) => !v && setEdit(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Edit Period · پیریڈ ترمیم</DialogTitle></DialogHeader>
+          <div>
+            <Label>Subject</Label>
+            <Input value={edit?.value ?? ""} onChange={(e) => setEdit((p) => p ? { ...p, value: e.target.value } : p)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEdit(null)}>Cancel</Button>
+            <Button onClick={() => { if (edit) { updateCell(edit.row, edit.col, edit.value || "—"); setEdit(null); } }}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

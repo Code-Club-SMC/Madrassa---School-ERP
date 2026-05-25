@@ -1,13 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Printer } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/madrassa/timetable")({
   component: TimetablePage,
 });
 
-const slots = [
+const initialSlots = [
   { time: "Fajr → 7:00", urdu: "نمازِ فجر و تلاوت", subjects: ["Tilawat", "Tilawat", "Tilawat", "Tilawat", "Tilawat", "Tilawat"] },
   { time: "7:00 → 8:30", urdu: "حفظ", subjects: ["Hifz", "Hifz", "Hifz", "Hifz", "Hifz", "Hifz"] },
   { time: "8:30 → 9:30", urdu: "ناشتہ و وقفہ", subjects: ["Break", "Break", "Break", "Break", "Break", "Break"] },
@@ -21,9 +28,16 @@ const days = ["السبت", "الأحد", "الإثنين", "الثلاثاء", 
 const daysEn = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu"];
 
 function TimetablePage() {
+  const [slots, setSlots] = useState(initialSlots);
+  const [edit, setEdit] = useState<{ row: number; col: number; value: string } | null>(null);
   return (
     <div>
-      <PageHeader title="Dars Timetable" titleUrdu="نظامِ اوقات (درس)" description="Weekly schedule. Fridays are reserved for Jumu'ah." />
+      <PageHeader
+        title="Dars Timetable"
+        titleUrdu="نظامِ اوقات (درس)"
+        description="Weekly schedule. Fridays are reserved for Jumu'ah. Click a slot to edit."
+        actions={<Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" />Print</Button>}
+      />
       <Card className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -46,7 +60,15 @@ function TimetablePage() {
                 </td>
                 {row.subjects.map((subj, j) => (
                   <td key={j} className="p-2 text-center">
-                    <div className={cn("rounded-md px-2 py-1.5 text-xs", subj === "Break" ? "bg-muted/50 text-muted-foreground" : "bg-primary/10 text-primary font-medium")}>{subj}</div>
+                    <button
+                      type="button"
+                      disabled={subj === "Break"}
+                      onClick={() => setEdit({ row: i, col: j, value: subj })}
+                      className={cn(
+                        "w-full rounded-md px-2 py-1.5 text-xs transition-colors",
+                        subj === "Break" ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : "bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer",
+                      )}
+                    >{subj}</button>
                   </td>
                 ))}
               </tr>
@@ -54,6 +76,20 @@ function TimetablePage() {
           </tbody>
         </table>
       </Card>
+      <Dialog open={!!edit} onOpenChange={(v) => !v && setEdit(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Edit Subject · سبق ترمیم</DialogTitle></DialogHeader>
+          <div><Label>Subject</Label><Input value={edit?.value ?? ""} onChange={(e) => setEdit((p) => p ? { ...p, value: e.target.value } : p)} /></div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEdit(null)}>Cancel</Button>
+            <Button onClick={() => {
+              if (!edit) return;
+              setSlots((p) => p.map((r, i) => i === edit.row ? { ...r, subjects: r.subjects.map((s, j) => j === edit.col ? (edit.value || "—") : s) } : r));
+              toast.success("Slot updated"); setEdit(null);
+            }}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
