@@ -28,7 +28,6 @@ import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authenticated/admission/index'
 import { Route as AuthenticatedTeachersIdRouteImport } from './routes/_authenticated/teachers.$id'
 import { Route as AuthenticatedStudentsIdRouteImport } from './routes/_authenticated/students.$id'
-import { Route as AuthenticatedSettingsWebsiteRouteImport } from './routes/_authenticated/settings/website'
 import { Route as AuthenticatedSettingsAcademicYearRouteImport } from './routes/_authenticated/settings/academic-year'
 import { Route as AuthenticatedSchoolTimetableRouteImport } from './routes/_authenticated/school/timetable'
 import { Route as AuthenticatedSchoolSubjectsRouteImport } from './routes/_authenticated/school/subjects'
@@ -157,12 +156,6 @@ const AuthenticatedStudentsIdRoute = AuthenticatedStudentsIdRouteImport.update({
   path: '/students/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedSettingsWebsiteRoute =
-  AuthenticatedSettingsWebsiteRouteImport.update({
-    id: '/settings/website',
-    path: '/settings/website',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedSettingsAcademicYearRoute =
   AuthenticatedSettingsAcademicYearRouteImport.update({
     id: '/settings/academic-year',
@@ -387,7 +380,6 @@ export interface FileRoutesByFullPath {
   '/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
   '/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
-  '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
@@ -439,7 +431,6 @@ export interface FileRoutesByTo {
   '/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
   '/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
-  '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
@@ -493,7 +484,6 @@ export interface FileRoutesById {
   '/_authenticated/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
   '/_authenticated/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/_authenticated/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
-  '/_authenticated/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/_authenticated/students/$id': typeof AuthenticatedStudentsIdRoute
   '/_authenticated/teachers/$id': typeof AuthenticatedTeachersIdRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
@@ -547,7 +537,6 @@ export interface FileRouteTypes {
     | '/school/subjects'
     | '/school/timetable'
     | '/settings/academic-year'
-    | '/settings/website'
     | '/students/$id'
     | '/teachers/$id'
     | '/admission/'
@@ -599,7 +588,6 @@ export interface FileRouteTypes {
     | '/school/subjects'
     | '/school/timetable'
     | '/settings/academic-year'
-    | '/settings/website'
     | '/students/$id'
     | '/teachers/$id'
     | '/admission'
@@ -652,7 +640,6 @@ export interface FileRouteTypes {
     | '/_authenticated/school/subjects'
     | '/_authenticated/school/timetable'
     | '/_authenticated/settings/academic-year'
-    | '/_authenticated/settings/website'
     | '/_authenticated/students/$id'
     | '/_authenticated/teachers/$id'
     | '/_authenticated/admission/'
@@ -808,13 +795,6 @@ declare module '@tanstack/react-router' {
       path: '/students/$id'
       fullPath: '/students/$id'
       preLoaderRoute: typeof AuthenticatedStudentsIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/settings/website': {
-      id: '/_authenticated/settings/website'
-      path: '/settings/website'
-      fullPath: '/settings/website'
-      preLoaderRoute: typeof AuthenticatedSettingsWebsiteRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings/academic-year': {
@@ -1167,7 +1147,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSchoolSubjectsRoute: typeof AuthenticatedSchoolSubjectsRoute
   AuthenticatedSchoolTimetableRoute: typeof AuthenticatedSchoolTimetableRoute
   AuthenticatedSettingsAcademicYearRoute: typeof AuthenticatedSettingsAcademicYearRoute
-  AuthenticatedSettingsWebsiteRoute: typeof AuthenticatedSettingsWebsiteRoute
   AuthenticatedStudentsIdRoute: typeof AuthenticatedStudentsIdRoute
   AuthenticatedAdmissionIndexRoute: typeof AuthenticatedAdmissionIndexRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
@@ -1204,7 +1183,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSchoolTimetableRoute: AuthenticatedSchoolTimetableRoute,
   AuthenticatedSettingsAcademicYearRoute:
     AuthenticatedSettingsAcademicYearRoute,
-  AuthenticatedSettingsWebsiteRoute: AuthenticatedSettingsWebsiteRoute,
   AuthenticatedStudentsIdRoute: AuthenticatedStudentsIdRoute,
   AuthenticatedAdmissionIndexRoute: AuthenticatedAdmissionIndexRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
