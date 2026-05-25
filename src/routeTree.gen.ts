@@ -37,6 +37,7 @@ import { Route as AuthenticatedSchoolFeesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedSchoolExamsRouteImport } from './routes/_authenticated/school/exams'
 import { Route as AuthenticatedSchoolClassesRouteImport } from './routes/_authenticated/school/classes'
 import { Route as AuthenticatedSchoolAttendanceRouteImport } from './routes/_authenticated/school/attendance'
+import { Route as AuthenticatedReportsCategoryRouteImport } from './routes/_authenticated/reports.category'
 import { Route as AuthenticatedReportsAttendanceRouteImport } from './routes/_authenticated/reports.attendance'
 import { Route as AuthenticatedMadrassaTimetableRouteImport } from './routes/_authenticated/madrassa/timetable'
 import { Route as AuthenticatedMadrassaSubjectsRouteImport } from './routes/_authenticated/madrassa/subjects'
@@ -207,6 +208,12 @@ const AuthenticatedSchoolAttendanceRoute =
     path: '/school/attendance',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedReportsCategoryRoute =
+  AuthenticatedReportsCategoryRouteImport.update({
+    id: '/category',
+    path: '/category',
+    getParentRoute: () => AuthenticatedReportsRoute,
+  } as any)
 const AuthenticatedReportsAttendanceRoute =
   AuthenticatedReportsAttendanceRouteImport.update({
     id: '/attendance',
@@ -355,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/madrassa/subjects': typeof AuthenticatedMadrassaSubjectsRoute
   '/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
   '/reports/attendance': typeof AuthenticatedReportsAttendanceRoute
+  '/reports/category': typeof AuthenticatedReportsCategoryRoute
   '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/school/classes': typeof AuthenticatedSchoolClassesRoute
   '/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
@@ -404,6 +412,7 @@ export interface FileRoutesByTo {
   '/madrassa/subjects': typeof AuthenticatedMadrassaSubjectsRoute
   '/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
   '/reports/attendance': typeof AuthenticatedReportsAttendanceRoute
+  '/reports/category': typeof AuthenticatedReportsCategoryRoute
   '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/school/classes': typeof AuthenticatedSchoolClassesRoute
   '/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
@@ -455,6 +464,7 @@ export interface FileRoutesById {
   '/_authenticated/madrassa/subjects': typeof AuthenticatedMadrassaSubjectsRoute
   '/_authenticated/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
   '/_authenticated/reports/attendance': typeof AuthenticatedReportsAttendanceRoute
+  '/_authenticated/reports/category': typeof AuthenticatedReportsCategoryRoute
   '/_authenticated/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/_authenticated/school/classes': typeof AuthenticatedSchoolClassesRoute
   '/_authenticated/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
@@ -506,6 +516,7 @@ export interface FileRouteTypes {
     | '/madrassa/subjects'
     | '/madrassa/timetable'
     | '/reports/attendance'
+    | '/reports/category'
     | '/school/attendance'
     | '/school/classes'
     | '/school/exams'
@@ -555,6 +566,7 @@ export interface FileRouteTypes {
     | '/madrassa/subjects'
     | '/madrassa/timetable'
     | '/reports/attendance'
+    | '/reports/category'
     | '/school/attendance'
     | '/school/classes'
     | '/school/exams'
@@ -605,6 +617,7 @@ export interface FileRouteTypes {
     | '/_authenticated/madrassa/subjects'
     | '/_authenticated/madrassa/timetable'
     | '/_authenticated/reports/attendance'
+    | '/_authenticated/reports/category'
     | '/_authenticated/school/attendance'
     | '/_authenticated/school/classes'
     | '/_authenticated/school/exams'
@@ -834,6 +847,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSchoolAttendanceRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/reports/category': {
+      id: '/_authenticated/reports/category'
+      path: '/category'
+      fullPath: '/reports/category'
+      preLoaderRoute: typeof AuthenticatedReportsCategoryRouteImport
+      parentRoute: typeof AuthenticatedReportsRoute
+    }
     '/_authenticated/reports/attendance': {
       id: '/_authenticated/reports/attendance'
       path: '/attendance'
@@ -979,10 +999,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedReportsRouteChildren {
   AuthenticatedReportsAttendanceRoute: typeof AuthenticatedReportsAttendanceRoute
+  AuthenticatedReportsCategoryRoute: typeof AuthenticatedReportsCategoryRoute
 }
 
 const AuthenticatedReportsRouteChildren: AuthenticatedReportsRouteChildren = {
   AuthenticatedReportsAttendanceRoute: AuthenticatedReportsAttendanceRoute,
+  AuthenticatedReportsCategoryRoute: AuthenticatedReportsCategoryRoute,
 }
 
 const AuthenticatedReportsRouteWithChildren =
