@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { schoolClasses } from "@/mock";
 import { formatDate } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/school/exams/$id")({
+export const Route = createFileRoute("/_authenticated/school/exams/$id/")({
   component: SchoolExamDetail,
 });
 

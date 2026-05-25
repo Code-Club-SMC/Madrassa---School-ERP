@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/madrassa/exams/$id")({
+export const Route = createFileRoute("/_authenticated/madrassa/exams/$id/")({
   component: MadrassaExamDetail,
 });
 
