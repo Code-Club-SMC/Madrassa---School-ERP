@@ -28,7 +28,7 @@ function ChangePassword() {
   const tone = s < 40 ? "bg-destructive" : s < 75 ? "bg-amber-500" : "bg-chart-1";
 
   return (
-    <div className="min-h-screen bg-muted/30 flex items-start justify-center pt-24 px-4">
+    <div className="min-h-dvh bg-muted/30 flex items-start justify-center pt-24 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mb-2">

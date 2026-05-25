@@ -10,7 +10,7 @@ export const Route = createFileRoute("/apply")({
 
 function PublicApply() {
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-dvh bg-muted/30">
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-2xl mx-auto px-6 py-3 flex items-center gap-3">
           <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">

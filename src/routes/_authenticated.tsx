@@ -18,7 +18,7 @@ function AuthenticatedLayout() {
 
   return (
     <SidebarProvider style={{ "--sidebar-width": "17.5rem", "--sidebar-width-icon": "3.25rem" } as React.CSSProperties}>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-dvh flex w-full bg-background">
         <AppSidebar />
         <SidebarInset className="flex-1 min-w-0">
           <Topbar onOpenPalette={() => setPaletteOpen(true)} />
