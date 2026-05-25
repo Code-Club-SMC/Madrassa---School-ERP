@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { applications } from "@/mock";
 
-export const Route = createFileRoute("/_authenticated/admission")({
+export const Route = createFileRoute("/_authenticated/admission/")({
   component: AdmissionHub,
 });
 
