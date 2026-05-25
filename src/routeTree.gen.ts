@@ -45,6 +45,10 @@ import { Route as AuthenticatedMadrassaCategoriesRouteImport } from './routes/_a
 import { Route as AuthenticatedMadrassaAttendanceRouteImport } from './routes/_authenticated/madrassa/attendance'
 import { Route as AuthenticatedAdmissionQueueRouteImport } from './routes/_authenticated/admission/queue'
 import { Route as AuthenticatedAdmissionNewRouteImport } from './routes/_authenticated/admission/new'
+import { Route as AuthenticatedSchoolExamsBoardRouteImport } from './routes/_authenticated/school/exams.board'
+import { Route as AuthenticatedSchoolExamsIdRouteImport } from './routes/_authenticated/school/exams.$id'
+import { Route as AuthenticatedSchoolExamsIdSeatingRouteImport } from './routes/_authenticated/school/exams.$id.seating'
+import { Route as AuthenticatedSchoolExamsIdResultsRouteImport } from './routes/_authenticated/school/exams.$id.results'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -245,6 +249,30 @@ const AuthenticatedAdmissionNewRoute =
     path: '/admission/new',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedSchoolExamsBoardRoute =
+  AuthenticatedSchoolExamsBoardRouteImport.update({
+    id: '/board',
+    path: '/board',
+    getParentRoute: () => AuthenticatedSchoolExamsRoute,
+  } as any)
+const AuthenticatedSchoolExamsIdRoute =
+  AuthenticatedSchoolExamsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedSchoolExamsRoute,
+  } as any)
+const AuthenticatedSchoolExamsIdSeatingRoute =
+  AuthenticatedSchoolExamsIdSeatingRouteImport.update({
+    id: '/seating',
+    path: '/seating',
+    getParentRoute: () => AuthenticatedSchoolExamsIdRoute,
+  } as any)
+const AuthenticatedSchoolExamsIdResultsRoute =
+  AuthenticatedSchoolExamsIdResultsRouteImport.update({
+    id: '/results',
+    path: '/results',
+    getParentRoute: () => AuthenticatedSchoolExamsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -273,7 +301,7 @@ export interface FileRoutesByFullPath {
   '/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
   '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/school/classes': typeof AuthenticatedSchoolClassesRoute
-  '/school/exams': typeof AuthenticatedSchoolExamsRoute
+  '/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
   '/school/fees': typeof AuthenticatedSchoolFeesRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
   '/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
@@ -282,6 +310,10 @@ export interface FileRoutesByFullPath {
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/school/exams/$id': typeof AuthenticatedSchoolExamsIdRouteWithChildren
+  '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
+  '/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
+  '/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -310,7 +342,7 @@ export interface FileRoutesByTo {
   '/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
   '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/school/classes': typeof AuthenticatedSchoolClassesRoute
-  '/school/exams': typeof AuthenticatedSchoolExamsRoute
+  '/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
   '/school/fees': typeof AuthenticatedSchoolFeesRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
   '/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
@@ -319,6 +351,10 @@ export interface FileRoutesByTo {
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
+  '/school/exams/$id': typeof AuthenticatedSchoolExamsIdRouteWithChildren
+  '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
+  '/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
+  '/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -349,7 +385,7 @@ export interface FileRoutesById {
   '/_authenticated/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
   '/_authenticated/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/_authenticated/school/classes': typeof AuthenticatedSchoolClassesRoute
-  '/_authenticated/school/exams': typeof AuthenticatedSchoolExamsRoute
+  '/_authenticated/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
   '/_authenticated/school/fees': typeof AuthenticatedSchoolFeesRoute
   '/_authenticated/school/students': typeof AuthenticatedSchoolStudentsRoute
   '/_authenticated/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
@@ -358,6 +394,10 @@ export interface FileRoutesById {
   '/_authenticated/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/_authenticated/school/exams/$id': typeof AuthenticatedSchoolExamsIdRouteWithChildren
+  '/_authenticated/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
+  '/_authenticated/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
+  '/_authenticated/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -397,6 +437,10 @@ export interface FileRouteTypes {
     | '/settings/website'
     | '/admission/'
     | '/settings/'
+    | '/school/exams/$id'
+    | '/school/exams/board'
+    | '/school/exams/$id/results'
+    | '/school/exams/$id/seating'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -434,6 +478,10 @@ export interface FileRouteTypes {
     | '/settings/website'
     | '/admission'
     | '/settings'
+    | '/school/exams/$id'
+    | '/school/exams/board'
+    | '/school/exams/$id/results'
+    | '/school/exams/$id/seating'
   id:
     | '__root__'
     | '/'
@@ -472,6 +520,10 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/website'
     | '/_authenticated/admission/'
     | '/_authenticated/settings/'
+    | '/_authenticated/school/exams/$id'
+    | '/_authenticated/school/exams/board'
+    | '/_authenticated/school/exams/$id/results'
+    | '/_authenticated/school/exams/$id/seating'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -736,8 +788,71 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdmissionNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/school/exams/board': {
+      id: '/_authenticated/school/exams/board'
+      path: '/board'
+      fullPath: '/school/exams/board'
+      preLoaderRoute: typeof AuthenticatedSchoolExamsBoardRouteImport
+      parentRoute: typeof AuthenticatedSchoolExamsRoute
+    }
+    '/_authenticated/school/exams/$id': {
+      id: '/_authenticated/school/exams/$id'
+      path: '/$id'
+      fullPath: '/school/exams/$id'
+      preLoaderRoute: typeof AuthenticatedSchoolExamsIdRouteImport
+      parentRoute: typeof AuthenticatedSchoolExamsRoute
+    }
+    '/_authenticated/school/exams/$id/seating': {
+      id: '/_authenticated/school/exams/$id/seating'
+      path: '/seating'
+      fullPath: '/school/exams/$id/seating'
+      preLoaderRoute: typeof AuthenticatedSchoolExamsIdSeatingRouteImport
+      parentRoute: typeof AuthenticatedSchoolExamsIdRoute
+    }
+    '/_authenticated/school/exams/$id/results': {
+      id: '/_authenticated/school/exams/$id/results'
+      path: '/results'
+      fullPath: '/school/exams/$id/results'
+      preLoaderRoute: typeof AuthenticatedSchoolExamsIdResultsRouteImport
+      parentRoute: typeof AuthenticatedSchoolExamsIdRoute
+    }
   }
 }
+
+interface AuthenticatedSchoolExamsIdRouteChildren {
+  AuthenticatedSchoolExamsIdResultsRoute: typeof AuthenticatedSchoolExamsIdResultsRoute
+  AuthenticatedSchoolExamsIdSeatingRoute: typeof AuthenticatedSchoolExamsIdSeatingRoute
+}
+
+const AuthenticatedSchoolExamsIdRouteChildren: AuthenticatedSchoolExamsIdRouteChildren =
+  {
+    AuthenticatedSchoolExamsIdResultsRoute:
+      AuthenticatedSchoolExamsIdResultsRoute,
+    AuthenticatedSchoolExamsIdSeatingRoute:
+      AuthenticatedSchoolExamsIdSeatingRoute,
+  }
+
+const AuthenticatedSchoolExamsIdRouteWithChildren =
+  AuthenticatedSchoolExamsIdRoute._addFileChildren(
+    AuthenticatedSchoolExamsIdRouteChildren,
+  )
+
+interface AuthenticatedSchoolExamsRouteChildren {
+  AuthenticatedSchoolExamsIdRoute: typeof AuthenticatedSchoolExamsIdRouteWithChildren
+  AuthenticatedSchoolExamsBoardRoute: typeof AuthenticatedSchoolExamsBoardRoute
+}
+
+const AuthenticatedSchoolExamsRouteChildren: AuthenticatedSchoolExamsRouteChildren =
+  {
+    AuthenticatedSchoolExamsIdRoute:
+      AuthenticatedSchoolExamsIdRouteWithChildren,
+    AuthenticatedSchoolExamsBoardRoute: AuthenticatedSchoolExamsBoardRoute,
+  }
+
+const AuthenticatedSchoolExamsRouteWithChildren =
+  AuthenticatedSchoolExamsRoute._addFileChildren(
+    AuthenticatedSchoolExamsRouteChildren,
+  )
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
@@ -762,7 +877,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMadrassaTimetableRoute: typeof AuthenticatedMadrassaTimetableRoute
   AuthenticatedSchoolAttendanceRoute: typeof AuthenticatedSchoolAttendanceRoute
   AuthenticatedSchoolClassesRoute: typeof AuthenticatedSchoolClassesRoute
-  AuthenticatedSchoolExamsRoute: typeof AuthenticatedSchoolExamsRoute
+  AuthenticatedSchoolExamsRoute: typeof AuthenticatedSchoolExamsRouteWithChildren
   AuthenticatedSchoolFeesRoute: typeof AuthenticatedSchoolFeesRoute
   AuthenticatedSchoolStudentsRoute: typeof AuthenticatedSchoolStudentsRoute
   AuthenticatedSchoolSubjectsRoute: typeof AuthenticatedSchoolSubjectsRoute
@@ -796,7 +911,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMadrassaTimetableRoute: AuthenticatedMadrassaTimetableRoute,
   AuthenticatedSchoolAttendanceRoute: AuthenticatedSchoolAttendanceRoute,
   AuthenticatedSchoolClassesRoute: AuthenticatedSchoolClassesRoute,
-  AuthenticatedSchoolExamsRoute: AuthenticatedSchoolExamsRoute,
+  AuthenticatedSchoolExamsRoute: AuthenticatedSchoolExamsRouteWithChildren,
   AuthenticatedSchoolFeesRoute: AuthenticatedSchoolFeesRoute,
   AuthenticatedSchoolStudentsRoute: AuthenticatedSchoolStudentsRoute,
   AuthenticatedSchoolSubjectsRoute: AuthenticatedSchoolSubjectsRoute,
