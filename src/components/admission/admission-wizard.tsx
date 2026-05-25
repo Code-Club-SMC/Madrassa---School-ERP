@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImagePlus, Pencil, CheckCircle2, ArrowLeft, ArrowRight, Loader2, Search, Plus, X } from "lucide-react";
-export const _icons = { ArrowLeft }; // keep tree-shake-safe re-export to silence unused warnings
 import { AdmissionStepper } from "./admission-stepper";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { cn } from "@/lib/utils";
