@@ -199,4 +199,10 @@
 
   /* Seating grid */
   .seating-grid-print { display: grid; gap: 4mm; page-break-inside: avoid; }
+
+  /* Balance sheet — A4 portrait */
+  .balance-sheet-print { width: 210mm; min-height: 297mm; padding: 14mm; font-size: 11pt; }
+
+  /* Khatm-ul-Quran certificate — A4 landscape */
+  .khatm-cert { width: 297mm; height: 210mm; padding: 18mm; border: 6px double #b8860b; background: #fffdf5 !important; }
 }
