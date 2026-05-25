@@ -26,6 +26,9 @@ import {
   Sparkles,
   Bell,
   HandCoins,
+  Receipt,
+  MessageSquareText,
+  DatabaseBackup,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@/types";
@@ -73,6 +76,7 @@ export const navItems: NavItem[] = [
   { group: "shared", url: "/reports", icon: BarChart3, en: "Reports", ur: "رپورٹس", roles: ANY_STAFF },
   { group: "shared", url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: ADMINS },
   { group: "shared", url: "/finance", icon: Wallet, en: "Finance", ur: "مالیات", roles: ADMINS },
+  { group: "shared", url: "/finance/donations", icon: Receipt, en: "Donations", ur: "عطیات", roles: ADMINS },
   { group: "shared", url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین", roles: ADMINS },
   { group: "shared", url: "/notifications", icon: Bell, en: "Notifications", ur: "اعلانات", roles: ANY_STAFF },
 
@@ -80,6 +84,8 @@ export const navItems: NavItem[] = [
   { group: "admin", url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },
   { group: "admin", url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
   { group: "admin", url: "/settings/concessions", icon: HandCoins, en: "Concessions", ur: "رعایات", roles: ADMINS },
+  { group: "admin", url: "/settings/templates", icon: MessageSquareText, en: "Msg Templates", ur: "پیغام سانچے", roles: ADMINS },
+  { group: "admin", url: "/settings/backup", icon: DatabaseBackup, en: "Backup", ur: "بیک اپ", roles: ["super_admin"] },
   { group: "admin", url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: ADMINS },
   { group: "admin", url: "/users", icon: ShieldUser, en: "Users", ur: "صارفین", roles: ["super_admin"] },
   { group: "admin", url: "/audit", icon: ShieldCheck, en: "Audit Log", ur: "آڈٹ لاگ", roles: ["super_admin"] },
@@ -98,4 +104,8 @@ export const PAGE_TITLES: Record<string, { en: string; ur: string }> = Object.fr
 Object.assign(PAGE_TITLES, {
   "/admission/new": { en: "New Admission", ur: "نیا داخلہ" },
   "/admission/queue": { en: "Application Queue", ur: "درخواستوں کی قطار" },
+  "/teachers/salary": { en: "Salary Slips", ur: "تنخواہ سلپ" },
+  "/finance/donations": { en: "Donations", ur: "عطیات" },
+  "/settings/templates": { en: "Message Templates", ur: "پیغام سانچے" },
+  "/settings/backup": { en: "Backup & Restore", ur: "بیک اپ" },
 });
