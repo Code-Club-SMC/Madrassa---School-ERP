@@ -24,6 +24,8 @@ import {
   School,
   BookMarked,
   Sparkles,
+  Bell,
+  HandCoins,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@/types";
@@ -72,10 +74,12 @@ export const navItems: NavItem[] = [
   { group: "shared", url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: ADMINS },
   { group: "shared", url: "/finance", icon: Wallet, en: "Finance", ur: "مالیات", roles: ADMINS },
   { group: "shared", url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین", roles: ADMINS },
+  { group: "shared", url: "/notifications", icon: Bell, en: "Notifications", ur: "اعلانات", roles: ANY_STAFF },
 
   // ---------- ADMIN (bottom-pinned) ----------
   { group: "admin", url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },
   { group: "admin", url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
+  { group: "admin", url: "/settings/concessions", icon: HandCoins, en: "Concessions", ur: "رعایات", roles: ADMINS },
   { group: "admin", url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: ADMINS },
   { group: "admin", url: "/users", icon: ShieldUser, en: "Users", ur: "صارفین", roles: ["super_admin"] },
   { group: "admin", url: "/audit", icon: ShieldCheck, en: "Audit Log", ur: "آڈٹ لاگ", roles: ["super_admin"] },

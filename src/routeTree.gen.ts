@@ -22,6 +22,7 @@ import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedParentsRouteImport } from './routes/_authenticated/parents'
+import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
 import { Route as AuthenticatedIdCardsRouteImport } from './routes/_authenticated/id-cards'
 import { Route as AuthenticatedHolidaysRouteImport } from './routes/_authenticated/holidays'
@@ -33,6 +34,7 @@ import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedTeachersIdRouteImport } from './routes/_authenticated/teachers.$id'
 import { Route as AuthenticatedStudentsIdRouteImport } from './routes/_authenticated/students.$id'
 import { Route as AuthenticatedSettingsWebsiteRouteImport } from './routes/_authenticated/settings/website'
+import { Route as AuthenticatedSettingsConcessionsRouteImport } from './routes/_authenticated/settings/concessions'
 import { Route as AuthenticatedSettingsAcademicYearRouteImport } from './routes/_authenticated/settings/academic-year'
 import { Route as AuthenticatedSchoolTimetableRouteImport } from './routes/_authenticated/school/timetable'
 import { Route as AuthenticatedSchoolSubjectsRouteImport } from './routes/_authenticated/school/subjects'
@@ -129,6 +131,12 @@ const AuthenticatedParentsRoute = AuthenticatedParentsRouteImport.update({
   path: '/parents',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedNotificationsRoute =
+  AuthenticatedNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedInventoryRoute = AuthenticatedInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -185,6 +193,12 @@ const AuthenticatedSettingsWebsiteRoute =
   AuthenticatedSettingsWebsiteRouteImport.update({
     id: '/settings/website',
     path: '/settings/website',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSettingsConcessionsRoute =
+  AuthenticatedSettingsConcessionsRouteImport.update({
+    id: '/settings/concessions',
+    path: '/settings/concessions',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedSettingsAcademicYearRoute =
@@ -385,6 +399,7 @@ export interface FileRoutesByFullPath {
   '/holidays': typeof AuthenticatedHolidaysRoute
   '/id-cards': typeof AuthenticatedIdCardsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
   '/parents': typeof AuthenticatedParentsRoute
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
@@ -415,6 +430,7 @@ export interface FileRoutesByFullPath {
   '/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
   '/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
+  '/settings/concessions': typeof AuthenticatedSettingsConcessionsRoute
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
@@ -440,6 +456,7 @@ export interface FileRoutesByTo {
   '/holidays': typeof AuthenticatedHolidaysRoute
   '/id-cards': typeof AuthenticatedIdCardsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
   '/parents': typeof AuthenticatedParentsRoute
   '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
@@ -470,6 +487,7 @@ export interface FileRoutesByTo {
   '/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
   '/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
+  '/settings/concessions': typeof AuthenticatedSettingsConcessionsRoute
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
@@ -498,6 +516,7 @@ export interface FileRoutesById {
   '/_authenticated/holidays': typeof AuthenticatedHolidaysRoute
   '/_authenticated/id-cards': typeof AuthenticatedIdCardsRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
+  '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/parents': typeof AuthenticatedParentsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRouteWithChildren
   '/_authenticated/teachers': typeof AuthenticatedTeachersRouteWithChildren
@@ -528,6 +547,7 @@ export interface FileRoutesById {
   '/_authenticated/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
   '/_authenticated/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/_authenticated/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
+  '/_authenticated/settings/concessions': typeof AuthenticatedSettingsConcessionsRoute
   '/_authenticated/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/_authenticated/students/$id': typeof AuthenticatedStudentsIdRoute
   '/_authenticated/teachers/$id': typeof AuthenticatedTeachersIdRoute
@@ -556,6 +576,7 @@ export interface FileRouteTypes {
     | '/holidays'
     | '/id-cards'
     | '/inventory'
+    | '/notifications'
     | '/parents'
     | '/reports'
     | '/teachers'
@@ -586,6 +607,7 @@ export interface FileRouteTypes {
     | '/school/subjects'
     | '/school/timetable'
     | '/settings/academic-year'
+    | '/settings/concessions'
     | '/settings/website'
     | '/students/$id'
     | '/teachers/$id'
@@ -611,6 +633,7 @@ export interface FileRouteTypes {
     | '/holidays'
     | '/id-cards'
     | '/inventory'
+    | '/notifications'
     | '/parents'
     | '/reports'
     | '/teachers'
@@ -641,6 +664,7 @@ export interface FileRouteTypes {
     | '/school/subjects'
     | '/school/timetable'
     | '/settings/academic-year'
+    | '/settings/concessions'
     | '/settings/website'
     | '/students/$id'
     | '/teachers/$id'
@@ -668,6 +692,7 @@ export interface FileRouteTypes {
     | '/_authenticated/holidays'
     | '/_authenticated/id-cards'
     | '/_authenticated/inventory'
+    | '/_authenticated/notifications'
     | '/_authenticated/parents'
     | '/_authenticated/reports'
     | '/_authenticated/teachers'
@@ -698,6 +723,7 @@ export interface FileRouteTypes {
     | '/_authenticated/school/subjects'
     | '/_authenticated/school/timetable'
     | '/_authenticated/settings/academic-year'
+    | '/_authenticated/settings/concessions'
     | '/_authenticated/settings/website'
     | '/_authenticated/students/$id'
     | '/_authenticated/teachers/$id'
@@ -815,6 +841,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedParentsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/notifications': {
+      id: '/_authenticated/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/inventory': {
       id: '/_authenticated/inventory'
       path: '/inventory'
@@ -890,6 +923,13 @@ declare module '@tanstack/react-router' {
       path: '/settings/website'
       fullPath: '/settings/website'
       preLoaderRoute: typeof AuthenticatedSettingsWebsiteRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings/concessions': {
+      id: '/_authenticated/settings/concessions'
+      path: '/settings/concessions'
+      fullPath: '/settings/concessions'
+      preLoaderRoute: typeof AuthenticatedSettingsConcessionsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings/academic-year': {
@@ -1219,6 +1259,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHolidaysRoute: typeof AuthenticatedHolidaysRoute
   AuthenticatedIdCardsRoute: typeof AuthenticatedIdCardsRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
+  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedParentsRoute: typeof AuthenticatedParentsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRouteWithChildren
   AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRouteWithChildren
@@ -1242,6 +1283,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSchoolSubjectsRoute: typeof AuthenticatedSchoolSubjectsRoute
   AuthenticatedSchoolTimetableRoute: typeof AuthenticatedSchoolTimetableRoute
   AuthenticatedSettingsAcademicYearRoute: typeof AuthenticatedSettingsAcademicYearRoute
+  AuthenticatedSettingsConcessionsRoute: typeof AuthenticatedSettingsConcessionsRoute
   AuthenticatedSettingsWebsiteRoute: typeof AuthenticatedSettingsWebsiteRoute
   AuthenticatedStudentsIdRoute: typeof AuthenticatedStudentsIdRoute
   AuthenticatedAdmissionIndexRoute: typeof AuthenticatedAdmissionIndexRoute
@@ -1255,6 +1297,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHolidaysRoute: AuthenticatedHolidaysRoute,
   AuthenticatedIdCardsRoute: AuthenticatedIdCardsRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
+  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedParentsRoute: AuthenticatedParentsRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRouteWithChildren,
   AuthenticatedTeachersRoute: AuthenticatedTeachersRouteWithChildren,
@@ -1279,6 +1322,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSchoolTimetableRoute: AuthenticatedSchoolTimetableRoute,
   AuthenticatedSettingsAcademicYearRoute:
     AuthenticatedSettingsAcademicYearRoute,
+  AuthenticatedSettingsConcessionsRoute: AuthenticatedSettingsConcessionsRoute,
   AuthenticatedSettingsWebsiteRoute: AuthenticatedSettingsWebsiteRoute,
   AuthenticatedStudentsIdRoute: AuthenticatedStudentsIdRoute,
   AuthenticatedAdmissionIndexRoute: AuthenticatedAdmissionIndexRoute,

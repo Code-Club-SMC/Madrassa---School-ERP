@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   Search,
   Plus,
@@ -9,6 +10,8 @@ import {
   Trash2,
   Download,
   Users2,
+  TrendingUp,
+  LogOut,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,6 +42,10 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StudentDetailsSheet } from "./student-details-sheet";
 import { AddStudentDialog } from "./add-student-dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import {
   students as allStudents,
   madrassaCategories,
@@ -59,6 +66,8 @@ export function StudentsTable({ system }: Props) {
   const [selected, setSelected] = useState<Student | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [data, setData] = useState<Student[]>(allStudents);
+  const [promoteFor, setPromoteFor] = useState<Student | null>(null);
+  const [exitFor, setExitFor] = useState<Student | null>(null);
 
   const groups = system === "madrassa" ? madrassaCategories : null;
 
@@ -289,8 +298,20 @@ export function StudentsTable({ system }: Props) {
                           <DropdownMenuItem onClick={() => setSelected(s)}>
                             <Eye className="h-3.5 w-3.5 me-2" /> View details
                           </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/students/$id" params={{ id: s.id }}>
+                              <Eye className="h-3.5 w-3.5 me-2" /> Open profile
+                            </Link>
+                          </DropdownMenuItem>
                           <DropdownMenuItem>
                             <Pencil className="h-3.5 w-3.5 me-2" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setPromoteFor(s)}>
+                            <TrendingUp className="h-3.5 w-3.5 me-2" /> Promote / Demote
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setExitFor(s)}>
+                            <LogOut className="h-3.5 w-3.5 me-2" /> Withdraw / Exit
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -348,6 +369,83 @@ export function StudentsTable({ system }: Props) {
         system={system}
         onAdd={handleAdd}
       />
+
+      <PromoteDialog
+        student={promoteFor}
+        onClose={() => setPromoteFor(null)}
+        onConfirm={(status) => {
+          if (!promoteFor) return;
+          setData((p) => p.map((x) => x.id === promoteFor.id ? { ...x, status } : x));
+          toast.success(`${promoteFor.name} marked as ${status}`);
+          setPromoteFor(null);
+        }}
+      />
+      <ExitDialog
+        student={exitFor}
+        onClose={() => setExitFor(null)}
+        onConfirm={(status) => {
+          if (!exitFor) return;
+          setData((p) => p.map((x) => x.id === exitFor.id ? { ...x, status } : x));
+          toast.success(`${exitFor.name} marked as ${status}`);
+          setExitFor(null);
+        }}
+      />
     </div>
+  );
+}
+
+function PromoteDialog({ student, onClose, onConfirm }: { student: Student | null; onClose: () => void; onConfirm: (s: Student["status"]) => void }) {
+  const [choice, setChoice] = useState<"active" | "inactive">("active");
+  return (
+    <Dialog open={!!student} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Promote / Demote — {student?.name}</DialogTitle></DialogHeader>
+        <div className="space-y-3 text-sm">
+          <Label>Action · کارروائی</Label>
+          <Select value={choice} onValueChange={(v) => setChoice(v as typeof choice)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">⬆ Promote to next class/darja</SelectItem>
+              <SelectItem value="inactive">⬇ Demote — repeat current</SelectItem>
+            </SelectContent>
+          </Select>
+          <Label>Reason · وجہ (optional)</Label>
+          <Textarea rows={2} placeholder="Performance, attendance, exam result…" />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => onConfirm(choice)}>Confirm</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ExitDialog({ student, onClose, onConfirm }: { student: Student | null; onClose: () => void; onConfirm: (s: Student["status"]) => void }) {
+  const [choice, setChoice] = useState<Student["status"]>("transferred");
+  return (
+    <Dialog open={!!student} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Withdraw / Exit — {student?.name}</DialogTitle></DialogHeader>
+        <div className="space-y-3 text-sm">
+          <Label>Exit type · قسمِ اخراج</Label>
+          <Select value={choice} onValueChange={(v) => setChoice(v as Student["status"])}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="transferred">Transferred — منتقل</SelectItem>
+              <SelectItem value="dropout">Dropout — تعلیم چھوڑ دی</SelectItem>
+              <SelectItem value="graduated">Graduated — فارغ التحصیل</SelectItem>
+              <SelectItem value="inactive">Inactive — غیر فعال</SelectItem>
+            </SelectContent>
+          </Select>
+          <Label>Notes · وضاحت</Label>
+          <Textarea rows={3} placeholder="Reason, transfer destination, leaving certificate #" />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="destructive" onClick={() => onConfirm(choice)}>Mark Exit</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
