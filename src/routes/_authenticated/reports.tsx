@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ClipboardList, Layers, GraduationCap, CalendarRange, BarChart3, Shield, FileText, FileSpreadsheet } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -12,12 +12,12 @@ export const Route = createFileRoute("/_authenticated/reports")({
 });
 
 const REPORTS = [
-  { key: "attendance", icon: ClipboardList, title: "Attendance", titleUrdu: "حاضری", desc: "Daily attendance trends with heatmap and per-student breakdown." },
-  { key: "category", icon: Layers, title: "Category-wise", titleUrdu: "زمرہ وار", desc: "Enrollment, retention and fee collection by Hifz / Nazira / class." },
-  { key: "exam", icon: GraduationCap, title: "Exam Results", titleUrdu: "نتائج", desc: "Series-level pass percentages and grade distribution." },
-  { key: "monthly", icon: CalendarRange, title: "Monthly Summary", titleUrdu: "ماہانہ", desc: "Combined admissions, attendance, fees for a single month." },
-  { key: "annual", icon: BarChart3, title: "Annual Report", titleUrdu: "سالانہ", desc: "Year-on-year growth, finance health and academic outcomes." },
-  { key: "admin", icon: Shield, title: "Administrative", titleUrdu: "انتظامی", desc: "Audit log, role activity and system change history." },
+  { key: "attendance", to: "/reports/attendance" as const, icon: ClipboardList, title: "Attendance", titleUrdu: "حاضری", desc: "Daily attendance trends with heatmap and per-student breakdown." },
+  { key: "category", to: "/reports/category" as const, icon: Layers, title: "Category-wise", titleUrdu: "زمرہ وار", desc: "Enrollment, retention and fee collection by Hifz / Nazira / class." },
+  { key: "exam", to: "/school/exams" as const, icon: GraduationCap, title: "Exam Results", titleUrdu: "نتائج", desc: "Series-level pass percentages and grade distribution." },
+  { key: "monthly", to: "/reports/monthly" as const, icon: CalendarRange, title: "Monthly Summary", titleUrdu: "ماہانہ", desc: "Combined admissions, attendance, fees for a single month." },
+  { key: "annual", to: "/reports/annual" as const, icon: BarChart3, title: "Annual Report", titleUrdu: "سالانہ", desc: "Year-on-year growth, finance health and academic outcomes." },
+  { key: "admin", to: "/audit" as const, icon: Shield, title: "Administrative", titleUrdu: "انتظامی", desc: "Audit log, role activity and system change history." },
 ];
 
 function ReportsHub() {
@@ -60,7 +60,7 @@ function ReportsHub() {
               <p className="font-urdu text-sm text-muted-foreground leading-tight">{r.titleUrdu}</p>
             </div>
             <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{r.desc}</p>
-            <Button size="sm" variant="outline" className="w-full" onClick={() => toast.success(`${r.title} report generated`, { description: r.titleUrdu })}>Generate Report</Button>
+            <Link to={r.to}><Button size="sm" variant="outline" className="w-full">Open Report</Button></Link>
           </Card>
         ))}
       </div>
