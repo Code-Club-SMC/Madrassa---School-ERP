@@ -34,6 +34,7 @@ import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedTeachersIdRouteImport } from './routes/_authenticated/teachers.$id'
 import { Route as AuthenticatedStudentsIdRouteImport } from './routes/_authenticated/students.$id'
 import { Route as AuthenticatedSettingsWebsiteRouteImport } from './routes/_authenticated/settings/website'
+import { Route as AuthenticatedSettingsConcessionsRouteImport } from './routes/_authenticated/settings/concessions'
 import { Route as AuthenticatedSettingsAcademicYearRouteImport } from './routes/_authenticated/settings/academic-year'
 import { Route as AuthenticatedSchoolTimetableRouteImport } from './routes/_authenticated/school/timetable'
 import { Route as AuthenticatedSchoolSubjectsRouteImport } from './routes/_authenticated/school/subjects'
@@ -192,6 +193,12 @@ const AuthenticatedSettingsWebsiteRoute =
   AuthenticatedSettingsWebsiteRouteImport.update({
     id: '/settings/website',
     path: '/settings/website',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSettingsConcessionsRoute =
+  AuthenticatedSettingsConcessionsRouteImport.update({
+    id: '/settings/concessions',
+    path: '/settings/concessions',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedSettingsAcademicYearRoute =
@@ -423,6 +430,7 @@ export interface FileRoutesByFullPath {
   '/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
   '/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
+  '/settings/concessions': typeof AuthenticatedSettingsConcessionsRoute
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
@@ -479,6 +487,7 @@ export interface FileRoutesByTo {
   '/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
   '/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
+  '/settings/concessions': typeof AuthenticatedSettingsConcessionsRoute
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
@@ -538,6 +547,7 @@ export interface FileRoutesById {
   '/_authenticated/school/subjects': typeof AuthenticatedSchoolSubjectsRoute
   '/_authenticated/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/_authenticated/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
+  '/_authenticated/settings/concessions': typeof AuthenticatedSettingsConcessionsRoute
   '/_authenticated/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/_authenticated/students/$id': typeof AuthenticatedStudentsIdRoute
   '/_authenticated/teachers/$id': typeof AuthenticatedTeachersIdRoute
@@ -597,6 +607,7 @@ export interface FileRouteTypes {
     | '/school/subjects'
     | '/school/timetable'
     | '/settings/academic-year'
+    | '/settings/concessions'
     | '/settings/website'
     | '/students/$id'
     | '/teachers/$id'
@@ -653,6 +664,7 @@ export interface FileRouteTypes {
     | '/school/subjects'
     | '/school/timetable'
     | '/settings/academic-year'
+    | '/settings/concessions'
     | '/settings/website'
     | '/students/$id'
     | '/teachers/$id'
@@ -711,6 +723,7 @@ export interface FileRouteTypes {
     | '/_authenticated/school/subjects'
     | '/_authenticated/school/timetable'
     | '/_authenticated/settings/academic-year'
+    | '/_authenticated/settings/concessions'
     | '/_authenticated/settings/website'
     | '/_authenticated/students/$id'
     | '/_authenticated/teachers/$id'
@@ -910,6 +923,13 @@ declare module '@tanstack/react-router' {
       path: '/settings/website'
       fullPath: '/settings/website'
       preLoaderRoute: typeof AuthenticatedSettingsWebsiteRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings/concessions': {
+      id: '/_authenticated/settings/concessions'
+      path: '/settings/concessions'
+      fullPath: '/settings/concessions'
+      preLoaderRoute: typeof AuthenticatedSettingsConcessionsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/settings/academic-year': {
@@ -1263,6 +1283,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSchoolSubjectsRoute: typeof AuthenticatedSchoolSubjectsRoute
   AuthenticatedSchoolTimetableRoute: typeof AuthenticatedSchoolTimetableRoute
   AuthenticatedSettingsAcademicYearRoute: typeof AuthenticatedSettingsAcademicYearRoute
+  AuthenticatedSettingsConcessionsRoute: typeof AuthenticatedSettingsConcessionsRoute
   AuthenticatedSettingsWebsiteRoute: typeof AuthenticatedSettingsWebsiteRoute
   AuthenticatedStudentsIdRoute: typeof AuthenticatedStudentsIdRoute
   AuthenticatedAdmissionIndexRoute: typeof AuthenticatedAdmissionIndexRoute
@@ -1301,6 +1322,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSchoolTimetableRoute: AuthenticatedSchoolTimetableRoute,
   AuthenticatedSettingsAcademicYearRoute:
     AuthenticatedSettingsAcademicYearRoute,
+  AuthenticatedSettingsConcessionsRoute: AuthenticatedSettingsConcessionsRoute,
   AuthenticatedSettingsWebsiteRoute: AuthenticatedSettingsWebsiteRoute,
   AuthenticatedStudentsIdRoute: AuthenticatedStudentsIdRoute,
   AuthenticatedAdmissionIndexRoute: AuthenticatedAdmissionIndexRoute,
