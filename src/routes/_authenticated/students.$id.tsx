@@ -112,7 +112,7 @@ function StudentProfile() {
                 {fees.map((f) => (
                   <TableRow key={f.id}>
                     <TableCell className="font-mono text-xs">{f.month}</TableCell>
-                    <TableCell className="font-mono text-sm">{formatPKR(f.monthlyFeePaisa / 100)}</TableCell>
+                    <TableCell className="font-mono text-sm">{formatPKR(f.monthlyFee)}</TableCell>
                     <TableCell><Badge variant={f.status === "paid" ? "default" : f.status === "overdue" ? "destructive" : "secondary"}>{f.status}</Badge></TableCell>
                     <TableCell className="text-xs">{f.paidOn ? formatDate(f.paidOn) : "—"}</TableCell>
                   </TableRow>
