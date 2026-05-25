@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { formatDate } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/madrassa/exams")({
+export const Route = createFileRoute("/_authenticated/madrassa/exams/")({
   component: MadrassaExamsPage,
 });
 
