@@ -13,7 +13,7 @@ import { teachers } from "@/mock/teachers";
 import { formatPKR, formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/teachers/salary")({
+export const Route = createFileRoute("/_authenticated/teachers_/salary")({
   component: SalaryPage,
 });
 

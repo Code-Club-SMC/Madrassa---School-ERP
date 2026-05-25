@@ -14,7 +14,7 @@ import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { formatPKR, formatDate } from "@/lib/format";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/finance/donations")({
+export const Route = createFileRoute("/_authenticated/finance_/donations")({
   component: DonationsPage,
 });
 
