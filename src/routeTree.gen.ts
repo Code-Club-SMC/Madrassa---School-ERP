@@ -37,9 +37,11 @@ import { Route as AuthenticatedSchoolFeesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedSchoolExamsRouteImport } from './routes/_authenticated/school/exams'
 import { Route as AuthenticatedSchoolClassesRouteImport } from './routes/_authenticated/school/classes'
 import { Route as AuthenticatedSchoolAttendanceRouteImport } from './routes/_authenticated/school/attendance'
+import { Route as AuthenticatedReportsAttendanceRouteImport } from './routes/_authenticated/reports.attendance'
 import { Route as AuthenticatedMadrassaTimetableRouteImport } from './routes/_authenticated/madrassa/timetable'
 import { Route as AuthenticatedMadrassaSubjectsRouteImport } from './routes/_authenticated/madrassa/subjects'
 import { Route as AuthenticatedMadrassaStudentsRouteImport } from './routes/_authenticated/madrassa/students'
+import { Route as AuthenticatedMadrassaHifzRouteImport } from './routes/_authenticated/madrassa/hifz'
 import { Route as AuthenticatedMadrassaFeesRouteImport } from './routes/_authenticated/madrassa/fees'
 import { Route as AuthenticatedMadrassaExamsRouteImport } from './routes/_authenticated/madrassa/exams'
 import { Route as AuthenticatedMadrassaClassesRouteImport } from './routes/_authenticated/madrassa/classes'
@@ -205,6 +207,12 @@ const AuthenticatedSchoolAttendanceRoute =
     path: '/school/attendance',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedReportsAttendanceRoute =
+  AuthenticatedReportsAttendanceRouteImport.update({
+    id: '/attendance',
+    path: '/attendance',
+    getParentRoute: () => AuthenticatedReportsRoute,
+  } as any)
 const AuthenticatedMadrassaTimetableRoute =
   AuthenticatedMadrassaTimetableRouteImport.update({
     id: '/madrassa/timetable',
@@ -221,6 +229,12 @@ const AuthenticatedMadrassaStudentsRoute =
   AuthenticatedMadrassaStudentsRouteImport.update({
     id: '/madrassa/students',
     path: '/madrassa/students',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMadrassaHifzRoute =
+  AuthenticatedMadrassaHifzRouteImport.update({
+    id: '/madrassa/hifz',
+    path: '/madrassa/hifz',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedMadrassaFeesRoute =
@@ -326,7 +340,7 @@ export interface FileRoutesByFullPath {
   '/id-cards': typeof AuthenticatedIdCardsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/parents': typeof AuthenticatedParentsRoute
-  '/reports': typeof AuthenticatedReportsRoute
+  '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
@@ -336,9 +350,11 @@ export interface FileRoutesByFullPath {
   '/madrassa/classes': typeof AuthenticatedMadrassaClassesRoute
   '/madrassa/exams': typeof AuthenticatedMadrassaExamsRouteWithChildren
   '/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
+  '/madrassa/hifz': typeof AuthenticatedMadrassaHifzRoute
   '/madrassa/students': typeof AuthenticatedMadrassaStudentsRoute
   '/madrassa/subjects': typeof AuthenticatedMadrassaSubjectsRoute
   '/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
+  '/reports/attendance': typeof AuthenticatedReportsAttendanceRoute
   '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/school/classes': typeof AuthenticatedSchoolClassesRoute
   '/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
@@ -373,7 +389,7 @@ export interface FileRoutesByTo {
   '/id-cards': typeof AuthenticatedIdCardsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/parents': typeof AuthenticatedParentsRoute
-  '/reports': typeof AuthenticatedReportsRoute
+  '/reports': typeof AuthenticatedReportsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
@@ -383,9 +399,11 @@ export interface FileRoutesByTo {
   '/madrassa/classes': typeof AuthenticatedMadrassaClassesRoute
   '/madrassa/exams': typeof AuthenticatedMadrassaExamsRouteWithChildren
   '/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
+  '/madrassa/hifz': typeof AuthenticatedMadrassaHifzRoute
   '/madrassa/students': typeof AuthenticatedMadrassaStudentsRoute
   '/madrassa/subjects': typeof AuthenticatedMadrassaSubjectsRoute
   '/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
+  '/reports/attendance': typeof AuthenticatedReportsAttendanceRoute
   '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/school/classes': typeof AuthenticatedSchoolClassesRoute
   '/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
@@ -422,7 +440,7 @@ export interface FileRoutesById {
   '/_authenticated/id-cards': typeof AuthenticatedIdCardsRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
   '/_authenticated/parents': typeof AuthenticatedParentsRoute
-  '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRouteWithChildren
   '/_authenticated/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/_authenticated/admission/new': typeof AuthenticatedAdmissionNewRoute
@@ -432,9 +450,11 @@ export interface FileRoutesById {
   '/_authenticated/madrassa/classes': typeof AuthenticatedMadrassaClassesRoute
   '/_authenticated/madrassa/exams': typeof AuthenticatedMadrassaExamsRouteWithChildren
   '/_authenticated/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
+  '/_authenticated/madrassa/hifz': typeof AuthenticatedMadrassaHifzRoute
   '/_authenticated/madrassa/students': typeof AuthenticatedMadrassaStudentsRoute
   '/_authenticated/madrassa/subjects': typeof AuthenticatedMadrassaSubjectsRoute
   '/_authenticated/madrassa/timetable': typeof AuthenticatedMadrassaTimetableRoute
+  '/_authenticated/reports/attendance': typeof AuthenticatedReportsAttendanceRoute
   '/_authenticated/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
   '/_authenticated/school/classes': typeof AuthenticatedSchoolClassesRoute
   '/_authenticated/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
@@ -481,9 +501,11 @@ export interface FileRouteTypes {
     | '/madrassa/classes'
     | '/madrassa/exams'
     | '/madrassa/fees'
+    | '/madrassa/hifz'
     | '/madrassa/students'
     | '/madrassa/subjects'
     | '/madrassa/timetable'
+    | '/reports/attendance'
     | '/school/attendance'
     | '/school/classes'
     | '/school/exams'
@@ -528,9 +550,11 @@ export interface FileRouteTypes {
     | '/madrassa/classes'
     | '/madrassa/exams'
     | '/madrassa/fees'
+    | '/madrassa/hifz'
     | '/madrassa/students'
     | '/madrassa/subjects'
     | '/madrassa/timetable'
+    | '/reports/attendance'
     | '/school/attendance'
     | '/school/classes'
     | '/school/exams'
@@ -576,9 +600,11 @@ export interface FileRouteTypes {
     | '/_authenticated/madrassa/classes'
     | '/_authenticated/madrassa/exams'
     | '/_authenticated/madrassa/fees'
+    | '/_authenticated/madrassa/hifz'
     | '/_authenticated/madrassa/students'
     | '/_authenticated/madrassa/subjects'
     | '/_authenticated/madrassa/timetable'
+    | '/_authenticated/reports/attendance'
     | '/_authenticated/school/attendance'
     | '/_authenticated/school/classes'
     | '/_authenticated/school/exams'
@@ -808,6 +834,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSchoolAttendanceRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/reports/attendance': {
+      id: '/_authenticated/reports/attendance'
+      path: '/attendance'
+      fullPath: '/reports/attendance'
+      preLoaderRoute: typeof AuthenticatedReportsAttendanceRouteImport
+      parentRoute: typeof AuthenticatedReportsRoute
+    }
     '/_authenticated/madrassa/timetable': {
       id: '/_authenticated/madrassa/timetable'
       path: '/madrassa/timetable'
@@ -827,6 +860,13 @@ declare module '@tanstack/react-router' {
       path: '/madrassa/students'
       fullPath: '/madrassa/students'
       preLoaderRoute: typeof AuthenticatedMadrassaStudentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/madrassa/hifz': {
+      id: '/_authenticated/madrassa/hifz'
+      path: '/madrassa/hifz'
+      fullPath: '/madrassa/hifz'
+      preLoaderRoute: typeof AuthenticatedMadrassaHifzRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/madrassa/fees': {
@@ -937,6 +977,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedReportsRouteChildren {
+  AuthenticatedReportsAttendanceRoute: typeof AuthenticatedReportsAttendanceRoute
+}
+
+const AuthenticatedReportsRouteChildren: AuthenticatedReportsRouteChildren = {
+  AuthenticatedReportsAttendanceRoute: AuthenticatedReportsAttendanceRoute,
+}
+
+const AuthenticatedReportsRouteWithChildren =
+  AuthenticatedReportsRoute._addFileChildren(AuthenticatedReportsRouteChildren)
+
 interface AuthenticatedTeachersRouteChildren {
   AuthenticatedTeachersIdRoute: typeof AuthenticatedTeachersIdRoute
 }
@@ -1028,7 +1079,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIdCardsRoute: typeof AuthenticatedIdCardsRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
   AuthenticatedParentsRoute: typeof AuthenticatedParentsRoute
-  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRouteWithChildren
   AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRouteWithChildren
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedAdmissionNewRoute: typeof AuthenticatedAdmissionNewRoute
@@ -1038,6 +1089,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMadrassaClassesRoute: typeof AuthenticatedMadrassaClassesRoute
   AuthenticatedMadrassaExamsRoute: typeof AuthenticatedMadrassaExamsRouteWithChildren
   AuthenticatedMadrassaFeesRoute: typeof AuthenticatedMadrassaFeesRoute
+  AuthenticatedMadrassaHifzRoute: typeof AuthenticatedMadrassaHifzRoute
   AuthenticatedMadrassaStudentsRoute: typeof AuthenticatedMadrassaStudentsRoute
   AuthenticatedMadrassaSubjectsRoute: typeof AuthenticatedMadrassaSubjectsRoute
   AuthenticatedMadrassaTimetableRoute: typeof AuthenticatedMadrassaTimetableRoute
@@ -1063,7 +1115,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIdCardsRoute: AuthenticatedIdCardsRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
   AuthenticatedParentsRoute: AuthenticatedParentsRoute,
-  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRouteWithChildren,
   AuthenticatedTeachersRoute: AuthenticatedTeachersRouteWithChildren,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedAdmissionNewRoute: AuthenticatedAdmissionNewRoute,
@@ -1073,6 +1125,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMadrassaClassesRoute: AuthenticatedMadrassaClassesRoute,
   AuthenticatedMadrassaExamsRoute: AuthenticatedMadrassaExamsRouteWithChildren,
   AuthenticatedMadrassaFeesRoute: AuthenticatedMadrassaFeesRoute,
+  AuthenticatedMadrassaHifzRoute: AuthenticatedMadrassaHifzRoute,
   AuthenticatedMadrassaStudentsRoute: AuthenticatedMadrassaStudentsRoute,
   AuthenticatedMadrassaSubjectsRoute: AuthenticatedMadrassaSubjectsRoute,
   AuthenticatedMadrassaTimetableRoute: AuthenticatedMadrassaTimetableRoute,
@@ -1105,3 +1158,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
