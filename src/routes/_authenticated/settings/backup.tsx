@@ -132,8 +132,8 @@ function BackupPage() {
                 <p className="text-[11px] text-muted-foreground">{b.sizeMb} MB · {b.storage === "cloud" ? "☁ Cloud" : "💾 Local"} · {b.type === "auto" ? "Scheduled" : "Manual"}</p>
               </div>
               <Badge variant={b.type === "auto" ? "secondary" : "default"} className="text-[10px]">{b.type}</Badge>
-              <Button size="icon" variant="ghost" className="h-8 w-8" title="Download"><Download className="h-3.5 w-3.5" /></Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8" title="Restore" onClick={() => toast.warning("Restore requires Super Admin confirmation")}><RotateCcw className="h-3.5 w-3.5" /></Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" title="Download" aria-label="Download"><Download className="h-3.5 w-3.5" /></Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" title="Restore" aria-label="Restore" onClick={() => toast.warning("Restore requires Super Admin confirmation")}><RotateCcw className="h-3.5 w-3.5" /></Button>
             </div>
           ))}
         </div>

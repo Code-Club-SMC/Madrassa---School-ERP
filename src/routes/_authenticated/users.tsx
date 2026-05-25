@@ -164,8 +164,8 @@ function UsersPage() {
                 <TableCell><StatusBadge status={u.status} /></TableCell>
                 <TableCell className="hidden lg:table-cell text-xs text-muted-foreground"><div>{formatDate(u.createdAt)}</div><div>by {u.createdBy}</div></TableCell>
                 <TableCell className="text-end">
-                  <Button size="icon" variant="ghost" className="h-8 w-8" title="Reset password" onClick={() => setCreds({ name: u.name, email: u.email, password: genPassword() })}><KeyRound className="h-3.5 w-3.5" /></Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Delete" disabled={u.id === currentUser.id} onClick={() => { setList((l) => l.filter((x) => x.id !== u.id)); toast.success("Account removed"); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" title="Reset password" aria-label="Reset password" onClick={() => setCreds({ name: u.name, email: u.email, password: genPassword() })}><KeyRound className="h-3.5 w-3.5" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" title="Delete" aria-label="Delete" disabled={u.id === currentUser.id} onClick={() => { setList((l) => l.filter((x) => x.id !== u.id)); toast.success("Account removed"); }}><Trash2 className="h-3.5 w-3.5" /></Button>
                 </TableCell>
               </TableRow>
             ))}
