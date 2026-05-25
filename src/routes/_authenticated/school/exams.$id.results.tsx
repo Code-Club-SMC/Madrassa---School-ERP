@@ -133,7 +133,7 @@ function ResultsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-xs mb-4">
                   <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">{r.s.name}</span><br /><span className="font-urdu text-base">{r.s.nameUrdu}</span></div>
-                  <div><span className="text-muted-foreground">Father:</span> <span className="font-medium">{r.s.fatherName}</span><br /><span className="font-urdu text-base">{r.s.fatherNameUrdu}</span></div>
+                  <div><span className="text-muted-foreground">Guardian:</span> <span className="font-medium">{r.s.guardianName}</span><br /><span className="font-urdu text-base">{r.s.guardianNameUrdu}</span></div>
                   <div><span className="text-muted-foreground">Roll No:</span> <span className="font-mono">{r.s.rollNo}</span></div>
                   <div><span className="text-muted-foreground">Class:</span> <span className="font-mono">{r.s.classId}-{r.s.section}</span></div>
                 </div>

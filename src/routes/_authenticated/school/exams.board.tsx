@@ -79,7 +79,7 @@ function BoardExamsPage() {
                   <TableCell className="font-mono text-xs">{s.rollNo}</TableCell>
                   <TableCell><p className="font-medium text-sm">{s.name}</p><p className="font-urdu text-sm text-muted-foreground">{s.nameUrdu}</p></TableCell>
                   <TableCell className="text-xs">{s.classId?.toUpperCase()} {s.section ? `· ${s.section}` : ""}</TableCell>
-                  <TableCell><p className="text-xs">{s.fatherName}</p><p className="font-urdu text-sm text-muted-foreground">{s.fatherNameUrdu}</p></TableCell>
+                  <TableCell><p className="text-xs">{s.guardianName}</p><p className="font-urdu text-sm text-muted-foreground">{s.guardianNameUrdu}</p></TableCell>
                   <TableCell className="font-mono text-[10px]">{s.guardianCnic}</TableCell>
                   <TableCell>
                     {status === "registered" && <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">Registered</Badge>}
