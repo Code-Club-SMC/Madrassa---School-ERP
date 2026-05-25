@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Moon, Sun, ChevronLeft, Search, ArrowLeftRight } from "lucide-react";
+import { Moon, Sun, ChevronLeft, Search, ArrowLeftRight, Bell } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -84,6 +84,31 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
         <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-1.5 end-1.5 w-2 h-2 rounded-full bg-destructive" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-72">
+            <DropdownMenuLabel className="flex items-center justify-between">
+              <span>Notifications · اعلانات</span>
+              <Link to="/notifications" className="text-[10px] text-muted-foreground hover:text-foreground">View all</Link>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {[
+              { t: "5 fee payments due today", u: "آج 5 فیسیں واجب الادا", tone: "text-amber-600" },
+              { t: "New admission application", u: "نئی داخلہ درخواست", tone: "text-blue-600" },
+              { t: "Inventory low: Notebooks", u: "نوٹ بک کم", tone: "text-destructive" },
+            ].map((n, i) => (
+              <DropdownMenuItem key={i} className="flex-col items-start gap-0.5">
+                <span className={cn("text-xs", n.tone)}>{n.t}</span>
+                <span className="font-urdu text-sm text-muted-foreground">{n.u}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
