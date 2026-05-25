@@ -167,7 +167,7 @@ function InterviewsPage() {
                     <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                       <div>
                         <h3 className="font-heading text-lg font-bold">{a.name} <span className="font-urdu text-base text-muted-foreground ms-2">{a.nameUrdu}</span></h3>
-                        <p className="text-xs text-muted-foreground">{a.refNo} · {a.system} · {a.preferredCategory}</p>
+                        <p className="text-xs text-muted-foreground">{a.refNo} · {a.system} · {a.categoryOrClass}</p>
                       </div>
                       {verified ? <Badge className="bg-chart-1/15 text-chart-1 border-0">All required documents verified</Badge> : <Badge variant="outline">Awaiting documents</Badge>}
                     </div>
@@ -214,7 +214,7 @@ function InterviewsPage() {
                     <TableRow key={w.appId}>
                       <TableCell><Badge variant="outline" className="font-mono">#{w.rank}</Badge></TableCell>
                       <TableCell><p className="font-urdu text-sm font-semibold leading-tight">{a.nameUrdu}</p><p className="text-[11px] text-muted-foreground">{a.refNo} · {formatDate(a.submittedAt)}</p></TableCell>
-                      <TableCell><p className="text-sm">{a.preferredCategory}</p><p className="font-urdu text-xs text-muted-foreground">{a.preferredCategoryUrdu}</p></TableCell>
+                      <TableCell><p className="text-sm">{a.categoryOrClass}</p><p className="font-urdu text-xs text-muted-foreground">{a.categoryOrClassUrdu}</p></TableCell>
                       <TableCell className="text-xs text-muted-foreground">{w.reason}</TableCell>
                       <TableCell className="text-end"><Button size="sm" variant="outline" className="gap-1.5 h-7 text-[10px]" onClick={() => promote(w.appId)}><ArrowUpRight className="h-3 w-3" />Promote</Button></TableCell>
                     </TableRow>
