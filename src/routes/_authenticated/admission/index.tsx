@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { UserPlus, Inbox, ChevronLeft } from "lucide-react";
+import { UserPlus, Inbox, ChevronLeft, CalendarClock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +62,25 @@ function AdmissionHub() {
           <Button asChild variant="outline" className="w-full">
             <Link to="/admission/queue">
               <span className="font-urdu">قطار دیکھیں</span>
+              <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+            </Link>
+          </Button>
+        </Card>
+
+        <Card className="p-8 hover:border-primary/40 transition-colors group md:col-span-2">
+          <div className="flex items-start gap-4 mb-6">
+            <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center"><CalendarClock className="h-6 w-6 text-primary" /></div>
+            <div className="min-w-0 flex-1">
+              <h2 className="font-heading text-xl font-semibold">Interviews, Documents & Waitlist</h2>
+              <p className="font-urdu text-base text-muted-foreground">انٹرویو، دستاویزات اور انتظار کی فہرست</p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+            Schedule applicant interviews, run through the required document checklist, and manage the waitlist when classes are full.
+          </p>
+          <Button asChild variant="outline" className="w-full">
+            <Link to="/admission/interviews">
+              <span className="font-urdu">مرحلے کا انتظام</span>
               <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
             </Link>
           </Button>
