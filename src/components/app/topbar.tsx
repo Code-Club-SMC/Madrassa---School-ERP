@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Moon, Sun, ChevronLeft } from "lucide-react";
+import { Moon, Sun, ChevronLeft, Search, ArrowLeftRight } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -15,34 +15,14 @@ import { useTheme } from "@/components/theme-provider";
 import { useSystem } from "@/components/system-context";
 import { currentUser } from "@/mock";
 import { cn } from "@/lib/utils";
+import { PAGE_TITLES } from "@/lib/nav-config";
 
-const PAGE_TITLES: Record<string, { en: string; ur: string }> = {
-  "/dashboard": { en: "Dashboard", ur: "ڈیش بورڈ" },
-  "/admission": { en: "Admission", ur: "داخلہ" },
-  "/admission/new": { en: "New Admission", ur: "نیا داخلہ" },
-  "/admission/queue": { en: "Application Queue", ur: "درخواستوں کی قطار" },
-  "/madrassa/students": { en: "Madrassa Students", ur: "مدرسہ — طلبہ" },
-  "/madrassa/attendance": { en: "Madrassa Attendance", ur: "مدرسہ — حاضری" },
-  "/madrassa/fees": { en: "Madrassa Fees", ur: "مدرسہ — فیس" },
-  "/madrassa/categories": { en: "Categories", ur: "اقسام" },
-  "/school/students": { en: "School Students", ur: "اسکول — طلبہ" },
-  "/school/attendance": { en: "School Attendance", ur: "اسکول — حاضری" },
-  "/school/fees": { en: "School Fees", ur: "اسکول — فیس" },
-  "/school/exams": { en: "Examinations", ur: "امتحانات" },
-  "/teachers": { en: "Teachers", ur: "اساتذہ" },
-  "/id-cards": { en: "ID Cards", ur: "شناختی کارڈ" },
-  "/reports": { en: "Reports", ur: "رپورٹس" },
-  "/inventory": { en: "Inventory", ur: "انوینٹری" },
-  "/finance": { en: "Finance", ur: "مالیات" },
-  "/parents": { en: "Parents Portal", ur: "والدین" },
-  "/users": { en: "User Management", ur: "صارف انتظام" },
-  "/settings": { en: "Settings", ur: "ترتیبات" },
-};
+type TopbarProps = { onOpenPalette: () => void };
 
-export function Topbar() {
+export function Topbar({ onOpenPalette }: TopbarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { theme, toggle } = useTheme();
-  const { system } = useSystem();
+  const { system, setSystem } = useSystem();
 
   const current = PAGE_TITLES[pathname] ?? { en: "MSMIS", ur: "ایم ایس ایم آئی ایس" };
 
@@ -61,14 +41,46 @@ export function Topbar() {
       </div>
 
       <div className="ms-auto flex items-center gap-2">
-        <span
-          className={cn(
-            "hidden sm:inline-flex items-center rounded-full px-3 py-1 text-xs font-medium font-urdu",
-            "bg-primary/10 text-primary",
-          )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onOpenPalette}
+          className="hidden md:inline-flex items-center gap-2 text-xs text-muted-foreground h-8 px-2.5 min-w-[200px] justify-start"
         >
-          {system === "madrassa" ? "🕌 مدرسہ" : "🏫 اسکول"}
-        </span>
+          <Search className="h-3.5 w-3.5" />
+          <span>Search…</span>
+          <kbd className="ms-auto pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
+            ⌘K
+          </kbd>
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "hidden sm:inline-flex items-center gap-1.5 h-8 rounded-full px-3 text-xs font-medium font-urdu",
+                "bg-primary/10 text-primary hover:bg-primary/15",
+              )}
+            >
+              {system === "madrassa" ? "🕌 مدرسہ" : "🏫 اسکول"}
+              <ArrowLeftRight className="h-3 w-3 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wide">Active system</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => setSystem("madrassa")}>
+              🕌 <span className="font-urdu ms-2">مدرسہ</span>
+              <span className="ms-auto text-[10px] text-muted-foreground">Madrassa</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSystem("school")}>
+              🏫 <span className="font-urdu ms-2">اسکول</span>
+              <span className="ms-auto text-[10px] text-muted-foreground">School</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
