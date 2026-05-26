@@ -35,6 +35,7 @@ function SchoolTimetablePage() {
   const [tables, setTables] = useState<Record<string, typeof initialPeriods>>({});
   const periods = tables[cls] ?? initialPeriods;
   const [edit, setEdit] = useState<{ row: number; col: number; value: string } | null>(null);
+  const [timeEdit, setTimeEdit] = useState<{ row: number; time: string; urdu: string; label: string } | null>(null);
   const current = schoolClasses.find((c) => c.id === cls);
 
   function updateCell(row: number, col: number, value: string) {
@@ -94,9 +95,16 @@ function SchoolTimetablePage() {
             {periods.map((row, i) => (
               <tr key={i} className="border-b border-border last:border-0">
                 <td className="p-3 align-top">
-                  <p className="font-mono text-xs">{row.time}</p>
-                  <p className="font-urdu text-sm text-muted-foreground">{row.urdu}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase">{row.label}</p>
+                  <button
+                    type="button"
+                    onClick={() => setTimeEdit({ row: i, time: row.time, urdu: row.urdu, label: row.label })}
+                    className="text-start hover:bg-accent/40 rounded-md px-1 py-0.5 -mx-1 transition-colors w-full"
+                    aria-label="Edit period time"
+                  >
+                    <p className="font-mono text-xs">{row.time}</p>
+                    <p className="font-urdu text-sm text-muted-foreground">{row.urdu}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase">{row.label}</p>
+                  </button>
                 </td>
                 {row.subjects.map((subj, j) => {
                   const muted = ["Break", "Prayer", "Assembly"].includes(subj);
@@ -130,6 +138,28 @@ function SchoolTimetablePage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEdit(null)}>Cancel</Button>
             <Button onClick={() => { if (edit) { updateCell(edit.row, edit.col, edit.value || "—"); setEdit(null); } }}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!timeEdit} onOpenChange={(v) => !v && setTimeEdit(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Edit Period Time · وقت ترمیم</DialogTitle></DialogHeader>
+          <div className="grid gap-3">
+            <div><Label>Time</Label><Input value={timeEdit?.time ?? ""} onChange={(e) => setTimeEdit((p) => p ? { ...p, time: e.target.value } : p)} placeholder="08:00 → 08:40" /></div>
+            <div><Label>Label</Label><Input value={timeEdit?.label ?? ""} onChange={(e) => setTimeEdit((p) => p ? { ...p, label: e.target.value } : p)} placeholder="Period 1" /></div>
+            <div><Label className="font-urdu">اردو لیبل</Label><Input dir="rtl" className="font-urdu" value={timeEdit?.urdu ?? ""} onChange={(e) => setTimeEdit((p) => p ? { ...p, urdu: e.target.value } : p)} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTimeEdit(null)}>Cancel</Button>
+            <Button onClick={() => {
+              if (!timeEdit) return;
+              setTables((p) => {
+                const base = p[cls] ?? initialPeriods.map((r) => ({ ...r, subjects: [...r.subjects] }));
+                const next = base.map((r, i) => i === timeEdit.row ? { ...r, time: timeEdit.time || r.time, urdu: timeEdit.urdu || r.urdu, label: timeEdit.label || r.label } : r);
+                return { ...p, [cls]: next };
+              });
+              toast.success("Time updated"); setTimeEdit(null);
+            }}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
