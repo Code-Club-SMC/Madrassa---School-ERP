@@ -60,7 +60,7 @@ function ReportsHub() {
               <p className="font-urdu text-sm text-muted-foreground leading-tight">{r.titleUrdu}</p>
             </div>
             <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{r.desc}</p>
-            <Link to={r.to}><Button size="sm" variant="outline" className="w-full">Open Report</Button></Link>
+            <Button asChild size="sm" variant="outline" className="w-full"><Link to={r.to}>Open Report</Link></Button>
           </Card>
         ))}
       </div>
