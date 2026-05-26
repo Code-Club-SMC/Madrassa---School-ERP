@@ -30,6 +30,7 @@ const daysEn = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu"];
 function TimetablePage() {
   const [slots, setSlots] = useState(initialSlots);
   const [edit, setEdit] = useState<{ row: number; col: number; value: string } | null>(null);
+  const [timeEdit, setTimeEdit] = useState<{ row: number; time: string; urdu: string } | null>(null);
   return (
     <div>
       <PageHeader
@@ -55,8 +56,15 @@ function TimetablePage() {
             {slots.map((row, i) => (
               <tr key={i} className="border-b border-border last:border-0">
                 <td className="p-3 align-top">
-                  <p className="font-mono text-xs">{row.time}</p>
-                  <p className="font-urdu text-sm text-muted-foreground">{row.urdu}</p>
+                  <button
+                    type="button"
+                    onClick={() => setTimeEdit({ row: i, time: row.time, urdu: row.urdu })}
+                    className="text-start hover:bg-accent/40 rounded-md px-1 py-0.5 -mx-1 transition-colors w-full"
+                    aria-label="Edit time slot"
+                  >
+                    <p className="font-mono text-xs">{row.time}</p>
+                    <p className="font-urdu text-sm text-muted-foreground">{row.urdu}</p>
+                  </button>
                 </td>
                 {row.subjects.map((subj, j) => (
                   <td key={j} className="p-2 text-center">
@@ -86,6 +94,23 @@ function TimetablePage() {
               if (!edit) return;
               setSlots((p) => p.map((r, i) => i === edit.row ? { ...r, subjects: r.subjects.map((s, j) => j === edit.col ? (edit.value || "—") : s) } : r));
               toast.success("Slot updated"); setEdit(null);
+            }}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!timeEdit} onOpenChange={(v) => !v && setTimeEdit(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Edit Time Slot · وقت ترمیم</DialogTitle></DialogHeader>
+          <div className="grid gap-3">
+            <div><Label>Time</Label><Input value={timeEdit?.time ?? ""} onChange={(e) => setTimeEdit((p) => p ? { ...p, time: e.target.value } : p)} placeholder="e.g. 7:00 → 8:30" /></div>
+            <div><Label className="font-urdu">اردو لیبل</Label><Input dir="rtl" className="font-urdu" value={timeEdit?.urdu ?? ""} onChange={(e) => setTimeEdit((p) => p ? { ...p, urdu: e.target.value } : p)} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTimeEdit(null)}>Cancel</Button>
+            <Button onClick={() => {
+              if (!timeEdit) return;
+              setSlots((p) => p.map((r, i) => i === timeEdit.row ? { ...r, time: timeEdit.time || r.time, urdu: timeEdit.urdu || r.urdu } : r));
+              toast.success("Time updated"); setTimeEdit(null);
             }}>Save</Button>
           </DialogFooter>
         </DialogContent>
