@@ -102,9 +102,9 @@ function AcademicYearPage() {
                 <Badge variant="outline" className={STATUS_TONE[y.status]}>{y.status}</Badge>
                 {y.status === "active" ? (
                   <Button size="sm" variant="outline" className="gap-1.5" onClick={() => archive(y.id)}><Archive className="h-3.5 w-3.5" />Archive</Button>
-                ) : y.status !== "archived" || true ? (
+                ) : (
                   <Button size="sm" variant="outline" onClick={() => activate(y.id)}>Activate</Button>
-                ) : null}
+                )}
               </div>
             </div>
           ))}
