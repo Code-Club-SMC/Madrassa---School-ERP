@@ -17,7 +17,13 @@ export function MobileBottomNav() {
     { url: "/settings", icon: MoreHorizontal, en: "More", ur: "مزید" },
   ];
 
-  const isActive = (url: string) => pathname === url || pathname.startsWith(url + "/");
+  const isActive = (url: string) => {
+    if (pathname === url) return true;
+    if (url === "/dashboard") return false; // never match prefixes for dashboard
+    // require exact match for short top-level URLs that are parents of other nav items
+    if (url === "/reports" || url === "/settings") return false;
+    return pathname.startsWith(url + "/");
+  };
 
   return (
     <nav

@@ -7,7 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Toolti
 import { madrassaCategories, students, feeRecords } from "@/mock";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/reports")({
+export const Route = createFileRoute("/_authenticated/reports/")({
   component: ReportsHub,
 });
 

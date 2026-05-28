@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { formatPKR } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/teachers")({
+export const Route = createFileRoute("/_authenticated/teachers/")({
   component: TeachersPage,
 });
 

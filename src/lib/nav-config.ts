@@ -29,6 +29,11 @@ import {
   Receipt,
   MessageSquareText,
   DatabaseBackup,
+  Briefcase,
+  CalendarDays,
+  PlaneTakeoff,
+  Building2,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@/types";
@@ -79,6 +84,13 @@ export const navItems: NavItem[] = [
   { group: "shared", url: "/finance/donations", icon: Receipt, en: "Donations", ur: "عطیات", roles: ADMINS },
   { group: "shared", url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین", roles: ADMINS },
   { group: "shared", url: "/notifications", icon: Bell, en: "Notifications", ur: "اعلانات", roles: ANY_STAFF },
+
+  // ---------- HR & PAYROLL ----------
+  { group: "shared", url: "/hr/staff", icon: Briefcase, en: "HR Staff", ur: "عملہ", roles: ADMINS },
+  { group: "shared", url: "/hr/payroll", icon: HandCoins, en: "Payroll", ur: "تنخواہ", roles: ADMINS },
+  { group: "shared", url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: ADMINS },
+  { group: "shared", url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: ADMINS },
+  { group: "shared", url: "/hr/departments", icon: Building2, en: "Departments", ur: "شعبہ جات", roles: ADMINS },
 
   // ---------- ADMIN (bottom-pinned) ----------
   { group: "admin", url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },
