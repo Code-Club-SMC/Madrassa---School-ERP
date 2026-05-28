@@ -58,6 +58,10 @@ import { Route as AuthenticatedMadrassaFeesRouteImport } from './routes/_authent
 import { Route as AuthenticatedMadrassaClassesRouteImport } from './routes/_authenticated/madrassa/classes'
 import { Route as AuthenticatedMadrassaCategoriesRouteImport } from './routes/_authenticated/madrassa/categories'
 import { Route as AuthenticatedMadrassaAttendanceRouteImport } from './routes/_authenticated/madrassa/attendance'
+import { Route as AuthenticatedHrPayrollRouteImport } from './routes/_authenticated/hr/payroll'
+import { Route as AuthenticatedHrLeaveRouteImport } from './routes/_authenticated/hr/leave'
+import { Route as AuthenticatedHrDepartmentsRouteImport } from './routes/_authenticated/hr/departments'
+import { Route as AuthenticatedHrAttendanceRouteImport } from './routes/_authenticated/hr/attendance'
 import { Route as AuthenticatedFinanceDonationsRouteImport } from './routes/_authenticated/finance_.donations'
 import { Route as AuthenticatedAdmissionQueueRouteImport } from './routes/_authenticated/admission/queue'
 import { Route as AuthenticatedAdmissionNewRouteImport } from './routes/_authenticated/admission/new'
@@ -349,6 +353,28 @@ const AuthenticatedMadrassaAttendanceRoute =
     path: '/madrassa/attendance',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedHrPayrollRoute = AuthenticatedHrPayrollRouteImport.update({
+  id: '/hr/payroll',
+  path: '/hr/payroll',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedHrLeaveRoute = AuthenticatedHrLeaveRouteImport.update({
+  id: '/hr/leave',
+  path: '/hr/leave',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedHrDepartmentsRoute =
+  AuthenticatedHrDepartmentsRouteImport.update({
+    id: '/hr/departments',
+    path: '/hr/departments',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedHrAttendanceRoute =
+  AuthenticatedHrAttendanceRouteImport.update({
+    id: '/hr/attendance',
+    path: '/hr/attendance',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedFinanceDonationsRoute =
   AuthenticatedFinanceDonationsRouteImport.update({
     id: '/finance_/donations',
@@ -473,6 +499,10 @@ export interface FileRoutesByFullPath {
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
   '/finance/donations': typeof AuthenticatedFinanceDonationsRoute
+  '/hr/attendance': typeof AuthenticatedHrAttendanceRoute
+  '/hr/departments': typeof AuthenticatedHrDepartmentsRoute
+  '/hr/leave': typeof AuthenticatedHrLeaveRoute
+  '/hr/payroll': typeof AuthenticatedHrPayrollRoute
   '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
   '/madrassa/categories': typeof AuthenticatedMadrassaCategoriesRoute
   '/madrassa/classes': typeof AuthenticatedMadrassaClassesRoute
@@ -539,6 +569,10 @@ export interface FileRoutesByTo {
   '/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/admission/queue': typeof AuthenticatedAdmissionQueueRoute
   '/finance/donations': typeof AuthenticatedFinanceDonationsRoute
+  '/hr/attendance': typeof AuthenticatedHrAttendanceRoute
+  '/hr/departments': typeof AuthenticatedHrDepartmentsRoute
+  '/hr/leave': typeof AuthenticatedHrLeaveRoute
+  '/hr/payroll': typeof AuthenticatedHrPayrollRoute
   '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
   '/madrassa/categories': typeof AuthenticatedMadrassaCategoriesRoute
   '/madrassa/classes': typeof AuthenticatedMadrassaClassesRoute
@@ -608,6 +642,10 @@ export interface FileRoutesById {
   '/_authenticated/admission/new': typeof AuthenticatedAdmissionNewRoute
   '/_authenticated/admission/queue': typeof AuthenticatedAdmissionQueueRoute
   '/_authenticated/finance_/donations': typeof AuthenticatedFinanceDonationsRoute
+  '/_authenticated/hr/attendance': typeof AuthenticatedHrAttendanceRoute
+  '/_authenticated/hr/departments': typeof AuthenticatedHrDepartmentsRoute
+  '/_authenticated/hr/leave': typeof AuthenticatedHrLeaveRoute
+  '/_authenticated/hr/payroll': typeof AuthenticatedHrPayrollRoute
   '/_authenticated/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
   '/_authenticated/madrassa/categories': typeof AuthenticatedMadrassaCategoriesRoute
   '/_authenticated/madrassa/classes': typeof AuthenticatedMadrassaClassesRoute
@@ -677,6 +715,10 @@ export interface FileRouteTypes {
     | '/admission/new'
     | '/admission/queue'
     | '/finance/donations'
+    | '/hr/attendance'
+    | '/hr/departments'
+    | '/hr/leave'
+    | '/hr/payroll'
     | '/madrassa/attendance'
     | '/madrassa/categories'
     | '/madrassa/classes'
@@ -743,6 +785,10 @@ export interface FileRouteTypes {
     | '/admission/new'
     | '/admission/queue'
     | '/finance/donations'
+    | '/hr/attendance'
+    | '/hr/departments'
+    | '/hr/leave'
+    | '/hr/payroll'
     | '/madrassa/attendance'
     | '/madrassa/categories'
     | '/madrassa/classes'
@@ -811,6 +857,10 @@ export interface FileRouteTypes {
     | '/_authenticated/admission/new'
     | '/_authenticated/admission/queue'
     | '/_authenticated/finance_/donations'
+    | '/_authenticated/hr/attendance'
+    | '/_authenticated/hr/departments'
+    | '/_authenticated/hr/leave'
+    | '/_authenticated/hr/payroll'
     | '/_authenticated/madrassa/attendance'
     | '/_authenticated/madrassa/categories'
     | '/_authenticated/madrassa/classes'
@@ -1212,6 +1262,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMadrassaAttendanceRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/hr/payroll': {
+      id: '/_authenticated/hr/payroll'
+      path: '/hr/payroll'
+      fullPath: '/hr/payroll'
+      preLoaderRoute: typeof AuthenticatedHrPayrollRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hr/leave': {
+      id: '/_authenticated/hr/leave'
+      path: '/hr/leave'
+      fullPath: '/hr/leave'
+      preLoaderRoute: typeof AuthenticatedHrLeaveRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hr/departments': {
+      id: '/_authenticated/hr/departments'
+      path: '/hr/departments'
+      fullPath: '/hr/departments'
+      preLoaderRoute: typeof AuthenticatedHrDepartmentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hr/attendance': {
+      id: '/_authenticated/hr/attendance'
+      path: '/hr/attendance'
+      fullPath: '/hr/attendance'
+      preLoaderRoute: typeof AuthenticatedHrAttendanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/finance_/donations': {
       id: '/_authenticated/finance_/donations'
       path: '/finance/donations'
@@ -1347,6 +1425,10 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdmissionNewRoute: typeof AuthenticatedAdmissionNewRoute
   AuthenticatedAdmissionQueueRoute: typeof AuthenticatedAdmissionQueueRoute
   AuthenticatedFinanceDonationsRoute: typeof AuthenticatedFinanceDonationsRoute
+  AuthenticatedHrAttendanceRoute: typeof AuthenticatedHrAttendanceRoute
+  AuthenticatedHrDepartmentsRoute: typeof AuthenticatedHrDepartmentsRoute
+  AuthenticatedHrLeaveRoute: typeof AuthenticatedHrLeaveRoute
+  AuthenticatedHrPayrollRoute: typeof AuthenticatedHrPayrollRoute
   AuthenticatedMadrassaAttendanceRoute: typeof AuthenticatedMadrassaAttendanceRoute
   AuthenticatedMadrassaCategoriesRoute: typeof AuthenticatedMadrassaCategoriesRoute
   AuthenticatedMadrassaClassesRoute: typeof AuthenticatedMadrassaClassesRoute
@@ -1407,6 +1489,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdmissionNewRoute: AuthenticatedAdmissionNewRoute,
   AuthenticatedAdmissionQueueRoute: AuthenticatedAdmissionQueueRoute,
   AuthenticatedFinanceDonationsRoute: AuthenticatedFinanceDonationsRoute,
+  AuthenticatedHrAttendanceRoute: AuthenticatedHrAttendanceRoute,
+  AuthenticatedHrDepartmentsRoute: AuthenticatedHrDepartmentsRoute,
+  AuthenticatedHrLeaveRoute: AuthenticatedHrLeaveRoute,
+  AuthenticatedHrPayrollRoute: AuthenticatedHrPayrollRoute,
   AuthenticatedMadrassaAttendanceRoute: AuthenticatedMadrassaAttendanceRoute,
   AuthenticatedMadrassaCategoriesRoute: AuthenticatedMadrassaCategoriesRoute,
   AuthenticatedMadrassaClassesRoute: AuthenticatedMadrassaClassesRoute,
