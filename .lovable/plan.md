@@ -1,128 +1,78 @@
-# MSMIS Frontend Implementation Plan
+# Frontend One-Shot: Seating v2, HR & Payroll, Bug Fixes
 
-Source of truth: `msmis-ui-brief-2-3.md` (3,574 lines). Sections 1–6 override 7–13; Sections 41–45 supersede 12–13; Section 51 supersedes 13.4; Section 50 replaces Hifz profile cards/tabs.
+Scope: pure frontend. No backend, no DB. All state via React `useState`/`useReducer` and a small Zustand-style store for HR. Types only (no `interface`, no `any`). Tailwind + shadcn/ui. TanStack Router file-based routes.
 
-Acceptance bar (non-negotiable): "indistinguishable from a senior SaaS product designer". All 55 routes wired, all 12 mock files present, RTL/Urdu Nastaliq throughout, paisa-based money, every async surface has skeleton + error + empty states, print stylesheets for receipts/DMC/ID cards/salary slips.
+## Part 1 — Exam Seating (replace existing)
 
----
+**Files**
+- Delete: `src/routes/_authenticated/school/exams.$id.seating.tsx`, `src/routes/_authenticated/madrassa/exams.$id.seating.tsx` (old implementations).
+- Create: `src/lib/seating.ts` — pure algorithm + types (gcd, findRowStep, canPlaceGreedy, countViolations, `buildHallSeating`, `shuffleHall`).
+- Create: `src/lib/mock/seating.ts` — `mockHalls`, `mockStudents` distributed round-robin across 5 grades × 4 halls.
+- Create: `src/components/shared/ExamSeating.tsx` — toolbar (Gap/Rows/Cols/Aisles/Cell px/Shuffle/Regenerate/Highlight), hall tabs, grid with axis labels + aisles, hover scale + cursor-tracking tooltip, grade legend, hall stats sidebar, status pill, feasibility banner.
+- Create: `src/routes/_authenticated/school/exams.$id.seating.tsx` and `madrassa/exams.$id.seating.tsx` — thin wrappers using `<ExamSeating />`.
+- Edit: `school/exams.$id.index.tsx` and `madrassa/exams.$id.index.tsx` — ensure "Seating" button routes here.
 
-## Build order (rationale)
+Algorithm exactly as spec: slot = `(row*rowStep + col) % numGrades`, Fisher–Yates per grade, greedy overflow with `canPlaceGreedy`, count violations after.
 
-Foundation → shell → data spine → admission → academic (Madrassa, then School) → people (Teachers, IDs) → reports/print → ops (Inventory, Finance) → dashboard → portals (Parents, Website) → settings/audit → QA. Each later phase consumes types/mocks/components produced earlier, so reordering creates rework.
+## Part 2 — Reports fix
 
----
+- Wrap every Recharts chart in `<ResponsiveContainer width="100%" height={300}>` inside a parent with `min-h-[300px]`.
+- Add empty-state fallback when data array is empty.
+- Verify `reports.tsx` (index) renders `<Outlet />` if it's a layout; otherwise ensure child report routes (`reports.annual/monthly/attendance/category.tsx`) are standalone and reachable. Confirm `<Button asChild><Link to={...}>` works (already applied previously) — re-test.
 
-## Phase A — Foundation refactor
+## Part 3 — Classes & Subjects: full CRUD
 
-- Move to feature-folder layout per Section 39+58: `src/features/{admission,madrassa,school,teachers,fees,reports,inventory,finance,parents,website,settings}/components`, `src/types/*`, `src/hooks/{useSession,useSystem,useTheme}.ts`, `src/lib/{formatters,theme,cn}.ts`, `src/components/shared/*`, `src/components/app/*`.
-- Replace monolithic `src/mock/index.ts` with domain files: `students, categories, classes, subjects, finance, users, attendance, exams, madrassa-exams, applications, holidays, audit-log` (12 files, 15–20 records each, real Wifaq/Pakistani data per §41.4, §42.1, §57).
-- `formatters.ts`: `formatPKR(paisa)`, `formatUrduDate`, `toArabicIndic`, `formatRoll`, `formatPercent`. All money stored as paisa (PKR×100).
-- `theme.ts`: pre-render apply (no FOUC) reading from localStorage; `useTheme` hook with light/dark/system.
-- `StatusBadge` with full 11-status map (§6); `BilingualLabel`, `EmptyState`, `PageHeader`, `DataTableWrapper`, `KPICard`, `PlaceholderPage` polished to spec.
-- Fonts: wire `@fontsource-variable/geist`, `@fontsource-variable/inter`, `@fontsource/noto-nastaliq-urdu`; `font-urdu` utility; `dir="rtl"` on all Urdu strings.
-- CSS logical properties only (`ms-/me-/ps-/pe-`); add lint guard comment in `styles.css`.
+Files: `madrassa/classes.tsx`, `school/classes.tsx`, `madrassa/subjects.tsx`, `school/subjects.tsx`.
+- Add `<Dialog open onOpenChange>` with TanStack Form + zod form inside.
+- Wire Add / Edit (same dialog, prefilled) / Delete (confirm AlertDialog).
+- Mutations via local `useState`, spread into new arrays.
 
-## Phase B — Shell & Navigation
+## Part 4 — Teacher detail view
 
-- `AppShell` (§8.1) with sidebar + topbar + outlet; system-switch fade (Madrassa ↔ School) per §44.
-- Sidebar: GLOBAL section label, role-gated entries (super_admin sees Users), bottom-pinned admin section, 14px row height, 18px icons, 17.5rem width, breathable spacing.
-- `nav-config.ts` with `madrassaNav`/`schoolNav`/`globalNav`/`adminNav` including §44 additions (`/madrassa/exams`, `/school/classes`) and §46/47/48/56 additions.
-- Topbar: search (`cmdk`), notifications, theme toggle, system switcher, user menu.
-- Mobile bottom nav (<md) per §29.
+- Create `src/routes/_authenticated/teachers.$teacherId.tsx` (replacing/augmenting `teachers.$id.tsx` if needed — check current filename and align with the eye icon's `to`/`params`).
+- Normalize id lookups; render "Teacher not found" fallback.
+- Build profile header, personal info, assigned classes/subjects, attendance + payroll summary cards (read from HR store), "View HR Profile" → `/hr/staff/$staffId`.
 
-## Phase C — Auth & Users
+## Part 5 — Duplicate active nav link
 
-- `/login` (§9.1), `/change-password` (§9.2), `/users` super_admin-only (§9.3) with credentials overlay.
-- Public `/apply` (§11.5) and `/parents` login (§18.3).
-- Session mock via `useSession`; role gating across routes.
+- `src/components/app/app-sidebar.tsx` and `mobile-bottom-nav.tsx`: add `activeOptions={{ exact: true }}` to any link whose `to` is a prefix of another (`/`, `/madrassa`, `/school`, `/hr`, `/settings`, `/reports`).
 
-## Phase D — Admission
+## Part 6 — HR & Payroll (new module)
 
-- `/admission` hub, `/admission/new` 5-step wizard (Personal → System → Details → Guardian → Review) per §11.3 with DatePicker, photo thumbnail, sibling chip search with removal animation, cascading skeletons.
-- `/admission/queue` (§11.4) with Accept (generates roll, opens credentials overlay) / Reject (reason dialog) / View flows.
+**Mock + store**
+- `src/lib/mock/hr.ts` — exports typed `staffMembers`, `payrollProfiles`, `payslips`, `attendance`, `leaves`, `loans`, `departments`. 12+ staff (mix of teachers + others) with realistic PK names/CNICs/salaries; 3 months attendance; 2–3 payslips each.
+- `src/stores/hr-store.ts` — Zustand store with all actions: addStaff (auto-links teachers), updateStaff, terminateStaff, updatePayrollProfile (revision), generatePayroll, approvePayroll, markPayrollPaid, bulkSaveAttendance, approveLeave, rejectLeave, addLoan, settleLoan.
 
-## Phase E — Madrassa module
+**Routes (all under `_authenticated/hr/`)**
+- `hr/staff.index.tsx` — list + filters + "Add Staff" Sheet (multi-step TanStack Form).
+- `hr/staff.$staffId.tsx` — 7-tab profile (Overview, Payroll Profile, Payslips, Attendance, Loans, Leave, Documents).
+- `hr/payroll.tsx` — generate/approve/pay flow.
+- `hr/attendance.tsx` — bulk daily entry + monthly summary tab.
+- `hr/leave.tsx` — approvals + history.
+- `hr/departments.tsx` — CRUD table.
+- `hr/index.tsx` — landing/redirect to `/hr/staff`.
+- Sidebar nav: add HR group with these links.
 
-- `/madrassa/students` list + `$id` profile with Dars-e-Nizami tab (§41.7), Hifz profile variant (§50: progress card, 30-cell Juz Grid, Juz Detail Popover, Revision Tracking tab replacing Fees, Hifz Exam tab, Wifaq registration).
-- `/madrassa/categories` with real Wifaq tree (Qaida/Nazira, Hifz, Dars-e-Nizami 8 darjat, Takhassus) per §41.4.
-- `/madrassa/attendance` daily marking.
-- `/madrassa/fees` with receipt dialog (§30.3) + concessions (§49.4) + defaulters.
-- `/madrassa/exams` + `$id` + `$id/marks` + `$id/results` + `/exams/board` (§41.5) — Sah Mahi / Nisfus Sana / Salanah + Wifaqi Salanah / Zimni; Wifaq Roll & Ilhaq numbers; Madrassa Result Card print (§51.2).
-- `/madrassa/timetable` Dars schedule (§48).
-- Promotion/Demotion dialog (§30.1, darja-aware §41.8); Exit dialog (§30.2); Hifz Completion Ceremony (§50.2).
+**Teachers module → read-only academic view**
+- `madrassa/teachers` & `school/teachers` (currently single `teachers.tsx`): remove "Add Teacher" button; source from HR store filtered by `staffType==='teacher'` and module; "View HR Profile" per row.
 
-## Phase F — School module
+## Execution Order
 
-- `/school/students` + `$id` profile (§13.1, §23) with Exams tab replacing History.
-- `/school/classes` manager (§42.4) with sections, Science/Arts group assign.
-- `/school/attendance`, `/school/fees` (§31.1).
-- `/school/exams` + `$id` + `seating` + `results` + `/exams/board` (§42.5) with Pakistani grading A1/A/B/C/D/E/F (§42.6).
-- `/school/timetable` builder (§47).
-- DMC print layout (§51.1).
+1. Mock + store + lib (`seating.ts`, `mock/seating.ts`, `mock/hr.ts`, `hr-store.ts`).
+2. Shared component `<ExamSeating />`.
+3. All new route files (HR + seating wrappers + teacher detail) created in one batch; router codegen runs once.
+4. Bug fixes (Reports, Classes/Subjects CRUD, nav active, teachers read-only).
+5. Self-check via console/network and manual route smoke test.
 
-## Phase G — Teachers, ID Cards, Salary
+## Technical notes
 
-- `/teachers` list + `$id` profile with Pakistani fields (§53.1), attendance (§53.2), Salary tab + Salary Slip print (§53.3).
-- `/id-cards` generator (§14.3, §52) — School ID & Madrassa ID print layouts.
+- No `interface` → use `type`. No `any` → `unknown` + narrowing.
+- Forms: TanStack Form (`@tanstack/react-form`) with zod resolvers. Add dep if missing.
+- Zustand: check `package.json`; add if missing.
+- All sidebar links audited for `activeOptions.exact`.
+- Dialogs always controlled with both `open` and `onOpenChange`.
+- Recharts always wrapped + parent has fixed height.
 
-## Phase H — Reports & print
+## Out of scope
 
-- `/reports` hub + `/attendance`, `/category`, `/results`, `/monthly` (§32.1, §55.1), `/annual` (§32.2, §55.2).
-- Print stylesheet (§28) for receipts, DMCs, ID cards, salary slips, result sheets.
-
-## Phase I — Inventory & Finance
-
-- `/inventory` with stock history sheet (§33.1), graduation gift distribution (§33.2).
-- `/finance` dashboard, transaction dialogs (§34.1), summary cards, balance sheet (§34.3).
-
-## Phase J — Global Dashboard
-
-- `/dashboard` (§17.1) with KPI cards, charts (recharts using `--chart-*` tokens), recent activity, system-aware data.
-
-## Phase K — Parents Portal
-
-- `/parents` layout + dashboard (§18.2): fees (§54.1), attendance (§54.2), results (§54.3).
-
-## Phase L — Public Website + CMS
-
-- `/website` + `/about-madrassa`, `/about-school`, `/gallery`, `/notices`, `/contact`, `/apply` (§19).
-- `/settings/website` CMS panel (§35.1) for announcements with website visibility flag.
-
-## Phase M — Settings, Audit, final QA
-
-- `/settings` hub, `/settings/academic-year` (§46.1), `/settings/holidays` (§46.2), `/settings/audit` (§56.1).
-- Final pass: RTL verification (§38), accessibility checklist (§37), dark-mode visual check (§27), print preview for every printable surface, responsive breakpoints (§29), 11-state badge coverage, empty/error/skeleton on every async surface.
-
----
-
-## Technical details
-
-**Routing:** TanStack Router file-based, flat dot-separated naming. Layout routes: `_authenticated.tsx` (auth gate + AppShell), `_authenticated.madrassa.tsx`, `_authenticated.school.tsx`, `_authenticated.reports.tsx`, `_authenticated.settings.tsx`, `_authenticated.admission.tsx`, plus `website.tsx` and `parents.tsx`. Each layout renders `<Outlet />`. Every leaf route gets a `head()` with route-specific meta.
-
-**State/data:** TanStack Query against in-memory mock modules wrapped in `queryOptions` factories per domain (e.g. `madrassa/queries.ts`). Loader pattern: `loader: ({ context }) => context.queryClient.ensureQueryData(...)` + `useSuspenseQuery` in component. No `useEffect` + fetch.
-
-**Forms:** `@tanstack/react-form` + `zod` schemas in `features/*/schemas`.
-
-**Types:** `src/types/{student,teacher,exam,fee,attendance,application,inventory,finance,user,announcement,audit,timetable,holiday,academic-year}.ts`. Use `type` (not `interface`) per brief.
-
-**Money:** all amounts as integer paisa; `formatPKR(paisa)` is the single render path. Forms accept rupees and convert on submit.
-
-**Bilingual:** every label uses `<BilingualLabel urdu="..." english="..." />`; Urdu strings carry `dir="rtl" lang="ur"` and `font-urdu`. Status badges render Urdu primary + English subtitle.
-
-**Print:** `@media print` rules per §28; printable surfaces use `print-page` wrapper; A4 portrait for DMC/Result Card/Salary Slip, CR80 for ID cards.
-
-**Charts:** recharts using `--chart-1..5` tokens; never raw colors.
-
-**File count estimate:** ~60 route files, ~70 feature components, 12 mock files, 14 type files, 6 shared components, 4 hooks, 3 lib files.
-
----
-
-## Out of scope (frontend brief only)
-
-No backend, no Supabase, no auth provider, no real API calls. Mocks only. Component shape is stable so a future swap to TanStack Query against a real API requires no structural change.
-
----
-
-## Delivery cadence
-
-I will land phases sequentially, ending each phase with a short summary of what's clickable and what's still placeholder, so you can spot-check before the next phase begins. Phase A lands first.
+Auth, exam creation/hall config UI, anything not listed above.
