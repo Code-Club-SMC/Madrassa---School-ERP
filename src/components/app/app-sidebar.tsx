@@ -34,7 +34,14 @@ export function AppSidebar() {
   const sharedNav = visibleFor(role, "shared");
   const adminNav = visibleFor(role, "admin");
 
-  const isActive = (url: string) => pathname === url || pathname.startsWith(url + "/");
+  const allUrls = [...globalNav, ...madrassaNav, ...schoolNav, ...sharedNav, ...adminNav].map((i) => i.url);
+  const isActive = (url: string) => {
+    if (pathname === url) return true;
+    // If any other registered nav item also starts with this url, require an exact match for the parent.
+    const hasMoreSpecific = allUrls.some((u) => u !== url && u.startsWith(url + "/"));
+    if (hasMoreSpecific) return false;
+    return pathname.startsWith(url + "/");
+  };
 
   const renderItem = (item: NavItem) => (
     <SidebarMenuItem key={item.url} className="mb-0.5">

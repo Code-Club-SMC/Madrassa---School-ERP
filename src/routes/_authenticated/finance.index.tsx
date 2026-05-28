@@ -17,7 +17,7 @@ import { financeRecords as initialFinance, incomeVsExpense, feeRecords, institut
 import { formatPKR, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/finance")({
+export const Route = createFileRoute("/_authenticated/finance/")({
   component: FinanceDashboard,
 });
 

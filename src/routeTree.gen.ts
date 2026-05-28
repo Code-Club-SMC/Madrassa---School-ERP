@@ -19,17 +19,17 @@ import { Route as WebsiteIndexRouteImport } from './routes/website.index'
 import { Route as WebsiteGalleryRouteImport } from './routes/website.gallery'
 import { Route as WebsiteContactRouteImport } from './routes/website.contact'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
-import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
-import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedParentsRouteImport } from './routes/_authenticated/parents'
 import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedInventoryRouteImport } from './routes/_authenticated/inventory'
 import { Route as AuthenticatedIdCardsRouteImport } from './routes/_authenticated/id-cards'
 import { Route as AuthenticatedHolidaysRouteImport } from './routes/_authenticated/holidays'
-import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
+import { Route as AuthenticatedTeachersIndexRouteImport } from './routes/_authenticated/teachers.index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
+import { Route as AuthenticatedFinanceIndexRouteImport } from './routes/_authenticated/finance.index'
 import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authenticated/admission/index'
 import { Route as AuthenticatedTeachersSalaryRouteImport } from './routes/_authenticated/teachers_.salary'
 import { Route as AuthenticatedTeachersIdRouteImport } from './routes/_authenticated/teachers.$id'
@@ -122,16 +122,6 @@ const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedTeachersRoute = AuthenticatedTeachersRouteImport.update({
-  id: '/teachers',
-  path: '/teachers',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedParentsRoute = AuthenticatedParentsRouteImport.update({
   id: '/parents',
   path: '/parents',
@@ -158,11 +148,6 @@ const AuthenticatedHolidaysRoute = AuthenticatedHolidaysRouteImport.update({
   path: '/holidays',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
-  id: '/finance',
-  path: '/finance',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -173,10 +158,28 @@ const AuthenticatedAuditRoute = AuthenticatedAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTeachersIndexRoute =
+  AuthenticatedTeachersIndexRouteImport.update({
+    id: '/teachers/',
+    path: '/teachers/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSettingsIndexRoute =
   AuthenticatedSettingsIndexRouteImport.update({
     id: '/settings/',
     path: '/settings/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedReportsIndexRoute =
+  AuthenticatedReportsIndexRouteImport.update({
+    id: '/reports/',
+    path: '/reports/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedFinanceIndexRoute =
+  AuthenticatedFinanceIndexRouteImport.update({
+    id: '/finance/',
+    path: '/finance/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAdmissionIndexRoute =
@@ -192,9 +195,9 @@ const AuthenticatedTeachersSalaryRoute =
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedTeachersIdRoute = AuthenticatedTeachersIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AuthenticatedTeachersRoute,
+  id: '/teachers/$id',
+  path: '/teachers/$id',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedStudentsIdRoute = AuthenticatedStudentsIdRouteImport.update({
   id: '/students/$id',
@@ -268,27 +271,27 @@ const AuthenticatedSchoolAttendanceRoute =
   } as any)
 const AuthenticatedReportsMonthlyRoute =
   AuthenticatedReportsMonthlyRouteImport.update({
-    id: '/monthly',
-    path: '/monthly',
-    getParentRoute: () => AuthenticatedReportsRoute,
+    id: '/reports/monthly',
+    path: '/reports/monthly',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReportsCategoryRoute =
   AuthenticatedReportsCategoryRouteImport.update({
-    id: '/category',
-    path: '/category',
-    getParentRoute: () => AuthenticatedReportsRoute,
+    id: '/reports/category',
+    path: '/reports/category',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReportsAttendanceRoute =
   AuthenticatedReportsAttendanceRouteImport.update({
-    id: '/attendance',
-    path: '/attendance',
-    getParentRoute: () => AuthenticatedReportsRoute,
+    id: '/reports/attendance',
+    path: '/reports/attendance',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReportsAnnualRoute =
   AuthenticatedReportsAnnualRouteImport.update({
-    id: '/annual',
-    path: '/annual',
-    getParentRoute: () => AuthenticatedReportsRoute,
+    id: '/reports/annual',
+    path: '/reports/annual',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedMadrassaTimetableRoute =
   AuthenticatedMadrassaTimetableRouteImport.update({
@@ -437,14 +440,11 @@ export interface FileRoutesByFullPath {
   '/website': typeof WebsiteRouteWithChildren
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/finance': typeof AuthenticatedFinanceRoute
   '/holidays': typeof AuthenticatedHolidaysRoute
   '/id-cards': typeof AuthenticatedIdCardsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/parents': typeof AuthenticatedParentsRoute
-  '/reports': typeof AuthenticatedReportsRouteWithChildren
-  '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
@@ -480,7 +480,10 @@ export interface FileRoutesByFullPath {
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
   '/teachers/salary': typeof AuthenticatedTeachersSalaryRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
+  '/finance/': typeof AuthenticatedFinanceIndexRoute
+  '/reports/': typeof AuthenticatedReportsIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/teachers/': typeof AuthenticatedTeachersIndexRoute
   '/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
   '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
   '/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
@@ -500,14 +503,11 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/finance': typeof AuthenticatedFinanceRoute
   '/holidays': typeof AuthenticatedHolidaysRoute
   '/id-cards': typeof AuthenticatedIdCardsRoute
   '/inventory': typeof AuthenticatedInventoryRoute
   '/notifications': typeof AuthenticatedNotificationsRoute
   '/parents': typeof AuthenticatedParentsRoute
-  '/reports': typeof AuthenticatedReportsRouteWithChildren
-  '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
@@ -543,7 +543,10 @@ export interface FileRoutesByTo {
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
   '/teachers/salary': typeof AuthenticatedTeachersSalaryRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
+  '/finance': typeof AuthenticatedFinanceIndexRoute
+  '/reports': typeof AuthenticatedReportsIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
+  '/teachers': typeof AuthenticatedTeachersIndexRoute
   '/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
   '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
   '/madrassa/exams': typeof AuthenticatedMadrassaExamsIndexRoute
@@ -566,14 +569,11 @@ export interface FileRoutesById {
   '/website': typeof WebsiteRouteWithChildren
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/finance': typeof AuthenticatedFinanceRoute
   '/_authenticated/holidays': typeof AuthenticatedHolidaysRoute
   '/_authenticated/id-cards': typeof AuthenticatedIdCardsRoute
   '/_authenticated/inventory': typeof AuthenticatedInventoryRoute
   '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/parents': typeof AuthenticatedParentsRoute
-  '/_authenticated/reports': typeof AuthenticatedReportsRouteWithChildren
-  '/_authenticated/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
@@ -609,7 +609,10 @@ export interface FileRoutesById {
   '/_authenticated/teachers/$id': typeof AuthenticatedTeachersIdRoute
   '/_authenticated/teachers_/salary': typeof AuthenticatedTeachersSalaryRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
+  '/_authenticated/finance/': typeof AuthenticatedFinanceIndexRoute
+  '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/_authenticated/teachers/': typeof AuthenticatedTeachersIndexRoute
   '/_authenticated/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
   '/_authenticated/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
   '/_authenticated/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
@@ -632,14 +635,11 @@ export interface FileRouteTypes {
     | '/website'
     | '/audit'
     | '/dashboard'
-    | '/finance'
     | '/holidays'
     | '/id-cards'
     | '/inventory'
     | '/notifications'
     | '/parents'
-    | '/reports'
-    | '/teachers'
     | '/users'
     | '/website/contact'
     | '/website/gallery'
@@ -675,7 +675,10 @@ export interface FileRouteTypes {
     | '/teachers/$id'
     | '/teachers/salary'
     | '/admission/'
+    | '/finance/'
+    | '/reports/'
     | '/settings/'
+    | '/teachers/'
     | '/madrassa/exams/board'
     | '/school/exams/board'
     | '/madrassa/exams/'
@@ -695,14 +698,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/audit'
     | '/dashboard'
-    | '/finance'
     | '/holidays'
     | '/id-cards'
     | '/inventory'
     | '/notifications'
     | '/parents'
-    | '/reports'
-    | '/teachers'
     | '/users'
     | '/website/contact'
     | '/website/gallery'
@@ -738,7 +738,10 @@ export interface FileRouteTypes {
     | '/teachers/$id'
     | '/teachers/salary'
     | '/admission'
+    | '/finance'
+    | '/reports'
     | '/settings'
+    | '/teachers'
     | '/madrassa/exams/board'
     | '/school/exams/board'
     | '/madrassa/exams'
@@ -760,14 +763,11 @@ export interface FileRouteTypes {
     | '/website'
     | '/_authenticated/audit'
     | '/_authenticated/dashboard'
-    | '/_authenticated/finance'
     | '/_authenticated/holidays'
     | '/_authenticated/id-cards'
     | '/_authenticated/inventory'
     | '/_authenticated/notifications'
     | '/_authenticated/parents'
-    | '/_authenticated/reports'
-    | '/_authenticated/teachers'
     | '/_authenticated/users'
     | '/website/contact'
     | '/website/gallery'
@@ -803,7 +803,10 @@ export interface FileRouteTypes {
     | '/_authenticated/teachers/$id'
     | '/_authenticated/teachers_/salary'
     | '/_authenticated/admission/'
+    | '/_authenticated/finance/'
+    | '/_authenticated/reports/'
     | '/_authenticated/settings/'
+    | '/_authenticated/teachers/'
     | '/_authenticated/madrassa/exams/board'
     | '/_authenticated/school/exams/board'
     | '/_authenticated/madrassa/exams/'
@@ -898,20 +901,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/teachers': {
-      id: '/_authenticated/teachers'
-      path: '/teachers'
-      fullPath: '/teachers'
-      preLoaderRoute: typeof AuthenticatedTeachersRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/reports': {
-      id: '/_authenticated/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof AuthenticatedReportsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/parents': {
       id: '/_authenticated/parents'
       path: '/parents'
@@ -947,13 +936,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHolidaysRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/finance': {
-      id: '/_authenticated/finance'
-      path: '/finance'
-      fullPath: '/finance'
-      preLoaderRoute: typeof AuthenticatedFinanceRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -968,11 +950,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAuditRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/teachers/': {
+      id: '/_authenticated/teachers/'
+      path: '/teachers'
+      fullPath: '/teachers/'
+      preLoaderRoute: typeof AuthenticatedTeachersIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/settings/': {
       id: '/_authenticated/settings/'
       path: '/settings'
       fullPath: '/settings/'
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/reports/': {
+      id: '/_authenticated/reports/'
+      path: '/reports'
+      fullPath: '/reports/'
+      preLoaderRoute: typeof AuthenticatedReportsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/finance/': {
+      id: '/_authenticated/finance/'
+      path: '/finance'
+      fullPath: '/finance/'
+      preLoaderRoute: typeof AuthenticatedFinanceIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admission/': {
@@ -991,10 +994,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/teachers/$id': {
       id: '/_authenticated/teachers/$id'
-      path: '/$id'
+      path: '/teachers/$id'
       fullPath: '/teachers/$id'
       preLoaderRoute: typeof AuthenticatedTeachersIdRouteImport
-      parentRoute: typeof AuthenticatedTeachersRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/students/$id': {
       id: '/_authenticated/students/$id'
@@ -1082,31 +1085,31 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/reports/monthly': {
       id: '/_authenticated/reports/monthly'
-      path: '/monthly'
+      path: '/reports/monthly'
       fullPath: '/reports/monthly'
       preLoaderRoute: typeof AuthenticatedReportsMonthlyRouteImport
-      parentRoute: typeof AuthenticatedReportsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/reports/category': {
       id: '/_authenticated/reports/category'
-      path: '/category'
+      path: '/reports/category'
       fullPath: '/reports/category'
       preLoaderRoute: typeof AuthenticatedReportsCategoryRouteImport
-      parentRoute: typeof AuthenticatedReportsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/reports/attendance': {
       id: '/_authenticated/reports/attendance'
-      path: '/attendance'
+      path: '/reports/attendance'
       fullPath: '/reports/attendance'
       preLoaderRoute: typeof AuthenticatedReportsAttendanceRouteImport
-      parentRoute: typeof AuthenticatedReportsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/reports/annual': {
       id: '/_authenticated/reports/annual'
-      path: '/annual'
+      path: '/reports/annual'
       fullPath: '/reports/annual'
       preLoaderRoute: typeof AuthenticatedReportsAnnualRouteImport
-      parentRoute: typeof AuthenticatedReportsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/madrassa/timetable': {
       id: '/_authenticated/madrassa/timetable'
@@ -1272,47 +1275,14 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedReportsRouteChildren {
-  AuthenticatedReportsAnnualRoute: typeof AuthenticatedReportsAnnualRoute
-  AuthenticatedReportsAttendanceRoute: typeof AuthenticatedReportsAttendanceRoute
-  AuthenticatedReportsCategoryRoute: typeof AuthenticatedReportsCategoryRoute
-  AuthenticatedReportsMonthlyRoute: typeof AuthenticatedReportsMonthlyRoute
-}
-
-const AuthenticatedReportsRouteChildren: AuthenticatedReportsRouteChildren = {
-  AuthenticatedReportsAnnualRoute: AuthenticatedReportsAnnualRoute,
-  AuthenticatedReportsAttendanceRoute: AuthenticatedReportsAttendanceRoute,
-  AuthenticatedReportsCategoryRoute: AuthenticatedReportsCategoryRoute,
-  AuthenticatedReportsMonthlyRoute: AuthenticatedReportsMonthlyRoute,
-}
-
-const AuthenticatedReportsRouteWithChildren =
-  AuthenticatedReportsRoute._addFileChildren(AuthenticatedReportsRouteChildren)
-
-interface AuthenticatedTeachersRouteChildren {
-  AuthenticatedTeachersIdRoute: typeof AuthenticatedTeachersIdRoute
-}
-
-const AuthenticatedTeachersRouteChildren: AuthenticatedTeachersRouteChildren = {
-  AuthenticatedTeachersIdRoute: AuthenticatedTeachersIdRoute,
-}
-
-const AuthenticatedTeachersRouteWithChildren =
-  AuthenticatedTeachersRoute._addFileChildren(
-    AuthenticatedTeachersRouteChildren,
-  )
-
 interface AuthenticatedRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
   AuthenticatedHolidaysRoute: typeof AuthenticatedHolidaysRoute
   AuthenticatedIdCardsRoute: typeof AuthenticatedIdCardsRoute
   AuthenticatedInventoryRoute: typeof AuthenticatedInventoryRoute
   AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedParentsRoute: typeof AuthenticatedParentsRoute
-  AuthenticatedReportsRoute: typeof AuthenticatedReportsRouteWithChildren
-  AuthenticatedTeachersRoute: typeof AuthenticatedTeachersRouteWithChildren
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
   AuthenticatedAdmissionInterviewsRoute: typeof AuthenticatedAdmissionInterviewsRoute
   AuthenticatedAdmissionNewRoute: typeof AuthenticatedAdmissionNewRoute
@@ -1326,6 +1296,10 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMadrassaStudentsRoute: typeof AuthenticatedMadrassaStudentsRoute
   AuthenticatedMadrassaSubjectsRoute: typeof AuthenticatedMadrassaSubjectsRoute
   AuthenticatedMadrassaTimetableRoute: typeof AuthenticatedMadrassaTimetableRoute
+  AuthenticatedReportsAnnualRoute: typeof AuthenticatedReportsAnnualRoute
+  AuthenticatedReportsAttendanceRoute: typeof AuthenticatedReportsAttendanceRoute
+  AuthenticatedReportsCategoryRoute: typeof AuthenticatedReportsCategoryRoute
+  AuthenticatedReportsMonthlyRoute: typeof AuthenticatedReportsMonthlyRoute
   AuthenticatedSchoolAttendanceRoute: typeof AuthenticatedSchoolAttendanceRoute
   AuthenticatedSchoolClassesRoute: typeof AuthenticatedSchoolClassesRoute
   AuthenticatedSchoolFeesRoute: typeof AuthenticatedSchoolFeesRoute
@@ -1338,9 +1312,13 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsTemplatesRoute: typeof AuthenticatedSettingsTemplatesRoute
   AuthenticatedSettingsWebsiteRoute: typeof AuthenticatedSettingsWebsiteRoute
   AuthenticatedStudentsIdRoute: typeof AuthenticatedStudentsIdRoute
+  AuthenticatedTeachersIdRoute: typeof AuthenticatedTeachersIdRoute
   AuthenticatedTeachersSalaryRoute: typeof AuthenticatedTeachersSalaryRoute
   AuthenticatedAdmissionIndexRoute: typeof AuthenticatedAdmissionIndexRoute
+  AuthenticatedFinanceIndexRoute: typeof AuthenticatedFinanceIndexRoute
+  AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
+  AuthenticatedTeachersIndexRoute: typeof AuthenticatedTeachersIndexRoute
   AuthenticatedMadrassaExamsBoardRoute: typeof AuthenticatedMadrassaExamsBoardRoute
   AuthenticatedSchoolExamsBoardRoute: typeof AuthenticatedSchoolExamsBoardRoute
   AuthenticatedMadrassaExamsIndexRoute: typeof AuthenticatedMadrassaExamsIndexRoute
@@ -1357,14 +1335,11 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
   AuthenticatedHolidaysRoute: AuthenticatedHolidaysRoute,
   AuthenticatedIdCardsRoute: AuthenticatedIdCardsRoute,
   AuthenticatedInventoryRoute: AuthenticatedInventoryRoute,
   AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedParentsRoute: AuthenticatedParentsRoute,
-  AuthenticatedReportsRoute: AuthenticatedReportsRouteWithChildren,
-  AuthenticatedTeachersRoute: AuthenticatedTeachersRouteWithChildren,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
   AuthenticatedAdmissionInterviewsRoute: AuthenticatedAdmissionInterviewsRoute,
   AuthenticatedAdmissionNewRoute: AuthenticatedAdmissionNewRoute,
@@ -1378,6 +1353,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMadrassaStudentsRoute: AuthenticatedMadrassaStudentsRoute,
   AuthenticatedMadrassaSubjectsRoute: AuthenticatedMadrassaSubjectsRoute,
   AuthenticatedMadrassaTimetableRoute: AuthenticatedMadrassaTimetableRoute,
+  AuthenticatedReportsAnnualRoute: AuthenticatedReportsAnnualRoute,
+  AuthenticatedReportsAttendanceRoute: AuthenticatedReportsAttendanceRoute,
+  AuthenticatedReportsCategoryRoute: AuthenticatedReportsCategoryRoute,
+  AuthenticatedReportsMonthlyRoute: AuthenticatedReportsMonthlyRoute,
   AuthenticatedSchoolAttendanceRoute: AuthenticatedSchoolAttendanceRoute,
   AuthenticatedSchoolClassesRoute: AuthenticatedSchoolClassesRoute,
   AuthenticatedSchoolFeesRoute: AuthenticatedSchoolFeesRoute,
@@ -1391,9 +1370,13 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsTemplatesRoute: AuthenticatedSettingsTemplatesRoute,
   AuthenticatedSettingsWebsiteRoute: AuthenticatedSettingsWebsiteRoute,
   AuthenticatedStudentsIdRoute: AuthenticatedStudentsIdRoute,
+  AuthenticatedTeachersIdRoute: AuthenticatedTeachersIdRoute,
   AuthenticatedTeachersSalaryRoute: AuthenticatedTeachersSalaryRoute,
   AuthenticatedAdmissionIndexRoute: AuthenticatedAdmissionIndexRoute,
+  AuthenticatedFinanceIndexRoute: AuthenticatedFinanceIndexRoute,
+  AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
+  AuthenticatedTeachersIndexRoute: AuthenticatedTeachersIndexRoute,
   AuthenticatedMadrassaExamsBoardRoute: AuthenticatedMadrassaExamsBoardRoute,
   AuthenticatedSchoolExamsBoardRoute: AuthenticatedSchoolExamsBoardRoute,
   AuthenticatedMadrassaExamsIndexRoute: AuthenticatedMadrassaExamsIndexRoute,
@@ -1443,3 +1426,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
