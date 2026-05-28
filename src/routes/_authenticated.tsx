@@ -6,6 +6,7 @@ import { Topbar } from "@/components/app/topbar";
 import { CommandPalette } from "@/components/app/command-palette";
 import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { useSystem } from "@/components/system-context";
+import { HRProvider } from "@/stores/hr-store";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -17,6 +18,7 @@ function AuthenticatedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
+    <HRProvider>
     <SidebarProvider style={{ "--sidebar-width": "17.5rem", "--sidebar-width-icon": "3.25rem" } as React.CSSProperties}>
       <div className="min-h-dvh flex w-full bg-background">
         <AppSidebar />
@@ -32,5 +34,6 @@ function AuthenticatedLayout() {
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       </div>
     </SidebarProvider>
+    </HRProvider>
   );
 }
