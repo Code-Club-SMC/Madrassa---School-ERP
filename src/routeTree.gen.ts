@@ -29,6 +29,7 @@ import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedTeachersIndexRouteImport } from './routes/_authenticated/teachers.index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports.index'
+import { Route as AuthenticatedHrIndexRouteImport } from './routes/_authenticated/hr/index'
 import { Route as AuthenticatedFinanceIndexRouteImport } from './routes/_authenticated/finance.index'
 import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authenticated/admission/index'
 import { Route as AuthenticatedTeachersSalaryRouteImport } from './routes/_authenticated/teachers_.salary'
@@ -63,6 +64,7 @@ import { Route as AuthenticatedAdmissionNewRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdmissionInterviewsRouteImport } from './routes/_authenticated/admission/interviews'
 import { Route as AuthenticatedSchoolExamsIndexRouteImport } from './routes/_authenticated/school/exams.index'
 import { Route as AuthenticatedMadrassaExamsIndexRouteImport } from './routes/_authenticated/madrassa/exams.index'
+import { Route as AuthenticatedHrStaffIndexRouteImport } from './routes/_authenticated/hr/staff.index'
 import { Route as AuthenticatedSchoolExamsBoardRouteImport } from './routes/_authenticated/school/exams.board'
 import { Route as AuthenticatedMadrassaExamsBoardRouteImport } from './routes/_authenticated/madrassa/exams.board'
 import { Route as AuthenticatedSchoolExamsIdIndexRouteImport } from './routes/_authenticated/school/exams.$id.index'
@@ -176,6 +178,11 @@ const AuthenticatedReportsIndexRoute =
     path: '/reports/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedHrIndexRoute = AuthenticatedHrIndexRouteImport.update({
+  id: '/hr/',
+  path: '/hr/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedFinanceIndexRoute =
   AuthenticatedFinanceIndexRouteImport.update({
     id: '/finance/',
@@ -377,6 +384,12 @@ const AuthenticatedMadrassaExamsIndexRoute =
     path: '/madrassa/exams/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedHrStaffIndexRoute =
+  AuthenticatedHrStaffIndexRouteImport.update({
+    id: '/hr/staff/',
+    path: '/hr/staff/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSchoolExamsBoardRoute =
   AuthenticatedSchoolExamsBoardRouteImport.update({
     id: '/school/exams/board',
@@ -481,11 +494,13 @@ export interface FileRoutesByFullPath {
   '/teachers/salary': typeof AuthenticatedTeachersSalaryRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/finance/': typeof AuthenticatedFinanceIndexRoute
+  '/hr/': typeof AuthenticatedHrIndexRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/teachers/': typeof AuthenticatedTeachersIndexRoute
   '/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
   '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
+  '/hr/staff/': typeof AuthenticatedHrStaffIndexRoute
   '/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
   '/school/exams/': typeof AuthenticatedSchoolExamsIndexRoute
   '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
@@ -544,11 +559,13 @@ export interface FileRoutesByTo {
   '/teachers/salary': typeof AuthenticatedTeachersSalaryRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
   '/finance': typeof AuthenticatedFinanceIndexRoute
+  '/hr': typeof AuthenticatedHrIndexRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/teachers': typeof AuthenticatedTeachersIndexRoute
   '/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
   '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
+  '/hr/staff': typeof AuthenticatedHrStaffIndexRoute
   '/madrassa/exams': typeof AuthenticatedMadrassaExamsIndexRoute
   '/school/exams': typeof AuthenticatedSchoolExamsIndexRoute
   '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
@@ -610,11 +627,13 @@ export interface FileRoutesById {
   '/_authenticated/teachers_/salary': typeof AuthenticatedTeachersSalaryRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/_authenticated/finance/': typeof AuthenticatedFinanceIndexRoute
+  '/_authenticated/hr/': typeof AuthenticatedHrIndexRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/teachers/': typeof AuthenticatedTeachersIndexRoute
   '/_authenticated/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
   '/_authenticated/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
+  '/_authenticated/hr/staff/': typeof AuthenticatedHrStaffIndexRoute
   '/_authenticated/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
   '/_authenticated/school/exams/': typeof AuthenticatedSchoolExamsIndexRoute
   '/_authenticated/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
@@ -676,11 +695,13 @@ export interface FileRouteTypes {
     | '/teachers/salary'
     | '/admission/'
     | '/finance/'
+    | '/hr/'
     | '/reports/'
     | '/settings/'
     | '/teachers/'
     | '/madrassa/exams/board'
     | '/school/exams/board'
+    | '/hr/staff/'
     | '/madrassa/exams/'
     | '/school/exams/'
     | '/madrassa/exams/$id/marks'
@@ -739,11 +760,13 @@ export interface FileRouteTypes {
     | '/teachers/salary'
     | '/admission'
     | '/finance'
+    | '/hr'
     | '/reports'
     | '/settings'
     | '/teachers'
     | '/madrassa/exams/board'
     | '/school/exams/board'
+    | '/hr/staff'
     | '/madrassa/exams'
     | '/school/exams'
     | '/madrassa/exams/$id/marks'
@@ -804,11 +827,13 @@ export interface FileRouteTypes {
     | '/_authenticated/teachers_/salary'
     | '/_authenticated/admission/'
     | '/_authenticated/finance/'
+    | '/_authenticated/hr/'
     | '/_authenticated/reports/'
     | '/_authenticated/settings/'
     | '/_authenticated/teachers/'
     | '/_authenticated/madrassa/exams/board'
     | '/_authenticated/school/exams/board'
+    | '/_authenticated/hr/staff/'
     | '/_authenticated/madrassa/exams/'
     | '/_authenticated/school/exams/'
     | '/_authenticated/madrassa/exams/$id/marks'
@@ -969,6 +994,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports/'
       preLoaderRoute: typeof AuthenticatedReportsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/hr/': {
+      id: '/_authenticated/hr/'
+      path: '/hr'
+      fullPath: '/hr/'
+      preLoaderRoute: typeof AuthenticatedHrIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/finance/': {
@@ -1209,6 +1241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMadrassaExamsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/hr/staff/': {
+      id: '/_authenticated/hr/staff/'
+      path: '/hr/staff'
+      fullPath: '/hr/staff/'
+      preLoaderRoute: typeof AuthenticatedHrStaffIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/school/exams/board': {
       id: '/_authenticated/school/exams/board'
       path: '/school/exams/board'
@@ -1316,11 +1355,13 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTeachersSalaryRoute: typeof AuthenticatedTeachersSalaryRoute
   AuthenticatedAdmissionIndexRoute: typeof AuthenticatedAdmissionIndexRoute
   AuthenticatedFinanceIndexRoute: typeof AuthenticatedFinanceIndexRoute
+  AuthenticatedHrIndexRoute: typeof AuthenticatedHrIndexRoute
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
   AuthenticatedTeachersIndexRoute: typeof AuthenticatedTeachersIndexRoute
   AuthenticatedMadrassaExamsBoardRoute: typeof AuthenticatedMadrassaExamsBoardRoute
   AuthenticatedSchoolExamsBoardRoute: typeof AuthenticatedSchoolExamsBoardRoute
+  AuthenticatedHrStaffIndexRoute: typeof AuthenticatedHrStaffIndexRoute
   AuthenticatedMadrassaExamsIndexRoute: typeof AuthenticatedMadrassaExamsIndexRoute
   AuthenticatedSchoolExamsIndexRoute: typeof AuthenticatedSchoolExamsIndexRoute
   AuthenticatedMadrassaExamsIdMarksRoute: typeof AuthenticatedMadrassaExamsIdMarksRoute
@@ -1374,11 +1415,13 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTeachersSalaryRoute: AuthenticatedTeachersSalaryRoute,
   AuthenticatedAdmissionIndexRoute: AuthenticatedAdmissionIndexRoute,
   AuthenticatedFinanceIndexRoute: AuthenticatedFinanceIndexRoute,
+  AuthenticatedHrIndexRoute: AuthenticatedHrIndexRoute,
   AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedTeachersIndexRoute: AuthenticatedTeachersIndexRoute,
   AuthenticatedMadrassaExamsBoardRoute: AuthenticatedMadrassaExamsBoardRoute,
   AuthenticatedSchoolExamsBoardRoute: AuthenticatedSchoolExamsBoardRoute,
+  AuthenticatedHrStaffIndexRoute: AuthenticatedHrStaffIndexRoute,
   AuthenticatedMadrassaExamsIndexRoute: AuthenticatedMadrassaExamsIndexRoute,
   AuthenticatedSchoolExamsIndexRoute: AuthenticatedSchoolExamsIndexRoute,
   AuthenticatedMadrassaExamsIdMarksRoute:
