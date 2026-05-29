@@ -6,6 +6,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/school/classes")({
   component: ClassesPage,
@@ -18,7 +23,7 @@ type Klass = {
   sections: { id: string; name: string; students: number; group?: "science" | "arts" }[];
 };
 
-const CLASSES: Klass[] = [
+const SEED_CLASSES: Klass[] = [
   { id: "kg", name: "KG / Prep", nameUrdu: "کے جی / پری", level: "pre_primary", rollPrefix: "KG", sections: [{ id: "kg-a", name: "A", students: 22 }] },
   { id: "g1", name: "Grade 1", nameUrdu: "پہلی جماعت", level: "primary", rollPrefix: "G1", sections: [{ id: "g1-a", name: "A", students: 28 }, { id: "g1-b", name: "B", students: 26 }] },
   { id: "g2", name: "Grade 2", nameUrdu: "دوسری جماعت", level: "primary", rollPrefix: "G2", sections: [{ id: "g2-a", name: "A", students: 30 }] },
@@ -54,18 +59,29 @@ function subjectsForLevel(level: Klass["level"]) {
 }
 
 function ClassesPage() {
-  const [selected, setSelected] = useState<Klass>(CLASSES[1]);
+  const [classes, setClasses] = useState<Klass[]>(SEED_CLASSES);
+  const [selected, setSelected] = useState<Klass>(SEED_CLASSES[1]);
+  const [classOpen, setClassOpen] = useState(false);
+  const [sectionOpen, setSectionOpen] = useState(false);
+  const [cf, setCf] = useState({ name: "", nameUrdu: "", level: "primary" as Klass["level"], rollPrefix: "" });
+  const [sf, setSf] = useState({ name: "", students: 0, group: "" as "" | "science" | "arts" });
+
+  function updateClass(updated: Klass) {
+    setClasses((p) => p.map((c) => (c.id === updated.id ? updated : c)));
+    setSelected(updated);
+  }
+
   return (
     <div>
       <PageHeader
         title="Class & Section Manager"
         titleUrdu="جماعتیں و سیکشن"
         description="Pakistani grade structure — Pre-primary through Matric. Manage sections, group assignment (Science/Arts), and subjects per class."
-        actions={<Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" />Add Class</Button>}
+        actions={<Button size="sm" className="gap-1.5" onClick={() => setClassOpen(true)}><Plus className="h-4 w-4" />Add Class</Button>}
       />
       <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
         <Card className="p-2 max-h-[70vh] overflow-y-auto">
-          {CLASSES.map((c) => {
+          {classes.map((c) => {
             const total = c.sections.reduce((a, s) => a + s.students, 0);
             const active = c.id === selected.id;
             return (
@@ -119,7 +135,7 @@ function ClassesPage() {
           <Card className="p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold flex items-center gap-2"><Users2 className="h-4 w-4 text-primary" />Sections</h3>
-              <Button size="sm" variant="outline" className="gap-1.5"><Plus className="h-3.5 w-3.5" />Add Section</Button>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setSectionOpen(true)}><Plus className="h-3.5 w-3.5" />Add Section</Button>
             </div>
             <div className="space-y-2">
               {selected.sections.map((s) => (
@@ -143,7 +159,7 @@ function ClassesPage() {
           <Card className="p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold flex items-center gap-2"><GraduationCap className="h-4 w-4 text-primary" />Subjects · مضامین</h3>
-              <Button size="sm" variant="outline" className="gap-1.5"><Plus className="h-3.5 w-3.5" />Add Subject</Button>
+              <Button size="sm" variant="outline" className="gap-1.5" asChild><a href="/school/subjects"><Plus className="h-3.5 w-3.5" />Manage Subjects</a></Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {subjectsForLevel(selected.level).map((s) => (
@@ -159,6 +175,73 @@ function ClassesPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={classOpen} onOpenChange={setClassOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Add Class · نئی جماعت</DialogTitle></DialogHeader>
+          <div className="grid gap-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>Name</Label><Input value={cf.name} onChange={(e) => setCf({ ...cf, name: e.target.value })} placeholder="Grade 11" /></div>
+              <div><Label className="font-urdu">اردو نام</Label><Input dir="rtl" className="font-urdu" value={cf.nameUrdu} onChange={(e) => setCf({ ...cf, nameUrdu: e.target.value })} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>Level</Label>
+                <Select value={cf.level} onValueChange={(v) => setCf({ ...cf, level: v as Klass["level"] })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pre_primary">Pre-Primary</SelectItem>
+                    <SelectItem value="primary">Primary</SelectItem>
+                    <SelectItem value="middle">Middle</SelectItem>
+                    <SelectItem value="secondary">Secondary</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div><Label>Roll Prefix</Label><Input value={cf.rollPrefix} onChange={(e) => setCf({ ...cf, rollPrefix: e.target.value })} placeholder="G11" /></div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClassOpen(false)}>Cancel</Button>
+            <Button onClick={() => {
+              if (!cf.name.trim()) { toast.error("Name required"); return; }
+              const id = `cls-${Date.now()}`;
+              const k: Klass = { id, name: cf.name, nameUrdu: cf.nameUrdu || cf.name, level: cf.level, rollPrefix: cf.rollPrefix || cf.name.slice(0, 2).toUpperCase(), sections: [] };
+              setClasses((p) => [...p, k]); setSelected(k);
+              toast.success("Class added"); setCf({ name: "", nameUrdu: "", level: "primary", rollPrefix: "" }); setClassOpen(false);
+            }}>Add</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={sectionOpen} onOpenChange={setSectionOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Add Section to {selected.name}</DialogTitle></DialogHeader>
+          <div className="grid gap-3">
+            <div><Label>Section Name</Label><Input value={sf.name} onChange={(e) => setSf({ ...sf, name: e.target.value })} placeholder="C" /></div>
+            <div><Label>Students Enrolled</Label><Input type="number" value={sf.students} onChange={(e) => setSf({ ...sf, students: +e.target.value })} /></div>
+            {selected.level === "secondary" && (
+              <div><Label>Group</Label>
+                <Select value={sf.group || "none"} onValueChange={(v) => setSf({ ...sf, group: v === "none" ? "" : v as "science" | "arts" })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="science">Science</SelectItem>
+                    <SelectItem value="arts">Arts</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSectionOpen(false)}>Cancel</Button>
+            <Button onClick={() => {
+              if (!sf.name.trim()) { toast.error("Section name required"); return; }
+              const sid = `${selected.id}-${sf.name.toLowerCase()}`;
+              updateClass({ ...selected, sections: [...selected.sections, { id: sid, name: sf.name, students: sf.students, ...(sf.group ? { group: sf.group } : {}) }] });
+              toast.success("Section added"); setSf({ name: "", students: 0, group: "" }); setSectionOpen(false);
+            }}>Add</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
