@@ -21,7 +21,8 @@ export const Route = createFileRoute("/_authenticated/reports/monthly")({
 function MonthlyReport() {
   const now = new Date();
   const monthLabel = now.toLocaleString("en-US", { month: "long", year: "numeric" });
-  const monthLabelUrdu = now.toLocaleString("ur-PK", { month: "long", year: "numeric" });
+  const URDU_MONTHS = ["جنوری", "فروری", "مارچ", "اپریل", "مئی", "جون", "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر"];
+  const monthLabelUrdu = `${URDU_MONTHS[now.getMonth()]} ${now.getFullYear()}`;
 
   // Admissions this month (use applications)
   const admissions = applications.filter((a) => a.status === "accepted").length;
