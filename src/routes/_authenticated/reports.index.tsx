@@ -7,7 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Toolti
 import { madrassaCategories, students, feeRecords } from "@/mock";
 import { toast } from "sonner";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
-import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
+import { TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 
 export const Route = createFileRoute("/_authenticated/reports/")({
   component: ReportsHub,
