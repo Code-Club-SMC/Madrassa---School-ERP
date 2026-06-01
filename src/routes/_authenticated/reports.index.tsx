@@ -3,9 +3,11 @@ import { ClipboardList, Layers, GraduationCap, CalendarRange, BarChart3, Shield,
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from "recharts";
 import { madrassaCategories, students, feeRecords } from "@/mock";
 import { toast } from "sonner";
+import { ChartCard, KpiCard } from "@/components/shared/chart-card";
+import { TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 
 export const Route = createFileRoute("/_authenticated/reports/")({
   component: ReportsHub,
@@ -23,6 +25,7 @@ const REPORTS = [
 function ReportsHub() {
   const enrollment = madrassaCategories.map((c) => ({
     name: c.name,
+    nameUrdu: c.nameUrdu,
     students: c.subcategories.reduce((a, b) => a + b.count, 0),
   }));
 
@@ -45,10 +48,10 @@ function ReportsHub() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Total Students · کل طلبہ</p><p className="font-heading text-2xl font-bold mt-1">{students.length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Active · فعال</p><p className="font-heading text-2xl font-bold mt-1 text-chart-5 dark:text-chart-1">{present}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Fee Collection · فیس وصولی</p><p className="font-heading text-2xl font-bold mt-1">{collectionRate}%</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Reports Available</p><p className="font-heading text-2xl font-bold mt-1">{REPORTS.length}</p></Card>
+        <KpiCard label="Total Students" labelUrdu="کل طلبہ" value={students.length} delta={{ value: 6, positive: true }} />
+        <KpiCard label="Active" labelUrdu="فعال" value={present} accent="success" />
+        <KpiCard label="Fee Collection" labelUrdu="فیس وصولی" value={`${collectionRate}%`} accent={collectionRate >= 75 ? "success" : "warning"} />
+        <KpiCard label="Reports Available" labelUrdu="دستیاب رپورٹس" value={REPORTS.length} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -65,23 +68,27 @@ function ReportsHub() {
         ))}
       </div>
 
-      <Card className="p-5">
-        <div className="mb-4">
-          <h3 className="font-heading font-semibold">Enrollment by Category</h3>
-          <p className="font-urdu text-sm text-muted-foreground">زمرہ وار اندراج</p>
-        </div>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={enrollment}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="currentColor" className="text-muted-foreground" />
-              <YAxis tick={{ fontSize: 11 }} stroke="currentColor" className="text-muted-foreground" />
-              <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-              <Bar dataKey="students" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
+      <ChartCard
+        title="Enrollment by Category"
+        titleUrdu="زمرہ وار اندراج"
+        description="Madrassa students grouped by Wifaq category."
+        bodyClassName="h-72"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={enrollment} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis dataKey="name" tick={AXIS_TICK} stroke="var(--border)" />
+            <YAxis tick={AXIS_TICK} stroke="var(--border)" />
+            <Tooltip
+              contentStyle={TOOLTIP_STYLE}
+              cursor={{ fill: "color-mix(in oklab, var(--primary) 8%, transparent)" }}
+              formatter={(v: number, _n, p) => [`${v} students`, p?.payload?.nameUrdu ?? p?.payload?.name]}
+            />
+            <Legend wrapperStyle={{ fontSize: 12, color: "var(--foreground)" }} />
+            <Bar dataKey="students" name="Students" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </ChartCard>
     </div>
   );
 }
