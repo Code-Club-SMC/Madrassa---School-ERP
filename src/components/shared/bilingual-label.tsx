@@ -11,12 +11,12 @@ type Props = {
 
 export function BilingualLabel({ urdu, english, htmlFor, required, children }: Props) {
   return (
-    <div className="flex flex-col gap-1">
-      <Label htmlFor={htmlFor} className="font-urdu text-base text-foreground">
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={htmlFor} dir="rtl" lang="ur" className="font-urdu text-base text-foreground leading-tight">
         {urdu}
         {required && <span className="text-destructive ms-1">*</span>}
       </Label>
-      <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium -mt-1">{english}</span>
+      <span className="text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground font-medium -mt-1">{english}</span>
       {children}
     </div>
   );
