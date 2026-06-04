@@ -16,15 +16,15 @@ type Props = {
 
 export function KpiCard({ icon: Icon, value, label, labelUrdu, subline, trend, sparkline, tone = "default" }: Props) {
   return (
-    <Card className="p-5 border-border/70 hover:shadow-sm transition-shadow">
+    <Card className="p-6 border-border/70 hover:shadow-sm transition-shadow">
       <div className="flex items-start gap-4">
         <div className="rounded-xl bg-primary/10 p-2.5 shrink-0">
           <Icon className="h-5 w-5 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className={cn("font-heading text-2xl font-bold tracking-tight tabular-nums", tone === "destructive" && "text-destructive")}>{value}</p>
-          <p className="text-sm font-medium text-foreground truncate">{label}</p>
-          <p className="font-urdu text-xs text-muted-foreground">{labelUrdu}</p>
+          <p className={cn("font-heading text-3xl font-bold tracking-tight tabular-nums", tone === "destructive" && "text-destructive")}>{value}</p>
+          <p dir="rtl" lang="ur" className="font-urdu text-base text-foreground leading-tight mt-1 truncate">{labelUrdu}</p>
+          <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground truncate">{label}</p>
           {subline && <p className="text-[11px] text-muted-foreground mt-1">{subline}</p>}
           {trend && (
             <p

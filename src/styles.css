@@ -94,14 +94,17 @@
   --chart-3: oklch(0.6 0.13 165);
   --chart-4: oklch(0.51 0.11 166);
   --chart-5: oklch(0.432 0.09 166);
-  --sidebar: oklch(0.985 0.008 180);
-  --sidebar-foreground: oklch(0.22 0.02 180);
-  --sidebar-primary: oklch(0.511 0.096 186.391);
-  --sidebar-primary-foreground: oklch(0.985 0.01 180);
-  --sidebar-accent: oklch(0.93 0.03 186);
-  --sidebar-accent-foreground: oklch(0.25 0.05 186);
-  --sidebar-border: oklch(0.91 0.014 186);
-  --sidebar-ring: oklch(0.511 0.096 186.391);
+  /* Sidebar uses a deliberate dark teal-charcoal even on light theme to create
+     a premium contrast against the bright canvas. Tones derived from the brand
+     teal (--primary hue ~186) shifted into deep luminance. */
+  --sidebar: oklch(0.21 0.025 186);
+  --sidebar-foreground: oklch(0.94 0.012 180);
+  --sidebar-primary: oklch(0.72 0.12 186);
+  --sidebar-primary-foreground: oklch(0.14 0.02 186);
+  --sidebar-accent: oklch(0.30 0.045 186);
+  --sidebar-accent-foreground: oklch(0.98 0.012 180);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.72 0.12 186);
 }
 
 .dark {

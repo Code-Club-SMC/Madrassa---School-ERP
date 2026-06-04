@@ -15,12 +15,14 @@ type Props = {
 /** Card wrapper for charts with bilingual header (English + Urdu RTL). */
 export function ChartCard({ title, titleUrdu, description, actions, children, className, bodyClassName }: Props) {
   return (
-    <Card className={cn("p-5 flex flex-col gap-3", className)}>
+    <Card className={cn("p-6 flex flex-col gap-4", className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-heading font-semibold text-sm text-foreground">{title}</h3>
-          <p dir="rtl" lang="ur" className="font-urdu text-sm text-muted-foreground leading-tight">
+          <h3 dir="rtl" lang="ur" className="font-urdu text-lg font-bold text-foreground leading-tight">
             {titleUrdu}
+          </h3>
+          <p className="font-heading text-[11px] uppercase tracking-wider text-muted-foreground mt-1">
+            {title}
           </p>
           {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
         </div>
@@ -49,13 +51,13 @@ export function KpiCard({ label, labelUrdu, value, delta, accent = "default" }: 
           ? "text-chart-3"
           : "text-foreground";
   return (
-    <Card className="p-4">
-      <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-      <p dir="rtl" lang="ur" className="font-urdu text-xs text-muted-foreground leading-tight">
+    <Card className="p-5">
+      <p dir="rtl" lang="ur" className="font-urdu text-base text-foreground leading-tight">
         {labelUrdu}
       </p>
-      <div className="flex items-baseline gap-2 mt-2">
-        <p className={cn("font-heading text-2xl font-bold", accentClass)}>{value}</p>
+      <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium mt-0.5">{label}</p>
+      <div className="flex items-baseline gap-2 mt-3">
+        <p className={cn("font-heading text-3xl font-bold tracking-tight", accentClass)}>{value}</p>
         {delta && (
           <span
             className={cn(

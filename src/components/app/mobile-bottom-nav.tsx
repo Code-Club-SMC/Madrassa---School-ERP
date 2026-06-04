@@ -38,12 +38,13 @@ export function MobileBottomNav() {
               <Link
                 to={i.url}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] transition-colors",
+                  "flex flex-col items-center justify-center gap-0 py-2.5 text-[10px] transition-colors",
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <i.icon className={cn("h-5 w-5", active && "scale-110 transition-transform")} />
-                <span className="font-urdu text-[11px] leading-none">{i.ur}</span>
+                <span dir="rtl" lang="ur" className="font-urdu text-[13px] leading-tight mt-0.5">{i.ur}</span>
+                <span className="text-[9px] uppercase tracking-wide leading-none opacity-70">{i.en}</span>
               </Link>
             </li>
           );
