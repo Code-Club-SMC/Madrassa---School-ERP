@@ -11,13 +11,13 @@ type Props = {
 
 export function EmptyState({ icon: Icon, heading, headingUrdu, description, action }: Props) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mb-4">
+    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-5">
         <Icon className="w-6 h-6 text-muted-foreground" />
       </div>
-      <h3 className="font-heading font-semibold text-base mb-1">{heading}</h3>
-      <p className="font-urdu text-muted-foreground text-sm mb-1">{headingUrdu}</p>
-      {description && <p className="text-sm text-muted-foreground max-w-xs mb-4">{description}</p>}
+      <h3 dir="rtl" lang="ur" className="font-urdu text-xl font-bold text-foreground leading-tight mb-1">{headingUrdu}</h3>
+      <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mb-3">{heading}</p>
+      {description && <p className="text-sm text-muted-foreground max-w-sm mb-5">{description}</p>}
       {action && (
         <Button size="sm" onClick={action.onClick}>
           {action.label}
