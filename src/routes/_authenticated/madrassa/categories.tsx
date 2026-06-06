@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { madrassaCategories, students } from "@/mock";
@@ -75,16 +76,23 @@ function CategoriesPage() {
 
       <Dialog open={addCat} onOpenChange={setAddCat}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add Category · نیا درجہ</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div><Label>Name (English)</Label><Input value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} placeholder="e.g. Tahfeez" /></div>
-            <div><Label className="font-urdu">اردو نام</Label><Input dir="rtl" className="font-urdu" value={catForm.nameUrdu} onChange={(e) => setCatForm({ ...catForm, nameUrdu: e.target.value })} /></div>
+          <DialogHeader>
+            <DialogTitle dir="rtl" lang="ur" className="font-urdu text-xl">نیا زمرہ</DialogTitle>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Add Category</p>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <BilingualLabel urdu="زمرہ کا نام" english="Category Name (Urdu)" required>
+              <Input dir="rtl" className="font-urdu text-base" value={catForm.nameUrdu} onChange={(e) => setCatForm({ ...catForm, nameUrdu: e.target.value })} placeholder="مثال: تحفیظ" />
+            </BilingualLabel>
+            <BilingualLabel urdu="انگریزی نام" english="English Name" required>
+              <Input value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} placeholder="e.g. Tahfeez" />
+            </BilingualLabel>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddCat(false)}>Cancel</Button>
             <Button onClick={() => {
-              if (!catForm.name.trim()) { toast.error("Name required"); return; }
-              setCats((p) => [...p, { id: `cat-${Date.now()}`, name: catForm.name, nameUrdu: catForm.nameUrdu || catForm.name, subcategories: [] }]);
+              if (!catForm.nameUrdu.trim() && !catForm.name.trim()) { toast.error("Name required · نام درکار ہے"); return; }
+              setCats((p) => [...p, { id: `cat-${Date.now()}`, name: catForm.name || catForm.nameUrdu, nameUrdu: catForm.nameUrdu || catForm.name, subcategories: [] }]);
               toast.success("Category added"); setCatForm({ name: "", nameUrdu: "" }); setAddCat(false);
             }}>Add</Button>
           </DialogFooter>
@@ -93,29 +101,40 @@ function CategoriesPage() {
 
       <Dialog open={!!addDarja} onOpenChange={(v) => !v && setAddDarja(null)}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add Darja · نیا ذیلی درجہ</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div><Label>Parent Category</Label>
+          <DialogHeader>
+            <DialogTitle dir="rtl" lang="ur" className="font-urdu text-xl">نیا ذیلی درجہ</DialogTitle>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Add Darja</p>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <BilingualLabel urdu="بنیادی زمرہ" english="Parent Category">
               <Select value={addDarja ?? ""} onValueChange={(v) => setAddDarja(v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
               </Select>
+            </BilingualLabel>
+            <div className="grid grid-cols-2 gap-3">
+              <BilingualLabel urdu="درجہ کا نام" english="Name (Urdu)" required>
+                <Input dir="rtl" className="font-urdu text-base" value={darjaForm.nameUrdu} onChange={(e) => setDarjaForm({ ...darjaForm, nameUrdu: e.target.value })} placeholder="مثال: درجہ اولیٰ" />
+              </BilingualLabel>
+              <BilingualLabel urdu="انگریزی" english="English">
+                <Input value={darjaForm.name} onChange={(e) => setDarjaForm({ ...darjaForm, name: e.target.value })} placeholder="Aamma" />
+              </BilingualLabel>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label>Name</Label><Input value={darjaForm.name} onChange={(e) => setDarjaForm({ ...darjaForm, name: e.target.value })} /></div>
-              <div><Label className="font-urdu">اردو</Label><Input dir="rtl" className="font-urdu" value={darjaForm.nameUrdu} onChange={(e) => setDarjaForm({ ...darjaForm, nameUrdu: e.target.value })} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label>Roll Prefix</Label><Input value={darjaForm.rollPrefix} onChange={(e) => setDarjaForm({ ...darjaForm, rollPrefix: e.target.value })} placeholder="e.g. HF" /></div>
-              <div><Label>Initial Count</Label><Input type="number" value={darjaForm.count} onChange={(e) => setDarjaForm({ ...darjaForm, count: +e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <BilingualLabel urdu="رول نمبر سابقہ" english="Roll Prefix">
+                <Input value={darjaForm.rollPrefix} onChange={(e) => setDarjaForm({ ...darjaForm, rollPrefix: e.target.value })} placeholder="HF" />
+              </BilingualLabel>
+              <BilingualLabel urdu="ابتدائی تعداد" english="Initial Count">
+                <Input type="number" value={darjaForm.count} onChange={(e) => setDarjaForm({ ...darjaForm, count: +e.target.value })} />
+              </BilingualLabel>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddDarja(null)}>Cancel</Button>
             <Button onClick={() => {
-              if (!addDarja || !darjaForm.name.trim()) { toast.error("Name required"); return; }
+              if (!addDarja || (!darjaForm.name.trim() && !darjaForm.nameUrdu.trim())) { toast.error("Name required · نام درکار ہے"); return; }
               const parent = addDarja;
-              setCats((p) => p.map((c) => c.id === parent ? { ...c, subcategories: [...c.subcategories, { id: `sub-${Date.now()}`, name: darjaForm.name, nameUrdu: darjaForm.nameUrdu || darjaForm.name, rollPrefix: darjaForm.rollPrefix || "X", count: darjaForm.count }] } : c));
+              setCats((p) => p.map((c) => c.id === parent ? { ...c, subcategories: [...c.subcategories, { id: `sub-${Date.now()}`, name: darjaForm.name || darjaForm.nameUrdu, nameUrdu: darjaForm.nameUrdu || darjaForm.name, rollPrefix: darjaForm.rollPrefix || "X", count: darjaForm.count }] } : c));
               toast.success("Darja added"); setAddDarja(null);
             }}>Add</Button>
           </DialogFooter>

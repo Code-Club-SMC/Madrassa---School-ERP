@@ -28,7 +28,7 @@ export function ChartCard({ title, titleUrdu, description, actions, children, cl
         </div>
         {actions && <div className="shrink-0">{actions}</div>}
       </div>
-      <div className={cn("flex-1 min-h-[260px]", bodyClassName)}>{children}</div>
+      <div className={cn("w-full h-72", bodyClassName)}>{children}</div>
     </Card>
   );
 }

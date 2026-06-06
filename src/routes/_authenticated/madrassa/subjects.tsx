@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/madrassa/subjects")({
@@ -64,20 +64,31 @@ function SubjectsPage() {
       </Card>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add Subject · نیا مضمون</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label className="font-urdu">اردو نام</Label><Input dir="rtl" className="font-urdu" value={f.urdu} onChange={(e) => setF({ ...f, urdu: e.target.value })} /></div>
-              <div><Label>English Name</Label><Input value={f.english} onChange={(e) => setF({ ...f, english: e.target.value })} /></div>
+          <DialogHeader>
+            <DialogTitle dir="rtl" lang="ur" className="font-urdu text-xl">نیا مضمون</DialogTitle>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Add Subject</p>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <BilingualLabel urdu="مضمون کا نام" english="Name (Urdu)" required>
+                <Input dir="rtl" className="font-urdu text-base" value={f.urdu} onChange={(e) => setF({ ...f, urdu: e.target.value })} placeholder="مثال: تفسیر" />
+              </BilingualLabel>
+              <BilingualLabel urdu="انگریزی نام" english="English Name">
+                <Input value={f.english} onChange={(e) => setF({ ...f, english: e.target.value })} placeholder="Tafsir" />
+              </BilingualLabel>
             </div>
-            <div><Label>Darja Coverage</Label><Input value={f.darja} onChange={(e) => setF({ ...f, darja: e.target.value })} placeholder="e.g. Aamma → Saalisa" /></div>
-            <div><Label>Teachers Count</Label><Input type="number" value={f.teachers} onChange={(e) => setF({ ...f, teachers: +e.target.value })} /></div>
+            <BilingualLabel urdu="درجات کا احاطہ" english="Darja Coverage">
+              <Input value={f.darja} onChange={(e) => setF({ ...f, darja: e.target.value })} placeholder="Aamma → Saalisa" />
+            </BilingualLabel>
+            <BilingualLabel urdu="اساتذہ کی تعداد" english="Teachers Count">
+              <Input type="number" value={f.teachers} onChange={(e) => setF({ ...f, teachers: +e.target.value })} />
+            </BilingualLabel>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button onClick={() => {
-              if (!f.english.trim()) { toast.error("English name required"); return; }
-              setSubjects((p) => [{ id: `s-${Date.now()}`, urdu: f.urdu || f.english, english: f.english, darja: f.darja || "—", teachers: f.teachers }, ...p]);
+              if (!f.urdu.trim() && !f.english.trim()) { toast.error("Name required · نام درکار ہے"); return; }
+              setSubjects((p) => [{ id: `s-${Date.now()}`, urdu: f.urdu || f.english, english: f.english || f.urdu, darja: f.darja || "—", teachers: f.teachers }, ...p]);
               toast.success("Subject added"); setF({ urdu: "", english: "", darja: "", teachers: 0 }); setOpen(false);
             }}>Add</Button>
           </DialogFooter>

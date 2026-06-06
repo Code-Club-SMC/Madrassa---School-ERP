@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
@@ -178,14 +178,21 @@ function ClassesPage() {
 
       <Dialog open={classOpen} onOpenChange={setClassOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add Class · نئی جماعت</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label>Name</Label><Input value={cf.name} onChange={(e) => setCf({ ...cf, name: e.target.value })} placeholder="Grade 11" /></div>
-              <div><Label className="font-urdu">اردو نام</Label><Input dir="rtl" className="font-urdu" value={cf.nameUrdu} onChange={(e) => setCf({ ...cf, nameUrdu: e.target.value })} /></div>
+          <DialogHeader>
+            <DialogTitle dir="rtl" lang="ur" className="font-urdu text-xl">نئی جماعت</DialogTitle>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Add Class</p>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <BilingualLabel urdu="جماعت کا نام" english="Name (Urdu)" required>
+                <Input dir="rtl" className="font-urdu text-base" value={cf.nameUrdu} onChange={(e) => setCf({ ...cf, nameUrdu: e.target.value })} placeholder="گیارہویں جماعت" />
+              </BilingualLabel>
+              <BilingualLabel urdu="انگریزی نام" english="English Name">
+                <Input value={cf.name} onChange={(e) => setCf({ ...cf, name: e.target.value })} placeholder="Grade 11" />
+              </BilingualLabel>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label>Level</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <BilingualLabel urdu="سطح" english="Level">
                 <Select value={cf.level} onValueChange={(v) => setCf({ ...cf, level: v as Klass["level"] })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -195,16 +202,18 @@ function ClassesPage() {
                     <SelectItem value="secondary">Secondary</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div><Label>Roll Prefix</Label><Input value={cf.rollPrefix} onChange={(e) => setCf({ ...cf, rollPrefix: e.target.value })} placeholder="G11" /></div>
+              </BilingualLabel>
+              <BilingualLabel urdu="رول نمبر سابقہ" english="Roll Prefix">
+                <Input value={cf.rollPrefix} onChange={(e) => setCf({ ...cf, rollPrefix: e.target.value })} placeholder="G11" />
+              </BilingualLabel>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setClassOpen(false)}>Cancel</Button>
             <Button onClick={() => {
-              if (!cf.name.trim()) { toast.error("Name required"); return; }
+              if (!cf.name.trim() && !cf.nameUrdu.trim()) { toast.error("Name required · نام درکار ہے"); return; }
               const id = `cls-${Date.now()}`;
-              const k: Klass = { id, name: cf.name, nameUrdu: cf.nameUrdu || cf.name, level: cf.level, rollPrefix: cf.rollPrefix || cf.name.slice(0, 2).toUpperCase(), sections: [] };
+              const k: Klass = { id, name: cf.name || cf.nameUrdu, nameUrdu: cf.nameUrdu || cf.name, level: cf.level, rollPrefix: cf.rollPrefix || (cf.name || cf.nameUrdu).slice(0, 2).toUpperCase(), sections: [] };
               setClasses((p) => [...p, k]); setSelected(k);
               toast.success("Class added"); setCf({ name: "", nameUrdu: "", level: "primary", rollPrefix: "" }); setClassOpen(false);
             }}>Add</Button>
@@ -214,21 +223,28 @@ function ClassesPage() {
 
       <Dialog open={sectionOpen} onOpenChange={setSectionOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add Section to {selected.name}</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div><Label>Section Name</Label><Input value={sf.name} onChange={(e) => setSf({ ...sf, name: e.target.value })} placeholder="C" /></div>
-            <div><Label>Students Enrolled</Label><Input type="number" value={sf.students} onChange={(e) => setSf({ ...sf, students: +e.target.value })} /></div>
+          <DialogHeader>
+            <DialogTitle dir="rtl" lang="ur" className="font-urdu text-xl">نیا سیکشن — {selected.nameUrdu}</DialogTitle>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Add Section to {selected.name}</p>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <BilingualLabel urdu="سیکشن کا نام" english="Section Name" required>
+              <Input value={sf.name} onChange={(e) => setSf({ ...sf, name: e.target.value })} placeholder="C" />
+            </BilingualLabel>
+            <BilingualLabel urdu="طلبہ کی تعداد" english="Students Enrolled">
+              <Input type="number" value={sf.students} onChange={(e) => setSf({ ...sf, students: +e.target.value })} />
+            </BilingualLabel>
             {selected.level === "secondary" && (
-              <div><Label>Group</Label>
+              <BilingualLabel urdu="گروپ" english="Group">
                 <Select value={sf.group || "none"} onValueChange={(v) => setSf({ ...sf, group: v === "none" ? "" : v as "science" | "arts" })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="science">Science</SelectItem>
-                    <SelectItem value="arts">Arts</SelectItem>
+                    <SelectItem value="none">None · کوئی نہیں</SelectItem>
+                    <SelectItem value="science">Science · سائنس</SelectItem>
+                    <SelectItem value="arts">Arts · آرٹس</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </BilingualLabel>
             )}
           </div>
           <DialogFooter>
