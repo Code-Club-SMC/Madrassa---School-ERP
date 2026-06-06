@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
@@ -66,29 +66,42 @@ function SubjectsPage() {
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add Subject · نیا مضمون</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label className="font-urdu">اردو نام</Label><Input dir="rtl" className="font-urdu" value={f.ur} onChange={(e) => setF({ ...f, ur: e.target.value })} /></div>
-              <div><Label>English Name</Label><Input value={f.en} onChange={(e) => setF({ ...f, en: e.target.value })} /></div>
+          <DialogHeader>
+            <DialogTitle dir="rtl" lang="ur" className="font-urdu text-xl">نیا مضمون</DialogTitle>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Add Subject</p>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <BilingualLabel urdu="مضمون کا نام" english="Name (Urdu)" required>
+                <Input dir="rtl" className="font-urdu text-base" value={f.ur} onChange={(e) => setF({ ...f, ur: e.target.value })} placeholder="مثال: ریاضی" />
+              </BilingualLabel>
+              <BilingualLabel urdu="انگریزی نام" english="English Name">
+                <Input value={f.en} onChange={(e) => setF({ ...f, en: e.target.value })} placeholder="Mathematics" />
+              </BilingualLabel>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label>Total Marks</Label><Input type="number" value={f.marks} onChange={(e) => setF({ ...f, marks: +e.target.value })} /></div>
-              <div><Label>Pass Marks</Label><Input type="number" value={f.pass} onChange={(e) => setF({ ...f, pass: +e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <BilingualLabel urdu="کل نمبر" english="Total Marks">
+                <Input type="number" value={f.marks} onChange={(e) => setF({ ...f, marks: +e.target.value })} />
+              </BilingualLabel>
+              <BilingualLabel urdu="پاس نمبر" english="Pass Marks">
+                <Input type="number" value={f.pass} onChange={(e) => setF({ ...f, pass: +e.target.value })} />
+              </BilingualLabel>
             </div>
-            <div><Label>Group</Label>
+            <BilingualLabel urdu="گروپ" english="Group">
               <Select value={f.group} onValueChange={(v) => setF({ ...f, group: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Compulsory">Compulsory</SelectItem><SelectItem value="Elective">Elective</SelectItem></SelectContent>
+                <SelectContent><SelectItem value="Compulsory">Compulsory · لازمی</SelectItem><SelectItem value="Elective">Elective · اختیاری</SelectItem></SelectContent>
               </Select>
-            </div>
-            <div><Label>Levels (comma-separated)</Label><Input value={f.levels} onChange={(e) => setF({ ...f, levels: e.target.value })} placeholder="Primary,Middle,Secondary" /></div>
+            </BilingualLabel>
+            <BilingualLabel urdu="سطحیں (کاما سے علیحدہ)" english="Levels (comma-separated)">
+              <Input value={f.levels} onChange={(e) => setF({ ...f, levels: e.target.value })} placeholder="Primary,Middle,Secondary" />
+            </BilingualLabel>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button onClick={() => {
-              if (!f.en.trim()) { toast.error("English name required"); return; }
-              setSubjects((p) => [{ ur: f.ur || f.en, en: f.en, marks: f.marks, pass: f.pass, group: f.group, levels: f.levels.split(",").map((s) => s.trim()).filter(Boolean) }, ...p]);
+              if (!f.ur.trim() && !f.en.trim()) { toast.error("Name required · نام درکار ہے"); return; }
+              setSubjects((p) => [{ ur: f.ur || f.en, en: f.en || f.ur, marks: f.marks, pass: f.pass, group: f.group, levels: f.levels.split(",").map((s) => s.trim()).filter(Boolean) }, ...p]);
               toast.success("Subject added"); setF({ ur: "", en: "", marks: 100, pass: 33, group: "Compulsory", levels: "Primary,Middle,Secondary" }); setOpen(false);
             }}>Add</Button>
           </DialogFooter>

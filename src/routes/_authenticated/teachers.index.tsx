@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { teachers as seedTeachers } from "@/mock/teachers";
 import type { Teacher } from "@/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { formatPKR } from "@/lib/format";
@@ -109,46 +109,59 @@ function TeachersPage() {
       )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Add Teacher · نیا استاد</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label>Name (English)</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-              <div><Label className="font-urdu">اردو نام</Label><Input dir="rtl" className="font-urdu" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} /></div>
+          <DialogHeader>
+            <DialogTitle dir="rtl" lang="ur" className="font-urdu text-xl">نیا استاد</DialogTitle>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Add Teacher</p>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <BilingualLabel urdu="استاد کا نام" english="Name (Urdu)" required>
+                <Input dir="rtl" className="font-urdu text-base" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} placeholder="مفتی محمد عبداللہ" />
+              </BilingualLabel>
+              <BilingualLabel urdu="انگریزی نام" english="English Name">
+                <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Mufti Abdullah" />
+              </BilingualLabel>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label>System</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <BilingualLabel urdu="نظام" english="System">
                 <Select value={f.system} onValueChange={(v) => setF({ ...f, system: v as Teacher["system"] })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="madrassa">Madrassa · مدرسہ</SelectItem>
-                    <SelectItem value="school">School · اسکول</SelectItem>
+                    <SelectItem value="madrassa">مدرسہ · Madrassa</SelectItem>
+                    <SelectItem value="school">اسکول · School</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div><Label>Designation</Label>
+              </BilingualLabel>
+              <BilingualLabel urdu="عہدہ" english="Designation">
                 <Select value={f.designation} onValueChange={(v) => setF({ ...f, designation: v as Teacher["designation"] })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {(["qari","hafiz","mudarris","ustaad","principal","subject_teacher","sports","assistant"] as const).map((d) => (
-                      <SelectItem key={d} value={d}>{d.replace("_"," ")}</SelectItem>
+                      <SelectItem key={d} value={d}>{designationUrdu[d]} · {d.replace("_"," ")}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </BilingualLabel>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div><Label>Phone</Label><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="0300-1234567" /></div>
-              <div><Label>Monthly Salary (PKR)</Label><Input type="number" value={f.salary} onChange={(e) => setF({ ...f, salary: +e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <BilingualLabel urdu="فون نمبر" english="Phone">
+                <Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="0300-1234567" />
+              </BilingualLabel>
+              <BilingualLabel urdu="ماہانہ تنخواہ (روپے)" english="Monthly Salary (PKR)">
+                <Input type="number" value={f.salary} onChange={(e) => setF({ ...f, salary: +e.target.value })} />
+              </BilingualLabel>
             </div>
-            <div><Label>Qualification</Label><Input value={f.qualification} onChange={(e) => setF({ ...f, qualification: e.target.value })} /></div>
+            <BilingualLabel urdu="تعلیمی قابلیت" english="Qualification">
+              <Input value={f.qualification} onChange={(e) => setF({ ...f, qualification: e.target.value })} />
+            </BilingualLabel>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button onClick={() => {
-              if (!f.name.trim()) { toast.error("Name required"); return; }
+              if (!f.name.trim() && !f.nameUrdu.trim()) { toast.error("Name required · نام درکار ہے"); return; }
               const id = `T${Date.now()}`;
               setTeachers((p) => [{
-                id, name: f.name, nameUrdu: f.nameUrdu || f.name,
+                id, name: f.name || f.nameUrdu, nameUrdu: f.nameUrdu || f.name,
                 designation: f.designation, qualification: f.qualification || "—",
                 qualificationUrdu: "—",
                 subjects: [], system: f.system, phone: f.phone || "—",
