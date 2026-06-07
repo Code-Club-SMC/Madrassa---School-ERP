@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ClipboardList, Layers, GraduationCap, CalendarRange, BarChart3, Shield, FileText, FileSpreadsheet } from "lucide-react";
+import { ClipboardList, Layers, GraduationCap, CalendarRange, BarChart3, Shield, FileText } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from "recharts";
 import { madrassaCategories, students, feeRecords } from "@/mock";
-import { toast } from "sonner";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 
