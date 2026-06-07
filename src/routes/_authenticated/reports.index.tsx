@@ -16,10 +16,10 @@ export const Route = createFileRoute("/_authenticated/reports/")({
 const REPORTS = [
   { key: "attendance", to: "/reports/attendance" as const, icon: ClipboardList, title: "Attendance", titleUrdu: "حاضری", desc: "Daily attendance trends with heatmap and per-student breakdown." },
   { key: "category", to: "/reports/category" as const, icon: Layers, title: "Category-wise", titleUrdu: "زمرہ وار", desc: "Enrollment, retention and fee collection by Hifz / Nazira / class." },
-  { key: "exam", to: "/school/exams" as const, icon: GraduationCap, title: "Exam Results", titleUrdu: "نتائج", desc: "Series-level pass percentages and grade distribution." },
+  { key: "exam", to: "/reports/exams" as const, icon: GraduationCap, title: "Exam Results", titleUrdu: "نتائج", desc: "Series-level pass percentages, grade distribution and subject mastery." },
   { key: "monthly", to: "/reports/monthly" as const, icon: CalendarRange, title: "Monthly Summary", titleUrdu: "ماہانہ", desc: "Combined admissions, attendance, fees for a single month." },
   { key: "annual", to: "/reports/annual" as const, icon: BarChart3, title: "Annual Report", titleUrdu: "سالانہ", desc: "Year-on-year growth, finance health and academic outcomes." },
-  { key: "admin", to: "/audit" as const, icon: Shield, title: "Administrative", titleUrdu: "انتظامی", desc: "Audit log, role activity and system change history." },
+  { key: "admin", to: "/reports/admin" as const, icon: Shield, title: "Administrative", titleUrdu: "انتظامی", desc: "Audit log, role activity, security events and system change history." },
 ];
 
 function ReportsHub() {
@@ -41,8 +41,7 @@ function ReportsHub() {
         description="Generate and export institutional reports."
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => toast.success("PDF export queued")}><FileText className="h-3.5 w-3.5" />Export PDF</Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => toast.success("Excel export queued")}><FileSpreadsheet className="h-3.5 w-3.5" />Export Excel</Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}><FileText className="h-3.5 w-3.5" />Print Hub</Button>
           </div>
         }
       />
