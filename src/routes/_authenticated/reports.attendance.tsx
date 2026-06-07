@@ -8,11 +8,11 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell, BarChart, Bar,
 } from "recharts";
-import { toast } from "sonner";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 import { students, madrassaCategories } from "@/mock";
 import { generateAttendance } from "@/mock/attendance";
+import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
 
 export const Route = createFileRoute("/_authenticated/reports/attendance")({
   component: AttendanceReport,
@@ -104,10 +104,27 @@ function AttendanceReport() {
         description="Daily attendance distribution, per-category averages, and chronic absentees across the last 30 working days."
         actions={
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.print()}>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => printHtml(
+              "Attendance Report",
+              `<h1>Attendance Report</h1><div class="urdu">حاضری رپورٹ</div>
+              <div>${kpiHtml([
+                { label: "Attendance Rate", value: `${attendanceRate}%` },
+                { label: "Avg Present/day", value: Math.round(totals.present / Math.max(daily.length, 1)) },
+                { label: "Avg Absent/day", value: Math.round(totals.absent / Math.max(daily.length, 1)) },
+                { label: "Sampled Students", value: sample.length },
+              ])}</div>
+              <h3>Top Absentees</h3>
+              ${tableHtml(["Roll", "Student", "Absent", "Late", "Rate"], perStudent.map((s) => [s.rollNo, s.name, s.absent, s.late, `${s.rate}%`]))}
+              <h3>Per Category</h3>
+              ${tableHtml(["Category", "Attendance %"], perCategory.map((c) => [c.name, `${c.rate}%`]))}`
+            )}>
               <Printer className="h-3.5 w-3.5" />Print
             </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => toast.success("Excel exported")}>
+            <Button size="sm" className="gap-1.5" onClick={() => downloadCsv(
+              "attendance-report",
+              ["Date", "Present", "Late", "Absent", "Leave", "Total"],
+              daily.map((d) => [d.date, d.present, d.late, d.absent, d.leave, d.total]),
+            )}>
               <FileSpreadsheet className="h-3.5 w-3.5" />Excel
             </Button>
           </div>

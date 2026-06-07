@@ -12,7 +12,7 @@ import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 import { students, applications, feeRecords, recentActivity } from "@/mock";
 import { generateAttendance } from "@/mock/attendance";
-import { toast } from "sonner";
+import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
 
 export const Route = createFileRoute("/_authenticated/reports/monthly")({
   component: MonthlyReport,
@@ -77,8 +77,21 @@ function MonthlyReport() {
         description="Admissions, attendance, fee collection and activity for the current month."
         actions={
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" />Print</Button>
-            <Button size="sm" className="gap-1.5" onClick={() => toast.success("Excel exported")}><FileSpreadsheet className="h-3.5 w-3.5" />Excel</Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => printHtml(
+              "Monthly Summary",
+              `<h1>Monthly Summary · ${monthLabel}</h1><div class="urdu">${monthLabelUrdu}</div>
+              <div>${kpiHtml([
+                { label: "Admissions", value: admissions },
+                { label: "Collection", value: `PKR ${collected.toLocaleString()}` },
+                { label: "Rate", value: `${rate}%` },
+              ])}</div>
+              ${tableHtml(["Metric", "Value"], overview.map((o) => [o.metric, o.value]))}`
+            )}><Printer className="h-3.5 w-3.5" />Print</Button>
+            <Button size="sm" className="gap-1.5" onClick={() => downloadCsv(
+              `monthly-${monthLabel.replace(/\s+/g, "-")}`,
+              ["Metric", "Value"],
+              overview.map((o) => [o.metric, o.value]),
+            )}><FileSpreadsheet className="h-3.5 w-3.5" />Excel</Button>
           </div>
         }
       />
