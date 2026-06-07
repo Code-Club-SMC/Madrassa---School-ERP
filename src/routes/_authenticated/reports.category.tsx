@@ -11,7 +11,7 @@ import {
 import { madrassaCategories, students, feeRecords } from "@/mock";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
-import { toast } from "sonner";
+import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
 
 export const Route = createFileRoute("/_authenticated/reports/category")({
   component: CategoryReport,
@@ -66,8 +66,21 @@ function CategoryReport() {
         description="Enrollment, gender split and fee collection across Wifaq categories."
         actions={
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" />Print</Button>
-            <Button size="sm" className="gap-1.5" onClick={() => toast.success("Excel exported")}><FileSpreadsheet className="h-3.5 w-3.5" />Excel</Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => printHtml(
+              "Category Report",
+              `<h1>Category-wise Report</h1><div class="urdu">زمرہ وار رپورٹ</div>
+              <div>${kpiHtml([
+                { label: "Total Enrolled", value: grandTotal },
+                { label: "Categories", value: byCategory.length },
+                { label: "Largest", value: top?.name ?? "—" },
+              ])}</div>
+              ${tableHtml(["Category", "Subcategory", "Roll Prefix", "Students", "%"], subBreakdown.map((s) => [s.category, s.name, s.rollPrefix, s.count, `${Math.round((s.count / grandTotal) * 1000) / 10}%`]))}`
+            )}><Printer className="h-3.5 w-3.5" />Print</Button>
+            <Button size="sm" className="gap-1.5" onClick={() => downloadCsv(
+              "category-report",
+              ["Category", "Subcategory", "Roll Prefix", "Students", "% of Total"],
+              subBreakdown.map((s) => [s.category, s.name, s.rollPrefix, s.count, `${Math.round((s.count / grandTotal) * 1000) / 10}%`]),
+            )}><FileSpreadsheet className="h-3.5 w-3.5" />Excel</Button>
           </div>
         }
       />

@@ -11,7 +11,7 @@ import {
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 import { madrassaCategories, students, enrollmentTrend } from "@/mock";
-import { toast } from "sonner";
+import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
 
 export const Route = createFileRoute("/_authenticated/reports/annual")({
   component: AnnualReport,
@@ -62,8 +62,24 @@ function AnnualReport() {
         description="Year-on-year enrollment, finance health and academic outcomes."
         actions={
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" />Print</Button>
-            <Button size="sm" className="gap-1.5" onClick={() => toast.success("Excel exported")}><FileSpreadsheet className="h-3.5 w-3.5" />Excel</Button>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => printHtml(
+              "Annual Report",
+              `<h1>Annual Report</h1><div class="urdu">سالانہ رپورٹ</div>
+              <div>${kpiHtml([
+                { label: "Enrollment", value: totalEnroll },
+                { label: "Collection", value: `PKR ${totalCollection.toLocaleString()}` },
+                { label: "Surplus", value: `PKR ${surplus.toLocaleString()}` },
+              ])}</div>
+              <h3>Month-by-Month Finance</h3>
+              ${tableHtml(["Month", "Collection", "Expenses", "Surplus"], finance.map((f) => [f.month, f.collection, f.expenses, f.surplus]))}
+              <h3>Academic Outcomes</h3>
+              ${tableHtml(["Subject", "Pass %", "Distinction %"], academicOutcomes.map((a) => [a.subject, a.pass, a.distinction]))}`
+            )}><Printer className="h-3.5 w-3.5" />Print</Button>
+            <Button size="sm" className="gap-1.5" onClick={() => downloadCsv(
+              "annual-report",
+              ["Month", "Collection", "Expenses", "Surplus"],
+              finance.map((f) => [f.month, f.collection, f.expenses, f.surplus]),
+            )}><FileSpreadsheet className="h-3.5 w-3.5" />Excel</Button>
           </div>
         }
       />
