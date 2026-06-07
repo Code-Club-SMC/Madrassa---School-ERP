@@ -384,3 +384,102 @@ function NumberCtl({
     </div>
   );
 }
+
+function HallManagerDialog({
+  halls,
+  onAdd,
+  onUpdate,
+  onDelete,
+}: {
+  halls: Hall[];
+  onAdd: (h: Omit<Hall, "id">) => void;
+  onUpdate: (id: string, patch: Partial<Hall>) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Omit<Hall, "id">>({
+    name: "",
+    nameUrdu: "",
+    rows: 6,
+    cols: 8,
+    aisleEveryRow: 3,
+    aisleEveryCol: 4,
+  });
+
+  function reset() {
+    setEditing(null);
+    setDraft({ name: "", nameUrdu: "", rows: 6, cols: 8, aisleEveryRow: 3, aisleEveryCol: 4 });
+  }
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!draft.name.trim()) return;
+    if (editing) onUpdate(editing, draft);
+    else onAdd(draft);
+    reset();
+  }
+
+  return (
+    <DialogContent className="max-w-2xl">
+      <DialogHeader>
+        <DialogTitle className="flex flex-col gap-0.5">
+          <span dir="rtl" lang="ur" className="font-urdu text-lg">ہالز کا انتظام</span>
+          <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground font-normal">Manage Examination Halls</span>
+        </DialogTitle>
+        <DialogDescription className="text-xs">
+          Add, edit or remove halls. Configure rows, columns and aisle spacing per hall.
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="rounded-md border divide-y max-h-64 overflow-auto">
+        {halls.map((h) => (
+          <div key={h.id} className="flex items-center gap-3 p-2.5 text-sm">
+            <div className="flex-1 min-w-0">
+              <div className="font-medium truncate">{h.name}</div>
+              {h.nameUrdu && <div dir="rtl" lang="ur" className="font-urdu text-xs text-muted-foreground truncate">{h.nameUrdu}</div>}
+              <div className="text-[11px] text-muted-foreground font-mono">
+                {h.rows}×{h.cols} · aisle r/{h.aisleEveryRow} c/{h.aisleEveryCol} · cap {h.rows * h.cols}
+              </div>
+            </div>
+            <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditing(h.id); setDraft({ name: h.name, nameUrdu: h.nameUrdu, rows: h.rows, cols: h.cols, aisleEveryRow: h.aisleEveryRow, aisleEveryCol: h.aisleEveryCol }); }}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button type="button" size="icon" variant="ghost" className="h-7 w-7 text-destructive" disabled={halls.length <= 1} onClick={() => onDelete(h.id)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      <form onSubmit={submit} className="space-y-3 border-t pt-3">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">
+          {editing ? "Edit Hall" : "Add New Hall"}
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">Name (English)</Label>
+            <Input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Hall E — Mosque Wing" className="h-8 mt-1" required />
+          </div>
+          <div>
+            <Label className="text-xs">نام (اردو)</Label>
+            <Input dir="rtl" lang="ur" value={draft.nameUrdu ?? ""} onChange={(e) => setDraft((d) => ({ ...d, nameUrdu: e.target.value }))} placeholder="ہال ای" className="font-urdu h-8 mt-1" />
+          </div>
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          <NumberCtl label="Rows" value={draft.rows} min={2} max={24} onChange={(v) => setDraft((d) => ({ ...d, rows: v }))} />
+          <NumberCtl label="Cols" value={draft.cols} min={2} max={24} onChange={(v) => setDraft((d) => ({ ...d, cols: v }))} />
+          <NumberCtl label="Aisle/Row" value={draft.aisleEveryRow} min={0} max={10} onChange={(v) => setDraft((d) => ({ ...d, aisleEveryRow: v }))} />
+          <NumberCtl label="Aisle/Col" value={draft.aisleEveryCol} min={0} max={10} onChange={(v) => setDraft((d) => ({ ...d, aisleEveryCol: v }))} />
+        </div>
+        <DialogFooter className="gap-2">
+          {editing && (
+            <Button type="button" variant="outline" size="sm" onClick={reset}>Cancel</Button>
+          )}
+          <Button type="submit" size="sm" className="gap-1.5">
+            {editing ? <><Pencil className="h-3.5 w-3.5" /> Save Changes</> : <><Plus className="h-3.5 w-3.5" /> Add Hall</>}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  );
+}
