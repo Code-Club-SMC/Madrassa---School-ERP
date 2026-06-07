@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
-import { Shuffle, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Shuffle, RefreshCw, AlertTriangle, CheckCircle2, Settings2, Plus, Pencil, Trash2, Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,18 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
+import {
   buildHallSeating,
   countViolations,
   isViolation,
   type HallSeating,
   type SeatingConfig,
 } from "@/lib/seating";
-import { mockHalls, mockStudentsPerHall, mockGrades } from "@/lib/mock/seating";
+import { mockGrades } from "@/lib/mock/seating";
+import { loadHalls, saveHalls, studentsForHalls, makeHallId, type Hall } from "@/lib/halls-storage";
 
 const GRADE_TONES: { bg: string; border: string; text: string }[] = [
   { bg: "bg-sky-100 dark:bg-sky-950/60", border: "border-sky-300 dark:border-sky-700", text: "text-sky-900 dark:text-sky-100" },
@@ -36,31 +41,35 @@ type Props = {
 };
 
 export function ExamSeating({ examId, module }: Props) {
-  const [config, setConfig] = useState<SeatingConfig>({
+  const [hallDefs, setHallDefs] = useState<Hall[]>(() => loadHalls(module));
+  const [config, setConfig] = useState<Pick<SeatingConfig, "gap" | "cellSizePx">>({
     gap: 1,
-    rows: 0,
-    cols: 0,
-    aisleEveryRow: 3,
-    aisleEveryCol: 4,
     cellSizePx: 72,
   });
-  const [activeHallId, setActiveHallId] = useState(mockHalls[0].id);
+  const [activeHallId, setActiveHallId] = useState(() => hallDefs[0]?.id ?? "");
   const [showViolations, setShowViolations] = useState(true);
   const [shuffleKey, setShuffleKey] = useState(0);
-  const [hallOverrides, setHallOverrides] = useState<Record<string, { rows: number; cols: number }>>({});
+  const [hallDialogOpen, setHallDialogOpen] = useState(false);
+
+  // persist on every change
+  useEffect(() => {
+    saveHalls(module, hallDefs);
+    if (!hallDefs.find((h) => h.id === activeHallId) && hallDefs[0]) {
+      setActiveHallId(hallDefs[0].id);
+    }
+  }, [hallDefs, module, activeHallId]);
+
+  const studentsPerHall = useMemo(() => studentsForHalls(hallDefs), [hallDefs]);
 
   const halls: HallSeating[] = useMemo(() => {
     void shuffleKey;
-    return mockHalls.map((h) => {
-      const override = hallOverrides[h.id];
-      const rows = override?.rows ?? h.rows;
-      const cols = override?.cols ?? h.cols;
-      const students = mockStudentsPerHall[h.id] ?? [];
-      return buildHallSeating(h.id, h.name, rows, cols, students, config.gap);
-    });
-  }, [config.gap, shuffleKey, hallOverrides]);
+    return hallDefs.map((h) =>
+      buildHallSeating(h.id, h.name, h.rows, h.cols, studentsPerHall[h.id] ?? [], config.gap),
+    );
+  }, [hallDefs, studentsPerHall, config.gap, shuffleKey]);
 
   const active = halls.find((h) => h.hallId === activeHallId) ?? halls[0];
+  const activeDef = hallDefs.find((h) => h.id === (active?.hallId ?? "")) ?? hallDefs[0];
   const totalViolations = halls.reduce((sum, h) => sum + countViolations(h.grid, h.rows, h.cols, config.gap), 0);
   const numGrades = mockGrades.length;
   const feasible = config.gap < numGrades;
@@ -71,14 +80,26 @@ export function ExamSeating({ examId, module }: Props) {
   const [tip, setTip] = useState<{ x: number; y: number; text: string; gradeId: number } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // initialize current hall's row/col display
-    setConfig((c) => ({ ...c, rows: active?.rows ?? 0, cols: active?.cols ?? 0 }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeHallId]);
+  function patchActiveHall(patch: Partial<Hall>) {
+    if (!activeDef) return;
+    setHallDefs((prev) => prev.map((h) => (h.id === activeDef.id ? { ...h, ...patch } : h)));
+  }
 
-  function updateActiveHallDims(rows: number, cols: number) {
-    setHallOverrides((prev) => ({ ...prev, [activeHallId]: { rows, cols } }));
+  function addHall(input: Omit<Hall, "id">) {
+    const id = makeHallId(input.name);
+    setHallDefs((prev) => [...prev, { ...input, id }]);
+    setActiveHallId(id);
+    toast.success(`Hall "${input.name}" added`);
+  }
+
+  function updateHall(id: string, patch: Partial<Hall>) {
+    setHallDefs((prev) => prev.map((h) => (h.id === id ? { ...h, ...patch } : h)));
+    toast.success("Hall updated");
+  }
+
+  function deleteHall(id: string) {
+    setHallDefs((prev) => (prev.length <= 1 ? prev : prev.filter((h) => h.id !== id)));
+    toast.success("Hall removed");
   }
 
   return (
@@ -98,11 +119,27 @@ export function ExamSeating({ examId, module }: Props) {
                 <AlertTriangle className="h-3.5 w-3.5" /> {totalViolations} Violation{totalViolations > 1 ? "s" : ""}
               </Badge>
             )}
+            <Dialog open={hallDialogOpen} onOpenChange={setHallDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Settings2 className="h-3.5 w-3.5" /> Manage Halls
+                </Button>
+              </DialogTrigger>
+              <HallManagerDialog
+                halls={hallDefs}
+                onAdd={addHall}
+                onUpdate={updateHall}
+                onDelete={deleteHall}
+              />
+            </Dialog>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={regenerate}>
               <Shuffle className="h-3.5 w-3.5" /> Shuffle
             </Button>
             <Button size="sm" className="gap-1.5" onClick={regenerate}>
               <RefreshCw className="h-3.5 w-3.5" /> Regenerate
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}>
+              <Printer className="h-3.5 w-3.5" /> Print
             </Button>
           </div>
         }
@@ -122,10 +159,10 @@ export function ExamSeating({ examId, module }: Props) {
       <Card className="p-4 mb-4">
         <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
           <NumberCtl label="Gap" value={config.gap} min={1} max={4} onChange={(v) => setConfig((c) => ({ ...c, gap: v }))} />
-          <NumberCtl label="Rows" value={active?.rows ?? config.rows} min={2} max={20} onChange={(v) => updateActiveHallDims(v, active?.cols ?? config.cols)} />
-          <NumberCtl label="Cols" value={active?.cols ?? config.cols} min={2} max={20} onChange={(v) => updateActiveHallDims(active?.rows ?? config.rows, v)} />
-          <NumberCtl label="Aisle/Row" value={config.aisleEveryRow} min={0} max={10} onChange={(v) => setConfig((c) => ({ ...c, aisleEveryRow: v }))} />
-          <NumberCtl label="Aisle/Col" value={config.aisleEveryCol} min={0} max={10} onChange={(v) => setConfig((c) => ({ ...c, aisleEveryCol: v }))} />
+          <NumberCtl label="Rows" value={activeDef?.rows ?? 0} min={2} max={24} onChange={(v) => patchActiveHall({ rows: v })} />
+          <NumberCtl label="Cols" value={activeDef?.cols ?? 0} min={2} max={24} onChange={(v) => patchActiveHall({ cols: v })} />
+          <NumberCtl label="Aisle/Row" value={activeDef?.aisleEveryRow ?? 3} min={0} max={10} onChange={(v) => patchActiveHall({ aisleEveryRow: v })} />
+          <NumberCtl label="Aisle/Col" value={activeDef?.aisleEveryCol ?? 4} min={0} max={10} onChange={(v) => patchActiveHall({ aisleEveryCol: v })} />
           <NumberCtl label="Cell px" value={config.cellSizePx} min={48} max={120} step={4} onChange={(v) => setConfig((c) => ({ ...c, cellSizePx: v }))} />
           <label className="flex items-end gap-2 pb-1">
             <Checkbox checked={showViolations} onCheckedChange={(v) => setShowViolations(Boolean(v))} />
@@ -152,7 +189,20 @@ export function ExamSeating({ examId, module }: Props) {
           <div className="text-center mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground bg-muted/50 border border-dashed border-border rounded-md py-1">
             Invigilator Desk · نگراں
           </div>
-          {active && <SeatingGrid hall={active} config={config} showViolations={showViolations} onTip={setTip} />}
+          {active && activeDef && (
+            <SeatingGrid
+              hall={active}
+              config={{
+                ...config,
+                rows: activeDef.rows,
+                cols: activeDef.cols,
+                aisleEveryRow: activeDef.aisleEveryRow,
+                aisleEveryCol: activeDef.aisleEveryCol,
+              }}
+              showViolations={showViolations}
+              onTip={setTip}
+            />
+          )}
         </Card>
 
         {/* Sidebar */}
