@@ -352,6 +352,11 @@ export type User = {
   createdBy: string;
   createdAt: string;
   lastLoginAt?: string;
+  phone?: string;
+  cnic?: string;
+  systemAccess?: "madrassa" | "school" | "both";
+  mustChangePassword?: boolean;
+  permissions?: import("@/lib/permissions/module-registry").UserPermissions;
 };
 
 // ---------- Announcements ----------
