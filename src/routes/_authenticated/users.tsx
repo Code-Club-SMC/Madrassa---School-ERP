@@ -4,7 +4,7 @@ import { Plus, Search, ShieldAlert, KeyRound, Trash2, Eye, MoreHorizontal, UserC
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
-import { KpiCard } from "@/components/shared/kpi-card";
+import { KpiCard } from "@/components/shared/chart-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { users as seedUsers, currentUser } from "@/mock";
+import { users as seedUsers } from "@/mock/users";
+import { currentUser } from "@/mock";
 import type { User, UserRole } from "@/types";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
@@ -128,10 +129,10 @@ function UsersPage() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <KpiCard titleUrdu="کل فعال صارفین" title="Total Active Users" value={stats.total} />
-        <KpiCard titleUrdu="منتظمین" title="Admins" value={stats.admins} />
-        <KpiCard titleUrdu="اساتذہ" title="Teachers" value={stats.teachers} />
-        <KpiCard titleUrdu="کبھی لاگ ان نہیں" title="Never Logged In" value={stats.neverLogged} />
+        <KpiCard labelUrdu="کل فعال صارفین" label="Total Active Users" value={String(stats.total)} />
+        <KpiCard labelUrdu="منتظمین" label="Admins" value={String(stats.admins)} />
+        <KpiCard labelUrdu="اساتذہ" label="Teachers" value={String(stats.teachers)} />
+        <KpiCard labelUrdu="کبھی لاگ ان نہیں" label="Never Logged In" value={String(stats.neverLogged)} />
       </div>
 
       <Card className="p-4 mb-4">

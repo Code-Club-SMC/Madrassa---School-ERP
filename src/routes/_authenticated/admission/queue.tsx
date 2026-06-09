@@ -16,7 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { applications as seed, type Application, type ApplicationStatus } from "@/mock";
 import { formatDate, relativeTime } from "@/lib/format";
 import { toast } from "sonner";
-import { CredentialsDialog } from "../users";
+import { CredentialsOverlay } from "@/features/users/credentials-display";
 
 export const Route = createFileRoute("/_authenticated/admission/queue")({
   component: QueuePage,
@@ -29,7 +29,7 @@ function QueuePage() {
   const [view, setView] = useState<Application | null>(null);
   const [reject, setReject] = useState<Application | null>(null);
   const [reason, setReason] = useState("");
-  const [creds, setCreds] = useState<{ name: string; email: string; password: string } | null>(null);
+  const [creds, setCreds] = useState<{ nameUrdu: string; nameEnglish: string; email: string; role: string; password: string } | null>(null);
 
   const counts = useMemo(() => ({
     pending: list.filter((a) => a.status === "pending").length,
@@ -47,7 +47,13 @@ function QueuePage() {
     const rollNo = `${rollPrefix}-${Math.floor(Math.random() * 9000 + 1000)}`;
     setList((l) => l.map((x) => (x.id === a.id ? { ...x, status: "accepted" } : x)));
     setView(null);
-    setCreds({ name: a.name, email: `${a.refNo.toLowerCase()}@parents.msmis.pk`, password: Math.random().toString(36).slice(2, 12) });
+    setCreds({
+      nameUrdu: a.nameUrdu,
+      nameEnglish: a.name,
+      email: `${a.refNo.toLowerCase()}@parents.msmis.pk`,
+      role: "parent",
+      password: Math.random().toString(36).slice(2, 12),
+    });
     toast.success(`Accepted — Roll ${rollNo} assigned`, { description: "داخلہ منظور ہوا" });
   };
 
@@ -167,7 +173,7 @@ function QueuePage() {
         </DialogContent>
       </Dialog>
 
-      <CredentialsDialog creds={creds} onClose={() => setCreds(null)} />
+      <CredentialsOverlay creds={creds} onClose={() => setCreds(null)} />
     </div>
   );
 }
