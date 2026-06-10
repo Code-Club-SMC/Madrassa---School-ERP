@@ -11,6 +11,7 @@ import {
   GraduationCap,
   ClipboardList,
   IdCard,
+  UsersRound,
   BarChart3,
   Package,
   Wallet,
@@ -76,7 +77,6 @@ export const navItems: NavItem[] = [
   { group: "school", url: "/school/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
 
   // ---------- SHARED ----------
-  { group: "shared", url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: ADMINS },
   { group: "shared", url: "/id-cards", icon: IdCard, en: "ID Cards", ur: "شناختی کارڈ", roles: ADMINS },
   { group: "shared", url: "/reports", icon: BarChart3, en: "Reports", ur: "رپورٹس", roles: ANY_STAFF },
   { group: "shared", url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: ADMINS },
@@ -85,8 +85,11 @@ export const navItems: NavItem[] = [
   { group: "shared", url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین", roles: ADMINS },
   { group: "shared", url: "/notifications", icon: Bell, en: "Notifications", ur: "اعلانات", roles: ANY_STAFF },
 
-  // ---------- HR & PAYROLL ----------
-  { group: "shared", url: "/hr/staff", icon: Briefcase, en: "HR Staff", ur: "عملہ", roles: ADMINS },
+  // ---------- HR MANAGEMENT (unified: Staff + Teachers + Users + Payroll) ----------
+  { group: "shared", url: "/hr", icon: UsersRound, en: "HR Management", ur: "انسانی وسائل", roles: ADMINS },
+  { group: "shared", url: "/hr/staff", icon: Briefcase, en: "Staff Directory", ur: "عملہ", roles: ADMINS },
+  { group: "shared", url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: ADMINS },
+  { group: "shared", url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: ["super_admin"] },
   { group: "shared", url: "/hr/payroll", icon: HandCoins, en: "Payroll", ur: "تنخواہ", roles: ADMINS },
   { group: "shared", url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: ADMINS },
   { group: "shared", url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: ADMINS },
@@ -99,7 +102,6 @@ export const navItems: NavItem[] = [
   { group: "admin", url: "/settings/templates", icon: MessageSquareText, en: "Msg Templates", ur: "پیغام سانچے", roles: ADMINS },
   { group: "admin", url: "/settings/backup", icon: DatabaseBackup, en: "Backup", ur: "بیک اپ", roles: ["super_admin"] },
   { group: "admin", url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: ADMINS },
-  { group: "admin", url: "/users", icon: ShieldUser, en: "Users", ur: "صارفین", roles: ["super_admin"] },
   { group: "admin", url: "/audit", icon: ShieldCheck, en: "Audit Log", ur: "آڈٹ لاگ", roles: ["super_admin"] },
   { group: "admin", url: "/settings", icon: Settings, en: "Settings", ur: "ترتیبات", roles: ADMINS },
 ];
