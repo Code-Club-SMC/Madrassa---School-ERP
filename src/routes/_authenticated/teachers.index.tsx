@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, Plus, IdCard, Eye, CalendarCheck, Phone, GraduationCap } from "lucide-react";
+import { Search, IdCard, Eye, CalendarCheck, Phone, GraduationCap, Info } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,6 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { teachers as seedTeachers } from "@/mock/teachers";
 import type { Teacher } from "@/types";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BilingualLabel } from "@/components/shared/bilingual-label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
 import { formatPKR } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/teachers/")({
@@ -27,11 +23,9 @@ const designationUrdu: Record<string, string> = {
 };
 
 function TeachersPage() {
-  const [teachers, setTeachers] = useState<Teacher[]>(seedTeachers);
+  const [teachers] = useState<Teacher[]>(seedTeachers);
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"all" | "madrassa" | "school">("all");
-  const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ name: "", nameUrdu: "", designation: "subject_teacher" as Teacher["designation"], system: "school" as Teacher["system"], phone: "", qualification: "", salary: 50000 });
 
   const filtered = useMemo(() => teachers.filter((t) => {
     if (tab !== "all" && t.system !== tab) return false;
@@ -47,7 +41,11 @@ function TeachersPage() {
         title="Teachers"
         titleUrdu="اساتذہ"
         description={`${teachers.filter((t) => t.active).length} active staff across madrassa and school.`}
-        actions={<Button className="gap-1.5" onClick={() => setOpen(true)}><Plus className="h-4 w-4" />Add Teacher</Button>}
+        actions={
+          <Button variant="outline" className="gap-1.5" asChild>
+            <Link to="/hr/staff"><Info className="h-4 w-4" />Add via HR Module</Link>
+          </Button>
+        }
       />
 
       <Card className="p-3 mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -107,76 +105,6 @@ function TeachersPage() {
           ))}
         </div>
       )}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle dir="rtl" lang="ur" className="font-urdu text-xl">نیا استاد</DialogTitle>
-            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Add Teacher</p>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="grid grid-cols-2 gap-3">
-              <BilingualLabel urdu="استاد کا نام" english="Name (Urdu)" required>
-                <Input dir="rtl" className="font-urdu text-base" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} placeholder="مفتی محمد عبداللہ" />
-              </BilingualLabel>
-              <BilingualLabel urdu="انگریزی نام" english="English Name">
-                <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Mufti Abdullah" />
-              </BilingualLabel>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <BilingualLabel urdu="نظام" english="System">
-                <Select value={f.system} onValueChange={(v) => setF({ ...f, system: v as Teacher["system"] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="madrassa">مدرسہ · Madrassa</SelectItem>
-                    <SelectItem value="school">اسکول · School</SelectItem>
-                  </SelectContent>
-                </Select>
-              </BilingualLabel>
-              <BilingualLabel urdu="عہدہ" english="Designation">
-                <Select value={f.designation} onValueChange={(v) => setF({ ...f, designation: v as Teacher["designation"] })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(["qari","hafiz","mudarris","ustaad","principal","subject_teacher","sports","assistant"] as const).map((d) => (
-                      <SelectItem key={d} value={d}>{designationUrdu[d]} · {d.replace("_"," ")}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </BilingualLabel>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <BilingualLabel urdu="فون نمبر" english="Phone">
-                <Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder="0300-1234567" />
-              </BilingualLabel>
-              <BilingualLabel urdu="ماہانہ تنخواہ (روپے)" english="Monthly Salary (PKR)">
-                <Input type="number" value={f.salary} onChange={(e) => setF({ ...f, salary: +e.target.value })} />
-              </BilingualLabel>
-            </div>
-            <BilingualLabel urdu="تعلیمی قابلیت" english="Qualification">
-              <Input value={f.qualification} onChange={(e) => setF({ ...f, qualification: e.target.value })} />
-            </BilingualLabel>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => {
-              if (!f.name.trim() && !f.nameUrdu.trim()) { toast.error("Name required · نام درکار ہے"); return; }
-              const id = `T${Date.now()}`;
-              setTeachers((p) => [{
-                id, name: f.name || f.nameUrdu, nameUrdu: f.nameUrdu || f.name,
-                designation: f.designation, qualification: f.qualification || "—",
-                qualificationUrdu: "—",
-                subjects: [], system: f.system, phone: f.phone || "—",
-                cnic: "—", address: "—",
-                joinedAt: new Date().toISOString().slice(0,10),
-                monthlySalaryPaisa: f.salary * 100,
-                bankName: "—", bankAccount: "—", active: true,
-              }, ...p]);
-              toast.success("Teacher added");
-              setF({ name: "", nameUrdu: "", designation: "subject_teacher", system: "school", phone: "", qualification: "", salary: 50000 });
-              setOpen(false);
-            }}>Add</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
