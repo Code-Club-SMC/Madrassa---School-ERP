@@ -14,7 +14,17 @@ export type StudentStatus =
   | "promoted"
   | "demoted";
 
-export type UserRole = "super_admin" | "admin" | "teacher" | "parent";
+export type UserRole =
+  | "super_admin"
+  | "admin"
+  | "principal"
+  | "hr_manager"
+  | "accountant"
+  | "librarian"
+  | "receptionist"
+  | "teacher"
+  | "staff"
+  | "parent";
 export type UserStatus = "active" | "inactive";
 export type ApplicationStatus = "pending" | "accepted" | "rejected";
 export type AttendanceStatus = "present" | "absent" | "late" | "leave";
@@ -357,6 +367,8 @@ export type User = {
   systemAccess?: "madrassa" | "school" | "both";
   mustChangePassword?: boolean;
   permissions?: import("@/lib/permissions/module-registry").UserPermissions;
+  department?: string;
+  designation?: string;
 };
 
 // ---------- Announcements ----------
