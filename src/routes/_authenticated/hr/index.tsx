@@ -43,7 +43,6 @@ function HRHub() {
   );
 
   const modules: ModCard[] = [
-    { to: "/hr/staff", icon: Briefcase, urdu: "عملہ", english: "Staff Directory", description: "All non-teaching & teaching staff records, onboarding, profiles.", count: `${staff.length} total`, accent: "from-sky-500/15 to-sky-500/0 text-sky-600" },
     { to: "/teachers", icon: GraduationCap, urdu: "اساتذہ", english: "Teachers", description: "Academic staff across Madrassa and School systems.", count: `${activeTeachers} active`, accent: "from-emerald-500/15 to-emerald-500/0 text-emerald-600" },
     { to: "/users", icon: ShieldUser, urdu: "صارف اکاؤنٹس", english: "User Accounts & Permissions", description: "Login accounts, roles, granular module permissions.", count: `${activeUsers} active`, accent: "from-violet-500/15 to-violet-500/0 text-violet-600" },
     { to: "/hr/payroll", icon: HandCoins, urdu: "تنخواہ", english: "Payroll", description: "Generate, approve, and disburse monthly salaries.", count: formatPKR(monthlyPayroll) + "/mo", accent: "from-amber-500/15 to-amber-500/0 text-amber-600" },

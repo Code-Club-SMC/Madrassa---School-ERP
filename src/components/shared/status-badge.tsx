@@ -11,6 +11,12 @@ export type StatusKey =
   | "transferred"
   | "super_admin"
   | "admin"
+  | "principal"
+  | "hr_manager"
+  | "accountant"
+  | "librarian"
+  | "receptionist"
+  | "staff"
   | "teacher"
   | "parent";
 
@@ -25,6 +31,12 @@ const VARIANTS: Record<StatusKey, { label: string; urdu: string; className: stri
   transferred: { label: "Transferred", urdu: "منتقل", className: "bg-blue-500/10 text-blue-700 border-blue-300/40 dark:text-blue-400" },
   super_admin: { label: "Super Admin", urdu: "سپر ایڈمن", className: "bg-purple-500/10 text-purple-700 border-purple-300/40 dark:text-purple-400" },
   admin: { label: "Admin", urdu: "ایڈمن", className: "bg-primary/10 text-primary border-primary/25" },
+  principal: { label: "Principal", urdu: "پرنسپل", className: "bg-indigo-500/10 text-indigo-700 border-indigo-300/40 dark:text-indigo-400" },
+  hr_manager: { label: "HR Manager", urdu: "ایچ آر منیجر", className: "bg-fuchsia-500/10 text-fuchsia-700 border-fuchsia-300/40 dark:text-fuchsia-400" },
+  accountant: { label: "Accountant", urdu: "اکاؤنٹنٹ", className: "bg-emerald-500/10 text-emerald-700 border-emerald-300/40 dark:text-emerald-400" },
+  librarian: { label: "Librarian", urdu: "لائبریرین", className: "bg-cyan-500/10 text-cyan-700 border-cyan-300/40 dark:text-cyan-400" },
+  receptionist: { label: "Receptionist", urdu: "استقبالیہ", className: "bg-pink-500/10 text-pink-700 border-pink-300/40 dark:text-pink-400" },
+  staff: { label: "Staff", urdu: "عملہ", className: "bg-slate-500/10 text-slate-700 border-slate-300/40 dark:text-slate-400" },
   teacher: { label: "Teacher", urdu: "استاد", className: "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400" },
   parent: { label: "Parent", urdu: "والدین", className: "bg-teal-500/10 text-teal-700 border-teal-300/40 dark:text-teal-400" },
 };

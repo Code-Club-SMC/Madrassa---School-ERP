@@ -43,7 +43,7 @@ function TeachersPage() {
         description={`${teachers.filter((t) => t.active).length} active staff across madrassa and school.`}
         actions={
           <Button variant="outline" className="gap-1.5" asChild>
-            <Link to="/hr/staff"><Info className="h-4 w-4" />Add via HR Module</Link>
+            <Link to="/users"><Info className="h-4 w-4" />Add via Users Module</Link>
           </Button>
         }
       />

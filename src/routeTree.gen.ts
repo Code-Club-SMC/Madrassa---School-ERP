@@ -70,10 +70,8 @@ import { Route as AuthenticatedAdmissionNewRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdmissionInterviewsRouteImport } from './routes/_authenticated/admission/interviews'
 import { Route as AuthenticatedSchoolExamsIndexRouteImport } from './routes/_authenticated/school/exams.index'
 import { Route as AuthenticatedMadrassaExamsIndexRouteImport } from './routes/_authenticated/madrassa/exams.index'
-import { Route as AuthenticatedHrStaffIndexRouteImport } from './routes/_authenticated/hr/staff.index'
 import { Route as AuthenticatedSchoolExamsBoardRouteImport } from './routes/_authenticated/school/exams.board'
 import { Route as AuthenticatedMadrassaExamsBoardRouteImport } from './routes/_authenticated/madrassa/exams.board'
-import { Route as AuthenticatedHrStaffStaffIdRouteImport } from './routes/_authenticated/hr/staff.$staffId'
 import { Route as AuthenticatedSchoolExamsIdIndexRouteImport } from './routes/_authenticated/school/exams.$id.index'
 import { Route as AuthenticatedMadrassaExamsIdIndexRouteImport } from './routes/_authenticated/madrassa/exams.$id.index'
 import { Route as AuthenticatedSchoolExamsIdSeatingRouteImport } from './routes/_authenticated/school/exams.$id.seating'
@@ -425,12 +423,6 @@ const AuthenticatedMadrassaExamsIndexRoute =
     path: '/madrassa/exams/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedHrStaffIndexRoute =
-  AuthenticatedHrStaffIndexRouteImport.update({
-    id: '/hr/staff/',
-    path: '/hr/staff/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedSchoolExamsBoardRoute =
   AuthenticatedSchoolExamsBoardRouteImport.update({
     id: '/school/exams/board',
@@ -441,12 +433,6 @@ const AuthenticatedMadrassaExamsBoardRoute =
   AuthenticatedMadrassaExamsBoardRouteImport.update({
     id: '/madrassa/exams/board',
     path: '/madrassa/exams/board',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedHrStaffStaffIdRoute =
-  AuthenticatedHrStaffStaffIdRouteImport.update({
-    id: '/hr/staff/$staffId',
-    path: '/hr/staff/$staffId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedSchoolExamsIdIndexRoute =
@@ -551,10 +537,8 @@ export interface FileRoutesByFullPath {
   '/reports/': typeof AuthenticatedReportsIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/teachers/': typeof AuthenticatedTeachersIndexRoute
-  '/hr/staff/$staffId': typeof AuthenticatedHrStaffStaffIdRoute
   '/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
   '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
-  '/hr/staff/': typeof AuthenticatedHrStaffIndexRoute
   '/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
   '/school/exams/': typeof AuthenticatedSchoolExamsIndexRoute
   '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
@@ -623,10 +607,8 @@ export interface FileRoutesByTo {
   '/reports': typeof AuthenticatedReportsIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/teachers': typeof AuthenticatedTeachersIndexRoute
-  '/hr/staff/$staffId': typeof AuthenticatedHrStaffStaffIdRoute
   '/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
   '/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
-  '/hr/staff': typeof AuthenticatedHrStaffIndexRoute
   '/madrassa/exams': typeof AuthenticatedMadrassaExamsIndexRoute
   '/school/exams': typeof AuthenticatedSchoolExamsIndexRoute
   '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
@@ -698,10 +680,8 @@ export interface FileRoutesById {
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/teachers/': typeof AuthenticatedTeachersIndexRoute
-  '/_authenticated/hr/staff/$staffId': typeof AuthenticatedHrStaffStaffIdRoute
   '/_authenticated/madrassa/exams/board': typeof AuthenticatedMadrassaExamsBoardRoute
   '/_authenticated/school/exams/board': typeof AuthenticatedSchoolExamsBoardRoute
-  '/_authenticated/hr/staff/': typeof AuthenticatedHrStaffIndexRoute
   '/_authenticated/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
   '/_authenticated/school/exams/': typeof AuthenticatedSchoolExamsIndexRoute
   '/_authenticated/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
@@ -773,10 +753,8 @@ export interface FileRouteTypes {
     | '/reports/'
     | '/settings/'
     | '/teachers/'
-    | '/hr/staff/$staffId'
     | '/madrassa/exams/board'
     | '/school/exams/board'
-    | '/hr/staff/'
     | '/madrassa/exams/'
     | '/school/exams/'
     | '/madrassa/exams/$id/marks'
@@ -845,10 +823,8 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/teachers'
-    | '/hr/staff/$staffId'
     | '/madrassa/exams/board'
     | '/school/exams/board'
-    | '/hr/staff'
     | '/madrassa/exams'
     | '/school/exams'
     | '/madrassa/exams/$id/marks'
@@ -919,10 +895,8 @@ export interface FileRouteTypes {
     | '/_authenticated/reports/'
     | '/_authenticated/settings/'
     | '/_authenticated/teachers/'
-    | '/_authenticated/hr/staff/$staffId'
     | '/_authenticated/madrassa/exams/board'
     | '/_authenticated/school/exams/board'
-    | '/_authenticated/hr/staff/'
     | '/_authenticated/madrassa/exams/'
     | '/_authenticated/school/exams/'
     | '/_authenticated/madrassa/exams/$id/marks'
@@ -1372,13 +1346,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMadrassaExamsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/hr/staff/': {
-      id: '/_authenticated/hr/staff/'
-      path: '/hr/staff'
-      fullPath: '/hr/staff/'
-      preLoaderRoute: typeof AuthenticatedHrStaffIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/school/exams/board': {
       id: '/_authenticated/school/exams/board'
       path: '/school/exams/board'
@@ -1391,13 +1358,6 @@ declare module '@tanstack/react-router' {
       path: '/madrassa/exams/board'
       fullPath: '/madrassa/exams/board'
       preLoaderRoute: typeof AuthenticatedMadrassaExamsBoardRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/hr/staff/$staffId': {
-      id: '/_authenticated/hr/staff/$staffId'
-      path: '/hr/staff/$staffId'
-      fullPath: '/hr/staff/$staffId'
-      preLoaderRoute: typeof AuthenticatedHrStaffStaffIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/school/exams/$id/': {
@@ -1503,10 +1463,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
   AuthenticatedTeachersIndexRoute: typeof AuthenticatedTeachersIndexRoute
-  AuthenticatedHrStaffStaffIdRoute: typeof AuthenticatedHrStaffStaffIdRoute
   AuthenticatedMadrassaExamsBoardRoute: typeof AuthenticatedMadrassaExamsBoardRoute
   AuthenticatedSchoolExamsBoardRoute: typeof AuthenticatedSchoolExamsBoardRoute
-  AuthenticatedHrStaffIndexRoute: typeof AuthenticatedHrStaffIndexRoute
   AuthenticatedMadrassaExamsIndexRoute: typeof AuthenticatedMadrassaExamsIndexRoute
   AuthenticatedSchoolExamsIndexRoute: typeof AuthenticatedSchoolExamsIndexRoute
   AuthenticatedMadrassaExamsIdMarksRoute: typeof AuthenticatedMadrassaExamsIdMarksRoute
@@ -1570,10 +1528,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
   AuthenticatedTeachersIndexRoute: AuthenticatedTeachersIndexRoute,
-  AuthenticatedHrStaffStaffIdRoute: AuthenticatedHrStaffStaffIdRoute,
   AuthenticatedMadrassaExamsBoardRoute: AuthenticatedMadrassaExamsBoardRoute,
   AuthenticatedSchoolExamsBoardRoute: AuthenticatedSchoolExamsBoardRoute,
-  AuthenticatedHrStaffIndexRoute: AuthenticatedHrStaffIndexRoute,
   AuthenticatedMadrassaExamsIndexRoute: AuthenticatedMadrassaExamsIndexRoute,
   AuthenticatedSchoolExamsIndexRoute: AuthenticatedSchoolExamsIndexRoute,
   AuthenticatedMadrassaExamsIdMarksRoute:
@@ -1621,3 +1577,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

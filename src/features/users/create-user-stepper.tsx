@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, Loader2, ShieldCheck, GraduationCap, Users as UsersIcon } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, Loader2, ShieldCheck, GraduationCap, Users as UsersIcon, Crown, Briefcase, Calculator, Library as LibraryIcon, Phone, HardHat } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,13 +11,13 @@ import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { generateSecurePassword } from "@/lib/generate-password";
-import { ROLE_DEFAULTS } from "@/lib/permissions/role-defaults";
+import { ROLE_DEFAULTS, type DefaultableRole } from "@/lib/permissions/role-defaults";
 import { countCustomizations, totalGrantedActions } from "@/lib/permissions/utils";
 import type { UserPermissions } from "@/lib/permissions/module-registry";
 import { PermissionMatrix, PermissionSummary } from "./permission-matrix";
 import type { User, UserRole } from "@/types";
 
-export type StepperRole = "admin" | "teacher" | "parent";
+export type StepperRole = DefaultableRole;
 
 type Prefill = {
   role?: StepperRole;
@@ -37,9 +37,15 @@ type Props = {
 };
 
 const ROLE_OPTIONS: { value: StepperRole; urdu: string; english: string; tagline: string; icon: typeof ShieldCheck }[] = [
-  { value: "admin", urdu: "منتظم", english: "Admin", tagline: "Manages all institutional operations", icon: ShieldCheck },
-  { value: "teacher", urdu: "استاد", english: "Teacher", tagline: "Access to assigned subjects and classes", icon: GraduationCap },
-  { value: "parent", urdu: "والدین", english: "Parent", tagline: "Parent portal access only", icon: UsersIcon },
+  { value: "admin",        urdu: "منتظم",        english: "Admin",         tagline: "Manages all institutional operations",     icon: ShieldCheck },
+  { value: "principal",    urdu: "پرنسپل",       english: "Principal",     tagline: "Oversight of academics, exams & reports",   icon: Crown },
+  { value: "hr_manager",   urdu: "ایچ آر منیجر", english: "HR Manager",     tagline: "Staff, payroll, leave & departments",       icon: Briefcase },
+  { value: "accountant",   urdu: "اکاؤنٹنٹ",     english: "Accountant",    tagline: "Fees, finance, donations & ledgers",        icon: Calculator },
+  { value: "librarian",    urdu: "لائبریرین",    english: "Librarian",     tagline: "Library inventory & book issuance",         icon: LibraryIcon },
+  { value: "receptionist", urdu: "استقبالیہ",    english: "Receptionist",  tagline: "Front-desk, admissions intake, ID cards",   icon: Phone },
+  { value: "teacher",      urdu: "استاد",         english: "Teacher",       tagline: "Access to assigned subjects and classes",   icon: GraduationCap },
+  { value: "staff",        urdu: "عملہ",          english: "General Staff", tagline: "Basic dashboard access for support staff",  icon: HardHat },
+  { value: "parent",       urdu: "والدین",        english: "Parent",        tagline: "Parent portal access only",                 icon: UsersIcon },
 ];
 
 export function CreateUserStepper({ open, onOpenChange, mode = "create", initial, prefill, onCreate, onUpdate }: Props) {

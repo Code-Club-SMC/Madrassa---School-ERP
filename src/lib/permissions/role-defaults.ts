@@ -1,6 +1,17 @@
 import { MODULE_REGISTRY, type UserPermissions } from "./module-registry";
 
-export const ROLE_DEFAULTS: Record<"admin" | "teacher" | "parent", UserPermissions> = {
+export type DefaultableRole =
+  | "admin"
+  | "principal"
+  | "hr_manager"
+  | "accountant"
+  | "librarian"
+  | "receptionist"
+  | "teacher"
+  | "staff"
+  | "parent";
+
+export const ROLE_DEFAULTS: Record<DefaultableRole, UserPermissions> = {
   admin: {
     dashboard:               { view: true },
     admission_new:           { view: true, create: true },
@@ -55,6 +66,62 @@ export const ROLE_DEFAULTS: Record<"admin" | "teacher" | "parent", UserPermissio
     reports_results:         { view: true },
     settings_academic_year:  { view: true },
     settings_holidays:       { view: true },
+  },
+  principal: {
+    dashboard:               { view: true },
+    admission_new:           { view: true, create: true },
+    admission_queue:         { view: true, approve: true },
+    madrassa_students:       { view: true, edit: true, export: true, print: true },
+    school_students:         { view: true, edit: true, export: true, print: true },
+    madrassa_attendance:     { view: true, export: true },
+    school_attendance:       { view: true, export: true },
+    madrassa_exams_internal: { view: true, approve: true, print: true, export: true },
+    school_exams_internal:   { view: true, approve: true, print: true, export: true },
+    madrassa_exams_board:    { view: true, export: true },
+    school_exams_board:      { view: true, export: true },
+    teachers:                { view: true, print: true, export: true },
+    reports_attendance:      { view: true, export: true, print: true },
+    reports_category:        { view: true, export: true, print: true },
+    reports_results:         { view: true, export: true, print: true },
+    reports_monthly:         { view: true, export: true, print: true },
+    reports_annual:          { view: true, export: true, print: true },
+    settings_academic_year:  { view: true, manage: true },
+    settings_holidays:       { view: true, edit: true },
+    finance:                 { view: true, export: true, print: true },
+  },
+  hr_manager: {
+    dashboard:               { view: true },
+    teachers:                { view: true, create: true, edit: true, print: true, export: true },
+    users:                   { view: false },
+    reports_attendance:      { view: true, export: true, print: true },
+    reports_monthly:         { view: true, export: true },
+  },
+  accountant: {
+    dashboard:               { view: true },
+    madrassa_fees:           { view: true, create: true, edit: true, export: true, print: true },
+    school_fees:             { view: true, create: true, edit: true, export: true, print: true },
+    finance:                 { view: true, create: true, edit: true, export: true, print: true },
+    reports_monthly:         { view: true, export: true, print: true },
+    reports_annual:          { view: true, export: true, print: true },
+    inventory:               { view: true, export: true },
+  },
+  librarian: {
+    dashboard:               { view: true },
+    inventory:               { view: true, create: true, edit: true, delete: false, export: true },
+    madrassa_students:       { view: true },
+    school_students:         { view: true },
+  },
+  receptionist: {
+    dashboard:               { view: true },
+    admission_new:           { view: true, create: true },
+    admission_queue:         { view: true },
+    madrassa_students:       { view: true },
+    school_students:         { view: true },
+    id_cards:                { view: true, print: true },
+    settings_holidays:       { view: true },
+  },
+  staff: {
+    dashboard:               { view: true },
   },
   parent: {},
 };

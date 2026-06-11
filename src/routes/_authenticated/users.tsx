@@ -66,6 +66,22 @@ function UsersPage() {
     neverLogged: list.filter((u) => !u.lastLoginAt).length,
   }), [list]);
 
+  const roleBreakdown = useMemo(() => {
+    const roles: { role: UserRole; urdu: string; en: string }[] = [
+      { role: "super_admin", urdu: "سپر ایڈمن", en: "Super Admin" },
+      { role: "admin", urdu: "ایڈمن", en: "Admin" },
+      { role: "principal", urdu: "پرنسپل", en: "Principal" },
+      { role: "hr_manager", urdu: "ایچ آر منیجر", en: "HR Manager" },
+      { role: "accountant", urdu: "اکاؤنٹنٹ", en: "Accountant" },
+      { role: "librarian", urdu: "لائبریرین", en: "Librarian" },
+      { role: "receptionist", urdu: "استقبالیہ", en: "Receptionist" },
+      { role: "teacher", urdu: "استاد", en: "Teacher" },
+      { role: "staff", urdu: "عملہ", en: "Staff" },
+      { role: "parent", urdu: "والدین", en: "Parent" },
+    ];
+    return roles.map((r) => ({ ...r, count: list.filter((u) => u.role === r.role).length }));
+  }, [list]);
+
   function handleCreate(u: User & { _password: string }) {
     const { _password, ...user } = u;
     setList((l) => [user, ...l]);
@@ -135,6 +151,36 @@ function UsersPage() {
         <KpiCard labelUrdu="کبھی لاگ ان نہیں" label="Never Logged In" value={String(stats.neverLogged)} />
       </div>
 
+      {/* Role breakdown chips */}
+      <Card className="p-3 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+            <span className="font-urdu text-sm normal-case me-2" dir="rtl" lang="ur">کرداروں کے مطابق تقسیم</span>
+            Distribution by Role
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setRoleFilter("all")}
+            className={`rounded-full border px-3 py-1 text-xs transition ${roleFilter === "all" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
+          >
+            <span className="font-urdu me-1.5" dir="rtl" lang="ur">سب</span>All · {list.length}
+          </button>
+          {roleBreakdown.filter((r) => r.count > 0).map((r) => (
+            <button
+              key={r.role}
+              type="button"
+              onClick={() => setRoleFilter(r.role)}
+              className={`rounded-full border px-3 py-1 text-xs transition ${roleFilter === r.role ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
+            >
+              <span className="font-urdu me-1.5" dir="rtl" lang="ur">{r.urdu}</span>
+              {r.en} · <span className="font-mono">{r.count}</span>
+            </button>
+          ))}
+        </div>
+      </Card>
+
       <Card className="p-4 mb-4">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[240px]">
@@ -147,7 +193,13 @@ function UsersPage() {
               <SelectItem value="all">All Roles · تمام</SelectItem>
               <SelectItem value="super_admin">Super Admin · سپر ایڈمن</SelectItem>
               <SelectItem value="admin">Admin · ایڈمن</SelectItem>
+              <SelectItem value="principal">Principal · پرنسپل</SelectItem>
+              <SelectItem value="hr_manager">HR Manager · ایچ آر منیجر</SelectItem>
+              <SelectItem value="accountant">Accountant · اکاؤنٹنٹ</SelectItem>
+              <SelectItem value="librarian">Librarian · لائبریرین</SelectItem>
+              <SelectItem value="receptionist">Receptionist · استقبالیہ</SelectItem>
               <SelectItem value="teacher">Teacher · استاد</SelectItem>
+              <SelectItem value="staff">Staff · عملہ</SelectItem>
               <SelectItem value="parent">Parent · والدین</SelectItem>
             </SelectContent>
           </Select>
