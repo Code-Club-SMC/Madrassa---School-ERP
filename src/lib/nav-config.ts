@@ -87,7 +87,6 @@ export const navItems: NavItem[] = [
 
   // ---------- HR MANAGEMENT (unified: Staff + Teachers + Users + Payroll) ----------
   { group: "shared", url: "/hr", icon: UsersRound, en: "HR Management", ur: "انسانی وسائل", roles: ADMINS },
-  { group: "shared", url: "/hr/staff", icon: Briefcase, en: "Staff Directory", ur: "عملہ", roles: ADMINS },
   { group: "shared", url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: ADMINS },
   { group: "shared", url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: ["super_admin"] },
   { group: "shared", url: "/hr/payroll", icon: HandCoins, en: "Payroll", ur: "تنخواہ", roles: ADMINS },
