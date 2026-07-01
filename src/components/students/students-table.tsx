@@ -41,7 +41,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StudentDetailsSheet } from "./student-details-sheet";
-import { AddStudentDialog } from "./add-student-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -64,7 +63,6 @@ export function StudentsTable({ system }: Props) {
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Student | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
   const [data, setData] = useState<Student[]>(allStudents);
   const [promoteFor, setPromoteFor] = useState<Student | null>(null);
   const [exitFor, setExitFor] = useState<Student | null>(null);
