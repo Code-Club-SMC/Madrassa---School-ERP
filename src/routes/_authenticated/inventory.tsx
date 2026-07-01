@@ -291,18 +291,42 @@ function GraduationDialog({ open, onOpenChange, items, onDistribute }: {
   items: InventoryItem[];
   onDistribute: (itemId: string, qty: number) => void;
 }) {
-  const eligible = useMemo(() => students.filter((s) => s.status === "graduated" || s.system === "madrassa").slice(0, 12), []);
+  const eligible = useMemo(() => students.filter((s) => s.status === "graduated" || s.status === "active"), []);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [studentQ, setStudentQ] = useState("");
+  const [sysFilter, setSysFilter] = useState<string>("all");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [giftItem, setGiftItem] = useState<string>(items[0]?.id ?? "");
   const [perStudent, setPerStudent] = useState(1);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (open) { setSelectedIds([]); setDone(false); setGiftItem(items[0]?.id ?? ""); setPerStudent(1); }
+    if (open) { setSelectedIds([]); setDone(false); setGiftItem(items[0]?.id ?? ""); setPerStudent(1); setStudentQ(""); setSysFilter("all"); setGroupFilter("all"); setStatusFilter("all"); }
   }, [open, items]);
 
   function toggle(id: string) {
     setSelectedIds((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
+  }
+
+  const visibleStudents = useMemo(() => eligible.filter((s) => {
+    if (sysFilter !== "all" && s.system !== sysFilter) return false;
+    if (statusFilter !== "all" && s.status !== statusFilter) return false;
+    if (groupFilter !== "all") {
+      if (s.system === "madrassa" && s.categoryId !== groupFilter) return false;
+      if (s.system === "school" && s.classId !== groupFilter) return false;
+    }
+    if (studentQ) {
+      const q = studentQ.toLowerCase();
+      if (!(s.name.toLowerCase().includes(q) || s.nameUrdu.includes(studentQ) || s.rollNo.toLowerCase().includes(q))) return false;
+    }
+    return true;
+  }), [eligible, sysFilter, statusFilter, groupFilter, studentQ]);
+
+  const allVisibleSelected = visibleStudents.length > 0 && visibleStudents.every((s) => selectedIds.includes(s.id));
+  function toggleAllVisible() {
+    if (allVisibleSelected) setSelectedIds((p) => p.filter((id) => !visibleStudents.some((s) => s.id === id)));
+    else setSelectedIds((p) => Array.from(new Set([...p, ...visibleStudents.map((s) => s.id)])));
   }
 
   const item = items.find((i) => i.id === giftItem);
@@ -335,16 +359,61 @@ function GraduationDialog({ open, onOpenChange, items, onDistribute }: {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-4">
-            <Card className="p-3 max-h-[360px] overflow-y-auto">
-              <p className="text-xs text-muted-foreground mb-2">Select graduating students · فارغ التحصیل طلبہ</p>
-              <div className="space-y-1">
-                {eligible.map((s) => (
+            <Card className="p-3 flex flex-col gap-2 min-h-0">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">Select students · طلبہ منتخب کریں</p>
+                <p className="text-[10px] text-muted-foreground font-mono">{selectedIds.length} selected</p>
+              </div>
+              <div className="relative">
+                <Search className="absolute end-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input value={studentQ} onChange={(e) => setStudentQ(e.target.value)} placeholder="Search by name or roll…" className="h-8 pe-8 text-xs" />
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <Select value={sysFilter} onValueChange={(v) => { setSysFilter(v); setGroupFilter("all"); }}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="System" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All systems</SelectItem>
+                    <SelectItem value="madrassa">Madrassa</SelectItem>
+                    <SelectItem value="school">School</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={groupFilter} onValueChange={setGroupFilter}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All groups</SelectItem>
+                    {sysFilter !== "school" && madrassaCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {sysFilter !== "madrassa" && schoolClasses.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="graduated">Graduated</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between border-t pt-2">
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox checked={allVisibleSelected} onCheckedChange={toggleAllVisible} />
+                  Select all visible ({visibleStudents.length})
+                </label>
+                {selectedIds.length > 0 && (
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => setSelectedIds([])}>Clear</Button>
+                )}
+              </div>
+              <div className="max-h-[300px] overflow-y-auto space-y-1 -mx-1 px-1">
+                {visibleStudents.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-6">No students match filters</p>
+                ) : visibleStudents.map((s) => (
                   <label key={s.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-pointer">
                     <Checkbox checked={selectedIds.includes(s.id)} onCheckedChange={() => toggle(s.id)} />
                     <div className="flex-1 min-w-0">
-                      <p className="font-urdu text-sm truncate" dir="rtl">{s.nameUrdu}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono">{s.rollNo} · {s.system}</p>
+                      <p className="text-xs font-medium truncate">{s.name}</p>
+                      <p className="font-urdu text-sm truncate text-muted-foreground" dir="rtl">{s.nameUrdu}</p>
                     </div>
+                    <span className="text-[10px] font-mono text-muted-foreground shrink-0">{s.rollNo}</span>
                   </label>
                 ))}
               </div>
