@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Search,
-  Plus,
   Filter,
   MoreHorizontal,
   Eye,
@@ -95,10 +94,6 @@ export function StudentsTable({ system }: Props) {
   const handleDelete = (id: string) => {
     setData((d) => d.filter((s) => s.id !== id));
     setSelected(null);
-  };
-
-  const handleAdd = (s: Student) => {
-    setData((d) => [s, ...d]);
   };
 
   const initials = (name: string) =>
