@@ -229,32 +229,49 @@ function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; on
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>{initial?.id ? "Edit Item" : "Add Item"} · {initial?.id ? "ترمیم" : "نئی شے"}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="flex flex-col gap-0.5">
+            <span>{initial?.id ? "Edit Item" : "Record Stock Entry"}</span>
+            <span className="font-urdu text-sm text-muted-foreground" dir="rtl">{initial?.id ? "ترمیم" : "اسٹاک اندراج"}</span>
+          </DialogTitle>
+        </DialogHeader>
         <div className="grid gap-3">
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Name</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-            <div><Label className="font-urdu">اردو نام</Label><Input className="font-urdu" dir="rtl" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} /></div>
+            <BilingualLabel urdu="نام (انگریزی)" english="Item Name" required>
+              <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+            </BilingualLabel>
+            <BilingualLabel urdu="نام (اردو)" english="Urdu Name" required>
+              <Input className="font-urdu" dir="rtl" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} />
+            </BilingualLabel>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Category</Label>
+            <BilingualLabel urdu="زمرہ" english="Category">
               <Select value={f.category} onValueChange={(v) => setF({ ...f, category: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{["Books", "Stationery", "Mosque", "Classroom", "Electronics", "Other"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
-            </div>
-            <div><Label>Type</Label>
+            </BilingualLabel>
+            <BilingualLabel urdu="قسم" english="Type" required>
               <Select value={f.type} onValueChange={(v) => setF({ ...f, type: v as InventoryItem["type"] })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="purchased">Purchased</SelectItem><SelectItem value="donated">Donated</SelectItem><SelectItem value="gift">Gift</SelectItem></SelectContent>
               </Select>
-            </div>
+            </BilingualLabel>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div><Label>Quantity</Label><Input type="number" value={f.quantity} onChange={(e) => setF({ ...f, quantity: +e.target.value })} /></div>
-            <div><Label>Unit</Label><Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} /></div>
-            <div><Label>Low @</Label><Input type="number" value={f.lowStockThreshold} onChange={(e) => setF({ ...f, lowStockThreshold: +e.target.value })} /></div>
+            <BilingualLabel urdu="مقدار" english="Quantity">
+              <Input type="number" value={f.quantity} onChange={(e) => setF({ ...f, quantity: +e.target.value })} />
+            </BilingualLabel>
+            <BilingualLabel urdu="اکائی" english="Unit">
+              <Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} />
+            </BilingualLabel>
+            <BilingualLabel urdu="کم اسٹاک" english="Low @">
+              <Input type="number" value={f.lowStockThreshold} onChange={(e) => setF({ ...f, lowStockThreshold: +e.target.value })} />
+            </BilingualLabel>
           </div>
-          <div><Label>Value (PKR)</Label><Input type="number" value={f.value} onChange={(e) => setF({ ...f, value: +e.target.value })} /></div>
+          <BilingualLabel urdu="مالیت (روپے)" english="Value (PKR)">
+            <Input type="number" value={f.value} onChange={(e) => setF({ ...f, value: +e.target.value })} />
+          </BilingualLabel>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
