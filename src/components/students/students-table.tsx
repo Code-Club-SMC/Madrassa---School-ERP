@@ -356,13 +356,6 @@ export function StudentsTable({ system }: Props) {
         onClose={() => setSelected(null)}
         onDelete={handleDelete}
       />
-      <AddStudentDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        system={system}
-        onAdd={handleAdd}
-      />
-
       <PromoteDialog
         student={promoteFor}
         onClose={() => setPromoteFor(null)}
