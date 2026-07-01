@@ -95,12 +95,25 @@ function CategoryReport() {
       <div className="grid lg:grid-cols-2 gap-4 mb-4">
         <ChartCard title="Distribution" titleUrdu="تقسیم" bodyClassName="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={byCategory} dataKey="value" nameKey="name" outerRadius={110} label={(e: { name?: string; value?: number }) => `${e.name} (${e.value})`}>
+            <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+              <Pie
+                data={byCategory}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="45%"
+                innerRadius={50}
+                outerRadius={90}
+                paddingAngle={2}
+                stroke="var(--background)"
+                strokeWidth={2}
+                label={(e: { percent?: number }) => `${Math.round((e.percent ?? 0) * 100)}%`}
+                labelLine={false}
+              >
                 {byCategory.map((c) => <Cell key={c.id} fill={c.color} />)}
               </Pie>
               <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number, _n, p) => [`${v} students`, p?.payload?.nameUrdu ?? p?.payload?.name]} />
-              <Legend wrapperStyle={{ fontSize: 12, color: "var(--foreground)" }} />
+              <Legend verticalAlign="bottom" height={32} wrapperStyle={{ fontSize: 12, color: "var(--foreground)" }} />
             </PieChart>
           </ResponsiveContainer>
         </ChartCard>
