@@ -50,16 +50,16 @@ export function AppSidebar() {
         isActive={isActive(item.url)}
         tooltip={collapsed ? item.en : undefined}
         className={cn(
-          "h-auto min-h-[3.5rem] gap-3 px-3 py-2.5 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
+          "h-auto min-h-[3.75rem] gap-3 px-3 py-3 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
           "data-[active=true]:relative data-[active=true]:before:absolute data-[active=true]:before:top-2 data-[active=true]:before:bottom-2 data-[active=true]:before:start-0 data-[active=true]:before:w-[3px] data-[active=true]:before:bg-sidebar-primary data-[active=true]:before:rounded-full",
         )}
       >
         <Link to={item.url}>
           <item.icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
           {!collapsed && (
-            <div className="flex flex-col leading-tight gap-0 min-w-0">
-              <span className="font-urdu text-[17px] leading-snug truncate" dir="rtl" lang="ur">{item.ur}</span>
-              <span className="text-[10.5px] uppercase tracking-wide text-sidebar-foreground/55 truncate -mt-0.5">{item.en}</span>
+            <div className="flex flex-col leading-tight gap-1 min-w-0">
+              <span className="font-urdu text-[16px] leading-tight truncate" dir="rtl" lang="ur">{item.ur}</span>
+              <span className="text-[10.5px] uppercase tracking-wide text-sidebar-foreground/60 truncate">{item.en}</span>
             </div>
           )}
         </Link>
