@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Search,
-  Plus,
   Filter,
   MoreHorizontal,
   Eye,
@@ -41,7 +40,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StudentDetailsSheet } from "./student-details-sheet";
-import { AddStudentDialog } from "./add-student-dialog";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -64,7 +62,6 @@ export function StudentsTable({ system }: Props) {
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Student | null>(null);
-  const [addOpen, setAddOpen] = useState(false);
   const [data, setData] = useState<Student[]>(allStudents);
   const [promoteFor, setPromoteFor] = useState<Student | null>(null);
   const [exitFor, setExitFor] = useState<Student | null>(null);
@@ -97,10 +94,6 @@ export function StudentsTable({ system }: Props) {
   const handleDelete = (id: string) => {
     setData((d) => d.filter((s) => s.id !== id));
     setSelected(null);
-  };
-
-  const handleAdd = (s: Student) => {
-    setData((d) => [s, ...d]);
   };
 
   const initials = (name: string) =>
@@ -179,11 +172,6 @@ export function StudentsTable({ system }: Props) {
           <Button variant="outline" size="sm" className="gap-1.5">
             <Download className="h-3.5 w-3.5" />
             Export
-          </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
-            <Plus className="h-4 w-4" />
-            <span>Add Student</span>
-            <span className="font-urdu text-xs">داخلہ</span>
           </Button>
         </div>
       </div>
@@ -363,13 +351,6 @@ export function StudentsTable({ system }: Props) {
         onClose={() => setSelected(null)}
         onDelete={handleDelete}
       />
-      <AddStudentDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        system={system}
-        onAdd={handleAdd}
-      />
-
       <PromoteDialog
         student={promoteFor}
         onClose={() => setPromoteFor(null)}

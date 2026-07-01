@@ -224,8 +224,8 @@ export const currentUser = {
 };
 
 export const institution = {
-  nameEnglish: "Jamia Anwar-ul-Quran",
-  nameUrdu: "جامعہ انوار القرآن",
+  nameEnglish: "Jamia Qasimia Tando Pakistan",
+  nameUrdu: "جامعہ قاسمیہ ٹنڈوپاکستان",
   motto: "علم نور ہے",
 };
 

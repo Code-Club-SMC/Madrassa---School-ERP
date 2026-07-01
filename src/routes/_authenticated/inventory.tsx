@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Plus, Package, AlertTriangle, ShoppingCart, Gift, Pencil, History, Trash2, GraduationCap, CheckCircle2 } from "lucide-react";
+import { Search, Package, AlertTriangle, PackagePlus, Gift, Pencil, History, Trash2, GraduationCap, CheckCircle2, X } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
-import { inventoryItems as seedItems, students, type InventoryItem } from "@/mock";
+import { inventoryItems as seedItems, students, madrassaCategories, schoolClasses, type InventoryItem } from "@/mock";
 import { formatPKR } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { BilingualLabel } from "@/components/shared/bilingual-label";
 
 export const Route = createFileRoute("/_authenticated/inventory")({
   component: InventoryPage,
@@ -29,15 +30,29 @@ const typeStyle: Record<string, string> = {
 
 function InventoryPage() {
   const [q, setQ] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [stockFilter, setStockFilter] = useState<string>("all");
   const [items, setItems] = useState<InventoryItem[]>(seedItems);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState<InventoryItem | null>(null);
   const [graduationOpen, setGraduationOpen] = useState(false);
 
-  const filtered = useMemo(() => items.filter((i) =>
-    !q || i.name.toLowerCase().includes(q.toLowerCase()) || i.nameUrdu.includes(q) || i.category.toLowerCase().includes(q.toLowerCase())
-  ), [q, items]);
+  const allCategories = useMemo(() => Array.from(new Set(items.map((i) => i.category))), [items]);
+
+  const filtered = useMemo(() => items.filter((i) => {
+    if (q && !(i.name.toLowerCase().includes(q.toLowerCase()) || i.nameUrdu.includes(q) || i.category.toLowerCase().includes(q.toLowerCase()))) return false;
+    if (categoryFilter !== "all" && i.category !== categoryFilter) return false;
+    if (typeFilter !== "all" && i.type !== typeFilter) return false;
+    if (stockFilter === "low" && !(i.quantity <= i.lowStockThreshold)) return false;
+    if (stockFilter === "out" && i.quantity !== 0) return false;
+    if (stockFilter === "ok" && i.quantity <= i.lowStockThreshold) return false;
+    return true;
+  }), [q, items, categoryFilter, typeFilter, stockFilter]);
+
+  const activeFilters = (categoryFilter !== "all" ? 1 : 0) + (typeFilter !== "all" ? 1 : 0) + (stockFilter !== "all" ? 1 : 0);
+  function clearFilters() { setCategoryFilter("all"); setTypeFilter("all"); setStockFilter("all"); setQ(""); }
 
   const totals = useMemo(() => ({
     items: items.length,
@@ -45,19 +60,18 @@ function InventoryPage() {
     value: items.reduce((a, i) => a + i.value, 0),
   }), [items]);
 
-  function openAdd() { setEditing(null); setDialogOpen(true); }
   function openEdit(it: InventoryItem) { setEditing(it); setDialogOpen(true); }
   function save(it: InventoryItem) {
     setItems((p) => editing ? p.map((x) => x.id === it.id ? it : x) : [it, ...p]);
-    toast.success(editing ? "Item updated" : "Item added");
+    toast.success(editing?.id ? "Item updated" : it.type === "donated" ? "Donation recorded" : "Purchase recorded");
     setDialogOpen(false);
   }
   function remove(id: string) {
     setItems((p) => p.filter((x) => x.id !== id));
     toast.success("Item deleted");
   }
-  function recordTxn(type: InventoryItem["type"]) {
-    setEditing({ id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type, value: 0, lowStockThreshold: 5 });
+  function recordStock() {
+    setEditing({ id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 });
     setDialogOpen(true);
   }
 
@@ -69,10 +83,8 @@ function InventoryPage() {
         description="Books, stationery, mosque and classroom assets."
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => recordTxn("purchased")}><ShoppingCart className="h-3.5 w-3.5" />Record Purchase</Button>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => recordTxn("donated")}><Gift className="h-3.5 w-3.5" />Record Donation</Button>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setGraduationOpen(true)}><GraduationCap className="h-3.5 w-3.5" />Graduation Gift</Button>
-            <Button size="sm" className="gap-1.5" onClick={openAdd}><Plus className="h-3.5 w-3.5" />Add Item</Button>
+            <Button size="sm" className="gap-1.5" onClick={recordStock}><PackagePlus className="h-3.5 w-3.5" />Record Stock</Button>
           </div>
         }
       />
@@ -90,9 +102,41 @@ function InventoryPage() {
       </div>
 
       <Card className="p-3 mb-4">
-        <div className="relative max-w-xs">
-          <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items…" className="pe-9" />
+        <div className="flex flex-col md:flex-row md:items-center gap-2">
+          <div className="relative md:w-72">
+            <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items…" className="pe-9" />
+          </div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="md:w-40"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {allCategories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="md:w-36"><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="purchased">Purchased</SelectItem>
+              <SelectItem value="donated">Donated</SelectItem>
+              <SelectItem value="gift">Gift</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={stockFilter} onValueChange={setStockFilter}>
+            <SelectTrigger className="md:w-36"><SelectValue placeholder="Stock" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All stock</SelectItem>
+              <SelectItem value="ok">In stock</SelectItem>
+              <SelectItem value="low">Low stock</SelectItem>
+              <SelectItem value="out">Out of stock</SelectItem>
+            </SelectContent>
+          </Select>
+          {(activeFilters > 0 || q) && (
+            <Button variant="ghost" size="sm" className="gap-1.5" onClick={clearFilters}>
+              <X className="h-3.5 w-3.5" />Clear
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -185,32 +229,49 @@ function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; on
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>{initial?.id ? "Edit Item" : "Add Item"} · {initial?.id ? "ترمیم" : "نئی شے"}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle className="flex flex-col gap-0.5">
+            <span>{initial?.id ? "Edit Item" : "Record Stock Entry"}</span>
+            <span className="font-urdu text-sm text-muted-foreground" dir="rtl">{initial?.id ? "ترمیم" : "اسٹاک اندراج"}</span>
+          </DialogTitle>
+        </DialogHeader>
         <div className="grid gap-3">
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Name</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-            <div><Label className="font-urdu">اردو نام</Label><Input className="font-urdu" dir="rtl" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} /></div>
+            <BilingualLabel urdu="نام (انگریزی)" english="Item Name" required>
+              <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+            </BilingualLabel>
+            <BilingualLabel urdu="نام (اردو)" english="Urdu Name" required>
+              <Input className="font-urdu" dir="rtl" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} />
+            </BilingualLabel>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Category</Label>
+            <BilingualLabel urdu="زمرہ" english="Category">
               <Select value={f.category} onValueChange={(v) => setF({ ...f, category: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{["Books", "Stationery", "Mosque", "Classroom", "Electronics", "Other"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
-            </div>
-            <div><Label>Type</Label>
+            </BilingualLabel>
+            <BilingualLabel urdu="قسم" english="Type" required>
               <Select value={f.type} onValueChange={(v) => setF({ ...f, type: v as InventoryItem["type"] })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="purchased">Purchased</SelectItem><SelectItem value="donated">Donated</SelectItem><SelectItem value="gift">Gift</SelectItem></SelectContent>
               </Select>
-            </div>
+            </BilingualLabel>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <div><Label>Quantity</Label><Input type="number" value={f.quantity} onChange={(e) => setF({ ...f, quantity: +e.target.value })} /></div>
-            <div><Label>Unit</Label><Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} /></div>
-            <div><Label>Low @</Label><Input type="number" value={f.lowStockThreshold} onChange={(e) => setF({ ...f, lowStockThreshold: +e.target.value })} /></div>
+            <BilingualLabel urdu="مقدار" english="Quantity">
+              <Input type="number" value={f.quantity} onChange={(e) => setF({ ...f, quantity: +e.target.value })} />
+            </BilingualLabel>
+            <BilingualLabel urdu="اکائی" english="Unit">
+              <Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} />
+            </BilingualLabel>
+            <BilingualLabel urdu="کم اسٹاک" english="Low @">
+              <Input type="number" value={f.lowStockThreshold} onChange={(e) => setF({ ...f, lowStockThreshold: +e.target.value })} />
+            </BilingualLabel>
           </div>
-          <div><Label>Value (PKR)</Label><Input type="number" value={f.value} onChange={(e) => setF({ ...f, value: +e.target.value })} /></div>
+          <BilingualLabel urdu="مالیت (روپے)" english="Value (PKR)">
+            <Input type="number" value={f.value} onChange={(e) => setF({ ...f, value: +e.target.value })} />
+          </BilingualLabel>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -230,18 +291,42 @@ function GraduationDialog({ open, onOpenChange, items, onDistribute }: {
   items: InventoryItem[];
   onDistribute: (itemId: string, qty: number) => void;
 }) {
-  const eligible = useMemo(() => students.filter((s) => s.status === "graduated" || s.system === "madrassa").slice(0, 12), []);
+  const eligible = useMemo(() => students.filter((s) => s.status === "graduated" || s.status === "active"), []);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [studentQ, setStudentQ] = useState("");
+  const [sysFilter, setSysFilter] = useState<string>("all");
+  const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [giftItem, setGiftItem] = useState<string>(items[0]?.id ?? "");
   const [perStudent, setPerStudent] = useState(1);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    if (open) { setSelectedIds([]); setDone(false); setGiftItem(items[0]?.id ?? ""); setPerStudent(1); }
+    if (open) { setSelectedIds([]); setDone(false); setGiftItem(items[0]?.id ?? ""); setPerStudent(1); setStudentQ(""); setSysFilter("all"); setGroupFilter("all"); setStatusFilter("all"); }
   }, [open, items]);
 
   function toggle(id: string) {
     setSelectedIds((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
+  }
+
+  const visibleStudents = useMemo(() => eligible.filter((s) => {
+    if (sysFilter !== "all" && s.system !== sysFilter) return false;
+    if (statusFilter !== "all" && s.status !== statusFilter) return false;
+    if (groupFilter !== "all") {
+      if (s.system === "madrassa" && s.categoryId !== groupFilter) return false;
+      if (s.system === "school" && s.classId !== groupFilter) return false;
+    }
+    if (studentQ) {
+      const q = studentQ.toLowerCase();
+      if (!(s.name.toLowerCase().includes(q) || s.nameUrdu.includes(studentQ) || s.rollNo.toLowerCase().includes(q))) return false;
+    }
+    return true;
+  }), [eligible, sysFilter, statusFilter, groupFilter, studentQ]);
+
+  const allVisibleSelected = visibleStudents.length > 0 && visibleStudents.every((s) => selectedIds.includes(s.id));
+  function toggleAllVisible() {
+    if (allVisibleSelected) setSelectedIds((p) => p.filter((id) => !visibleStudents.some((s) => s.id === id)));
+    else setSelectedIds((p) => Array.from(new Set([...p, ...visibleStudents.map((s) => s.id)])));
   }
 
   const item = items.find((i) => i.id === giftItem);
@@ -274,16 +359,61 @@ function GraduationDialog({ open, onOpenChange, items, onDistribute }: {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-4">
-            <Card className="p-3 max-h-[360px] overflow-y-auto">
-              <p className="text-xs text-muted-foreground mb-2">Select graduating students · فارغ التحصیل طلبہ</p>
-              <div className="space-y-1">
-                {eligible.map((s) => (
+            <Card className="p-3 flex flex-col gap-2 min-h-0">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">Select students · طلبہ منتخب کریں</p>
+                <p className="text-[10px] text-muted-foreground font-mono">{selectedIds.length} selected</p>
+              </div>
+              <div className="relative">
+                <Search className="absolute end-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input value={studentQ} onChange={(e) => setStudentQ(e.target.value)} placeholder="Search by name or roll…" className="h-8 pe-8 text-xs" />
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                <Select value={sysFilter} onValueChange={(v) => { setSysFilter(v); setGroupFilter("all"); }}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="System" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All systems</SelectItem>
+                    <SelectItem value="madrassa">Madrassa</SelectItem>
+                    <SelectItem value="school">School</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={groupFilter} onValueChange={setGroupFilter}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All groups</SelectItem>
+                    {sysFilter !== "school" && madrassaCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    {sysFilter !== "madrassa" && schoolClasses.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="graduated">Graduated</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between border-t pt-2">
+                <label className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox checked={allVisibleSelected} onCheckedChange={toggleAllVisible} />
+                  Select all visible ({visibleStudents.length})
+                </label>
+                {selectedIds.length > 0 && (
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => setSelectedIds([])}>Clear</Button>
+                )}
+              </div>
+              <div className="max-h-[300px] overflow-y-auto space-y-1 -mx-1 px-1">
+                {visibleStudents.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-6">No students match filters</p>
+                ) : visibleStudents.map((s) => (
                   <label key={s.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-pointer">
                     <Checkbox checked={selectedIds.includes(s.id)} onCheckedChange={() => toggle(s.id)} />
                     <div className="flex-1 min-w-0">
-                      <p className="font-urdu text-sm truncate" dir="rtl">{s.nameUrdu}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono">{s.rollNo} · {s.system}</p>
+                      <p className="text-xs font-medium truncate">{s.name}</p>
+                      <p className="font-urdu text-sm truncate text-muted-foreground" dir="rtl">{s.nameUrdu}</p>
                     </div>
+                    <span className="text-[10px] font-mono text-muted-foreground shrink-0">{s.rollNo}</span>
                   </label>
                 ))}
               </div>
