@@ -178,10 +178,16 @@ export function PdfFormRenderer({ variant, isPublic = false }: { variant: Admiss
           <ArrowLeft className="h-4 w-4 me-2 rtl:rotate-180" />
           <span className="font-urdu">منسوخ</span>
         </Button>
-        <Button size="lg" onClick={submit} disabled={!declaration || submitting}>
-          {submitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
-          <span className="font-urdu">داخلہ محفوظ کریں</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="lg" onClick={handlePrint}>
+            <Printer className="h-4 w-4 me-2" />
+            <span className="font-urdu">پرنٹ</span>
+          </Button>
+          <Button size="lg" onClick={submit} disabled={!declaration || submitting}>
+            {submitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
+            <span className="font-urdu">{isPublic ? "درخواست جمع کروائیں" : "داخلہ محفوظ کریں"}</span>
+          </Button>
+        </div>
       </div>
     </div>
   );
