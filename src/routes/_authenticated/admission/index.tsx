@@ -1,16 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { UserPlus, Inbox, ChevronLeft, CalendarClock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { applications } from "@/mock";
+import { AdmissionFormSelectorDialog } from "@/components/admission/form-selector-dialog";
 
 export const Route = createFileRoute("/_authenticated/admission/")({
   component: AdmissionHub,
 });
 
 function AdmissionHub() {
+  const [selectorOpen, setSelectorOpen] = useState(false);
   const pendingCount = applications.filter((a) => a.status === "pending").length;
   return (
     <div>
@@ -33,11 +36,9 @@ function AdmissionHub() {
           <p className="text-sm text-muted-foreground leading-relaxed mb-6">
             Manually enroll a new student through the five-step admission flow. Suitable for walk-in admissions and admin-led intake.
           </p>
-          <Button asChild className="w-full">
-            <Link to="/admission/new">
-              <span className="font-urdu">داخلہ شروع کریں</span>
-              <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
-            </Link>
+          <Button className="w-full" onClick={() => setSelectorOpen(true)}>
+            <span className="font-urdu">داخلہ شروع کریں</span>
+            <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
           </Button>
         </Card>
 
@@ -86,6 +87,7 @@ function AdmissionHub() {
           </Button>
         </Card>
       </div>
+      <AdmissionFormSelectorDialog open={selectorOpen} onOpenChange={setSelectorOpen} />
     </div>
   );
 }
