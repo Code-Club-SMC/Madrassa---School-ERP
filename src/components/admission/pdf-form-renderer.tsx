@@ -265,14 +265,6 @@ function SchoolFields({ form, set }: FieldProps) {
         </BilingualLabel>
       </Section>
 
-      <Section urdu="برائے دفتر استعمال" english="For Office Use">
-        <BilingualLabel urdu="دستخط سرپرست" english="Guardian Signature">
-          <Input value={val("sig_guardian")} onChange={(e) => set("sig_guardian", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="دستخط و مہر پرنسپل" english="Principal Signature / Stamp">
-          <Input value={val("sig_principal")} onChange={(e) => set("sig_principal", e.target.value)} />
-        </BilingualLabel>
-      </Section>
     </>
   );
 }
@@ -334,18 +326,6 @@ function MadrassaShortFields({ form, set, isGirls }: FieldProps & { isGirls: boo
         </BilingualLabel>
         <BilingualLabel urdu="رابطہ نمبر" english="Contact No." required>
           <Input value={val("guardian_phone")} onChange={(e) => set("guardian_phone", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="دستخط سرپرست" english="Guardian Signature">
-          <Input value={val("sig_guardian")} onChange={(e) => set("sig_guardian", e.target.value)} />
-        </BilingualLabel>
-      </Section>
-
-      <Section urdu="دفتری دستخط" english="Office Signatures">
-        <BilingualLabel urdu="دستخط ناظم" english="Nazim Signature">
-          <Input value={val("sig_nazim")} onChange={(e) => set("sig_nazim", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="دستخط مہتمم" english="Muhtamim Signature">
-          <Input value={val("sig_muhtamim")} onChange={(e) => set("sig_muhtamim", e.target.value)} />
         </BilingualLabel>
       </Section>
     </>
