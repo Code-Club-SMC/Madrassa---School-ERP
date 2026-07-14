@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ImagePlus, CheckCircle2, ArrowLeft, Loader2 } from "lucide-react";
+import { ImagePlus, CheckCircle2, ArrowLeft, Loader2, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,11 +9,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { institution } from "@/mock";
 import type { AdmissionVariant } from "@/lib/admission-variants";
+import { printAdmissionForm } from "@/lib/admission-print";
 import { toast } from "sonner";
 
 type State = Record<string, string>;
 
-export function PdfFormRenderer({ variant }: { variant: AdmissionVariant }) {
+export function PdfFormRenderer({ variant, isPublic = false }: { variant: AdmissionVariant; isPublic?: boolean }) {
   const navigate = useNavigate();
   const [form, setForm] = useState<State>({});
   const [declaration, setDeclaration] = useState(false);
@@ -23,6 +24,8 @@ export function PdfFormRenderer({ variant }: { variant: AdmissionVariant }) {
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const val = (k: string) => form[k] ?? "";
+
+  const handlePrint = () => printAdmissionForm(variant, form, institution.nameUrdu);
 
   const submit = () => {
     setSubmitting(true);
@@ -48,9 +51,15 @@ export function PdfFormRenderer({ variant }: { variant: AdmissionVariant }) {
             <p className="font-heading font-bold text-3xl text-primary mt-1">{refNo}</p>
           </div>
           <div className="flex gap-2 mt-2">
-            <Button variant="outline" onClick={() => navigate({ to: "/admission" })}>
-              <span className="font-urdu">واپس داخلہ مرکز</span>
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="h-4 w-4 me-2" />
+              <span className="font-urdu">فارم پرنٹ کریں</span>
             </Button>
+            {!isPublic && (
+              <Button onClick={() => navigate({ to: "/admission" })}>
+                <span className="font-urdu">واپس داخلہ مرکز</span>
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
