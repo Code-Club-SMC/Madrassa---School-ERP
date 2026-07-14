@@ -119,7 +119,7 @@ function QueuePage() {
                   {a.status === "pending" ? (
                     <div className="flex justify-end gap-1">
                       <Button size="sm" variant="outline" className="h-8" onClick={() => setView(a)}><Eye className="h-3.5 w-3.5" /></Button>
-                      <Button size="sm" className="h-8 gap-1 bg-chart-1 hover:bg-chart-1/90 text-white" onClick={() => accept(a)}><Check className="h-3.5 w-3.5" />Accept</Button>
+                      <Button size="sm" className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => accept(a)}><Check className="h-3.5 w-3.5" />Accept</Button>
                       <Button size="sm" variant="outline" className="h-8 gap-1 text-destructive border-destructive/30" onClick={() => setReject(a)}><X className="h-3.5 w-3.5" />Reject</Button>
                     </div>
                   ) : (
@@ -150,7 +150,7 @@ function QueuePage() {
               </div>
               {view.status === "pending" && (
                 <div className="p-4 border-t border-border flex gap-2">
-                  <Button className="flex-1 bg-chart-1 hover:bg-chart-1/90 text-white gap-1.5" onClick={() => accept(view)}><Check className="h-4 w-4" />Accept · منظور</Button>
+                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5" onClick={() => accept(view)}><Check className="h-4 w-4" />Accept · منظور</Button>
                   <Button variant="outline" className="flex-1 text-destructive border-destructive/30 gap-1.5" onClick={() => setReject(view)}><X className="h-4 w-4" />Reject · مسترد</Button>
                 </div>
               )}
