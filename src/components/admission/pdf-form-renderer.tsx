@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ImagePlus, CheckCircle2, ArrowLeft, Loader2 } from "lucide-react";
+import { ImagePlus, CheckCircle2, ArrowLeft, Loader2, Printer } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,11 +9,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { institution } from "@/mock";
 import type { AdmissionVariant } from "@/lib/admission-variants";
+import { printAdmissionForm } from "@/lib/admission-print";
 import { toast } from "sonner";
 
 type State = Record<string, string>;
 
-export function PdfFormRenderer({ variant }: { variant: AdmissionVariant }) {
+export function PdfFormRenderer({ variant, isPublic = false }: { variant: AdmissionVariant; isPublic?: boolean }) {
   const navigate = useNavigate();
   const [form, setForm] = useState<State>({});
   const [declaration, setDeclaration] = useState(false);
@@ -23,6 +24,8 @@ export function PdfFormRenderer({ variant }: { variant: AdmissionVariant }) {
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const val = (k: string) => form[k] ?? "";
+
+  const handlePrint = () => printAdmissionForm(variant, form, institution.nameUrdu);
 
   const submit = () => {
     setSubmitting(true);
@@ -48,9 +51,15 @@ export function PdfFormRenderer({ variant }: { variant: AdmissionVariant }) {
             <p className="font-heading font-bold text-3xl text-primary mt-1">{refNo}</p>
           </div>
           <div className="flex gap-2 mt-2">
-            <Button variant="outline" onClick={() => navigate({ to: "/admission" })}>
-              <span className="font-urdu">واپس داخلہ مرکز</span>
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="h-4 w-4 me-2" />
+              <span className="font-urdu">فارم پرنٹ کریں</span>
             </Button>
+            {!isPublic && (
+              <Button onClick={() => navigate({ to: "/admission" })}>
+                <span className="font-urdu">واپس داخلہ مرکز</span>
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -165,14 +174,20 @@ export function PdfFormRenderer({ variant }: { variant: AdmissionVariant }) {
       </label>
 
       <div className="flex items-center justify-between pt-4 border-t border-border">
-        <Button variant="outline" onClick={() => navigate({ to: "/admission" })}>
+        <Button variant="outline" onClick={() => (isPublic ? navigate({ to: "/apply", search: {} }) : navigate({ to: "/admission" }))}>
           <ArrowLeft className="h-4 w-4 me-2 rtl:rotate-180" />
           <span className="font-urdu">منسوخ</span>
         </Button>
-        <Button size="lg" onClick={submit} disabled={!declaration || submitting}>
-          {submitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
-          <span className="font-urdu">داخلہ محفوظ کریں</span>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="lg" onClick={handlePrint}>
+            <Printer className="h-4 w-4 me-2" />
+            <span className="font-urdu">پرنٹ</span>
+          </Button>
+          <Button size="lg" onClick={submit} disabled={!declaration || submitting}>
+            {submitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
+            <span className="font-urdu">{isPublic ? "درخواست جمع کروائیں" : "داخلہ محفوظ کریں"}</span>
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -250,14 +265,6 @@ function SchoolFields({ form, set }: FieldProps) {
         </BilingualLabel>
       </Section>
 
-      <Section urdu="برائے دفتر استعمال" english="For Office Use">
-        <BilingualLabel urdu="دستخط سرپرست" english="Guardian Signature">
-          <Input value={val("sig_guardian")} onChange={(e) => set("sig_guardian", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="دستخط و مہر پرنسپل" english="Principal Signature / Stamp">
-          <Input value={val("sig_principal")} onChange={(e) => set("sig_principal", e.target.value)} />
-        </BilingualLabel>
-      </Section>
     </>
   );
 }
@@ -319,18 +326,6 @@ function MadrassaShortFields({ form, set, isGirls }: FieldProps & { isGirls: boo
         </BilingualLabel>
         <BilingualLabel urdu="رابطہ نمبر" english="Contact No." required>
           <Input value={val("guardian_phone")} onChange={(e) => set("guardian_phone", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="دستخط سرپرست" english="Guardian Signature">
-          <Input value={val("sig_guardian")} onChange={(e) => set("sig_guardian", e.target.value)} />
-        </BilingualLabel>
-      </Section>
-
-      <Section urdu="دفتری دستخط" english="Office Signatures">
-        <BilingualLabel urdu="دستخط ناظم" english="Nazim Signature">
-          <Input value={val("sig_nazim")} onChange={(e) => set("sig_nazim", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="دستخط مہتمم" english="Muhtamim Signature">
-          <Input value={val("sig_muhtamim")} onChange={(e) => set("sig_muhtamim", e.target.value)} />
         </BilingualLabel>
       </Section>
     </>
@@ -486,9 +481,6 @@ function MadrassaLongFields({ form, set, isGirls }: FieldProps & { isGirls: bool
         <BilingualLabel urdu="امیدوار درجہ" english="Candidate Darja">
           <Input className="font-urdu" value={val("candidate_darja")} onChange={(e) => set("candidate_darja", e.target.value)} />
         </BilingualLabel>
-        <BilingualLabel urdu={isGirls ? "دستخط طالبہ" : "دستخط طالب علم"} english="Student Signature">
-          <Input value={val("sig_student")} onChange={(e) => set("sig_student", e.target.value)} />
-        </BilingualLabel>
       </Section>
 
       <Section urdu="برائے سرپرست" english="For Guardian">
@@ -531,9 +523,6 @@ function MadrassaLongFields({ form, set, isGirls }: FieldProps & { isGirls: bool
         <BilingualLabel urdu="یک مشت / قسط وار" english="Lump-sum / Installments">
           <Input className="font-urdu" value={val("support_mode")} onChange={(e) => set("support_mode", e.target.value)} />
         </BilingualLabel>
-        <BilingualLabel urdu="دستخط سرپرست" english="Guardian Signature">
-          <Input value={val("sig_guardian")} onChange={(e) => set("sig_guardian", e.target.value)} />
-        </BilingualLabel>
       </Section>
 
       <Section urdu="دفتری کاروائی" english="Office Action">
@@ -544,15 +533,6 @@ function MadrassaLongFields({ form, set, isGirls }: FieldProps & { isGirls: bool
         </div>
         <BilingualLabel urdu="مجوزہ درجہ" english="Proposed Darja">
           <Input className="font-urdu" value={val("proposed_darja")} onChange={(e) => set("proposed_darja", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="دستخط ناظم تعلیمات" english="Nazim-e-Taleemat Signature">
-          <Input value={val("sig_nazim_taleemat")} onChange={(e) => set("sig_nazim_taleemat", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="دستخط مہتمم" english="Muhtamim Signature">
-          <Input value={val("sig_muhtamim")} onChange={(e) => set("sig_muhtamim", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="مہر مدرسہ" english="Institution Stamp">
-          <Input value={val("stamp")} onChange={(e) => set("stamp", e.target.value)} />
         </BilingualLabel>
       </Section>
     </>
