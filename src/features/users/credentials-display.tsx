@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CheckCircle2, Copy, Eye, EyeOff, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 type Creds = { nameUrdu: string; nameEnglish: string; email: string; role: string; password: string };
@@ -25,15 +25,21 @@ export function CredentialsOverlay({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center p-4">
-      <Card className="max-w-md w-full p-6">
-        <div className="flex flex-col items-center text-center mb-4">
-          <div className="w-14 h-14 rounded-2xl bg-chart-1/15 flex items-center justify-center mb-3">
-            <CheckCircle2 className="w-7 h-7 text-chart-1" />
+    <Dialog open={!!creds} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <div className="flex flex-col items-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center mb-3">
+              <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+            </div>
+            <DialogTitle asChild>
+              <h3 className="font-urdu text-xl font-bold leading-loose" dir="rtl" lang="ur">
+                صارف کامیابی سے بن گیا
+              </h3>
+            </DialogTitle>
+            <DialogDescription>User Created Successfully</DialogDescription>
           </div>
-          <h3 className="font-urdu text-xl font-bold leading-loose" dir="rtl" lang="ur">صارف کامیابی سے بن گیا</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">User Created Successfully</p>
-        </div>
+        </DialogHeader>
         <div className="rounded-xl border border-border bg-muted/40 divide-y divide-border text-sm">
           <Row label="نام / Name" value={`${creds.nameUrdu} · ${creds.nameEnglish}`} />
           <Row label="ای میل / Email" value={creds.email} mono />
@@ -48,20 +54,20 @@ export function CredentialsOverlay({
             </Button>
           </div>
         </div>
-        <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300/40 px-3 py-2 mt-4 flex items-start gap-2">
+        <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300/40 px-3 py-2 flex items-start gap-2">
           <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
           <div>
             <p className="font-urdu text-xs leading-loose" dir="rtl" lang="ur">یہ پاس ورڈ دوبارہ نہیں دکھایا جائے گا</p>
             <p className="text-[11px] text-muted-foreground">This password will not be shown again — note it now.</p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 mt-5 justify-end">
+        <DialogFooter className="flex-wrap gap-2 sm:justify-end">
           <Button variant="outline" onClick={copyAll} className="gap-1.5"><Copy className="h-3.5 w-3.5" /><span className="font-urdu">تمام کاپی کریں</span></Button>
           {onViewUser && <Button variant="outline" onClick={onViewUser}><span className="font-urdu">صارف دیکھیں</span></Button>}
           <Button onClick={onClose}><span className="font-urdu">بند کریں</span></Button>
-        </div>
-      </Card>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
