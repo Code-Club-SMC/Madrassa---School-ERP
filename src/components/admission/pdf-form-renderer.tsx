@@ -481,9 +481,6 @@ function MadrassaLongFields({ form, set, isGirls }: FieldProps & { isGirls: bool
         <BilingualLabel urdu="امیدوار درجہ" english="Candidate Darja">
           <Input className="font-urdu" value={val("candidate_darja")} onChange={(e) => set("candidate_darja", e.target.value)} />
         </BilingualLabel>
-        <BilingualLabel urdu={isGirls ? "دستخط طالبہ" : "دستخط طالب علم"} english="Student Signature">
-          <Input value={val("sig_student")} onChange={(e) => set("sig_student", e.target.value)} />
-        </BilingualLabel>
       </Section>
 
       <Section urdu="برائے سرپرست" english="For Guardian">
@@ -526,9 +523,6 @@ function MadrassaLongFields({ form, set, isGirls }: FieldProps & { isGirls: bool
         <BilingualLabel urdu="یک مشت / قسط وار" english="Lump-sum / Installments">
           <Input className="font-urdu" value={val("support_mode")} onChange={(e) => set("support_mode", e.target.value)} />
         </BilingualLabel>
-        <BilingualLabel urdu="دستخط سرپرست" english="Guardian Signature">
-          <Input value={val("sig_guardian")} onChange={(e) => set("sig_guardian", e.target.value)} />
-        </BilingualLabel>
       </Section>
 
       <Section urdu="دفتری کاروائی" english="Office Action">
@@ -539,15 +533,6 @@ function MadrassaLongFields({ form, set, isGirls }: FieldProps & { isGirls: bool
         </div>
         <BilingualLabel urdu="مجوزہ درجہ" english="Proposed Darja">
           <Input className="font-urdu" value={val("proposed_darja")} onChange={(e) => set("proposed_darja", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="دستخط ناظم تعلیمات" english="Nazim-e-Taleemat Signature">
-          <Input value={val("sig_nazim_taleemat")} onChange={(e) => set("sig_nazim_taleemat", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="دستخط مہتمم" english="Muhtamim Signature">
-          <Input value={val("sig_muhtamim")} onChange={(e) => set("sig_muhtamim", e.target.value)} />
-        </BilingualLabel>
-        <BilingualLabel urdu="مہر مدرسہ" english="Institution Stamp">
-          <Input value={val("stamp")} onChange={(e) => set("stamp", e.target.value)} />
         </BilingualLabel>
       </Section>
     </>
