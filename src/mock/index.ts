@@ -1,5 +1,6 @@
 // Centralized mock data for MSMIS — all UI surfaces source from here.
 // Replace with TanStack Query hooks when backend is ready.
+import { madrassaCategories as sharedMadrassaCategories } from "@/mock/categories";
 
 export type System = "madrassa" | "school" | "both";
 export type Gender = "male" | "female";
@@ -12,7 +13,13 @@ export type MadrassaCategory = {
   id: string;
   name: string;
   nameUrdu: string;
-  subcategories: Array<{ id: string; name: string; nameUrdu: string; rollPrefix: string; count: number }>;
+  subcategories: Array<{
+    id: string;
+    name: string;
+    nameUrdu: string;
+    rollPrefix: string;
+    count: number;
+  }>;
 };
 
 export type Student = {
@@ -77,36 +84,7 @@ export type ActivityEvent = {
   at: string;
 };
 
-export const madrassaCategories: MadrassaCategory[] = [
-  {
-    id: "hifz",
-    name: "Hifz",
-    nameUrdu: "حفظ",
-    subcategories: [
-      { id: "hifz-1", name: "Hifz Beginner", nameUrdu: "حفظ ابتدائی", rollPrefix: "HB", count: 48 },
-      { id: "hifz-2", name: "Hifz Intermediate", nameUrdu: "حفظ درمیانی", rollPrefix: "HI", count: 36 },
-      { id: "hifz-3", name: "Hifz Advanced", nameUrdu: "حفظ منتہی", rollPrefix: "HA", count: 22 },
-    ],
-  },
-  {
-    id: "nazira",
-    name: "Nazira",
-    nameUrdu: "ناظرہ",
-    subcategories: [
-      { id: "naz-1", name: "Qaida", nameUrdu: "قاعدہ", rollPrefix: "QD", count: 62 },
-      { id: "naz-2", name: "Nazira Quran", nameUrdu: "ناظرہ قرآن", rollPrefix: "NZ", count: 84 },
-    ],
-  },
-  {
-    id: "alimiyat",
-    name: "Alimiyat",
-    nameUrdu: "عالمیہ",
-    subcategories: [
-      { id: "ali-1", name: "Year 1", nameUrdu: "درجہ اولیٰ", rollPrefix: "A1", count: 18 },
-      { id: "ali-2", name: "Year 2", nameUrdu: "درجہ ثانیہ", rollPrefix: "A2", count: 14 },
-    ],
-  },
-];
+export const madrassaCategories: MadrassaCategory[] = sharedMadrassaCategories;
 
 export const schoolClasses = [
   { id: "kg", name: "KG", nameUrdu: "نرسری" },
@@ -117,9 +95,36 @@ export const schoolClasses = [
   { id: "c5", name: "Class 5", nameUrdu: "جماعت پنجم" },
 ];
 
-const urduFirst = ["محمد", "احمد", "علی", "حسن", "حسین", "بلال", "اسامہ", "زید", "عمر", "ابراہیم", "فاطمہ", "عائشہ", "خدیجہ", "مریم", "زینب"];
+const urduFirst = [
+  "محمد",
+  "احمد",
+  "علی",
+  "حسن",
+  "حسین",
+  "بلال",
+  "اسامہ",
+  "زید",
+  "عمر",
+  "ابراہیم",
+  "فاطمہ",
+  "عائشہ",
+  "خدیجہ",
+  "مریم",
+  "زینب",
+];
 const urduLast = ["خان", "رضا", "احمد", "اسلم", "حسین", "اقبال", "صدیقی", "ملک"];
-const engNames = ["Muhammad Khan", "Ahmad Raza", "Ali Hassan", "Bilal Iqbal", "Usama Malik", "Zaid Siddiqui", "Fatima Aslam", "Ayesha Hussain", "Mariam Khan", "Zainab Raza"];
+const engNames = [
+  "Muhammad Khan",
+  "Ahmad Raza",
+  "Ali Hassan",
+  "Bilal Iqbal",
+  "Usama Malik",
+  "Zaid Siddiqui",
+  "Fatima Aslam",
+  "Ayesha Hussain",
+  "Mariam Khan",
+  "Zainab Raza",
+];
 
 function pick<T>(arr: T[], i: number): T {
   return arr[i % arr.length];
@@ -133,7 +138,10 @@ export const students: Student[] = Array.from({ length: 48 }).map((_, i) => {
   const cls = pick(schoolClasses, i);
   return {
     id: `S${1000 + i}`,
-    rollNo: sys === "madrassa" ? `${sub.rollPrefix}-${(101 + i).toString().padStart(3, "0")}` : `SCH-${(2024000 + i)}`,
+    rollNo:
+      sys === "madrassa"
+        ? `${sub.rollPrefix}-${(101 + i).toString().padStart(3, "0")}`
+        : `SCH-${2024000 + i}`,
     name: pick(engNames, i),
     nameUrdu: `${pick(urduFirst, i)} ${pick(urduLast, i)}`,
     gender,
@@ -155,11 +163,51 @@ export const students: Student[] = Array.from({ length: 48 }).map((_, i) => {
 });
 
 export const users: User[] = [
-  { id: "u1", name: "Super Admin", email: "admin@msmis.pk", role: "super_admin", status: "active", createdBy: "system", createdAt: "2024-01-01" },
-  { id: "u2", name: "Hafiz Bilal", email: "bilal@msmis.pk", role: "admin", status: "active", createdBy: "Super Admin", createdAt: "2024-03-12" },
-  { id: "u3", name: "Ustad Imran", email: "imran@msmis.pk", role: "teacher", status: "active", createdBy: "Hafiz Bilal", createdAt: "2024-04-20" },
-  { id: "u4", name: "Parent Iqbal", email: "iqbal@gmail.com", role: "parent", status: "active", createdBy: "Hafiz Bilal", createdAt: "2024-08-08" },
-  { id: "u5", name: "Ustaad Saleem", email: "saleem@msmis.pk", role: "teacher", status: "inactive", createdBy: "Super Admin", createdAt: "2023-11-15" },
+  {
+    id: "u1",
+    name: "Super Admin",
+    email: "admin@msmis.pk",
+    role: "super_admin",
+    status: "active",
+    createdBy: "system",
+    createdAt: "2024-01-01",
+  },
+  {
+    id: "u2",
+    name: "Hafiz Bilal",
+    email: "bilal@msmis.pk",
+    role: "admin",
+    status: "active",
+    createdBy: "Super Admin",
+    createdAt: "2024-03-12",
+  },
+  {
+    id: "u3",
+    name: "Ustad Imran",
+    email: "imran@msmis.pk",
+    role: "teacher",
+    status: "active",
+    createdBy: "Hafiz Bilal",
+    createdAt: "2024-04-20",
+  },
+  {
+    id: "u4",
+    name: "Parent Iqbal",
+    email: "iqbal@gmail.com",
+    role: "parent",
+    status: "active",
+    createdBy: "Hafiz Bilal",
+    createdAt: "2024-08-08",
+  },
+  {
+    id: "u5",
+    name: "Ustaad Saleem",
+    email: "saleem@msmis.pk",
+    role: "teacher",
+    status: "inactive",
+    createdBy: "Super Admin",
+    createdAt: "2023-11-15",
+  },
 ];
 
 export const applications: Application[] = Array.from({ length: 14 }).map((_, i) => ({
@@ -175,22 +223,110 @@ export const applications: Application[] = Array.from({ length: 14 }).map((_, i)
 }));
 
 export const teachers: Teacher[] = [
-  { id: "T1", name: "Hafiz Bilal", nameUrdu: "حافظ بلال", subject: "Hifz", system: "madrassa", phone: "0300-1234567", joinedAt: "2022-04-01" },
-  { id: "T2", name: "Maulana Imran", nameUrdu: "مولانا عمران", subject: "Alimiyat", system: "madrassa", phone: "0301-2345678", joinedAt: "2021-08-15" },
-  { id: "T3", name: "Sir Adeel", nameUrdu: "سر عدیل", subject: "Mathematics", system: "school", phone: "0302-3456789", joinedAt: "2023-01-10" },
-  { id: "T4", name: "Miss Ayesha", nameUrdu: "مس عائشہ", subject: "English", system: "school", phone: "0303-4567890", joinedAt: "2022-11-22" },
-  { id: "T5", name: "Qari Saleem", nameUrdu: "قاری سلیم", subject: "Tajweed", system: "madrassa", phone: "0304-5678901", joinedAt: "2020-06-05" },
+  {
+    id: "T1",
+    name: "Hafiz Bilal",
+    nameUrdu: "حافظ بلال",
+    subject: "Hifz",
+    system: "madrassa",
+    phone: "0300-1234567",
+    joinedAt: "2022-04-01",
+  },
+  {
+    id: "T2",
+    name: "Maulana Imran",
+    nameUrdu: "مولانا عمران",
+    subject: "Alimiyat",
+    system: "madrassa",
+    phone: "0301-2345678",
+    joinedAt: "2021-08-15",
+  },
+  {
+    id: "T3",
+    name: "Sir Adeel",
+    nameUrdu: "سر عدیل",
+    subject: "Mathematics",
+    system: "school",
+    phone: "0302-3456789",
+    joinedAt: "2023-01-10",
+  },
+  {
+    id: "T4",
+    name: "Miss Ayesha",
+    nameUrdu: "مس عائشہ",
+    subject: "English",
+    system: "school",
+    phone: "0303-4567890",
+    joinedAt: "2022-11-22",
+  },
+  {
+    id: "T5",
+    name: "Qari Saleem",
+    nameUrdu: "قاری سلیم",
+    subject: "Tajweed",
+    system: "madrassa",
+    phone: "0304-5678901",
+    joinedAt: "2020-06-05",
+  },
 ];
 
 export const recentActivity: ActivityEvent[] = [
-  { id: "e1", type: "admission", title: "New admission — Muhammad Khan", titleUrdu: "نیا داخلہ — محمد خان", at: new Date(Date.now() - 1000 * 60 * 12).toISOString() },
-  { id: "e2", type: "fee", title: "Fee received — PKR 4,500 from Bilal Iqbal", titleUrdu: "فیس وصول — PKR 4,500", at: new Date(Date.now() - 1000 * 60 * 48).toISOString() },
-  { id: "e3", type: "attendance", title: "Attendance marked for Hifz Intermediate", titleUrdu: "حاضری مکمل — حفظ درمیانی", at: new Date(Date.now() - 1000 * 60 * 90).toISOString() },
-  { id: "e4", type: "exam", title: "Mid-term results published — Class 4", titleUrdu: "نتائج جاری — جماعت چہارم", at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
-  { id: "e5", type: "admission", title: "Application APP-2410 accepted", titleUrdu: "درخواست منظور — APP-2410", at: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString() },
-  { id: "e6", type: "fee", title: "PKR 8,000 collected from Ayesha Hussain", titleUrdu: "فیس وصول — PKR 8,000", at: new Date(Date.now() - 1000 * 60 * 60 * 22).toISOString() },
-  { id: "e7", type: "attendance", title: "Daily attendance closed — School wing", titleUrdu: "روزانہ حاضری بند — اسکول", at: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString() },
-  { id: "e8", type: "admission", title: "New parent account created", titleUrdu: "نیا والدین اکاؤنٹ", at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
+  {
+    id: "e1",
+    type: "admission",
+    title: "New admission — Muhammad Khan",
+    titleUrdu: "نیا داخلہ — محمد خان",
+    at: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+  },
+  {
+    id: "e2",
+    type: "fee",
+    title: "Fee received — PKR 4,500 from Bilal Iqbal",
+    titleUrdu: "فیس وصول — PKR 4,500",
+    at: new Date(Date.now() - 1000 * 60 * 48).toISOString(),
+  },
+  {
+    id: "e3",
+    type: "attendance",
+    title: "Attendance marked for Hifz Intermediate",
+    titleUrdu: "حاضری مکمل — حفظ درمیانی",
+    at: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
+  },
+  {
+    id: "e4",
+    type: "exam",
+    title: "Mid-term results published — Class 4",
+    titleUrdu: "نتائج جاری — جماعت چہارم",
+    at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+  },
+  {
+    id: "e5",
+    type: "admission",
+    title: "Application APP-2410 accepted",
+    titleUrdu: "درخواست منظور — APP-2410",
+    at: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
+  },
+  {
+    id: "e6",
+    type: "fee",
+    title: "PKR 8,000 collected from Ayesha Hussain",
+    titleUrdu: "فیس وصول — PKR 8,000",
+    at: new Date(Date.now() - 1000 * 60 * 60 * 22).toISOString(),
+  },
+  {
+    id: "e7",
+    type: "attendance",
+    title: "Daily attendance closed — School wing",
+    titleUrdu: "روزانہ حاضری بند — اسکول",
+    at: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
+  },
+  {
+    id: "e8",
+    type: "admission",
+    title: "New parent account created",
+    titleUrdu: "نیا والدین اکاؤنٹ",
+    at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+  },
 ];
 
 export const enrollmentTrend = Array.from({ length: 12 }).map((_, i) => {
@@ -208,7 +344,10 @@ export const categoryDistribution = madrassaCategories.flatMap((c) =>
 );
 
 export const sparkline = (seed: number) =>
-  Array.from({ length: 7 }).map((_, i) => ({ x: i, y: 20 + Math.round(Math.sin(i + seed) * 8 + seed) }));
+  Array.from({ length: 7 }).map((_, i) => ({
+    x: i,
+    y: 20 + Math.round(Math.sin(i + seed) * 8 + seed),
+  }));
 
 export const attendanceLast7 = Array.from({ length: 7 }).map((_, i) => ({
   day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i],
@@ -273,7 +412,8 @@ export type FeeRecord = {
 
 export const feeRecords: FeeRecord[] = students.slice(0, 24).map((s, i) => {
   const paid = i % 7 === 0 ? 0 : i % 5 === 0 ? Math.round(s.monthlyFee / 2) : s.monthlyFee;
-  const status: FeeStatus = paid === 0 ? (i % 3 === 0 ? "overdue" : "unpaid") : paid < s.monthlyFee ? "partial" : "paid";
+  const status: FeeStatus =
+    paid === 0 ? (i % 3 === 0 ? "overdue" : "unpaid") : paid < s.monthlyFee ? "partial" : "paid";
   return {
     id: `fee-${s.id}`,
     studentId: s.id,
@@ -290,7 +430,13 @@ export const feeRecords: FeeRecord[] = students.slice(0, 24).map((s, i) => {
 
 // ---------- Exams ----------
 export type ExamStatus = "upcoming" | "active" | "completed";
-export type ExamSubject = { id: string; name: string; nameUrdu: string; totalMarks: number; passingMarks: number };
+export type ExamSubject = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  totalMarks: number;
+  passingMarks: number;
+};
 export type ExamSeries = {
   id: string;
   name: string;
@@ -352,7 +498,11 @@ export function generateResults(seriesId: string, schoolOnly = true) {
     .filter((s) => (schoolOnly ? s.system === "school" : true))
     .slice(0, 18)
     .map((s, i) => {
-      const marks = series.subjects.map((sub) => Math.round(sub.passingMarks + Math.random() * (sub.totalMarks - sub.passingMarks - 5 + (i % 3) * 10)));
+      const marks = series.subjects.map((sub) =>
+        Math.round(
+          sub.passingMarks + Math.random() * (sub.totalMarks - sub.passingMarks - 5 + (i % 3) * 10),
+        ),
+      );
       const total = marks.reduce((a, b) => a + b, 0);
       const max = series.subjects.reduce((a, b) => a + b.totalMarks, 0);
       const pct = (total / max) * 100;
@@ -395,7 +545,9 @@ export const financeRecords: FinanceRecord[] = Array.from({ length: 32 }).map((_
     type: isIncome ? "income" : "expense",
     category: cat.c,
     categoryUrdu: cat.u,
-    description: isIncome ? "Monthly collection / donation received" : "Operating expense / inventory purchase",
+    description: isIncome
+      ? "Monthly collection / donation received"
+      : "Operating expense / inventory purchase",
     amount: isIncome ? 15000 + (i % 6) * 5000 : 4000 + (i % 5) * 2500,
     source: isIncome ? (i % 2 ? "Fee Module" : "Donation") : "Vendor",
     system,
@@ -430,14 +582,94 @@ export type InventoryItem = {
 };
 
 export const inventoryItems: InventoryItem[] = [
-  { id: "inv-1", name: "Quran (Hardcover)", nameUrdu: "قرآن مجید", category: "Books", quantity: 18, unit: "copies", type: "donated", value: 12000, lowStockThreshold: 20 },
-  { id: "inv-2", name: "Notebooks", nameUrdu: "کاپیاں", category: "Stationery", quantity: 240, unit: "pcs", type: "purchased", value: 24000, lowStockThreshold: 100 },
-  { id: "inv-3", name: "Pens (Blue)", nameUrdu: "نیلے قلم", category: "Stationery", quantity: 8, unit: "boxes", type: "purchased", value: 4800, lowStockThreshold: 10 },
-  { id: "inv-4", name: "Prayer Mats", nameUrdu: "جانمازیں", category: "Mosque", quantity: 65, unit: "pcs", type: "donated", value: 32500, lowStockThreshold: 30 },
-  { id: "inv-5", name: "White Boards", nameUrdu: "وائٹ بورڈ", category: "Classroom", quantity: 12, unit: "pcs", type: "purchased", value: 18000, lowStockThreshold: 5 },
-  { id: "inv-6", name: "Markers", nameUrdu: "مارکر", category: "Stationery", quantity: 4, unit: "boxes", type: "gift", value: 1600, lowStockThreshold: 6 },
-  { id: "inv-7", name: "Tasbeeh", nameUrdu: "تسبیح", category: "Mosque", quantity: 180, unit: "pcs", type: "donated", value: 9000, lowStockThreshold: 50 },
-  { id: "inv-8", name: "Sport Equipment", nameUrdu: "کھیلوں کا سامان", category: "Sports", quantity: 22, unit: "sets", type: "purchased", value: 44000, lowStockThreshold: 10 },
+  {
+    id: "inv-1",
+    name: "Quran (Hardcover)",
+    nameUrdu: "قرآن مجید",
+    category: "Books",
+    quantity: 18,
+    unit: "copies",
+    type: "donated",
+    value: 12000,
+    lowStockThreshold: 20,
+  },
+  {
+    id: "inv-2",
+    name: "Notebooks",
+    nameUrdu: "کاپیاں",
+    category: "Stationery",
+    quantity: 240,
+    unit: "pcs",
+    type: "purchased",
+    value: 24000,
+    lowStockThreshold: 100,
+  },
+  {
+    id: "inv-3",
+    name: "Pens (Blue)",
+    nameUrdu: "نیلے قلم",
+    category: "Stationery",
+    quantity: 8,
+    unit: "boxes",
+    type: "purchased",
+    value: 4800,
+    lowStockThreshold: 10,
+  },
+  {
+    id: "inv-4",
+    name: "Prayer Mats",
+    nameUrdu: "جانمازیں",
+    category: "Mosque",
+    quantity: 65,
+    unit: "pcs",
+    type: "donated",
+    value: 32500,
+    lowStockThreshold: 30,
+  },
+  {
+    id: "inv-5",
+    name: "White Boards",
+    nameUrdu: "وائٹ بورڈ",
+    category: "Classroom",
+    quantity: 12,
+    unit: "pcs",
+    type: "purchased",
+    value: 18000,
+    lowStockThreshold: 5,
+  },
+  {
+    id: "inv-6",
+    name: "Markers",
+    nameUrdu: "مارکر",
+    category: "Stationery",
+    quantity: 4,
+    unit: "boxes",
+    type: "gift",
+    value: 1600,
+    lowStockThreshold: 6,
+  },
+  {
+    id: "inv-7",
+    name: "Tasbeeh",
+    nameUrdu: "تسبیح",
+    category: "Mosque",
+    quantity: 180,
+    unit: "pcs",
+    type: "donated",
+    value: 9000,
+    lowStockThreshold: 50,
+  },
+  {
+    id: "inv-8",
+    name: "Sport Equipment",
+    nameUrdu: "کھیلوں کا سامان",
+    category: "Sports",
+    quantity: 22,
+    unit: "sets",
+    type: "purchased",
+    value: 44000,
+    lowStockThreshold: 10,
+  },
 ];
 
 // ---------- Announcements ----------
@@ -452,10 +684,42 @@ export type Announcement = {
 };
 
 export const announcements: Announcement[] = [
-  { id: "n1", title: "Eid Holidays Notice", titleUrdu: "عید کی چھٹیوں کا اعلان", body: "Institution will remain closed from 1st to 5th Shawwal.", bodyUrdu: "ادارہ یکم تا 5 شوال بند رہے گا۔", date: new Date(Date.now() - 86400000 * 2).toISOString(), audience: "all" },
-  { id: "n2", title: "Mid-Year Exam Schedule", titleUrdu: "نیم سالہ امتحان کا شیڈول", body: "Mid-year examinations begin on 10th June. Datesheet attached.", bodyUrdu: "نیم سالہ امتحانات 10 جون سے شروع ہوں گے۔", date: new Date(Date.now() - 86400000 * 5).toISOString(), audience: "parents" },
-  { id: "n3", title: "Parent–Teacher Meeting", titleUrdu: "والدین اور اساتذہ کی نشست", body: "PTM scheduled for Saturday 11 AM in the main hall.", bodyUrdu: "ہفتہ کے دن صبح 11 بجے مین ہال میں۔", date: new Date(Date.now() - 86400000 * 8).toISOString(), audience: "parents" },
-  { id: "n4", title: "Donation Drive", titleUrdu: "عطیات کی مہم", body: "Help us furnish the new Hifz wing.", bodyUrdu: "نئے حفظ ونگ کی تکمیل میں ہمارا ساتھ دیں۔", date: new Date(Date.now() - 86400000 * 12).toISOString(), audience: "all" },
+  {
+    id: "n1",
+    title: "Eid Holidays Notice",
+    titleUrdu: "عید کی چھٹیوں کا اعلان",
+    body: "Institution will remain closed from 1st to 5th Shawwal.",
+    bodyUrdu: "ادارہ یکم تا 5 شوال بند رہے گا۔",
+    date: new Date(Date.now() - 86400000 * 2).toISOString(),
+    audience: "all",
+  },
+  {
+    id: "n2",
+    title: "Mid-Year Exam Schedule",
+    titleUrdu: "نیم سالہ امتحان کا شیڈول",
+    body: "Mid-year examinations begin on 10th June. Datesheet attached.",
+    bodyUrdu: "نیم سالہ امتحانات 10 جون سے شروع ہوں گے۔",
+    date: new Date(Date.now() - 86400000 * 5).toISOString(),
+    audience: "parents",
+  },
+  {
+    id: "n3",
+    title: "Parent–Teacher Meeting",
+    titleUrdu: "والدین اور اساتذہ کی نشست",
+    body: "PTM scheduled for Saturday 11 AM in the main hall.",
+    bodyUrdu: "ہفتہ کے دن صبح 11 بجے مین ہال میں۔",
+    date: new Date(Date.now() - 86400000 * 8).toISOString(),
+    audience: "parents",
+  },
+  {
+    id: "n4",
+    title: "Donation Drive",
+    titleUrdu: "عطیات کی مہم",
+    body: "Help us furnish the new Hifz wing.",
+    bodyUrdu: "نئے حفظ ونگ کی تکمیل میں ہمارا ساتھ دیں۔",
+    date: new Date(Date.now() - 86400000 * 12).toISOString(),
+    audience: "all",
+  },
 ];
 
 // ---------- Parents / Children link ----------

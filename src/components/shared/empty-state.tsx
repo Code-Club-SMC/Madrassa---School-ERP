@@ -9,14 +9,13 @@ type Props = {
   action?: { label: string; onClick: () => void };
 };
 
-export function EmptyState({ icon: Icon, heading, headingUrdu, description, action }: Props) {
+export function EmptyState({ icon: Icon, heading: _heading, headingUrdu, description, action }: Props) {
   return (
     <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
       <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-5">
         <Icon className="w-6 h-6 text-muted-foreground" />
       </div>
       <h3 dir="rtl" lang="ur" className="font-urdu text-xl font-bold text-foreground leading-tight mb-1">{headingUrdu}</h3>
-      <p className="text-[11px] uppercase tracking-widest text-muted-foreground font-medium mb-3">{heading}</p>
       {description && <p className="text-sm text-muted-foreground max-w-sm mb-5">{description}</p>}
       {action && (
         <Button size="sm" onClick={action.onClick}>

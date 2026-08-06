@@ -32,8 +32,8 @@ type Props = {
   mode?: "create" | "edit";
   initial?: User | null;
   prefill?: Prefill | null;
-  onCreate?: (user: User & { _password: string }) => void;
-  onUpdate?: (user: User) => void;
+  onCreate?: (user: User & { _password: string }) => void | Promise<void>;
+  onUpdate?: (user: User) => void | Promise<void>;
 };
 
 const ROLE_OPTIONS: { value: StepperRole; urdu: string; english: string; tagline: string; icon: typeof ShieldCheck }[] = [
@@ -115,9 +115,9 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
     setStep(stepOrder[prevIdx]);
   }
 
-  function submit() {
+  async function submit() {
     setSubmitting(true);
-    setTimeout(() => {
+    try {
       if (isEdit && initial) {
         const updated: User = {
           ...initial,
@@ -131,7 +131,7 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
           linkedTeacherId,
           permissions: isParent ? {} : permissions,
         };
-        onUpdate?.(updated);
+        await onUpdate?.(updated);
         toast.success("تبدیلیاں محفوظ ہو گئیں · Changes saved");
       } else {
         const username = email.split("@")[0];
@@ -153,11 +153,12 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
           createdAt: new Date().toISOString(),
           _password: password,
         };
-        onCreate?.(created);
+        await onCreate?.(created);
       }
-      setSubmitting(false);
       onOpenChange(false);
-    }, 400);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const stepDefs = [

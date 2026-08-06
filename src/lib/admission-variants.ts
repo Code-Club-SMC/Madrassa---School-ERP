@@ -15,6 +15,8 @@ export type AdmissionVariant = {
   titleUrdu: string;
   subtitleUrdu?: string;
   titleEnglish: string;
+  pdfPath: string;
+  templateImagePath: string;
   /** Long detailed madrassa form (kawaif nama + pledge) vs short form */
   layout: "school" | "madrassa-short" | "madrassa-long";
   allowPhoto: boolean;
@@ -40,6 +42,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     category: "school",
     titleUrdu: "القاسم اکیڈمی ٹل، ہنگو (شعبہ سکول)",
     titleEnglish: "Al-Qasim Academy Thall, HANGU (Shoba School)",
+    pdfPath: "/Al-Qasim Academy Thall, Hangu (School Department).pdf",
+    templateImagePath: "/admission-templates/school-boys.png",
     layout: "school",
     allowPhoto: true,
   },
@@ -48,6 +52,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     category: "school",
     titleUrdu: "جامعہ زینب للبنات ٹل، ہنگو (شعبہ سکول)",
     titleEnglish: "Jamyah Zainab lilbanat Thall, HANGU (Shoba School)",
+    pdfPath: "/jam-e-zanib-lilbanat-thall-hangu-shoba-school.pdf",
+    templateImagePath: "/admission-templates/school-girls.png",
     layout: "school",
     allowPhoto: false,
   },
@@ -57,6 +63,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     titleUrdu: "جامعہ قاسمیہ للبنین ٹل پاکستان",
     subtitleUrdu: "داخلہ فارم برائے ناظرہ و قاعدہ",
     titleEnglish: "Jamia Qasimia lilBanin Thall — Nazira & Qaida",
+    pdfPath: "/Jamia Qasmia Lil-Baneen Thall Pakistan (For Nazira & Qaida).pdf",
+    templateImagePath: "/admission-templates/madrassa-boys-nazira.png",
     layout: "madrassa-short",
     allowPhoto: true,
     addressUrdu: "محلہ حاجی اللہ یار خان سرہ غنڈے ٹل ضلع ہنگو پاکستان",
@@ -67,6 +75,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     titleUrdu: "جامعہ قاسمیہ للبنین ٹل پاکستان",
     subtitleUrdu: "داخلہ فارم برائے حفظ",
     titleEnglish: "Jamia Qasimia lilBanin Thall — Hifz",
+    pdfPath: "/Jamia Qasmia Lil-Baneen Thall Pakistan (For Hifz).pdf",
+    templateImagePath: "/admission-templates/madrassa-boys-hifz.png",
     layout: "madrassa-short",
     allowPhoto: true,
     addressUrdu: "محلہ حاجی اللہ یار خان سرہ غنڈے ٹل ضلع ہنگو پاکستان",
@@ -77,6 +87,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     titleUrdu: "جامعہ قاسمیہ ٹل پاکستان",
     subtitleUrdu: "فارم داخلہ (درس نظامی)",
     titleEnglish: "Jamia Qasimia Thall — Dars-e-Nizami",
+    pdfPath: "/Jamia Qasmia Thall Pakistan.pdf",
+    templateImagePath: "/admission-templates/madrassa-boys-general.png",
     layout: "madrassa-long",
     allowPhoto: true,
   },
@@ -86,6 +98,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     titleUrdu: "جامعہ زینب للبنات ٹل پاکستان",
     subtitleUrdu: "فارم داخلہ (درس نظامی)",
     titleEnglish: "Jamia Zainab lilBanat Thall — Dars-e-Nizami",
+    pdfPath: "/Jamia Zainab Lil-Banat Thall Pakistan.pdf",
+    templateImagePath: "/admission-templates/madrassa-girls-general.png",
     layout: "madrassa-long",
     allowPhoto: false,
   },
@@ -95,6 +109,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     titleUrdu: "جامعہ زینب للبنات ٹل پاکستان",
     subtitleUrdu: "داخلہ فارم برائے ناظرہ و قاعدہ",
     titleEnglish: "Jamia Zainab lilBanat — Nazira & Qaida",
+    pdfPath: "/Jamia Zainab Lil-Banat Thall Pakistan (For Nazira & Qaida).pdf",
+    templateImagePath: "/admission-templates/madrassa-girls-nazira.png",
     layout: "madrassa-short",
     allowPhoto: false,
   },

@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/components/theme-provider";
 import { useSystem } from "@/components/system-context";
-import { currentUser } from "@/mock";
+import { useSession } from "@/hooks/use-session";
 import { cn } from "@/lib/utils";
 import { PAGE_TITLES } from "@/lib/nav-config";
 
@@ -23,8 +23,16 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { theme, toggle } = useTheme();
   const { system, setSystem } = useSystem();
+  const { user, logout } = useSession();
 
   const current = PAGE_TITLES[pathname] ?? { en: "MSMIS", ur: "ایم ایس ایم آئی ایس" };
+  const initials = (user?.name ?? "MSMIS")
+    .split(" ")
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <header className="h-14 sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border flex items-center px-4 gap-3">
@@ -113,15 +121,15 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{currentUser.initials}</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{initials}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div>
-                <p className="text-sm font-medium">{currentUser.name}</p>
-                <p className="text-xs text-muted-foreground truncate">{currentUser.email}</p>
+                <p className="text-sm font-medium">{user?.name ?? "Signed in user"}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -137,11 +145,12 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="text-destructive focus:text-destructive">
-              <Link to="/login">
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => void logout()}
+            >
                 <span className="font-urdu text-sm">سائن آؤٹ</span>
                 <span className="ms-auto text-xs">Sign out</span>
-              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

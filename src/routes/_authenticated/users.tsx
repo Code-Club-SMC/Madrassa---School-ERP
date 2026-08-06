@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Plus, Search, ShieldAlert, KeyRound, Trash2, Eye, MoreHorizontal, UserCheck, UserX, Pencil } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Search, ShieldAlert, KeyRound, Trash2, Eye, MoreHorizontal, UserCheck, UserX, Pencil, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -14,7 +14,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { users as seedUsers } from "@/mock/users";
-import { currentUser } from "@/mock";
 import type { User, UserRole } from "@/types";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
@@ -23,16 +22,52 @@ import { CredentialsOverlay } from "@/features/users/credentials-display";
 import { UserDetailSheet } from "@/features/users/user-detail-sheet";
 import { generateSecurePassword } from "@/lib/generate-password";
 import { Users2 } from "lucide-react";
+import { useSession } from "@/hooks/use-session";
+import { authClient } from "@/lib/auth-client";
+import { requireRoles } from "@/lib/route-guards";
+import { toAppUser, type RawAuthUser } from "@/lib/auth-session";
 
 export const Route = createFileRoute("/_authenticated/users")({
+  beforeLoad: requireRoles(["super_admin"]),
   component: UsersPage,
 });
 
+function authErrorMessage(error: { message?: string } | null | undefined, fallback: string) {
+  return error?.message ?? fallback;
+}
+
+function assertAuthResult(result: { error?: { message?: string } | null }, fallback: string) {
+  if (!result.error) return;
+  const message = authErrorMessage(result.error, fallback);
+  toast.error(message);
+  throw new Error(message);
+}
+
+function authUserData(user: User) {
+  return {
+    name: user.name,
+    email: user.email,
+    nameUrdu: user.nameUrdu,
+    phone: user.phone,
+    cnic: user.cnic,
+    status: user.status,
+    systemAccess: user.systemAccess ?? "both",
+    mustChangePassword: user.mustChangePassword ?? true,
+    linkedTeacherId: user.linkedTeacherId,
+    linkedStudentIds: user.linkedStudentIds,
+    permissions: user.permissions,
+    department: user.department,
+    designation: user.designation,
+  };
+}
+
 function UsersPage() {
+  const { user: currentUser, isLoading: sessionLoading } = useSession();
   const [list, setList] = useState<User[]>(seedUsers);
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<UserRole | "all">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [detailUser, setDetailUser] = useState<User | null>(null);
@@ -40,15 +75,6 @@ function UsersPage() {
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [creds, setCreds] = useState<{ nameUrdu: string; nameEnglish: string; email: string; role: string; password: string } | null>(null);
-
-  if (currentUser.role !== "super_admin") {
-    return (
-      <div>
-        <PageHeader title="User Management" titleUrdu="صارف انتظام" />
-        <EmptyState icon={ShieldAlert} heading="Access denied" headingUrdu="رسائی محدود ہے" description="Only Super Admins can manage user accounts." />
-      </div>
-    );
-  }
 
   const filtered = useMemo(
     () => list.filter((u) =>
@@ -82,32 +108,147 @@ function UsersPage() {
     return roles.map((r) => ({ ...r, count: list.filter((u) => u.role === r.role).length }));
   }, [list]);
 
-  function handleCreate(u: User & { _password: string }) {
+  useEffect(() => {
+    if (currentUser?.role !== "super_admin") return;
+
+    let active = true;
+    setLoadingUsers(true);
+
+    authClient.admin.listUsers({
+      query: {
+        limit: 100,
+        offset: 0,
+        sortBy: "createdAt",
+        sortDirection: "desc",
+      },
+    }).then((result) => {
+      if (!active) return;
+      if (result.error) {
+        toast.error(authErrorMessage(result.error, "Could not load users from Better Auth"));
+        return;
+      }
+      setList((result.data?.users ?? []).map((user) => toAppUser(user as unknown as RawAuthUser)));
+    }).finally(() => {
+      if (active) setLoadingUsers(false);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser?.role]);
+
+  async function handleCreate(u: User & { _password: string }) {
     const { _password, ...user } = u;
-    setList((l) => [user, ...l]);
-    setCreds({
-      nameUrdu: user.nameUrdu ?? user.name,
-      nameEnglish: user.name,
+    if (user.role === "super_admin") {
+      toast.error("Use the super admin setup API for this role");
+      throw new Error("Super admin creation is not allowed from user management");
+    }
+
+    const result = await authClient.admin.createUser({
       email: user.email,
+      password: _password,
+      name: user.name,
       role: user.role,
+      data: authUserData(user),
+    });
+    assertAuthResult(result, "Could not create user");
+
+    const authUser = result.data?.user;
+    const savedUser: User = {
+      ...user,
+      id: authUser?.id ?? user.id,
+      createdAt:
+        authUser?.createdAt instanceof Date
+          ? authUser.createdAt.toISOString()
+          : typeof authUser?.createdAt === "string"
+            ? authUser.createdAt
+            : user.createdAt,
+    };
+
+    setList((l) => [savedUser, ...l]);
+    setCreds({
+      nameUrdu: savedUser.nameUrdu ?? savedUser.name,
+      nameEnglish: savedUser.name,
+      email: savedUser.email,
+      role: savedUser.role,
       password: _password,
     });
   }
 
-  function handleUpdate(u: User) {
+  async function handleUpdate(u: User) {
+    const previous = list.find((x) => x.id === u.id);
+    if (previous?.role === "super_admin" || u.role === "super_admin") {
+      toast.error("Use the dedicated super admin API for this account");
+      throw new Error("Super admin updates are not allowed from user management");
+    }
+
+    if (previous?.role !== u.role) {
+      const roleResult = await authClient.admin.setRole({
+        userId: u.id,
+        role: u.role,
+      });
+      assertAuthResult(roleResult, "Could not update user role");
+    }
+
+    const result = await authClient.admin.updateUser({
+      userId: u.id,
+      data: authUserData(u),
+    });
+    assertAuthResult(result, "Could not update user");
+
     setList((l) => l.map((x) => (x.id === u.id ? u : x)));
     setEditUser(null);
   }
 
-  function handleDeactivate(u: User) {
+  async function handleDeactivate(u: User) {
+    if (u.role === "super_admin") {
+      toast.error("The super admin cannot be deactivated from user management");
+      return;
+    }
+
     const nextStatus = u.status === "active" ? "inactive" : "active";
-    setList((l) => l.map((x) => (x.id === u.id ? { ...x, status: nextStatus } : x)));
-    toast.success(nextStatus === "active" ? "اکاؤنٹ فعال ہو گیا · Activated" : "اکاؤنٹ غیر فعال ہو گیا · Deactivated");
+    try {
+      const statusResult = nextStatus === "active"
+        ? await authClient.admin.unbanUser({ userId: u.id })
+        : await authClient.admin.banUser({ userId: u.id, banReason: "Disabled by Super Admin" });
+      assertAuthResult(statusResult, nextStatus === "active" ? "Could not activate user" : "Could not deactivate user");
+
+      const result = await authClient.admin.updateUser({
+        userId: u.id,
+        data: { status: nextStatus },
+      });
+      assertAuthResult(result, "Could not update user status");
+
+      setList((l) => l.map((x) => (x.id === u.id ? { ...x, status: nextStatus } : x)));
+      toast.success(nextStatus === "active" ? "اکاؤنٹ فعال ہو گیا · Activated" : "اکاؤنٹ غیر فعال ہو گیا · Deactivated");
+    } catch {}
   }
 
-  function confirmReset() {
+  async function confirmReset() {
     if (!resetUser) return;
+    if (resetUser.role === "super_admin") {
+      toast.error("Use the super admin recovery API for this account");
+      setResetUser(null);
+      return;
+    }
+
     const pwd = generateSecurePassword();
+    try {
+      const passwordResult = await authClient.admin.setUserPassword({
+        userId: resetUser.id,
+        newPassword: pwd,
+      });
+      assertAuthResult(passwordResult, "Could not reset password");
+
+      const result = await authClient.admin.updateUser({
+        userId: resetUser.id,
+        data: { mustChangePassword: true },
+      });
+      assertAuthResult(result, "Could not mark password for change");
+    } catch {
+      return;
+    }
+
     setList((l) => l.map((x) => (x.id === resetUser.id ? { ...x, mustChangePassword: true } : x)));
     setCreds({
       nameUrdu: resetUser.nameUrdu ?? resetUser.name,
@@ -119,15 +260,47 @@ function UsersPage() {
     setResetUser(null);
   }
 
-  function confirmDelete() {
+  async function confirmDelete() {
     if (!deleteUser || deleteConfirm !== deleteUser.email) return;
-    setList((l) => l.filter((x) => x.id !== deleteUser.id));
-    toast.success("صارف حذف کر دیا گیا · User deleted");
-    setDeleteUser(null);
-    setDeleteConfirm("");
+    if (deleteUser.role === "super_admin") {
+      toast.error("The super admin cannot be deleted");
+      setDeleteUser(null);
+      setDeleteConfirm("");
+      return;
+    }
+
+    try {
+      const result = await authClient.admin.removeUser({ userId: deleteUser.id });
+      assertAuthResult(result, "Could not delete user");
+      setList((l) => l.filter((x) => x.id !== deleteUser.id));
+      toast.success("صارف حذف کر دیا گیا · User deleted");
+      setDeleteUser(null);
+      setDeleteConfirm("");
+    } catch {}
   }
 
   const initials = (u: User) => (u.nameUrdu ?? u.name).slice(0, 2);
+
+  if (sessionLoading || !currentUser) {
+    return (
+      <div>
+        <PageHeader title="User Management" titleUrdu="صارف انتظام" />
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading session...
+        </div>
+      </div>
+    );
+  }
+
+  if (currentUser.role !== "super_admin") {
+    return (
+      <div>
+        <PageHeader title="User Management" titleUrdu="صارف انتظام" />
+        <EmptyState icon={ShieldAlert} heading="Access denied" headingUrdu="رسائی محدود ہے" description="Only Super Admins can manage user accounts." />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -158,6 +331,12 @@ function UsersPage() {
             <span className="font-urdu text-sm normal-case me-2" dir="rtl" lang="ur">کرداروں کے مطابق تقسیم</span>
             Distribution by Role
           </p>
+          {loadingUsers && (
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Syncing
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5">
           <button
@@ -255,14 +434,14 @@ function UsersPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setDetailUser(u)}><Eye className="h-3.5 w-3.5 me-2" /><span className="font-urdu">تفصیل</span><span className="ms-1.5 text-xs text-muted-foreground">View</span></DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setEditUser(u)}><Pencil className="h-3.5 w-3.5 me-2" /><span className="font-urdu">ترمیم</span><span className="ms-1.5 text-xs text-muted-foreground">Edit</span></DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setResetUser(u)}><KeyRound className="h-3.5 w-3.5 me-2" /><span className="font-urdu">پاس ورڈ ری سیٹ</span></DropdownMenuItem>
+                      <DropdownMenuItem disabled={u.role === "super_admin"} onClick={() => setEditUser(u)}><Pencil className="h-3.5 w-3.5 me-2" /><span className="font-urdu">ترمیم</span><span className="ms-1.5 text-xs text-muted-foreground">Edit</span></DropdownMenuItem>
+                      <DropdownMenuItem disabled={u.role === "super_admin"} onClick={() => setResetUser(u)}><KeyRound className="h-3.5 w-3.5 me-2" /><span className="font-urdu">پاس ورڈ ری سیٹ</span></DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDeactivate(u)} disabled={u.id === currentUser.id}>
+                      <DropdownMenuItem onClick={() => handleDeactivate(u)} disabled={u.id === currentUser?.id || u.role === "super_admin"}>
                         {u.status === "active" ? <><UserX className="h-3.5 w-3.5 me-2" /><span className="font-urdu">غیر فعال کریں</span></> : <><UserCheck className="h-3.5 w-3.5 me-2" /><span className="font-urdu">فعال کریں</span></>}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" disabled={u.id === currentUser.id} onClick={() => { setDeleteUser(u); setDeleteConfirm(""); }}>
+                      <DropdownMenuItem className="text-destructive" disabled={u.id === currentUser?.id || u.role === "super_admin"} onClick={() => { setDeleteUser(u); setDeleteConfirm(""); }}>
                         <Trash2 className="h-3.5 w-3.5 me-2" /><span className="font-urdu">حذف کریں</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>

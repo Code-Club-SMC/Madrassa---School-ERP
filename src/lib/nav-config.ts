@@ -50,10 +50,13 @@ export type NavItem = {
 
 const ANY_STAFF: UserRole[] = ["super_admin", "admin", "teacher"];
 const ADMINS: UserRole[] = ["super_admin", "admin"];
+const TEACHER_MANAGERS: UserRole[] = ["super_admin", "admin", "principal", "hr_manager"];
+const PARENT_SAFE: UserRole[] = ["super_admin", "admin", "parent"];
+const NOTIFICATION_ROLES: UserRole[] = ["super_admin", "admin", "teacher", "parent"];
 
 export const navItems: NavItem[] = [
   // ---------- GLOBAL ----------
-  { group: "global", url: "/dashboard", icon: LayoutDashboard, en: "Dashboard", ur: "ڈیش بورڈ", roles: ANY_STAFF },
+  { group: "global", url: "/dashboard", icon: LayoutDashboard, en: "Dashboard", ur: "ڈیش بورڈ", roles: [...ANY_STAFF, "parent"] },
   { group: "global", url: "/admission", icon: FileSignature, en: "Admission", ur: "داخلہ", roles: ADMINS },
 
   // ---------- MADRASSA ----------
@@ -81,13 +84,14 @@ export const navItems: NavItem[] = [
   { group: "shared", url: "/reports", icon: BarChart3, en: "Reports", ur: "رپورٹس", roles: ANY_STAFF },
   { group: "shared", url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: ADMINS },
   { group: "shared", url: "/finance", icon: Wallet, en: "Finance", ur: "مالیات", roles: ADMINS },
+  { group: "shared", url: "/finance/reports", icon: BarChart3, en: "Finance Reports", ur: "مالی رپورٹس", roles: ADMINS },
   { group: "shared", url: "/finance/donations", icon: Receipt, en: "Donations", ur: "عطیات", roles: ADMINS },
-  { group: "shared", url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین", roles: ADMINS },
-  { group: "shared", url: "/notifications", icon: Bell, en: "Notifications", ur: "اعلانات", roles: ANY_STAFF },
+  { group: "shared", url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین", roles: PARENT_SAFE },
+  { group: "shared", url: "/notifications", icon: Bell, en: "Notifications", ur: "اعلانات", roles: NOTIFICATION_ROLES },
 
   // ---------- HR MANAGEMENT (unified: Staff + Teachers + Users + Payroll) ----------
   { group: "shared", url: "/hr", icon: UsersRound, en: "HR Management", ur: "انسانی وسائل", roles: ADMINS },
-  { group: "shared", url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: ADMINS },
+  { group: "shared", url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: TEACHER_MANAGERS },
   { group: "shared", url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: ["super_admin"] },
   { group: "shared", url: "/hr/payroll", icon: HandCoins, en: "Payroll", ur: "تنخواہ", roles: ADMINS },
   { group: "shared", url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: ADMINS },
@@ -118,6 +122,7 @@ Object.assign(PAGE_TITLES, {
   "/admission/new": { en: "New Admission", ur: "نیا داخلہ" },
   "/admission/queue": { en: "Application Queue", ur: "درخواستوں کی قطار" },
   "/teachers/salary": { en: "Salary Slips", ur: "تنخواہ سلپ" },
+  "/finance/reports": { en: "Finance Reports", ur: "مالی رپورٹس" },
   "/finance/donations": { en: "Donations", ur: "عطیات" },
   "/admission/interviews": { en: "Interviews & Waitlist", ur: "انٹرویو" },
   "/settings/templates": { en: "Message Templates", ur: "پیغام سانچے" },

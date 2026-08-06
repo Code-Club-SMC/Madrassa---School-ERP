@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exam Seating System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface-2: #1e2333;
+    --border: #2a2f42;
+    --text: #e8eaf0;
+    --text-muted: #5c6380;
+    --text-dim: #8892b0;
+    --accent: #4f8ef7;
+    --accent-glow: rgba(79,142,247,0.15);
+
+    --g1-bg: #1a2540; --g1-accent: #4f8ef7; --g1-text: #a8c4ff;
+    --g2-bg: #1a2a1e; --g2-accent: #3ecf72; --g2-text: #90dba8;
+    --g3-bg: #2a2010; --g3-accent: #f0a020; --g3-text: #f5c870;
+    --g4-bg: #2a1a28; --g4-accent: #d46ef0; --g4-text: #e4a8f8;
+    --g5-bg: #1e2428; --g5-accent: #40c8d8; --g5-text: #90dce8;
+
+    --empty-bg: #14171f;
+    --empty-border: #1e2230;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 14px; }
+
+  .logo {
+    width: 36px; height: 36px;
+    background: var(--accent-glow);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .header-title { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
+  .header-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; font-family: 'DM Mono', monospace; }
+
+  .status-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.3s;
+  }
+  .status-pill.ok { background: rgba(62,207,114,0.12); color: #3ecf72; border: 1px solid rgba(62,207,114,0.25); }
+  .status-pill.warn { background: rgba(240,80,80,0.12); color: #f05050; border: 1px solid rgba(240,80,80,0.25); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 28px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+
+  .ctrl-group { display: flex; align-items: center; gap: 8px; }
+
+  .ctrl-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  input[type=number], input[type=text] {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 5px 9px;
+    width: 68px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type=number]:focus, input[type=text]:focus { border-color: var(--accent); }
+
+  .toolbar-sep { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+
+  .btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 16px;
+    border: none;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #6aa0f9; }
+
+  .btn-ghost {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+
+  .btn svg { flex-shrink: 0; }
+
+  /* ── Hall Tabs ── */
+  .hall-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .hall-tab {
+    padding: 10px 22px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hall-tab:hover { color: var(--text-dim); }
+  .hall-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .hall-tab-count {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+  }
+  .hall-tab.active .hall-tab-count { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+
+  /* ── Main Layout ── */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sidebar-section { padding: 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-heading {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .legend-chip {
+    width: 28px;
+    height: 18px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    flex-shrink: 0;
+  }
+
+  .legend-count {
+    margin-left: auto;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 12px;
+  }
+  .stat-row .stat-label { color: var(--text-muted); }
+  .stat-row .stat-val { font-family: 'DM Mono', monospace; color: var(--text-dim); font-size: 13px; }
+
+  .fill-bar-wrap { margin-top: 8px; }
+  .fill-bar-track {
+    height: 4px;
+    background: var(--surface-2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .fill-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+  .fill-bar-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+  /* ── Content ── */
+  .content { flex: 1; overflow: auto; padding: 24px 28px; }
+
+  /* ── Grid ── */
+  .grid-outer {
+    overflow: auto;
+  }
+
+  .col-axis {
+    display: flex;
+    margin-left: 36px;
+    margin-bottom: 6px;
+    gap: 5px;
+  }
+
+  .col-ax-cell {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .grid-body { display: flex; gap: 5px; align-items: flex-start; }
+
+  .row-axis {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 28px;
+    flex-shrink: 0;
+  }
+
+  .row-ax-cell {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .seat-grid {
+    display: grid;
+    gap: 5px;
+  }
+
+  .seat {
+    border-radius: 7px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    border: 1px solid;
+    transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .seat:hover {
+    transform: scale(1.08);
+    z-index: 20;
+  }
+
+  .seat.empty {
+    background: var(--empty-bg);
+    border-color: var(--empty-border);
+    cursor: default;
+  }
+
+  .seat.grade-1 { background: var(--g1-bg); border-color: var(--g1-accent); }
+  .seat.grade-2 { background: var(--g2-bg); border-color: var(--g2-accent); }
+  .seat.grade-3 { background: var(--g3-bg); border-color: var(--g3-accent); }
+  .seat.grade-4 { background: var(--g4-bg); border-color: var(--g4-accent); }
+  .seat.grade-5 { background: var(--g5-bg); border-color: var(--g5-accent); }
+
+  .seat.violation {
+    outline: 2px solid #f05050;
+    outline-offset: 1px;
+  }
+
+  .seat-roll {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .seat-grade {
+    font-size: 10px;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+
+  .seat-front-label {
+    font-size: 8px;
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    opacity: 0.5;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Aisle */
+  .aisle-col { width: 12px; flex-shrink: 0; }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    position: fixed;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    pointer-events: none;
+    z-index: 9999;
+    display: none;
+    min-width: 180px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+  }
+
+  .tt-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+
+  .tt-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 10px;
+  }
+
+  .tt-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+    padding: 2px 0;
+  }
+  .tt-key { color: var(--text-muted); }
+  .tt-val { color: var(--text-dim); font-family: 'DM Mono', monospace; }
+
+  .tt-divider { height: 1px; background: var(--border); margin: 6px 0; }
+
+  /* ── Shuffle animation ── */
+  @keyframes pop-in {
+    0% { transform: scale(0.85); opacity: 0; }
+    60% { transform: scale(1.03); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .seat.animating {
+    animation: pop-in 0.25s ease forwards;
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-muted);
+    gap: 8px;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .toolbar { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div class="tt-name" id="tt-name">—</div>
+  <div class="tt-badge" id="tt-badge">Grade ?</div>
+  <div class="tt-divider"></div>
+  <div class="tt-row"><span class="tt-key">Roll No</span><span class="tt-val" id="tt-roll">—</span></div>
+  <div class="tt-row"><span class="tt-key">Hall</span><span class="tt-val" id="tt-hall">—</span></div>
+  <div class="tt-row"><span class="tt-key">Seat</span><span class="tt-val" id="tt-seat">—</span></div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="header-left">
+    <div class="logo">📋</div>
+    <div>
+      <div class="header-title">Exam Seating System</div>
+      <div class="header-sub">Primary School · Grades 1–5</div>
+    </div>
+  </div>
+  <div class="status-pill ok" id="statusPill">
+    <div class="status-dot"></div>
+    <span id="statusText">All Constraints Met</span>
+  </div>
+</header>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="ctrl-group">
+    <span class="ctrl-label">Students / Grade</span>
+    <input type="number" id="studentsPerGrade" value="30" min="5" max="100">
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Gap</span>
+    <input type="number" id="gap" value="2" min="1" max="5" title="Min students of different grade between same-grade students">
+  </div>
+  <div class="toolbar-sep"></div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Rows</span>
+    <input type="number" id="rows" value="8" min="2" max="30">
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Cols</span>
+    <input type="number" id="cols" value="10" min="2" max="30">
+  </div>
+  <div class="toolbar-sep"></div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Cell Size</span>
+    <input type="number" id="cellSize" value="76" min="52" max="120" step="4">
+  </div>
+  <div class="toolbar-sep"></div>
+  <button class="btn btn-ghost" onclick="shuffle()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+    Shuffle
+  </button>
+  <button class="btn btn-primary" onclick="regenerate()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M3 21v-5h5"/></svg>
+    Regenerate
+  </button>
+  <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer;margin-left:4px;">
+    <input type="checkbox" id="showViolations" onchange="renderHall()"> Highlight violations
+  </label>
+</div>
+
+<!-- Hall Tabs -->
+<div class="hall-tabs" id="hallTabs"></div>
+
+<!-- Main -->
+<div class="main">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Grade Legend</div>
+      <div id="legendList"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Hall Stats</div>
+      <div id="sidebarStats"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Constraint Check</div>
+      <div id="constraintStats"></div>
+    </div>
+  </aside>
+
+  <!-- Content -->
+  <div class="content" id="content">
+    <div class="grid-outer" id="gridOuter"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════
+
+const GRADES = [1, 2, 3, 4, 5];
+
+const GRADE_META = {
+  1: { label: 'Grade 1', accent: '#4f8ef7', textVar: '--g1-text' },
+  2: { label: 'Grade 2', accent: '#3ecf72', textVar: '--g2-text' },
+  3: { label: 'Grade 3', accent: '#f0a020', textVar: '--g3-text' },
+  4: { label: 'Grade 4', accent: '#d46ef0', textVar: '--g4-text' },
+  5: { label: 'Grade 5', accent: '#40c8d8', textVar: '--g5-text' },
+};
+
+const HALLS = [
+  { id: 'A', name: 'Hall A', icon: '🏛' },
+  { id: 'B', name: 'Hall B', icon: '🏛' },
+  { id: 'C', name: 'Hall C', icon: '🏛' },
+  { id: 'D', name: 'Hall D', icon: '🏛' },
+];
+
+const FIRST = [
+  'Ahmed','Ali','Usman','Hassan','Ibrahim','Hamza','Bilal','Omar',
+  'Zain','Faisal','Talha','Saad','Daniyal','Yusuf','Asad','Raza',
+  'Ayesha','Fatima','Zara','Maryam','Sara','Noor','Hira','Sana',
+  'Amna','Rida','Mahnoor','Laiba','Nimra','Mehak','Jawad','Waqar',
+  'Mikail','Kamran','Areeba','Zunaira','Hammad','Aqib','Tariq','Umer'
+];
+const LAST = [
+  'Khan','Ahmed','Ali','Malik','Qureshi','Sheikh','Chaudhry','Butt',
+  'Akhtar','Iqbal','Hussain','Mirza','Siddiqui','Baig','Nawaz','Raza',
+  'Farooq','Javed','Mehmood','Aslam','Rashid','Riaz','Latif','Zafar'
+];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+
+let state = {
+  students: [],
+  halls: [],
+  activeHall: 'A',
+  cfg: {}
+};
+
+// ══════════════════════════════════════════
+// STUDENT GENERATION
+// ══════════════════════════════════════════
+
+function rnd(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function generateStudents(perGrade) {
+  const students = [];
+  GRADES.forEach(grade => {
+    for (let i = 1; i <= perGrade; i++) {
+      students.push({
+        id: `G${grade}-${i}`,
+        name: `${rnd(FIRST)} ${rnd(LAST)}`,
+        rollNo: `${grade}-${String(i).padStart(3,'0')}`,
+        grade,
+      });
+    }
+  });
+  return students;
+}
+
+// ══════════════════════════════════════════
+// DISTRIBUTION
+// ══════════════════════════════════════════
+
+function distributeToHalls(students) {
+  // Round-robin per grade so every hall gets a mix of all grades
+  const byGrade = {};
+  GRADES.forEach(g => byGrade[g] = []);
+  students.forEach(s => byGrade[s.grade].push(s));
+
+  const hallMap = {};
+  HALLS.forEach(h => hallMap[h.id] = []);
+  const hIds = HALLS.map(h => h.id);
+
+  GRADES.forEach(g => {
+    byGrade[g].forEach((s, i) => hallMap[hIds[i % hIds.length]].push(s));
+  });
+
+  return hallMap;
+}
+
+// ══════════════════════════════════════════
+// SEATING ALGORITHM
+// ══════════════════════════════════════════
+
+function canPlace(grid, row, col, grade, gap) {
+  const rows = grid.length;
+  const cols = grid[0].length;
+  // Check row left
+  for (let c = Math.max(0, col - gap); c < col; c++) {
+    if (grid[row][c]?.grade === grade) return false;
+  }
+  // Check col above
+  for (let r = Math.max(0, row - gap); r < row; r++) {
+    if (grid[r][col]?.grade === grade) return false;
+  }
+  return true;
+}
+
+function interleaveByGrade(students) {
+  const byGrade = {};
+  GRADES.forEach(g => byGrade[g] = []);
+  students.forEach(s => byGrade[s.grade].push(s));
+  GRADES.forEach(g => byGrade[g].sort(() => Math.random() - 0.5));
+
+  const result = [];
+  let more = true;
+  while (more) {
+    more = false;
+    GRADES.forEach(g => {
+      if (byGrade[g].length) { result.push(byGrade[g].shift()); more = true; }
+    });
+  }
+  return result;
+}
+
+function placeStudents(students, rows, cols, gap) {
+  const capacity = rows * cols;
+  const toPlace = students.slice(0, capacity);
+
+  let bestGrid = null;
+  let bestViolations = Infinity;
+
+  const attempts = 8;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const grid = Array.from({ length: rows }, () => Array(cols).fill(null));
+
+    // On first attempt use interleaved ordering, rest random
+    let pool = attempt === 0
+      ? interleaveByGrade(toPlace)
+      : [...toPlace].sort(() => Math.random() - 0.5);
+
+    let violations = 0;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (!pool.length) break;
+
+        // Search through candidates (up to pool.length, capped for perf)
+        const searchLimit = Math.min(pool.length, pool.length); // try all
+        let placed = false;
+
+        for (let i = 0; i < searchLimit; i++) {
+          if (canPlace(grid, r, c, pool[i].grade, gap)) {
+            grid[r][c] = pool.splice(i, 1)[0];
+            placed = true;
+            break;
+          }
+        }
+
+        if (!placed) {
+          // Force-place — count as violation
+          grid[r][c] = pool.shift();
+          violations++;
+        }
+      }
+    }
+
+    if (violations < bestViolations) {
+      bestViolations = violations;
+      bestGrid = grid;
+      if (violations === 0) break;
+    }
+  }
+
+  return bestGrid;
+}
+
+function buildHalls(hallMap, rows, cols, gap) {
+  return HALLS.map(h => {
+    const students = hallMap[h.id] || [];
+    return {
+      ...h,
+      rows, cols,
+      students,
+      grid: placeStudents(students, rows, cols, gap),
+    };
+  });
+}
+
+// ══════════════════════════════════════════
+// VIOLATION ANALYSIS
+// ══════════════════════════════════════════
+
+function analyzeViolations(grid, rows, cols, gap) {
+  const violatingCells = new Set();
+  let count = 0;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const s = grid[r][c];
+      if (!s) continue;
+
+      // Right neighbors within gap
+      for (let dc = 1; dc <= gap; dc++) {
+        if (c + dc < cols && grid[r][c + dc]?.grade === s.grade) {
+          violatingCells.add(`${r},${c}`);
+          violatingCells.add(`${r},${c + dc}`);
+          count++;
+        }
+      }
+      // Down neighbors within gap
+      for (let dr = 1; dr <= gap; dr++) {
+        if (r + dr < rows && grid[r + dr][c]?.grade === s.grade) {
+          violatingCells.add(`${r},${c}`);
+          violatingCells.add(`${r + dr},${c}`);
+          count++;
+        }
+      }
+    }
+  }
+
+  return { violatingCells, count };
+}
+
+function totalViolations() {
+  const gap = state.cfg.gap;
+  return state.halls.reduce((sum, h) => {
+    return sum + analyzeViolations(h.grid, h.rows, h.cols, gap).count;
+  }, 0);
+}
+
+// ══════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════
+
+function renderTabs() {
+  const el = document.getElementById('hallTabs');
+  el.innerHTML = state.halls.map(h => `
+    <button class="hall-tab ${h.id === state.activeHall ? 'active' : ''}"
+      onclick="selectHall('${h.id}')">
+      ${h.name}
+      <span class="hall-tab-count">${h.students.length}</span>
+    </button>
+  `).join('');
+}
+
+function renderLegend() {
+  const el = document.getElementById('legendList');
+  const hall = state.halls.find(h => h.id === state.activeHall);
+  const counts = {};
+  GRADES.forEach(g => counts[g] = 0);
+  if (hall) hall.students.forEach(s => counts[s.grade]++);
+
+  el.innerHTML = GRADES.map(g => {
+    const m = GRADE_META[g];
+    return `
+      <div class="legend-item">
+        <div class="legend-chip" style="background:var(--g${g}-bg);border:1px solid ${m.accent};color:${m.accent}">G${g}</div>
+        <span>Grade ${g}</span>
+        <span class="legend-count">${counts[g]}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSidebarStats() {
+  const hall = state.halls.find(h => h.id === state.activeHall);
+  if (!hall) return;
+
+  const capacity = hall.rows * hall.cols;
+  const seated = hall.students.length;
+  const pct = Math.round((seated / capacity) * 100);
+
+  document.getElementById('sidebarStats').innerHTML = `
+    <div class="stat-row"><span class="stat-label">Capacity</span><span class="stat-val">${capacity}</span></div>
+    <div class="stat-row"><span class="stat-label">Seated</span><span class="stat-val">${seated}</span></div>
+    <div class="stat-row"><span class="stat-label">Empty</span><span class="stat-val">${capacity - seated}</span></div>
+    <div class="stat-row"><span class="stat-label">Grid</span><span class="stat-val">${hall.rows}×${hall.cols}</span></div>
+    <div class="fill-bar-wrap">
+      <div class="fill-bar-track"><div class="fill-bar-fill" style="width:${pct}%"></div></div>
+      <div class="fill-bar-label"><span>Fill</span><span>${pct}%</span></div>
+    </div>
+  `;
+
+  const { count } = analyzeViolations(hall.grid, hall.rows, hall.cols, state.cfg.gap);
+  const tv = totalViolations();
+
+  document.getElementById('constraintStats').innerHTML = `
+    <div class="stat-row"><span class="stat-label">Gap rule</span><span class="stat-val">${state.cfg.gap} seat${state.cfg.gap > 1 ? 's' : ''}</span></div>
+    <div class="stat-row"><span class="stat-label">This hall</span>
+      <span class="stat-val" style="color:${count === 0 ? '#3ecf72' : '#f05050'}">${count === 0 ? '✓ Clean' : `${count} issue${count > 1 ? 's' : ''}`}</span>
+    </div>
+    <div class="stat-row"><span class="stat-label">All halls</span>
+      <span class="stat-val" style="color:${tv === 0 ? '#3ecf72' : '#f05050'}">${tv === 0 ? '✓ Clean' : `${tv} total`}</span>
+    </div>
+  `;
+
+  // Status pill
+  const pill = document.getElementById('statusPill');
+  const txt = document.getElementById('statusText');
+  if (tv === 0) {
+    pill.className = 'status-pill ok';
+    txt.textContent = 'All Constraints Met';
+  } else {
+    pill.className = 'status-pill warn';
+    txt.textContent = `${tv} Violation${tv > 1 ? 's' : ''}`;
+  }
+}
+
+function renderHall() {
+  const hall = state.halls.find(h => h.id === state.activeHall);
+  if (!hall) return;
+
+  const { grid, rows, cols } = hall;
+  const gap = state.cfg.gap;
+  const showViol = document.getElementById('showViolations').checked;
+  const cellSize = parseInt(document.getElementById('cellSize').value) || 76;
+  const fontSize = Math.max(10, Math.floor(cellSize * 0.17));
+  const rollSize = Math.max(11, Math.floor(cellSize * 0.19));
+
+  const { violatingCells } = analyzeViolations(grid, rows, cols, gap);
+
+  const outer = document.getElementById('gridOuter');
+
+  // Col labels
+  const colLabelsHTML = `<div class="col-axis" style="margin-left:${36}px;gap:5px">` +
+    Array.from({ length: cols }, (_, i) =>
+      `<div class="col-ax-cell" style="width:${cellSize}px">${i + 1}</div>`
+    ).join('') + '</div>';
+
+  // Row labels
+  const rowAxisHTML = `<div class="row-axis">` +
+    Array.from({ length: rows }, (_, i) =>
+      `<div class="row-ax-cell" style="height:${cellSize}px">${i + 1}</div>`
+    ).join('') + '</div>';
+
+  // Grid cells
+  let gridHTML = `<div class="seat-grid" style="grid-template-columns:repeat(${cols},${cellSize}px);gap:5px">`;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const s = grid[r][c];
+      const key = `${r},${c}`;
+      const isViol = showViol && violatingCells.has(key);
+
+      if (s) {
+        const m = GRADE_META[s.grade];
+        gridHTML += `
+          <div class="seat grade-${s.grade}${isViol ? ' violation' : ''}"
+            style="width:${cellSize}px;height:${cellSize}px;box-shadow:0 2px 8px rgba(0,0,0,0.3)"
+            onmouseenter="showTT(event,'${s.id}')" onmousemove="moveTT(event)" onmouseleave="hideTT()"
+            data-sid="${s.id}" data-r="${r}" data-c="${c}" data-hall="${hall.id}">
+            <div class="seat-roll" style="color:${m.accent};font-size:${rollSize}px">${s.rollNo}</div>
+            <div class="seat-grade" style="color:${m.accent};font-size:${fontSize}px">Gr.${s.grade}</div>
+          </div>
+        `;
+      } else {
+        gridHTML += `
+          <div class="seat empty" style="width:${cellSize}px;height:${cellSize}px"></div>
+        `;
+      }
+    }
+  }
+  gridHTML += '</div>';
+
+  outer.innerHTML = colLabelsHTML +
+    `<div class="grid-body">` + rowAxisHTML +
+    `<div style="overflow:auto">` + gridHTML + `</div></div>`;
+
+  renderLegend();
+  renderSidebarStats();
+}
+
+// ══════════════════════════════════════════
+// TOOLTIP
+// ══════════════════════════════════════════
+
+// Student lookup map
+const studentMap = {};
+
+function buildStudentMap() {
+  Object.keys(studentMap).forEach(k => delete studentMap[k]);
+  state.students.forEach(s => studentMap[s.id] = s);
+}
+
+function showTT(e, sid) {
+  const s = studentMap[sid];
+  if (!s) return;
+
+  const r = parseInt(e.currentTarget.dataset.r) + 1;
+  const c = parseInt(e.currentTarget.dataset.c) + 1;
+  const hallId = e.currentTarget.dataset.hall;
+  const hallName = HALLS.find(h => h.id === hallId)?.name || hallId;
+  const m = GRADE_META[s.grade];
+
+  document.getElementById('tt-name').textContent = s.name;
+
+  const badge = document.getElementById('tt-badge');
+  badge.textContent = m.label;
+  badge.style.background = `var(--g${s.grade}-bg)`;
+  badge.style.border = `1px solid ${m.accent}`;
+  badge.style.color = m.accent;
+
+  document.getElementById('tt-roll').textContent = s.rollNo;
+  document.getElementById('tt-hall').textContent = hallName;
+  document.getElementById('tt-seat').textContent = `R${r} / C${c}`;
+
+  const tt = document.getElementById('tooltip');
+  tt.style.display = 'block';
+  moveTT(e);
+}
+
+function moveTT(e) {
+  const tt = document.getElementById('tooltip');
+  const x = e.clientX + 18;
+  const y = e.clientY - 10;
+  const maxX = window.innerWidth - tt.offsetWidth - 8;
+  const maxY = window.innerHeight - tt.offsetHeight - 8;
+  tt.style.left = Math.min(x, maxX) + 'px';
+  tt.style.top = Math.max(8, Math.min(y, maxY)) + 'px';
+}
+
+function hideTT() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+// ══════════════════════════════════════════
+// ACTIONS
+// ══════════════════════════════════════════
+
+function selectHall(id) {
+  state.activeHall = id;
+  renderTabs();
+  renderHall();
+}
+
+function getCfg() {
+  return {
+    studentsPerGrade: Math.max(1, parseInt(document.getElementById('studentsPerGrade').value) || 30),
+    gap: Math.max(1, parseInt(document.getElementById('gap').value) || 2),
+    rows: Math.max(2, parseInt(document.getElementById('rows').value) || 8),
+    cols: Math.max(2, parseInt(document.getElementById('cols').value) || 10),
+    cellSize: parseInt(document.getElementById('cellSize').value) || 76,
+  };
+}
+
+function regenerate() {
+  state.cfg = getCfg();
+  state.students = generateStudents(state.cfg.studentsPerGrade);
+  buildStudentMap();
+  const hallMap = distributeToHalls(state.students);
+  state.halls = buildHalls(hallMap, state.cfg.rows, state.cfg.cols, state.cfg.gap);
+  renderTabs();
+  renderHall();
+}
+
+function shuffle() {
+  state.cfg = getCfg();
+  const { gap, rows, cols } = state.cfg;
+
+  state.halls = state.halls.map(h => ({
+    ...h,
+    rows, cols,
+    grid: placeStudents([...h.students], rows, cols, gap),
+  }));
+
+  // Animate cells
+  renderHall();
+  const seats = document.querySelectorAll('.seat:not(.empty)');
+  seats.forEach((s, i) => {
+    s.classList.remove('animating');
+    void s.offsetWidth;
+    s.style.animationDelay = `${(i % 12) * 18}ms`;
+    s.classList.add('animating');
+  });
+}
+
+// Debounced re-render on cell size change
+document.getElementById('cellSize').addEventListener('input', () => renderHall());
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+regenerate();
+</script>
+</body>
+</html>

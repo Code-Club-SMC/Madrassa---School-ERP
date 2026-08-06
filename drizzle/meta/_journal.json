@@ -1,0 +1,90 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784102198577,
+      "tag": "0000_wide_fantastic_four",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784110617369,
+      "tag": "0001_flat_snowbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784120626937,
+      "tag": "0002_massive_wind_dancer",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784148750557,
+      "tag": "0003_clever_raza",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784195194546,
+      "tag": "0004_skinny_jubilee",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784200817682,
+      "tag": "0005_charming_maverick",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784228291256,
+      "tag": "0006_breezy_jamie_braddock",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784284877362,
+      "tag": "0007_happy_grandmaster",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784286776547,
+      "tag": "0008_narrow_zombie",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784287878695,
+      "tag": "0009_smiling_lockheed",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784293352479,
+      "tag": "0010_jittery_iron_monger",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785839640891,
+      "tag": "0011_workable_doctor_spectrum",
+      "breakpoints": true
+    }
+  ]
+}

@@ -34,19 +34,53 @@ export type FeeStatus = "paid" | "unpaid" | "partial" | "waived" | "overdue";
 export type MadrassaTrack =
   | "qaida_nazira"
   | "hifz"
+  | "preparatory"
   | "tajweed"
   | "dars_nizami"
-  | "takhassus";
+  | "takhassus"
+  | "short_courses";
 
 export type Darja =
+  | "hifz_year_1"
+  | "hifz_year_2"
+  | "hifz_year_3"
+  | "nazira_year_1"
+  | "nazira_year_2"
+  | "nazira_year_3"
+  | "nazira_year_4"
+  | "nazira_year_5"
   | "idadiya"
+  | "idadiya_awwal"
+  | "idadiya_daum"
+  | "mutawassita"
+  | "sarf_nahw_arabi"
   | "awwal"
   | "daum"
   | "soyam"
   | "sanawiyya_amma"
   | "sanawiyya_khasa"
   | "aliyah"
-  | "alimiyyah";
+  | "alimiyyah"
+  | "dars_ula"
+  | "dars_sania"
+  | "dars_salisa"
+  | "dars_rabia"
+  | "dars_khamisa"
+  | "dars_sadisa"
+  | "mauquf_alaih"
+  | "daurah_hadith"
+  | "tarjuma"
+  | "tadreeb"
+  | "tajweed_huffaz_year_1"
+  | "tajweed_huffaz_year_2"
+  | "tajweed_ulama"
+  | "tajweed_muallimat"
+  | "takhassus_year_1"
+  | "takhassus_year_2"
+  | "takhassus_hadith"
+  | "takhassus_mirath"
+  | "takhassus_fiqh"
+  | "short_course";
 
 export type MadrassaSubcategory = {
   id: string;
@@ -54,9 +88,11 @@ export type MadrassaSubcategory = {
   nameUrdu: string;
   rollPrefix: string;
   count: number;
+  section?: Section;
   darja?: Darja;
   govtEquivalent?: string;
   durationYears?: number;
+  reviewRequired?: boolean;
 };
 
 export type MadrassaCategory = {
@@ -336,7 +372,15 @@ export type StockMovement = {
 
 // ---------- Finance ----------
 export type FinanceType = "income" | "expense";
-export type FinanceCategory = "fees" | "donation" | "charity" | "zakat" | "inventory" | "salary" | "utilities" | "misc";
+export type FinanceCategory =
+  | "fees"
+  | "donation"
+  | "charity"
+  | "zakat"
+  | "inventory"
+  | "salary"
+  | "utilities"
+  | "misc";
 export type FinanceRecord = {
   id: string;
   date: string;
@@ -395,6 +439,9 @@ export type Holiday = {
 export type AcademicYear = {
   id: string;
   name: string; // e.g. "2024-25"
+  system: "school" | "madrassa";
+  calendarType: "gregorian" | "hijri";
+  hijriName?: string | null;
   startDate: string;
   endDate: string;
   isCurrent: boolean;

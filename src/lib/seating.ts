@@ -64,12 +64,7 @@ export function canPlaceGreedy(
   return true;
 }
 
-export function countViolations(
-  grid: SeatGrid,
-  rows: number,
-  cols: number,
-  gap: number,
-): number {
+export function countViolations(grid: SeatGrid, rows: number, cols: number, gap: number): number {
   let count = 0;
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++) {
@@ -83,21 +78,35 @@ export function countViolations(
   return count;
 }
 
-function shuffle<T>(arr: T[]): T[] {
+export function seededRandom(seed: string | number): () => number {
+  let hash = 2166136261;
+  const value = String(seed);
+
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return () => {
+    hash += 0x6d2b79f5;
+    let t = hash;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function shuffle<T>(arr: T[], seed?: string | number): T[] {
+  const random = seed === undefined ? Math.random : seededRandom(seed);
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
 }
 
-export function isViolation(
-  grid: SeatGrid,
-  r: number,
-  c: number,
-  gap: number,
-): boolean {
+export function isViolation(grid: SeatGrid, r: number, c: number, gap: number): boolean {
   const s = grid[r][c];
   if (!s) return false;
   const rows = grid.length;
@@ -120,6 +129,7 @@ export function buildHallSeating(
   cols: number,
   students: SeatingStudent[],
   gap: number,
+  seed?: string | number,
 ): HallSeating {
   const grades = Array.from(new Set(students.map((s) => s.gradeId))).sort((a, b) => a - b);
   const numGrades = grades.length || 1;
@@ -130,10 +140,13 @@ export function buildHallSeating(
   const buckets: Record<number, SeatingStudent[]> = {};
   for (const g of grades) buckets[g] = [];
   for (const s of students) buckets[s.gradeId].push(s);
-  for (const g of grades) buckets[g] = shuffle(buckets[g]);
+  for (const g of grades)
+    buckets[g] = shuffle(buckets[g], seed === undefined ? undefined : `${seed}:${g}`);
 
   // create grid
-  const grid: SeatGrid = Array.from({ length: rows }, () => Array<SeatingStudent | null>(cols).fill(null));
+  const grid: SeatGrid = Array.from({ length: rows }, () =>
+    Array<SeatingStudent | null>(cols).fill(null),
+  );
 
   // overflow holder: cells we want to fill later
   const overflowCells: { r: number; c: number; preferredGradeIdx: number }[] = [];

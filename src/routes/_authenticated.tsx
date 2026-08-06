@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app/app-sidebar";
@@ -7,15 +7,22 @@ import { CommandPalette } from "@/components/app/command-palette";
 import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { useSystem } from "@/components/system-context";
 import { HRProvider } from "@/stores/hr-store";
+import { requireAuth } from "@/lib/route-guards";
 
 export const Route = createFileRoute("/_authenticated")({
+  beforeLoad: requireAuth,
   component: AuthenticatedLayout,
 });
 
 function AuthenticatedLayout() {
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const { system } = useSystem();
+  const { system, setSystem } = useSystem();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  useEffect(() => {
+    if (pathname.startsWith("/madrassa")) setSystem("madrassa");
+    if (pathname.startsWith("/school")) setSystem("school");
+  }, [pathname, setSystem]);
 
   return (
     <HRProvider>

@@ -26,13 +26,14 @@ import {
   Legend,
 } from "recharts";
 import { PageHeader } from "@/components/shared/page-header";
+import { TeacherDashboard } from "@/components/teachers/teacher-dashboard";
+import { ParentPortal } from "@/components/parents/parent-portal";
 import { KpiCard } from "@/components/shared/kpi-card";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   attendanceLast7,
   categoryDistribution,
-  currentUser,
   enrollmentTrend,
   institution,
   recentActivity,
@@ -40,6 +41,7 @@ import {
 } from "@/mock";
 import { formatPKR, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/hooks/use-session";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -60,6 +62,14 @@ const ACTIVITY_TONE = {
 } as const;
 
 function DashboardPage() {
+  const { user } = useSession();
+  if (user?.role === "teacher") {
+    return <TeacherDashboard />;
+  }
+  if (user?.role === "parent") {
+    return <ParentPortal />;
+  }
+
   const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const todayUrdu = new Intl.DateTimeFormat("ur-PK", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
 
@@ -69,7 +79,7 @@ function DashboardPage() {
       <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/15 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
-            <h1 className="font-heading text-xl font-bold tracking-tight">Assalamu Alaikum, {currentUser.name}</h1>
+            <h1 className="font-heading text-xl font-bold tracking-tight">Assalamu Alaikum, {user?.name ?? "User"}</h1>
             <p className="text-sm text-muted-foreground mt-0.5">{today}</p>
           </div>
           <div className="text-end">

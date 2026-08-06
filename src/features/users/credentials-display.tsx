@@ -4,7 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-type Creds = { nameUrdu: string; nameEnglish: string; email: string; role: string; password: string };
+type Creds = {
+  nameUrdu: string;
+  nameEnglish: string;
+  email?: string;
+  username?: string;
+  role: string;
+  password: string;
+};
 
 export function CredentialsOverlay({
   creds,
@@ -17,11 +24,19 @@ export function CredentialsOverlay({
 }) {
   const [reveal, setReveal] = useState(false);
   if (!creds) return null;
+  const isParent = creds.role === "parent";
+  const loginId = isParent ? creds.username : creds.email;
 
   const copyAll = () => {
-    const text = `MSMIS Login Credentials\nName: ${creds.nameUrdu} (${creds.nameEnglish})\nEmail: ${creds.email}\nPassword: ${creds.password}\nLogin URL: ${typeof window !== "undefined" ? window.location.origin + "/login" : "/login"}`;
+    const text = [
+      "لاگ اِن معلومات",
+      `نام: ${creds.nameUrdu}`,
+      `${isParent ? "لاگ اِن آئی ڈی" : "ای میل"}: ${loginId ?? ""}`,
+      `پاس ورڈ: ${creds.password}`,
+      `لنک: ${typeof window !== "undefined" ? window.location.origin + "/login" : "/login"}`,
+    ].join("\n");
     navigator.clipboard?.writeText(text);
-    toast.success("اسناد کاپی ہو گئیں · Credentials copied");
+    toast.success("لاگ اِن معلومات کاپی ہو گئیں");
   };
 
   return (
@@ -37,16 +52,16 @@ export function CredentialsOverlay({
                 صارف کامیابی سے بن گیا
               </h3>
             </DialogTitle>
-            <DialogDescription>User Created Successfully</DialogDescription>
+            <DialogDescription className="font-urdu">لاگ اِن معلومات محفوظ کر لیں</DialogDescription>
           </div>
         </DialogHeader>
         <div className="rounded-xl border border-border bg-muted/40 divide-y divide-border text-sm">
-          <Row label="نام / Name" value={`${creds.nameUrdu} · ${creds.nameEnglish}`} />
-          <Row label="ای میل / Email" value={creds.email} mono />
-          <Row label="کردار / Role" value={creds.role} />
+          <Row label="نام" value={`${creds.nameUrdu} · ${creds.nameEnglish}`} />
+          <Row label={isParent ? "لاگ اِن آئی ڈی" : "ای میل"} value={loginId ?? ""} mono />
+          <Row label="کردار" value={roleLabel(creds.role)} />
           <div className="flex items-center justify-between gap-2 px-3 py-2.5">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] uppercase text-muted-foreground tracking-wider">پاس ورڈ / Password</p>
+              <p className="text-[10px] uppercase text-muted-foreground tracking-wider">پاس ورڈ</p>
               <p className="font-mono text-sm break-all">{reveal ? creds.password : "•".repeat(creds.password.length)}</p>
             </div>
             <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setReveal((v) => !v)} aria-label="Toggle password">
@@ -58,7 +73,7 @@ export function CredentialsOverlay({
           <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
           <div>
             <p className="font-urdu text-xs leading-loose" dir="rtl" lang="ur">یہ پاس ورڈ دوبارہ نہیں دکھایا جائے گا</p>
-            <p className="text-[11px] text-muted-foreground">This password will not be shown again — note it now.</p>
+            <p className="font-urdu text-[11px] text-muted-foreground" dir="rtl" lang="ur">اسے ابھی محفوظ کر لیں۔</p>
           </div>
         </div>
         <DialogFooter className="flex-wrap gap-2 sm:justify-end">
@@ -78,4 +93,12 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
       <span className={mono ? "font-mono text-sm" : "text-sm font-medium"}>{value}</span>
     </div>
   );
+}
+
+function roleLabel(role: string) {
+  if (role === "parent") return "والدین";
+  if (role === "teacher") return "استاد";
+  if (role === "admin") return "منتظم";
+  if (role === "super_admin") return "اعلیٰ منتظم";
+  return role;
 }

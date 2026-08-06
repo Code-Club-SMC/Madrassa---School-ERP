@@ -4,6 +4,10 @@ export type StatusKey =
   | "active"
   | "inactive"
   | "pending"
+  | "under_review"
+  | "interview_scheduled"
+  | "documents_pending"
+  | "waitlisted"
   | "accepted"
   | "rejected"
   | "graduated"
@@ -24,6 +28,10 @@ const VARIANTS: Record<StatusKey, { label: string; urdu: string; className: stri
   active: { label: "Active", urdu: "فعال", className: "bg-chart-1/15 text-chart-5 border-chart-2/40 dark:text-chart-1" },
   inactive: { label: "Inactive", urdu: "غیر فعال", className: "bg-muted text-muted-foreground border-border" },
   pending: { label: "Pending", urdu: "زیر غور", className: "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400" },
+  under_review: { label: "Under Review", urdu: "زیر جائزہ", className: "bg-blue-500/10 text-blue-700 border-blue-300/40 dark:text-blue-400" },
+  interview_scheduled: { label: "Interview", urdu: "انٹرویو", className: "bg-cyan-500/10 text-cyan-700 border-cyan-300/40 dark:text-cyan-400" },
+  documents_pending: { label: "Docs Pending", urdu: "کاغذات باقی", className: "bg-orange-500/10 text-orange-700 border-orange-300/40 dark:text-orange-400" },
+  waitlisted: { label: "Waitlisted", urdu: "انتظار", className: "bg-muted text-muted-foreground border-border" },
   accepted: { label: "Accepted", urdu: "منظور", className: "bg-chart-1/15 text-chart-5 border-chart-2/40 dark:text-chart-1" },
   rejected: { label: "Rejected", urdu: "مسترد", className: "bg-destructive/10 text-destructive border-destructive/25" },
   graduated: { label: "Graduated", urdu: "فارغ التحصیل", className: "bg-primary/10 text-primary border-primary/25" },
@@ -52,8 +60,11 @@ export function StatusBadge({ status, showUrdu = true }: Props) {
         v.className,
       )}
     >
-      <span className="font-sans">{v.label}</span>
-      {showUrdu && <span className="font-urdu text-[0.95em] leading-none">{v.urdu}</span>}
+      {showUrdu ? (
+        <span className="font-urdu text-[0.95em] leading-none">{v.urdu}</span>
+      ) : (
+        <span className="font-sans">{v.label}</span>
+      )}
     </span>
   );
 }

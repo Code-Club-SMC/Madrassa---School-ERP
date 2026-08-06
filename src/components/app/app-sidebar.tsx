@@ -16,17 +16,30 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useSystem } from "@/components/system-context";
-import { currentUser, institution } from "@/mock";
+import { institution } from "@/mock";
 import { cn } from "@/lib/utils";
 import { visibleFor, type NavItem } from "@/lib/nav-config";
+import { useSession } from "@/hooks/use-session";
 import type { UserRole } from "@/types";
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { system, setSystem } = useSystem();
-  const role = currentUser.role as UserRole;
+  const { user, logout } = useSession();
+  const role = (user?.role ?? "parent") as UserRole;
+  const isParent = role === "parent";
 
   const globalNav = visibleFor(role, "global");
   const madrassaNav = visibleFor(role, "madrassa");
@@ -96,7 +109,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {!collapsed && (
+        {!collapsed && !isParent && (
           <div className="px-3 pt-3 pb-1">
             <div className="grid grid-cols-2 bg-sidebar-accent/40 rounded-lg p-1 gap-1">
               <button
@@ -121,6 +134,7 @@ export function AppSidebar() {
           </div>
         )}
 
+        {!isParent && (system === "madrassa" ? madrassaNav : schoolNav).length > 0 && (
         <SidebarGroup key={system} className="px-1.5 pt-2 animate-in fade-in-50 duration-300">
           {!collapsed && (
             <SidebarGroupLabel className="flex flex-col items-start gap-0 h-auto py-1 mb-1 text-sidebar-foreground/70">
@@ -136,7 +150,9 @@ export function AppSidebar() {
             <SidebarMenu className="gap-0">{(system === "madrassa" ? madrassaNav : schoolNav).map(renderItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
 
+        {sharedNav.length > 0 && (
         <SidebarGroup className="px-1.5 pt-2">
           {!collapsed && (
             <SidebarGroupLabel className="flex flex-col items-start gap-0 h-auto py-1 mb-1 text-sidebar-foreground/70">
@@ -148,7 +164,9 @@ export function AppSidebar() {
             <SidebarMenu className="gap-0">{sharedNav.map(renderItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
 
+        {adminNav.length > 0 && (
         <SidebarGroup className="mt-auto border-t border-sidebar-border pt-3 px-1.5">
           {!collapsed && (
             <SidebarGroupLabel className="flex flex-col items-start gap-0 h-auto py-1 mb-1 text-sidebar-foreground/70">
@@ -160,23 +178,29 @@ export function AppSidebar() {
             <SidebarMenu className="gap-0">{adminNav.map(renderItem)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border py-3">
         <div className="flex items-center gap-2.5 px-1 py-1">
           <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary text-xs font-bold">{currentUser.initials}</AvatarFallback>
+            <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary text-xs font-bold">
+              {initials(user?.name ?? "MSMIS")}
+            </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <>
               <div className="min-w-0 flex-1 leading-tight">
                 <p className="font-urdu text-sm truncate text-sidebar-foreground" dir="rtl" lang="ur">{institution.nameUrdu}</p>
-                <p className="text-[10px] text-sidebar-foreground/55 truncate">{currentUser.name}</p>
+                <p className="text-[10px] text-sidebar-foreground/55 truncate">{user?.name ?? "Signed in user"}</p>
               </div>
-              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent" asChild>
-                <Link to="/login">
-                  <LogOut className="h-3.5 w-3.5" />
-                </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                onClick={() => void logout()}
+              >
+                <LogOut className="h-3.5 w-3.5" />
               </Button>
             </>
           )}

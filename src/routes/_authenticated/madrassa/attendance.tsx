@@ -1,125 +1,376 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Check, X, Clock, Save, Calendar } from "lucide-react";
+import { BookOpen, CalendarDays, Landmark } from "lucide-react";
+import { toast } from "sonner";
+import {
+  getMadrassaAttendanceRoster,
+  markMadrassaAttendance,
+} from "@/components/attendance/attendance-api";
+import { AttendanceMarker } from "@/components/attendance/attendance-marker";
+import type {
+  AttendanceRosterPayload,
+  AttendanceStatus,
+} from "@/components/attendance/attendance-types";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { madrassaCategories, students, type AttendanceStatus } from "@/mock";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/madrassa/attendance")({
   component: AttendancePage,
 });
 
-const today = new Date().toISOString().slice(0, 10);
+type InstitutionOption = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  system: string;
+  section: string | null;
+  active: boolean;
+};
+
+type MadrassaSubcategoryOption = {
+  id: string;
+  categoryId: string;
+  name: string;
+  nameUrdu: string;
+  darja: string | null;
+  active: boolean;
+  enrollmentCount: number;
+  qasmiaCount: number;
+  zainabCount: number;
+};
+
+type MadrassaCategoryOption = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  active: boolean;
+  subcategories: MadrassaSubcategoryOption[];
+};
+
+type InstitutionsPayload = {
+  institutions?: InstitutionOption[];
+  error?: string;
+};
+
+type MadrassaCategoriesPayload = {
+  categories?: MadrassaCategoryOption[];
+  error?: string;
+};
+
+const today = formatLocalDate(new Date());
 
 function AttendancePage() {
   const [date, setDate] = useState(today);
-  const [subId, setSubId] = useState(madrassaCategories[0].subcategories[0].id);
-  const cohort = useMemo(() => students.filter((s) => s.system === "madrassa" && s.subcategoryId === subId), [subId]);
+  const [institutions, setInstitutions] = useState<InstitutionOption[]>([]);
+  const [categories, setCategories] = useState<MadrassaCategoryOption[]>([]);
+  const [institutionId, setInstitutionId] = useState("");
+  const [subcategoryId, setSubcategoryId] = useState("");
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [loadingRoster, setLoadingRoster] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [roster, setRoster] = useState<AttendanceRosterPayload | null>(null);
   const [marks, setMarks] = useState<Record<string, AttendanceStatus>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
-  const counts = useMemo(() => {
-    const out = { present: 0, absent: 0, late: 0, unmarked: 0 };
-    cohort.forEach((s) => {
-      const m = marks[s.id];
-      if (!m) out.unmarked++;
-      else out[m]++;
-    });
-    return out;
-  }, [cohort, marks]);
+  const madrassaInstitutions = useMemo(
+    () => institutions.filter((item) => item.active && item.system === "madrassa"),
+    [institutions],
+  );
+  const subcategoryOptions = useMemo(
+    () =>
+      categories.flatMap((category) =>
+        category.subcategories
+          .filter((subcategory) => category.active && subcategory.active)
+          .map((subcategory) => ({
+            ...subcategory,
+            categoryName: category.name,
+            categoryNameUrdu: category.nameUrdu,
+          })),
+      ),
+    [categories],
+  );
+  const selectedInstitution = useMemo(
+    () => madrassaInstitutions.find((item) => item.id === institutionId) ?? null,
+    [institutionId, madrassaInstitutions],
+  );
+  const selectedSubcategory = useMemo(
+    () => subcategoryOptions.find((item) => item.id === subcategoryId) ?? null,
+    [subcategoryId, subcategoryOptions],
+  );
 
-  const setAll = (status: AttendanceStatus) => {
-    const next: Record<string, AttendanceStatus> = {};
-    cohort.forEach((s) => (next[s.id] = status));
-    setMarks(next);
-  };
+  const initializeMarks = useCallback((payload: AttendanceRosterPayload) => {
+    const nextMarks: Record<string, AttendanceStatus> = {};
+    const nextNotes: Record<string, string> = {};
 
-  const save = () => toast.success(`Attendance saved · ${counts.present + counts.absent + counts.late}/${cohort.length}`, { description: "حاضری محفوظ ہوگئی" });
+    for (const student of payload.students) {
+      if (!student.attendance) continue;
+      nextMarks[student.id] = student.attendance.status;
+      if (student.attendance.notes) nextNotes[student.id] = student.attendance.notes;
+    }
+
+    setMarks(nextMarks);
+    setNotes(nextNotes);
+  }, []);
+
+  const loadOptions = useCallback(async () => {
+    setLoadingOptions(true);
+    try {
+      const [institutionPayload, categoryPayload] = await Promise.all([
+        requestJson<InstitutionsPayload>("/api/academic/institutions"),
+        requestJson<MadrassaCategoriesPayload>("/api/academic/madrassa/categories"),
+      ]);
+
+      const nextInstitutions = institutionPayload.institutions ?? [];
+      const nextCategories = categoryPayload.categories ?? [];
+      const nextMadrassaInstitutions = nextInstitutions.filter(
+        (item) => item.active && item.system === "madrassa",
+      );
+      const nextSubcategories = nextCategories.flatMap((category) =>
+        category.subcategories.filter((subcategory) => category.active && subcategory.active),
+      );
+
+      setInstitutions(nextInstitutions);
+      setCategories(nextCategories);
+      setInstitutionId((current) => {
+        if (current && nextMadrassaInstitutions.some((item) => item.id === current)) return current;
+        return nextMadrassaInstitutions[0]?.id ?? "";
+      });
+      setSubcategoryId((current) => {
+        if (current && nextSubcategories.some((item) => item.id === current)) return current;
+        return nextSubcategories[0]?.id ?? "";
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load madrassa options");
+    } finally {
+      setLoadingOptions(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadOptions();
+  }, [loadOptions]);
+
+  useEffect(() => {
+    if (!date || !institutionId || !subcategoryId) {
+      setRoster(null);
+      setMarks({});
+      setNotes({});
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadRoster() {
+      setLoadingRoster(true);
+      try {
+        const payload = await getMadrassaAttendanceRoster({ date, institutionId, subcategoryId });
+        if (cancelled) return;
+        setRoster(payload);
+        initializeMarks(payload);
+      } catch (error) {
+        if (!cancelled) {
+          setRoster(null);
+          setMarks({});
+          setNotes({});
+          toast.error(error instanceof Error ? error.message : "Could not load attendance roster");
+        }
+      } finally {
+        if (!cancelled) setLoadingRoster(false);
+      }
+    }
+
+    void loadRoster();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [date, initializeMarks, institutionId, subcategoryId]);
+
+  const markerTitle =
+    selectedInstitution && selectedSubcategory
+      ? `${selectedInstitution.name} - ${selectedSubcategory.name}`
+      : "Madrassa Attendance";
+  const markerSubtitle =
+    selectedInstitution && selectedSubcategory
+      ? `${selectedInstitution.nameUrdu} · ${selectedSubcategory.nameUrdu} · ${date} · ${institutionCountLabel(
+          selectedInstitution.id,
+          selectedSubcategory,
+        )}`
+      : "Select a madrassa and darja to load students.";
+
+  function handleMarkAllPresent() {
+    if (!roster) return;
+    const nextMarks: Record<string, AttendanceStatus> = {};
+    for (const student of roster.students) nextMarks[student.id] = "present";
+    setMarks(nextMarks);
+  }
+
+  function handleClear() {
+    setMarks({});
+    setNotes({});
+  }
+
+  function handleSetStatus(studentId: string, status: AttendanceStatus) {
+    setMarks((current) => ({ ...current, [studentId]: status }));
+  }
+
+  function handleSetNote(studentId: string, note: string) {
+    setNotes((current) => ({ ...current, [studentId]: note }));
+  }
+
+  async function handleSave() {
+    if (!roster || !institutionId || !subcategoryId) return;
+
+    const rows = roster.students
+      .map((student) => {
+        const status = marks[student.id];
+        if (!status) return null;
+
+        return {
+          studentId: student.id,
+          enrollmentId: student.enrollmentId,
+          status,
+          notes: notes[student.id]?.trim() || undefined,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
+
+    if (rows.length === 0) {
+      toast.error("Mark at least one student before saving");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = await markMadrassaAttendance({ date, institutionId, subcategoryId, rows });
+      setRoster(payload);
+      initializeMarks(payload);
+      toast.success("Attendance saved", {
+        description: `${payload.summary.marked}/${payload.summary.total} students marked`,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save attendance");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div>
-      <PageHeader title="Madrassa Attendance" titleUrdu="مدرسہ کی حاضری" description="Mark daily attendance per sub-category." />
+      <PageHeader
+        title="Madrassa Attendance"
+        titleUrdu="مدرسہ کی حاضری"
+        description="Mark daily attendance from active madrassa enrollments."
+      />
 
-      <Card className="p-4 mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <Card className="mb-4 p-4">
+        <div className="grid gap-3 lg:grid-cols-[minmax(160px,220px)_minmax(220px,1fr)_minmax(220px,1fr)]">
           <div>
-            <label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1.5"><Calendar className="h-3 w-3" /> Date · تاریخ</label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Label className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Date
+            </Label>
+            <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
           </div>
-          <div className="md:col-span-2">
-            <label className="text-xs text-muted-foreground mb-1.5 block">Sub-category · ذیلی قسم</label>
-            <Select value={subId} onValueChange={setSubId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+
+          <div>
+            <Label className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Landmark className="h-3.5 w-3.5" />
+              Madrassa
+            </Label>
+            <Select
+              value={institutionId}
+              onValueChange={setInstitutionId}
+              disabled={loadingOptions || madrassaInstitutions.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingOptions ? "Loading madrassas..." : "Select madrassa"} />
+              </SelectTrigger>
               <SelectContent>
-                {madrassaCategories.map((c) => c.subcategories.map((s) => (
-                  <SelectItem key={s.id} value={s.id}><span className="font-urdu">{s.nameUrdu}</span><span className="text-xs text-muted-foreground ms-2">{c.name} · {s.name}</span></SelectItem>
-                )))}
+                {madrassaInstitutions.map((institution) => (
+                  <SelectItem key={institution.id} value={institution.id}>
+                    <span className="font-urdu">{institution.nameUrdu}</span>
+                    <span className="ms-2 text-xs text-muted-foreground">{institution.name}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <BookOpen className="h-3.5 w-3.5" />
+              Darja
+            </Label>
+            <Select
+              value={subcategoryId}
+              onValueChange={setSubcategoryId}
+              disabled={loadingOptions || subcategoryOptions.length === 0}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingOptions ? "Loading darjat..." : "Select darja"} />
+              </SelectTrigger>
+              <SelectContent>
+                {subcategoryOptions.map((subcategory) => (
+                  <SelectItem key={subcategory.id} value={subcategory.id}>
+                    <span className="font-urdu">{subcategory.nameUrdu}</span>
+                    <span className="ms-2 text-xs text-muted-foreground">
+                      {subcategory.categoryName} · {subcategory.name}
+                    </span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         </div>
       </Card>
 
-      <Card className="p-3 mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-2 text-xs">
-          <Pill label="Present" urdu="حاضر" count={counts.present} className="bg-chart-1/15 text-chart-5 dark:text-chart-1" />
-          <Pill label="Absent" urdu="غیر حاضر" count={counts.absent} className="bg-destructive/10 text-destructive" />
-          <Pill label="Late" urdu="دیر سے" count={counts.late} className="bg-amber-500/15 text-amber-700 dark:text-amber-400" />
-          <Pill label="Unmarked" urdu="بقیہ" count={counts.unmarked} className="bg-muted text-muted-foreground" />
-        </div>
-        <div className="flex gap-1.5">
-          <Button size="sm" variant="outline" onClick={() => setAll("present")}>Mark all present</Button>
-          <Button size="sm" variant="outline" onClick={() => setMarks({})}>Clear</Button>
-          <Button size="sm" onClick={save} className="gap-1.5"><Save className="h-3.5 w-3.5" />Save</Button>
-        </div>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <div className="divide-y divide-border">
-          {cohort.length === 0 ? (
-            <div className="p-12 text-center text-sm text-muted-foreground">No students in this cohort.</div>
-          ) : cohort.map((s) => {
-            const m = marks[s.id];
-            return (
-              <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
-                <Avatar className="h-9 w-9"><AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">{s.name[0]}</AvatarFallback></Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="font-urdu text-sm">{s.nameUrdu}</p>
-                  <p className="text-[11px] text-muted-foreground font-mono">{s.rollNo}</p>
-                </div>
-                <div className="flex gap-1">
-                  <MarkBtn active={m === "present"} onClick={() => setMarks({ ...marks, [s.id]: "present" })} className="text-chart-5 dark:text-chart-1 data-[active=true]:bg-chart-1/20"><Check className="h-4 w-4" /></MarkBtn>
-                  <MarkBtn active={m === "late"} onClick={() => setMarks({ ...marks, [s.id]: "late" })} className="text-amber-700 dark:text-amber-400 data-[active=true]:bg-amber-500/20"><Clock className="h-4 w-4" /></MarkBtn>
-                  <MarkBtn active={m === "absent"} onClick={() => setMarks({ ...marks, [s.id]: "absent" })} className="text-destructive data-[active=true]:bg-destructive/15"><X className="h-4 w-4" /></MarkBtn>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
+      <AttendanceMarker
+        title={markerTitle}
+        subtitle={markerSubtitle}
+        roster={roster}
+        loading={loadingOptions || loadingRoster}
+        saving={saving}
+        marks={marks}
+        notes={notes}
+        onSetStatus={handleSetStatus}
+        onSetNote={handleSetNote}
+        onMarkAllPresent={handleMarkAllPresent}
+        onClear={handleClear}
+        onSave={handleSave}
+      />
     </div>
   );
 }
 
-function Pill({ label, urdu, count, className }: { label: string; urdu: string; count: number; className: string }) {
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1", className)}>
-      <span className="font-mono tabular-nums">{count}</span>
-      <span>{label}</span>
-      <span className="font-urdu opacity-80">{urdu}</span>
-    </span>
-  );
+async function requestJson<T>(url: string): Promise<T> {
+  const response = await fetch(url, { credentials: "include" });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "Request failed");
+  return payload as T;
 }
 
-function MarkBtn({ children, active, onClick, className }: { children: React.ReactNode; active: boolean; onClick: () => void; className?: string }) {
-  return (
-    <button type="button" data-active={active} onClick={onClick} className={cn("h-8 w-8 rounded-lg border border-border flex items-center justify-center transition-colors hover:bg-muted", className)}>
-      {children}
-    </button>
-  );
+function institutionCountLabel(
+  institutionId: string,
+  subcategory: MadrassaSubcategoryOption,
+) {
+  if (institutionId === "jamia_qasmia_baneen") return `${subcategory.qasmiaCount} active enrollments`;
+  if (institutionId === "jamia_zainab_banat") return `${subcategory.zainabCount} active enrollments`;
+  return `${subcategory.enrollmentCount} active enrollments`;
+}
+
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }

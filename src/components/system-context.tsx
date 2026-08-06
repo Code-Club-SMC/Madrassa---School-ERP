@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type ActiveSystem = "madrassa" | "school";
 type Ctx = { system: ActiveSystem; setSystem: (s: ActiveSystem) => void };
@@ -13,14 +13,16 @@ export function SystemProvider({ children }: { children: ReactNode }) {
     if (stored === "madrassa" || stored === "school") setSystemState(stored);
   }, []);
 
-  const setSystem = (s: ActiveSystem) => {
+  const setSystem = useCallback((s: ActiveSystem) => {
     setSystemState(s);
     try {
       localStorage.setItem("msmis-system", s);
     } catch {}
-  };
+  }, []);
 
-  return <SystemCtx.Provider value={{ system, setSystem }}>{children}</SystemCtx.Provider>;
+  const value = useMemo(() => ({ system, setSystem }), [system, setSystem]);
+
+  return <SystemCtx.Provider value={value}>{children}</SystemCtx.Provider>;
 }
 
 export const useSystem = () => useContext(SystemCtx);
