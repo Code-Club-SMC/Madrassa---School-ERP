@@ -85,17 +85,10 @@ function LoginPage() {
         return;
       }
 
-      window.location.href = redirect ?? (role === "parent" ? "/parents" : "/dashboard");
-    } catch {
-      setError(
-        lang === "ur" ? "لاگ اِن نہیں ہو سکا، دوبارہ کوشش کریں" : "Login failed, please try again",
-      );
-    } finally {
       setSubmitting(false);
       setTimeout(() => {
         window.location.href = redirect ?? (role === "parent" ? "/parents" : "/dashboard");
       }, 50);
-    }
   };
 
   return (
