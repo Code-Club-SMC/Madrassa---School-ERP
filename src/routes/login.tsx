@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { toAppUser } from "@/lib/auth-session";
+import { useLanguage } from "@/components/language-context";
+import { DraggableLanguageToggle } from "@/components/app/draggable-language-toggle";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -25,6 +27,7 @@ const institutionUnits = [
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { lang, setLang } = useLanguage();
   const { redirect } = Route.useSearch();
   const [mode, setMode] = useState<LoginMode>("staff");
   const [staffEmail, setStaffEmail] = useState("");
@@ -40,7 +43,11 @@ function LoginPage() {
     setError(null);
 
     if (!identifier || !password) {
-      setError("براہِ کرم لاگ اِن معلومات اور پاس ورڈ درج کریں");
+      setError(
+        lang === "ur"
+          ? "براہِ کرم لاگ اِن معلومات اور پاس ورڈ درج کریں"
+          : "Please enter your login credentials and password",
+      );
       return;
     }
 
@@ -52,45 +59,65 @@ function LoginPage() {
           : await authClient.signIn.username({ username: identifier, password });
 
       if (result.error) {
-        setError(result.error.message ?? "لاگ اِن معلومات درست نہیں ہیں");
+        setError(
+          result.error.message ??
+            (lang === "ur" ? "لاگ اِن معلومات درست نہیں ہیں" : "Invalid login credentials"),
+        );
         return;
       }
 
-      const session = await authClient.getSession();
-      const role = session.data?.user ? toAppUser(session.data.user).role : undefined;
+      const signedInUser = result.data?.user ?? null;
+      const role = signedInUser ? toAppUser(signedInUser).role : undefined;
 
       if (mode === "parent" && role !== "parent") {
         await authClient.signOut();
-        setError("یہ والدین کا اکاؤنٹ نہیں ہے");
+        setError(lang === "ur" ? "یہ والدین کا اکاؤنٹ نہیں ہے" : "This is not a parent account");
         return;
       }
 
       if (mode === "staff" && role === "parent") {
         await authClient.signOut();
-        setError("والدین کے لیے والدین والا لاگ اِن استعمال کریں");
+        setError(
+          lang === "ur"
+            ? "والدین کے لیے والدین والا لاگ اِن استعمال کریں"
+            : "Use the parent login for parent accounts",
+        );
         return;
       }
 
-      await navigate({ to: redirect ?? (role === "parent" ? "/parents" : "/dashboard") });
+      window.location.href = redirect ?? (role === "parent" ? "/parents" : "/dashboard");
     } catch {
-      setError("لاگ اِن نہیں ہو سکا، دوبارہ کوشش کریں");
+      setError(
+        lang === "ur" ? "لاگ اِن نہیں ہو سکا، دوبارہ کوشش کریں" : "Login failed, please try again",
+      );
     } finally {
       setSubmitting(false);
+      setTimeout(() => {
+        window.location.href = redirect ?? (role === "parent" ? "/parents" : "/dashboard");
+      }, 50);
     }
   };
 
   return (
     <div className="min-h-dvh bg-[#f7fbfa] text-foreground lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(520px,0.9fr)]">
-      <main className="flex min-h-dvh items-center justify-center px-5 py-10" dir="rtl" lang="ur">
+      <main
+        className="flex min-h-dvh items-center justify-center px-5 py-10"
+        dir={lang === "ur" ? "rtl" : "ltr"}
+        lang={lang}
+      >
         <div className="w-full max-w-[430px] space-y-8">
           <div className="space-y-3 text-right">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
               <School className="h-6 w-6" />
             </div>
             <div className="space-y-1">
-              <p className="font-urdu text-3xl font-bold leading-loose">خوش آمدید</p>
+              <p className="font-urdu text-3xl font-bold leading-loose">
+                {lang === "ur" ? "خوش آمدید" : "Welcome"}
+              </p>
               <p className="font-urdu text-sm text-muted-foreground">
-                اپنے اکاؤنٹ میں داخل ہونے کے لیے درست طریقہ منتخب کریں
+                {lang === "ur"
+                  ? "اپنے اکاؤنٹ میں داخل ہونے کے لیے درست طریقہ منتخب کریں"
+                  : "Select the correct method to log into your account"}
               </p>
             </div>
           </div>
@@ -99,7 +126,7 @@ function LoginPage() {
             <ModeButton
               active={mode === "staff"}
               icon={UsersRound}
-              label="عملہ"
+              label={lang === "ur" ? "عملہ" : "Staff"}
               onClick={() => {
                 setMode("staff");
                 setError(null);
@@ -108,7 +135,7 @@ function LoginPage() {
             <ModeButton
               active={mode === "parent"}
               icon={UserRound}
-              label="والدین"
+              label={lang === "ur" ? "والدین" : "Parents"}
               onClick={() => {
                 setMode("parent");
                 setError(null);
@@ -116,10 +143,19 @@ function LoginPage() {
             />
           </div>
 
-          <form onSubmit={onSubmit} className="space-y-5 rounded-xl border border-border bg-background p-6 shadow-sm">
+          <form
+            onSubmit={onSubmit}
+            className="space-y-5 rounded-xl border border-border bg-background p-6 shadow-sm"
+          >
             <div className="space-y-2 text-right">
               <label htmlFor="identifier" className="font-urdu text-sm font-medium">
-                {mode === "staff" ? "ای میل" : "لاگ اِن آئی ڈی"}
+                {mode === "staff"
+                  ? lang === "ur"
+                    ? "ای میل"
+                    : "Email"
+                  : lang === "ur"
+                    ? "لاگ اِن آئی ڈی"
+                    : "Login ID"}
               </label>
               <Input
                 id="identifier"
@@ -140,7 +176,7 @@ function LoginPage() {
 
             <div className="space-y-2 text-right">
               <label htmlFor="password" className="font-urdu text-sm font-medium">
-                پاس ورڈ
+                {lang === "ur" ? "پاس ورڈ" : "Password"}
               </label>
               <Input
                 id="password"
@@ -161,24 +197,38 @@ function LoginPage() {
               </Alert>
             )}
 
-            <Button type="submit" disabled={submitting} className="h-11 w-full gap-2 font-urdu text-base">
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="h-11 w-full gap-2 font-urdu text-base"
+            >
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              داخل ہوں
+              {lang === "ur" ? "داخل ہوں" : "Sign In"}
             </Button>
           </form>
 
           <div className="space-y-4 text-center">
             <p className="font-urdu text-sm leading-loose text-muted-foreground">
-              پاس ورڈ بھولنے پر دفتر یا منتظم سے رابطہ کریں
+              {lang === "ur"
+                ? "پاس ورڈ بھولنے پر دفتر یا منتظم سے رابطہ کریں"
+                : "Contact the office or administrator if you forgot your password"}
             </p>
-            <Link to="/apply" className="font-urdu text-sm font-medium text-primary underline-offset-4 hover:underline">
-              آن لائن داخلہ درخواست
+            <Link
+              to="/apply"
+              className="font-urdu text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {lang === "ur" ? "آن لائن داخلہ درخواست" : "Online Admission Application"}
             </Link>
           </div>
+          <DraggableLanguageToggle className="fixed bottom-4 end-4" />
         </div>
       </main>
 
-      <aside className="relative hidden min-h-dvh overflow-hidden bg-primary text-primary-foreground lg:flex" dir="rtl" lang="ur">
+      <aside
+        className="relative hidden min-h-dvh overflow-hidden bg-primary text-primary-foreground lg:flex"
+        dir={lang === "ur" ? "rtl" : "ltr"}
+        lang={lang}
+      >
         <div
           className="absolute inset-0 opacity-[0.07]"
           style={{
@@ -190,21 +240,30 @@ function LoginPage() {
           <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-lg border border-primary-foreground/25 bg-primary-foreground/10">
             <School className="h-7 w-7" />
           </div>
-          <p className="font-urdu text-4xl font-bold leading-loose">مدرسہ مینجمنٹ سسٹم</p>
+          <p className="font-urdu text-4xl font-bold leading-loose">
+            {lang === "ur" ? "مدرسہ مینجمنٹ سسٹم" : "Madrassa Management System"}
+          </p>
           <p className="font-urdu mt-3 max-w-md text-base leading-loose text-primary-foreground/75">
-            داخلہ، طلبہ، والدین، حاضری، فیس، امتحانات، اور مقامی اطلاعات کے لیے مرکزی نظام
+            {lang === "ur"
+              ? "داخلہ، طلبہ، والدین، حاضری، فیس، امتحانات، اور مقامی اطلاعات کے لیے مرکزی نظام"
+              : "Centralized system for admissions, students, parents, attendance, fees, exams, and local communications"}
           </p>
 
           <div className="mt-10 grid gap-3">
             {institutionUnits.map((name) => (
-              <div key={name} className="rounded-lg border border-primary-foreground/18 bg-primary-foreground/8 px-4 py-3">
+              <div
+                key={name}
+                className="rounded-lg border border-primary-foreground/18 bg-primary-foreground/8 px-4 py-3"
+              >
                 <p className="font-urdu text-base leading-loose">{name}</p>
               </div>
             ))}
           </div>
         </div>
         <p className="absolute bottom-6 left-1/2 -translate-x-1/2 font-urdu text-xs text-primary-foreground/45">
-          نظام برائے تعلیمی و انتظامی امور
+          {lang === "ur"
+            ? "نظام برائے تعلیمی و انتظامی امور"
+            : "System for educational and administrative affairs"}
         </p>
       </aside>
     </div>
@@ -228,7 +287,9 @@ function ModeButton({
       onClick={onClick}
       className={[
         "flex h-11 items-center justify-center gap-2 rounded-lg font-urdu text-sm transition-colors",
-        active ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted",
+        active
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:bg-muted",
       ].join(" ")}
     >
       <Icon className="h-4 w-4" />

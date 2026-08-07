@@ -14,6 +14,7 @@ import {
 import { navItems } from "@/lib/nav-config";
 import { useSystem } from "@/components/system-context";
 import { useTheme } from "@/components/theme-provider";
+import { useLanguage } from "@/components/language-context";
 import { useSession } from "@/hooks/use-session";
 import type { UserRole } from "@/types";
 
@@ -23,6 +24,7 @@ export function CommandPalette({ open, onOpenChange }: Props) {
   const navigate = useNavigate();
   const { system, setSystem } = useSystem();
   const { toggle } = useTheme();
+  const { lang, setLang } = useLanguage();
   const { user } = useSession();
   const role = (user?.role ?? "parent") as UserRole;
 
@@ -48,21 +50,49 @@ export function CommandPalette({ open, onOpenChange }: Props) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search pages, actions… — تلاش کریں" />
+      <CommandInput
+        placeholder={lang === "ur" ? "صفحات، اعمال تلاش کریں" : "Search pages, actions…"}
+      />
       <CommandList>
-        <CommandEmpty>No results — کوئی نتیجہ نہیں</CommandEmpty>
+        <CommandEmpty>{lang === "ur" ? "کوئی نتیجہ نہیں" : "No results"}</CommandEmpty>
 
-        <CommandGroup heading="Actions">
-          <CommandItem onSelect={() => { setSystem(system === "madrassa" ? "school" : "madrassa"); onOpenChange(false); }}>
+        <CommandGroup heading={lang === "ur" ? "اعمال" : "Actions"}>
+          <CommandItem
+            onSelect={() => {
+              setSystem(system === "madrassa" ? "school" : "madrassa");
+              onOpenChange(false);
+            }}
+          >
             <ArrowLeftRight className="me-2 h-4 w-4" />
-            Switch to {system === "madrassa" ? "School" : "Madrassa"}
-            <span className="font-urdu ms-2 text-muted-foreground">{system === "madrassa" ? "اسکول" : "مدرسہ"}</span>
+            {lang === "ur"
+              ? system === "madrassa"
+                ? "اسکول میں جائیں"
+                : "مدرسہ میں جائیں"
+              : `Switch to ${system === "madrassa" ? "School" : "Madrassa"}`}
+            <span className="font-urdu ms-2 text-muted-foreground">
+              {system === "madrassa" ? "اسکول" : "مدرسہ"}
+            </span>
           </CommandItem>
-          <CommandItem onSelect={() => { toggle(); onOpenChange(false); }}>
+          <CommandItem
+            onSelect={() => {
+              toggle();
+              onOpenChange(false);
+            }}
+          >
             <Sun className="me-2 h-4 w-4 dark:hidden" />
             <Moon className="me-2 h-4 w-4 hidden dark:inline" />
-            Toggle theme
+            {lang === "ur" ? "تھیم تبدیل کریں" : "Toggle theme"}
             <CommandShortcut>⌘J</CommandShortcut>
+          </CommandItem>
+          <CommandItem
+            onSelect={() => {
+              setLang(lang === "ur" ? "en" : "ur");
+              onOpenChange(false);
+            }}
+          >
+            <span className="me-2 text-xs font-bold">{lang === "ur" ? "EN" : "اردو"}</span>
+            {lang === "ur" ? "انگریزی میں دیکھیں" : "اردو میں دیکھیں"}
+            <CommandShortcut>⌘L</CommandShortcut>
           </CommandItem>
         </CommandGroup>
 
@@ -71,13 +101,36 @@ export function CommandPalette({ open, onOpenChange }: Props) {
         {groups.map((g) => {
           const items = visible.filter((i) => i.group === g);
           if (items.length === 0) return null;
+          const heading =
+            g === "admin"
+              ? lang === "ur"
+                ? "انتظامیہ"
+                : "Admin"
+              : g === "shared"
+                ? lang === "ur"
+                  ? "مشترکہ"
+                  : "Shared"
+                : g === "madrassa"
+                  ? lang === "ur"
+                    ? "مدرسہ"
+                    : "Madrassa"
+                  : g === "school"
+                    ? lang === "ur"
+                      ? "اسکول"
+                      : "School"
+                    : lang === "ur"
+                      ? "عمومی"
+                      : "Global";
           return (
-            <CommandGroup key={g} heading={g === "admin" ? "Admin" : g === "shared" ? "Shared" : g === "madrassa" ? "Madrassa — مدرسہ" : g === "school" ? "School — اسکول" : "Global"}>
+            <CommandGroup key={g} heading={heading}>
               {items.map((i) => (
-                <CommandItem key={i.url} onSelect={() => go(i.url)} value={`${i.en} ${i.ur} ${i.url}`}>
+                <CommandItem
+                  key={i.url}
+                  onSelect={() => go(i.url)}
+                  value={`${i.en} ${i.ur} ${i.url}`}
+                >
                   <i.icon className="me-2 h-4 w-4" />
-                  <span>{i.en}</span>
-                  <span className="font-urdu ms-auto text-muted-foreground">{i.ur}</span>
+                  <span>{lang === "ur" ? i.ur : i.en}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

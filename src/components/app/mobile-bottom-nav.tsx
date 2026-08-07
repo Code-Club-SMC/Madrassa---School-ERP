@@ -1,11 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { LayoutDashboard, Users2, FileSignature, BarChart3, MoreHorizontal } from "lucide-react";
 import { useSystem } from "@/components/system-context";
+import { useLanguage } from "@/components/language-context";
 import { cn } from "@/lib/utils";
 
 export function MobileBottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { system } = useSystem();
+  const { lang } = useLanguage();
 
   const studentsUrl = system === "madrassa" ? "/madrassa/students" : "/school/students";
 
@@ -43,8 +45,15 @@ export function MobileBottomNav() {
                 )}
               >
                 <i.icon className={cn("h-5 w-5", active && "scale-110 transition-transform")} />
-                <span dir="rtl" lang="ur" className="font-urdu text-[13px] leading-tight mt-0.5">{i.ur}</span>
-                <span className="text-[9px] uppercase tracking-wide leading-none opacity-70">{i.en}</span>
+                {lang === "ur" ? (
+                  <span dir="rtl" lang="ur" className="font-urdu text-[13px] leading-tight mt-0.5">
+                    {i.ur}
+                  </span>
+                ) : (
+                  <span className="text-[10px] uppercase tracking-wide leading-none mt-0.5">
+                    {i.en}
+                  </span>
+                )}
               </Link>
             </li>
           );

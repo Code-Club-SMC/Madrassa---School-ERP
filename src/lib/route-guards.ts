@@ -25,9 +25,17 @@ const getAuthSession = createServerFn({ method: "GET" }).handler(async () => {
     import("@/lib/auth"),
   ]);
 
-  return auth.api.getSession({
-    headers: getRequest().headers,
+  const request = getRequest();
+  const cookieHeader = request.headers.get("cookie");
+  console.log("[route-guards] cookie header:", cookieHeader);
+  console.log("[route-guards] headers:", Object.fromEntries(request.headers.entries()));
+
+  const session = await auth.api.getSession({
+    headers: request.headers,
   });
+
+  console.log("[route-guards] session user:", session?.user?.email ?? null);
+  return session;
 });
 
 export async function getCurrentAuthSession(): Promise<AuthSession | null> {

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/components/theme-provider";
 import { useSystem } from "@/components/system-context";
+import { useLanguage } from "@/components/language-context";
 import { useSession } from "@/hooks/use-session";
 import { cn } from "@/lib/utils";
 import { PAGE_TITLES } from "@/lib/nav-config";
@@ -23,6 +24,7 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { theme, toggle } = useTheme();
   const { system, setSystem } = useSystem();
+  const { lang, setLang } = useLanguage();
   const { user, logout } = useSession();
 
   const current = PAGE_TITLES[pathname] ?? { en: "MSMIS", ur: "ایم ایس ایم آئی ایس" };
@@ -38,13 +40,33 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
     <header className="h-14 sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border flex items-center px-4 gap-3">
       <SidebarTrigger className="-me-1" />
       <div className="flex items-center gap-2 min-w-0">
-        <Link to="/dashboard" className="text-xs text-muted-foreground hover:text-foreground hidden sm:inline">
-          MSMIS
+        <Link
+          to="/dashboard"
+          className="text-xs text-muted-foreground hover:text-foreground hidden sm:inline"
+        >
+          {lang === "ur" ? "ایم ایس ایم آئی ایس" : "MSMIS"}
         </Link>
         <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground rtl:rotate-180 hidden sm:inline" />
         <div className="min-w-0">
-          <p className="font-urdu text-sm truncate leading-none">{current.ur}</p>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">{current.en}</p>
+          {lang === "ur" ? (
+            <>
+              <p className="font-urdu text-sm truncate leading-none">{current.ur}</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">
+                {current.en}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm truncate leading-none font-medium">{current.en}</p>
+              <p
+                className="text-[10px] text-muted-foreground truncate font-urdu"
+                dir="rtl"
+                lang="ur"
+              >
+                {current.ur}
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -56,7 +78,7 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
           className="hidden md:inline-flex items-center gap-2 text-xs text-muted-foreground h-8 px-2.5 min-w-[200px] justify-start"
         >
           <Search className="h-3.5 w-3.5" />
-          <span>Search…</span>
+          <span>{lang === "ur" ? "تلاش کریں…" : "Search…"}</span>
           <kbd className="ms-auto pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
             ⌘K
           </kbd>
@@ -68,22 +90,30 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
               variant="ghost"
               size="sm"
               className={cn(
-                "hidden sm:inline-flex items-center gap-1.5 h-8 rounded-full px-3 text-xs font-medium font-urdu",
+                "hidden sm:inline-flex items-center gap-1.5 h-8 rounded-full px-3 text-xs font-medium",
                 "bg-primary/10 text-primary hover:bg-primary/15",
               )}
             >
-              {system === "madrassa" ? "🕌 مدرسہ" : "🏫 اسکول"}
+              {system === "madrassa"
+                ? lang === "ur"
+                  ? "🕌 مدرسہ"
+                  : "🕌 Madrassa"
+                : lang === "ur"
+                  ? "🏫 اسکول"
+                  : "🏫 School"}
               <ArrowLeftRight className="h-3 w-3 opacity-60" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuLabel className="text-[10px] uppercase tracking-wide">Active system</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wide">
+              {lang === "ur" ? "فعال نظام" : "Active system"}
+            </DropdownMenuLabel>
             <DropdownMenuItem onClick={() => setSystem("madrassa")}>
-              🕌 <span className="font-urdu ms-2">مدرسہ</span>
+              🕌 <span className="font-urdu ms-2">{lang === "ur" ? "مدرسہ" : "مدرسہ"}</span>
               <span className="ms-auto text-[10px] text-muted-foreground">Madrassa</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setSystem("school")}>
-              🏫 <span className="font-urdu ms-2">اسکول</span>
+              🏫 <span className="font-urdu ms-2">{lang === "ur" ? "اسکول" : "اسکول"}</span>
               <span className="ms-auto text-[10px] text-muted-foreground">School</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -101,8 +131,13 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72">
             <DropdownMenuLabel className="flex items-center justify-between">
-              <span>Notifications · اعلانات</span>
-              <Link to="/notifications" className="text-[10px] text-muted-foreground hover:text-foreground">View all</Link>
+              <span>{lang === "ur" ? "اعلانات · Notifications" : "Notifications · اعلانات"}</span>
+              <Link
+                to="/notifications"
+                className="text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                {lang === "ur" ? "سب دیکھیں" : "View all"}
+              </Link>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             {[
@@ -111,7 +146,7 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
               { t: "Inventory low: Notebooks", u: "نوٹ بک کم", tone: "text-destructive" },
             ].map((n, i) => (
               <DropdownMenuItem key={i} className="flex-col items-start gap-0.5">
-                <span className={cn("text-xs", n.tone)}>{n.t}</span>
+                <span className={cn("text-xs", n.tone)}>{lang === "ur" ? n.u : n.t}</span>
                 <span className="font-urdu text-sm text-muted-foreground">{n.u}</span>
               </DropdownMenuItem>
             ))}
@@ -121,27 +156,46 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{initials}</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                  {initials}
+                </AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div>
-                <p className="text-sm font-medium">{user?.name ?? "Signed in user"}</p>
+                <p className="text-sm font-medium">
+                  {user?.name ?? (lang === "ur" ? "لاگ ان صارف" : "Signed in user")}
+                </p>
                 <p className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link to="/settings">
-                <span className="font-urdu text-sm">پروفائل</span>
-                <span className="ms-auto text-xs text-muted-foreground">Profile</span>
+                {lang === "ur" ? (
+                  <>
+                    <span className="font-urdu text-sm">پروفائل</span>
+                    <span className="ms-auto text-xs text-muted-foreground">Profile</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm">Profile</span>
+                    <span
+                      className="ms-auto text-xs text-muted-foreground font-urdu"
+                      dir="rtl"
+                      lang="ur"
+                    >
+                      پروفائل
+                    </span>
+                  </>
+                )}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to="/change-password">
-                <span className="font-urdu text-sm">پاس ورڈ تبدیل کریں</span>
+                {lang === "ur" ? "پاس ورڈ تبدیل کریں" : "Change password"}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -149,8 +203,19 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
               className="text-destructive focus:text-destructive"
               onClick={() => void logout()}
             >
-                <span className="font-urdu text-sm">سائن آؤٹ</span>
-                <span className="ms-auto text-xs">Sign out</span>
+              {lang === "ur" ? (
+                <>
+                  <span className="font-urdu text-sm">سائن آؤٹ</span>
+                  <span className="ms-auto text-xs">Sign out</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-sm">Sign out</span>
+                  <span className="ms-auto text-xs font-urdu" dir="rtl" lang="ur">
+                    سائن آؤٹ
+                  </span>
+                </>
+              )}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
