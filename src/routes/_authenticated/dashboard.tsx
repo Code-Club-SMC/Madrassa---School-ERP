@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import {
   Users,
   CalendarCheck2,
@@ -43,6 +44,7 @@ import { formatPKR, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/hooks/use-session";
 import { useLanguage } from "@/components/language-context";
+import { useCustomAuth } from "@/lib/custom-auth-client";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -63,8 +65,28 @@ const ACTIVITY_TONE = {
 } as const;
 
 function DashboardPage() {
-  const { user } = useSession();
+  const { user, isLoading } = useSession();
+  const auth = useCustomAuth();
   const { lang } = useLanguage();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate({ to: "/login" });
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
   if (user?.role === "teacher") {
     return <TeacherDashboard />;
   }
@@ -169,33 +191,33 @@ function DashboardPage() {
       {/* Quick actions */}
       <div className="flex flex-wrap gap-2">
         <Button asChild variant="outline" size="sm">
-          <Link to="/admission/new">
-            <UserPlus className="h-4 w-4" />
-            <span className="font-urdu text-sm">{lang === "ur" ? "نیا داخلہ" : "نیا داخلہ"}</span>
-            <span className="text-xs text-muted-foreground">
-              {lang === "ur" ? "New Admission" : "New Admission"}
-            </span>
-          </Link>
+            <Link to="/admission/new">
+              <UserPlus className="h-4 w-4" />
+              <span className="font-urdu text-sm">{lang === "ur" ? "نیا داخلہ" : "New Admission"}</span>
+              <span className="text-xs text-muted-foreground">
+                {lang === "ur" ? "نیا داخلہ" : "New Admission"}
+              </span>
+            </Link>
         </Button>
         <Button asChild variant="outline" size="sm">
-          <Link to="/madrassa/attendance">
-            <CalendarCheck2 className="h-4 w-4" />
-            <span className="font-urdu text-sm">{lang === "ur" ? "حاضری" : "حاضری"}</span>
-            <span className="text-xs text-muted-foreground">
-              {lang === "ur" ? "Mark Attendance" : "Mark Attendance"}
-            </span>
-          </Link>
+            <Link to="/madrassa/attendance">
+              <CalendarCheck2 className="h-4 w-4" />
+              <span className="font-urdu text-sm">{lang === "ur" ? "حاضری" : "Attendance"}</span>
+              <span className="text-xs text-muted-foreground">
+                {lang === "ur" ? "حاضری کریں" : "Mark Attendance"}
+              </span>
+            </Link>
         </Button>
         <Button asChild variant="outline" size="sm">
-          <Link to="/madrassa/fees">
-            <Banknote className="h-4 w-4" />
-            <span className="font-urdu text-sm">
-              {lang === "ur" ? "فیس وصول کریں" : "فیس وصول کریں"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {lang === "ur" ? "Record Payment" : "Record Payment"}
-            </span>
-          </Link>
+            <Link to="/madrassa/fees">
+              <Banknote className="h-4 w-4" />
+              <span className="font-urdu text-sm">
+                {lang === "ur" ? "فیس وصول کریں" : "Receive Fee"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {lang === "ur" ? "ادائیگی ریکارڈ کریں" : "Record Payment"}
+              </span>
+            </Link>
         </Button>
       </div>
 
@@ -207,7 +229,7 @@ function DashboardPage() {
               {lang === "ur" ? "داخلوں کا رجحان" : "Enrollment Trend"}
             </h3>
             <p className="font-urdu text-sm text-muted-foreground">
-              {lang === "ur" ? "داخلوں کا رجحان — گزشتہ 12 ماہ" : "داخلوں کا رجحان — گزشتہ 12 ماہ"}
+              {lang === "ur" ? "داخلوں کا رجحان — گزشتہ 12 ماہ" : "Enrollment Trend — Last 12 Months"}
             </p>
           </div>
         </div>
@@ -267,7 +289,7 @@ function DashboardPage() {
               {lang === "ur" ? "حاضری — گزشتہ 7 دن" : "Attendance — Last 7 Days"}
             </h3>
             <p className="font-urdu text-sm text-muted-foreground">
-              {lang === "ur" ? "گزشتہ سات دن کی حاضری" : "گزشتہ سات دن کی حاضری"}
+              {lang === "ur" ? "گزشتہ سات دن کی حاضری" : "Attendance summary for last 7 days"}
             </p>
           </div>
           <div className="grid grid-cols-7 gap-2">
@@ -301,7 +323,7 @@ function DashboardPage() {
               <div key={s.label} className="rounded-lg bg-muted/50 p-3">
                 <p className="font-heading text-lg font-bold tabular-nums">{s.value}</p>
                 <p className="text-[11px] text-muted-foreground">{s.label}</p>
-                <p className="font-urdu text-xs text-muted-foreground">{s.urdu}</p>
+                <p className="font-urdu text-xs text-muted-foreground">{lang === "ur" ? s.urdu : s.label}</p>
               </div>
             ))}
           </div>
@@ -313,7 +335,7 @@ function DashboardPage() {
               {lang === "ur" ? "مدرسہ — اقسام کی تقسیم" : "Madrassa Category Distribution"}
             </h3>
             <p className="font-urdu text-sm text-muted-foreground">
-              {lang === "ur" ? "مدرسہ — اقسام کی تقسیم" : "مدرسہ — اقسام کی تقسیم"}
+              {lang === "ur" ? "مدرسہ — اقسام کی تقسیم" : "Madrassa Category Distribution"}
             </p>
           </div>
           <div className="h-56">

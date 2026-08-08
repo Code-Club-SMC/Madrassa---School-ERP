@@ -32,6 +32,10 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as ApiStudentsRouteImport } from './routes/api/students'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthLogoutRouteImport } from './routes/auth/logout'
+import { Route as AuthMeRouteImport } from './routes/auth/me'
+import { Route as AuthValidateSessionRouteImport } from './routes/auth/validate-session'
 import { Route as WebsiteIndexRouteImport } from './routes/website/index'
 import { Route as WebsiteContactRouteImport } from './routes/website/contact'
 import { Route as WebsiteGalleryRouteImport } from './routes/website/gallery'
@@ -90,6 +94,9 @@ import { Route as ApiAdmissionApplicationsRouteImport } from './routes/api/admis
 import { Route as ApiAdmissionGuardianSuggestionsRouteImport } from './routes/api/admission/guardian-suggestions'
 import { Route as ApiAdmissionStudentsRouteImport } from './routes/api/admission/students'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
+import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiExamsHallsRouteImport } from './routes/api/exams/halls'
 import { Route as ApiExamsSessionsRouteImport } from './routes/api/exams/sessions'
 import { Route as ApiExamsSubjectsRouteImport } from './routes/api/exams/subjects'
@@ -288,6 +295,26 @@ const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
 const ApiStudentsRoute = ApiStudentsRouteImport.update({
   id: '/api/students',
   path: '/api/students',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthLogoutRoute = AuthLogoutRouteImport.update({
+  id: '/auth/logout',
+  path: '/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthMeRoute = AuthMeRouteImport.update({
+  id: '/auth/me',
+  path: '/auth/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthValidateSessionRoute = AuthValidateSessionRouteImport.update({
+  id: '/auth/validate-session',
+  path: '/auth/validate-session',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WebsiteIndexRoute = WebsiteIndexRouteImport.update({
@@ -620,6 +647,21 @@ const ApiAdmissionStudentsRoute = ApiAdmissionStudentsRouteImport.update({
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/api/auth/login',
+  path: '/api/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthMeRoute = ApiAuthMeRouteImport.update({
+  id: '/api/auth/me',
+  path: '/api/auth/me',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiExamsHallsRoute = ApiExamsHallsRouteImport.update({
@@ -1117,6 +1159,10 @@ export interface FileRoutesByFullPath {
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
+  '/auth/me': typeof AuthMeRoute
+  '/auth/validate-session': typeof AuthValidateSessionRoute
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
   '/website/': typeof WebsiteIndexRoute
@@ -1168,6 +1214,9 @@ export interface FileRoutesByFullPath {
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
   '/api/admission/students': typeof ApiAdmissionStudentsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
   '/api/exams/halls': typeof ApiExamsHallsRouteWithChildren
   '/api/exams/sessions': typeof ApiExamsSessionsRouteWithChildren
   '/api/exams/subjects': typeof ApiExamsSubjectsRouteWithChildren
@@ -1276,6 +1325,10 @@ export interface FileRoutesByTo {
   '/school': typeof AuthenticatedSchoolRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
+  '/auth/me': typeof AuthMeRoute
+  '/auth/validate-session': typeof AuthValidateSessionRoute
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
   '/website': typeof WebsiteIndexRoute
@@ -1325,6 +1378,9 @@ export interface FileRoutesByTo {
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
   '/api/admission/students': typeof ApiAdmissionStudentsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
   '/api/exams/halls': typeof ApiExamsHallsRouteWithChildren
   '/api/exams/sessions': typeof ApiExamsSessionsRouteWithChildren
   '/api/exams/subjects': typeof ApiExamsSubjectsRouteWithChildren
@@ -1442,6 +1498,10 @@ export interface FileRoutesById {
   '/_authenticated/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
+  '/auth/me': typeof AuthMeRoute
+  '/auth/validate-session': typeof AuthValidateSessionRoute
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
   '/website/': typeof WebsiteIndexRoute
@@ -1493,6 +1553,9 @@ export interface FileRoutesById {
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
   '/api/admission/students': typeof ApiAdmissionStudentsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/me': typeof ApiAuthMeRoute
   '/api/exams/halls': typeof ApiExamsHallsRouteWithChildren
   '/api/exams/sessions': typeof ApiExamsSessionsRouteWithChildren
   '/api/exams/subjects': typeof ApiExamsSubjectsRouteWithChildren
@@ -1610,6 +1673,10 @@ export interface FileRouteTypes {
     | '/teachers'
     | '/users'
     | '/api/students'
+    | '/auth/login'
+    | '/auth/logout'
+    | '/auth/me'
+    | '/auth/validate-session'
     | '/website/contact'
     | '/website/gallery'
     | '/website/'
@@ -1661,6 +1728,9 @@ export interface FileRouteTypes {
     | '/api/admission/guardian-suggestions'
     | '/api/admission/students'
     | '/api/auth/$'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/me'
     | '/api/exams/halls'
     | '/api/exams/sessions'
     | '/api/exams/subjects'
@@ -1769,6 +1839,10 @@ export interface FileRouteTypes {
     | '/school'
     | '/users'
     | '/api/students'
+    | '/auth/login'
+    | '/auth/logout'
+    | '/auth/me'
+    | '/auth/validate-session'
     | '/website/contact'
     | '/website/gallery'
     | '/website'
@@ -1818,6 +1892,9 @@ export interface FileRouteTypes {
     | '/api/admission/guardian-suggestions'
     | '/api/admission/students'
     | '/api/auth/$'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/me'
     | '/api/exams/halls'
     | '/api/exams/sessions'
     | '/api/exams/subjects'
@@ -1934,6 +2011,10 @@ export interface FileRouteTypes {
     | '/_authenticated/teachers'
     | '/_authenticated/users'
     | '/api/students'
+    | '/auth/login'
+    | '/auth/logout'
+    | '/auth/me'
+    | '/auth/validate-session'
     | '/website/contact'
     | '/website/gallery'
     | '/website/'
@@ -1985,6 +2066,9 @@ export interface FileRouteTypes {
     | '/api/admission/guardian-suggestions'
     | '/api/admission/students'
     | '/api/auth/$'
+    | '/api/auth/login'
+    | '/api/auth/logout'
+    | '/api/auth/me'
     | '/api/exams/halls'
     | '/api/exams/sessions'
     | '/api/exams/subjects'
@@ -2086,6 +2170,10 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   WebsiteRoute: typeof WebsiteRouteWithChildren
   ApiStudentsRoute: typeof ApiStudentsRouteWithChildren
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthLogoutRoute: typeof AuthLogoutRoute
+  AuthMeRoute: typeof AuthMeRoute
+  AuthValidateSessionRoute: typeof AuthValidateSessionRoute
   ApiAcademicYearsIdRoute: typeof ApiAcademicYearsIdRouteWithChildren
   ApiAcademicYearsBackfillRoute: typeof ApiAcademicYearsBackfillRoute
   ApiAcademicInstitutionsRoute: typeof ApiAcademicInstitutionsRoute
@@ -2095,6 +2183,9 @@ export interface RootRouteChildren {
   ApiAdmissionGuardianSuggestionsRoute: typeof ApiAdmissionGuardianSuggestionsRoute
   ApiAdmissionStudentsRoute: typeof ApiAdmissionStudentsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiExamsHallsRoute: typeof ApiExamsHallsRouteWithChildren
   ApiExamsSessionsRoute: typeof ApiExamsSessionsRouteWithChildren
   ApiExamsSubjectsRoute: typeof ApiExamsSubjectsRouteWithChildren
@@ -2292,6 +2383,34 @@ declare module '@tanstack/react-router' {
       path: '/api/students'
       fullPath: '/api/students'
       preLoaderRoute: typeof ApiStudentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/logout': {
+      id: '/auth/logout'
+      path: '/auth/logout'
+      fullPath: '/auth/logout'
+      preLoaderRoute: typeof AuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/me': {
+      id: '/auth/me'
+      path: '/auth/me'
+      fullPath: '/auth/me'
+      preLoaderRoute: typeof AuthMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/validate-session': {
+      id: '/auth/validate-session'
+      path: '/auth/validate-session'
+      fullPath: '/auth/validate-session'
+      preLoaderRoute: typeof AuthValidateSessionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/website/': {
@@ -2698,6 +2817,27 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/api/auth/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/me': {
+      id: '/api/auth/me'
+      path: '/api/auth/me'
+      fullPath: '/api/auth/me'
+      preLoaderRoute: typeof ApiAuthMeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/exams/halls': {
@@ -3968,6 +4108,10 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   WebsiteRoute: WebsiteRouteWithChildren,
   ApiStudentsRoute: ApiStudentsRouteWithChildren,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthLogoutRoute: AuthLogoutRoute,
+  AuthMeRoute: AuthMeRoute,
+  AuthValidateSessionRoute: AuthValidateSessionRoute,
   ApiAcademicYearsIdRoute: ApiAcademicYearsIdRouteWithChildren,
   ApiAcademicYearsBackfillRoute: ApiAcademicYearsBackfillRoute,
   ApiAcademicInstitutionsRoute: ApiAcademicInstitutionsRoute,
@@ -3977,6 +4121,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdmissionGuardianSuggestionsRoute: ApiAdmissionGuardianSuggestionsRoute,
   ApiAdmissionStudentsRoute: ApiAdmissionStudentsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthMeRoute: ApiAuthMeRoute,
   ApiExamsHallsRoute: ApiExamsHallsRouteWithChildren,
   ApiExamsSessionsRoute: ApiExamsSessionsRouteWithChildren,
   ApiExamsSubjectsRoute: ApiExamsSubjectsRouteWithChildren,

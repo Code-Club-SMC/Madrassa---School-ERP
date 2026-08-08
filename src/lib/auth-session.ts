@@ -93,7 +93,7 @@ export function toAppUser(user: RawAuthUser): User {
     status: user.banned === true ? "inactive" : normalizeStatus(user.status),
     linkedStudentIds: stringArray(user.linkedStudentIds),
     linkedTeacherId: stringValue(user.linkedTeacherId),
-    createdBy: "better-auth",
+    createdBy: "custom",
     createdAt:
       user.createdAt instanceof Date
         ? user.createdAt.toISOString()

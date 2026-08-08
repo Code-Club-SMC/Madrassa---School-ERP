@@ -33,26 +33,26 @@ function WebsiteShell() {
               className="px-3 py-1.5 rounded-md hover:bg-accent flex items-center gap-1.5"
             >
               <Globe className="h-3.5 w-3.5" />
-              {lang === "ur" ? "Home" : "ہوم"}
+              {lang === "ur" ? "ہوم" : "Home"}
             </Link>
             <Link
               to="/website/gallery"
               className="px-3 py-1.5 rounded-md hover:bg-accent flex items-center gap-1.5"
             >
               <ImgIcon className="h-3.5 w-3.5" />
-              {lang === "ur" ? "Gallery" : "گیلری"}
+              {lang === "ur" ? "گیلری" : "Gallery"}
             </Link>
             <Link
               to="/website/contact"
               className="px-3 py-1.5 rounded-md hover:bg-accent flex items-center gap-1.5"
             >
               <Phone className="h-3.5 w-3.5" />
-              {lang === "ur" ? "Contact" : "رابطہ"}
+              {lang === "ur" ? "رابطہ" : "Contact"}
             </Link>
             <Link to="/apply">
               <Button size="sm" className="ms-2 gap-1.5">
                 <FileSignature className="h-3.5 w-3.5" />
-                {lang === "ur" ? "Apply Online" : "آن لائن درخواست دیں"}
+                {lang === "ur" ? "آن لائن درخواست دیں" : "Apply Online"}
               </Button>
             </Link>
           </nav>

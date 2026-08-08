@@ -4,10 +4,10 @@ import { AlertCircle, Loader2, School, UserRound, UsersRound } from "lucide-reac
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { authClient } from "@/lib/auth-client";
-import { toAppUser } from "@/lib/auth-session";
 import { useLanguage } from "@/components/language-context";
 import { DraggableLanguageToggle } from "@/components/app/draggable-language-toggle";
+import { useCustomAuth } from "@/lib/custom-auth-client";
+import { toAppUser } from "@/lib/auth-session";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -28,6 +28,7 @@ const institutionUnits = [
 function LoginPage() {
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
+  const auth = useCustomAuth();
   const { redirect } = Route.useSearch();
   const [mode, setMode] = useState<LoginMode>("staff");
   const [staffEmail, setStaffEmail] = useState("");
@@ -53,30 +54,21 @@ function LoginPage() {
 
     setSubmitting(true);
     try {
-      const result =
-        mode === "staff"
-          ? await authClient.signIn.email({ email: identifier, password })
-          : await authClient.signIn.username({ username: identifier, password });
+      const user = await auth.login({
+        email: identifier.toLowerCase(),
+        password,
+      });
 
-      if (result.error) {
-        setError(
-          result.error.message ??
-            (lang === "ur" ? "لاگ اِن معلومات درست نہیں ہیں" : "Invalid login credentials"),
-        );
-        return;
-      }
-
-      const signedInUser = result.data?.user ?? null;
-      const role = signedInUser ? toAppUser(signedInUser).role : undefined;
+      const role = user.role;
 
       if (mode === "parent" && role !== "parent") {
-        await authClient.signOut();
+        await auth.logout();
         setError(lang === "ur" ? "یہ والدین کا اکاؤنٹ نہیں ہے" : "This is not a parent account");
         return;
       }
 
       if (mode === "staff" && role === "parent") {
-        await authClient.signOut();
+        await auth.logout();
         setError(
           lang === "ur"
             ? "والدین کے لیے والدین والا لاگ اِن استعمال کریں"
@@ -85,10 +77,18 @@ function LoginPage() {
         return;
       }
 
+      window.location.href = redirect ?? (role === "parent" ? "/parents" : "/dashboard");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : lang === "ur"
+            ? "لاگ اِن نہیں ہو سکا، دوبارہ کوشش کریں"
+            : "Login failed, please try again",
+      );
+    } finally {
       setSubmitting(false);
-      setTimeout(() => {
-        window.location.href = redirect ?? (role === "parent" ? "/parents" : "/dashboard");
-      }, 50);
+    }
   };
 
   return (

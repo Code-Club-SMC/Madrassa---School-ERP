@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-context";
 import {
   MODULE_REGISTRY,
   ACTION_META,
@@ -166,9 +167,10 @@ export function PermissionMatrix({ value, onChange, readOnly }: Props) {
 }
 
 export function PermissionSummary({ value }: { value: UserPermissions }) {
+  const { lang } = useLanguage();
   const accessible = MODULE_REGISTRY.filter((m) => value[m.key]?.view === true);
   if (accessible.length === 0) {
-    return <p className="text-sm text-muted-foreground italic">No module access granted · کوئی رسائی نہیں</p>;
+    return <p className="text-sm text-muted-foreground italic">{lang === "ur" ? "کوئی رسائی نہیں" : "No module access granted"}</p>;
   }
   return (
     <div className="flex flex-wrap gap-1.5">

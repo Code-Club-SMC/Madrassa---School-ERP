@@ -1,13 +1,11 @@
 import { redirect } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
 import { hasAnyRole, staffRoles, toAppUser } from "@/lib/auth-session";
 import { navItems } from "@/lib/nav-config";
-import type { AuthSession } from "@/lib/auth";
 import type { User, UserRole } from "@/types";
 
 export type AuthRouteContext = {
   auth: {
-    session: AuthSession["session"];
+    session: Record<string, unknown>;
     user: User;
   };
 };
@@ -18,29 +16,6 @@ type GuardContext = {
     pathname: string;
   };
 };
-
-const getAuthSession = createServerFn({ method: "GET" }).handler(async () => {
-  const [{ getRequest }, { auth }] = await Promise.all([
-    import("@tanstack/react-start/server"),
-    import("@/lib/auth"),
-  ]);
-
-  const request = getRequest();
-  const cookieHeader = request.headers.get("cookie");
-  console.log("[route-guards] cookie header:", cookieHeader);
-  console.log("[route-guards] headers:", Object.fromEntries(request.headers.entries()));
-
-  const session = await auth.api.getSession({
-    headers: request.headers,
-  });
-
-  console.log("[route-guards] session user:", session?.user?.email ?? null);
-  return session;
-});
-
-export async function getCurrentAuthSession(): Promise<AuthSession | null> {
-  return getAuthSession();
-}
 
 function bestNavMatch(pathname: string) {
   return navItems
@@ -64,16 +39,19 @@ function assertParentPathAccess(pathname: string, user: User) {
 }
 
 export async function requireAuth({ location }: GuardContext): Promise<AuthRouteContext> {
-  const session = await getCurrentAuthSession();
+  const res = await fetch("/auth/validate-session", {
+    headers: { Accept: "application/json" },
+  });
+  const data = (await res.json().catch(() => ({ user: null }))) as { user: null | Record<string, unknown> };
 
-  if (!session?.user || !session.session) {
+  if (!data.user) {
     throw redirect({
       to: "/login",
       search: { redirect: location.href },
     });
   }
 
-  const user = toAppUser(session.user);
+  const user = toAppUser(data.user);
 
   if (!hasAnyRole(user, [...staffRoles, "parent"])) {
     throw redirect({ to: "/login", search: { redirect: undefined } });
@@ -84,7 +62,7 @@ export async function requireAuth({ location }: GuardContext): Promise<AuthRoute
 
   return {
     auth: {
-      session: session.session,
+      session: { user: data.user } as Record<string, unknown>,
       user,
     },
   };

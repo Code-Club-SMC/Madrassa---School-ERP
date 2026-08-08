@@ -20,6 +20,19 @@ import { Home, RefreshCw } from "lucide-react";
 type RootContext = {
   queryClient: QueryClient;
   initialLang?: "ur" | "en";
+  authUser?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    nameUrdu?: string;
+    phone?: string;
+    cnic?: string;
+    systemAccess?: string;
+    mustChangePassword?: boolean;
+    department?: string;
+    designation?: string;
+  };
 };
 
 function parseLangFromCookie(cookie: string | null): "ur" | "en" {
@@ -106,7 +119,26 @@ export const Route = createRootRouteWithContext<RootContext>()({
   beforeLoad: async (ctx: any) => {
     const cookie = typeof ctx?.request?.headers?.get === 'function' ? ctx.request.headers.get("cookie") : null;
     const initialLang = parseLangFromCookie(cookie);
-    return { initialLang };
+
+    let authUser: RootContext["authUser"];
+    if (cookie) {
+      const cookies = cookie.split("; ").reduce((acc: Record<string, string>, c: string) => {
+        const [key, ...rest] = c.split("=");
+        acc[key] = rest.join("=");
+        return acc;
+      }, {} as Record<string, string>);
+      const token = cookies["msmis_auth_token"];
+      if (token) {
+        try {
+          const decoded = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
+          if (decoded.exp && Date.now() < decoded.exp) {
+            authUser = decoded;
+          }
+        } catch {}
+      }
+    }
+
+    return { initialLang, authUser };
   },
   head: () => ({
     meta: [
@@ -155,8 +187,12 @@ export const Route = createRootRouteWithContext<RootContext>()({
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {
+  const { initialLang } = Route.useRouteContext();
+  const dir = initialLang === "en" ? "ltr" : "rtl";
+  const lang = initialLang === "en" ? "en" : "ur";
+
   return (
-    <html lang="ur" dir="rtl">
+    <html lang={lang} dir={dir}>
       <head>
         <HeadContent />
       </head>

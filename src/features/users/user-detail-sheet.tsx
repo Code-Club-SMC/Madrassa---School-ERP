@@ -65,12 +65,18 @@ export function UserDetailSheet({ user, onClose }: Props) {
   );
 }
 
+import { useLanguage } from "@/components/language-context";
+
 function Row({ urdu, en, value }: { urdu: string; en: string; value: string }) {
+  const { lang } = useLanguage();
   return (
     <div className="flex items-start justify-between gap-4 px-4 py-3">
       <div className="min-w-0">
-        <p className="font-urdu text-sm leading-loose" dir="rtl" lang="ur">{urdu}</p>
-        <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{en}</p>
+        {lang === "ur" ? (
+          <p className="font-urdu text-sm leading-loose" dir="rtl" lang="ur">{urdu}</p>
+        ) : (
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{en}</p>
+        )}
       </div>
       <p className="text-sm font-medium text-end break-all">{value}</p>
     </div>

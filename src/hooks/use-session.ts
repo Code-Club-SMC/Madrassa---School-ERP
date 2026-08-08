@@ -1,7 +1,7 @@
-import { useCallback } from "react";
-import { authClient } from "@/lib/auth-client";
+import { useCallback, useEffect, useState } from "react";
 import { hasAnyRole, toAppUser } from "@/lib/auth-session";
-import type { User } from "@/types";
+import type { User, UserRole } from "@/types";
+import { useCustomAuth } from "@/lib/custom-auth-client";
 
 type SessionState = {
   user: User | null;
@@ -9,23 +9,29 @@ type SessionState = {
 };
 
 export function useSession() {
-  const session = authClient.useSession();
-  const user = session.data?.user ? toAppUser(session.data.user) : null;
-  const state: SessionState = { user, isLoading: session.isPending };
+  const { getUser, logout } = useCustomAuth();
+  const [state, setState] = useState<SessionState>({ user: null, isLoading: true });
+
+  useEffect(() => {
+    let cancelled = false;
+    getUser().then((user) => {
+      if (!cancelled) setState({ user, isLoading: false });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [getUser]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const result = await authClient.signIn.email({ email, password });
-    return !result.error;
-  }, []);
-
-  const logout = useCallback(async () => {
-    await authClient.signOut();
+    const user = await useCustomAuth().login({ email, password });
+    setState({ user, isLoading: false });
+    return true;
   }, []);
 
   const hasRole = useCallback(
-    (...roles: User["role"][]) => hasAnyRole(state.user, roles),
+    (...roles: User["role"][]) => Boolean(state.user && roles.includes(state.user.role)),
     [state.user],
   );
 
-  return { ...state, login, logout, hasRole, refetch: session.refetch, session: session.data };
+  return { ...state, login, logout, hasRole };
 }

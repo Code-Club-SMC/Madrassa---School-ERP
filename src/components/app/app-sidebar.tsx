@@ -48,6 +48,7 @@ export function AppSidebar() {
   const schoolNav = visibleFor(role, "school");
   const sharedNav = visibleFor(role, "shared");
   const adminNav = visibleFor(role, "admin");
+  const sidebarSide = lang === "en" ? "left" : "right";
 
   const allUrls = [...globalNav, ...madrassaNav, ...schoolNav, ...sharedNav, ...adminNav].map(
     (i) => i.url,
@@ -75,12 +76,15 @@ export function AppSidebar() {
           <item.icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
           {!collapsed && (
             <div className="flex flex-col leading-tight gap-1 min-w-0">
-              <span className="font-urdu text-[16px] leading-tight truncate" dir="rtl" lang="ur">
-                {item.ur}
-              </span>
-              <span className="text-[10.5px] uppercase tracking-wide text-sidebar-foreground/60 truncate">
-                {item.en}
-              </span>
+              {lang === "ur" ? (
+                <span className="font-urdu text-[16px] leading-tight truncate" dir="rtl" lang="ur">
+                  {item.ur}
+                </span>
+              ) : (
+                <span className="text-[11px] uppercase tracking-wide text-sidebar-foreground/60 truncate">
+                  {item.en}
+                </span>
+              )}
             </div>
           )}
         </Link>
@@ -89,7 +93,7 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar collapsible="icon" side="right">
+    <Sidebar collapsible="icon" side={sidebarSide}>
       <SidebarHeader className="border-b border-sidebar-border py-3">
         <div className="flex items-center gap-3 px-1 py-1">
           <div className="h-10 w-10 rounded-xl bg-sidebar-primary/15 border border-sidebar-primary/30 flex items-center justify-center shrink-0">
@@ -97,12 +101,15 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="font-urdu text-base leading-tight" dir="rtl" lang="ur">
-                ایم ایس ایم آئی ایس
-              </p>
-              <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/55 truncate">
-                MSMIS · Management
-              </p>
+              {lang === "ur" ? (
+                <p className="font-urdu text-base leading-tight" dir="rtl" lang="ur">
+                  ایم ایس ایم آئی ایس
+                </p>
+              ) : (
+                <p className="text-[10px] uppercase tracking-widest text-sidebar-foreground/55 truncate">
+                  MSMIS · Management
+                </p>
+              )}
             </div>
           )}
         </div>

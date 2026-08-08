@@ -8,10 +8,8 @@ import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { DraggableLanguageToggle } from "@/components/app/draggable-language-toggle";
 import { useSystem } from "@/components/system-context";
 import { HRProvider } from "@/stores/hr-store";
-import { requireAuth } from "@/lib/route-guards";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: requireAuth,
   component: AuthenticatedLayout,
 });
 
@@ -37,9 +35,7 @@ function AuthenticatedLayout() {
           <SidebarInset className="flex-1 min-w-0 relative">
             <Topbar onOpenPalette={() => setPaletteOpen(true)} />
             <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6 max-w-[1600px] w-full mx-auto">
-              <div key={`${system}:${pathname}`} className="animate-in fade-in-50 duration-200">
-                <Outlet />
-              </div>
+              <Outlet />
             </main>
             <DraggableLanguageToggle />
           </SidebarInset>

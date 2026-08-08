@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { generateSecurePassword } from "@/lib/generate-password";
 import { ROLE_DEFAULTS, type DefaultableRole } from "@/lib/permissions/role-defaults";
 import { countCustomizations, totalGrantedActions } from "@/lib/permissions/utils";
+import { useLanguage } from "@/components/language-context";
 import type { UserPermissions } from "@/lib/permissions/module-registry";
 import { PermissionMatrix, PermissionSummary } from "./permission-matrix";
 import type { User, UserRole } from "@/types";
@@ -50,6 +51,7 @@ const ROLE_OPTIONS: { value: StepperRole; urdu: string; english: string; tagline
 
 export function CreateUserStepper({ open, onOpenChange, mode = "create", initial, prefill, onCreate, onUpdate }: Props) {
   const isEdit = mode === "edit" && !!initial;
+  const { lang } = useLanguage();
 
   // Step 1
   const [nameUrdu, setNameUrdu] = useState(initial?.nameUrdu ?? prefill?.nameUrdu ?? "");
@@ -104,8 +106,8 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
 
   function next() {
     if (step === 1) {
-      if (!nameUrdu.trim()) return toast.error("نام (اردو) درج کریں · Enter Urdu name");
-      if (!email.trim() || !/.+@.+\..+/.test(email)) return toast.error("درست ای میل درج کریں · Enter valid email");
+      if (!nameUrdu.trim()) return toast.error(lang === "ur" ? "نام (اردو) درج کریں" : "Enter Urdu name");
+      if (!email.trim() || !/.+@.+\..+/.test(email)) return toast.error(lang === "ur" ? "درست ای میل درج کریں" : "Enter valid email");
     }
     const nextIdx = Math.min(stepIdx + 1, stepOrder.length - 1);
     setStep(stepOrder[nextIdx]);
@@ -132,7 +134,7 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
           permissions: isParent ? {} : permissions,
         };
         await onUpdate?.(updated);
-        toast.success("تبدیلیاں محفوظ ہو گئیں · Changes saved");
+        toast.success(lang === "ur" ? "تبدیلیاں محفوظ ہو گئیں" : "Changes saved");
       } else {
         const username = email.split("@")[0];
         const created: User & { _password: string } = {
@@ -257,13 +259,16 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
                     <Button type="button" size="icon" variant="outline" onClick={() => setRevealPwd((v) => !v)} aria-label="Show/hide">
                       {revealPwd ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </Button>
-                    <Button type="button" size="icon" variant="outline" onClick={() => { navigator.clipboard?.writeText(password); toast.success("کاپی ہو گیا · Copied"); }} aria-label="Copy">
+                    <Button type="button" size="icon" variant="outline" onClick={() => { navigator.clipboard?.writeText(password); toast.success(lang === "ur" ? "کاپی ہو گیا" : "Copied"); }} aria-label="Copy">
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-2">
-                    <span className="font-urdu" dir="rtl" lang="ur">یہ پاس ورڈ صرف ایک بار دکھایا جائے گا</span>
-                    {" · "}This password is shown only once — save it before proceeding.
+                    {lang === "ur" ? (
+                      <span className="font-urdu" dir="rtl" lang="ur">یہ پاس ورڈ صرف ایک بار دکھایا جائے گا</span>
+                    ) : (
+                      "This password is shown only once — save it before proceeding."
+                    )}
                   </p>
                 </div>
               )}
@@ -294,8 +299,11 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
                       )}
                     >
                       <Icon className={cn("h-6 w-6 mb-2", active ? "text-primary" : "text-muted-foreground")} />
-                      <p className="font-urdu text-base font-bold leading-loose" dir="rtl" lang="ur">{opt.urdu}</p>
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground mt-0.5">{opt.english}</p>
+                      {lang === "ur" ? (
+                        <p className="font-urdu text-base font-bold leading-loose" dir="rtl" lang="ur">{opt.urdu}</p>
+                      ) : (
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground mt-0.5">{opt.english}</p>
+                      )}
                       <p className="text-xs text-muted-foreground mt-2 leading-snug">{opt.tagline}</p>
                     </button>
                   );
@@ -316,12 +324,15 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
                           systemAccess === v ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40",
                         )}
                       >
+                      {lang === "ur" ? (
                         <span className="font-urdu" dir="rtl" lang="ur">
                           {v === "madrassa" ? "مدرسہ" : v === "school" ? "اسکول" : "دونوں"}
                         </span>
+                      ) : (
                         <span className="ms-2 text-xs text-muted-foreground">
                           {v === "madrassa" ? "Madrassa" : v === "school" ? "School" : "Both"}
                         </span>
+                      )}
                       </button>
                     ))}
                   </div>
@@ -331,8 +342,12 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
               <div className="rounded-xl border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="font-urdu text-sm font-medium leading-loose" dir="rtl" lang="ur">پہلے لاگ ان پر پاس ورڈ تبدیل کریں</Label>
-                    <p className="text-[11px] text-muted-foreground">Require password change on first login</p>
+                    <Label className="font-urdu text-sm font-medium leading-loose" dir="rtl" lang="ur">
+                      {lang === "ur" ? "پہلے لاگ ان پر پاس ورڈ تبدیل کریں" : "Require password change on first login"}
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      {lang === "ur" ? "پہلی بار لاگ ان کرنے پر پاس ورڈ تبدیل کرنے کی ضرورت" : "Require password change on first login"}
+                    </p>
                   </div>
                   <Switch checked={mustChange} onCheckedChange={setMustChange} />
                 </div>
@@ -346,7 +361,7 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
                 <div>
                   <h3 className="font-urdu text-lg font-bold leading-loose" dir="rtl" lang="ur">اجازتیں</h3>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">
-                    Permissions · Role defaults pre-loaded for {role}
+                    {lang === "ur" ? `اجازتیں · کردار کے لیے پہلے سے لوڈ ہیں ${role}` : `Permissions · Role defaults pre-loaded for ${role}`}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 items-center">

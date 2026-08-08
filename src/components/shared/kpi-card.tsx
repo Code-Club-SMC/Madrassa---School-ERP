@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-context";
 
 type Props = {
   icon: LucideIcon;
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export function KpiCard({ icon: Icon, value, label, labelUrdu, subline, trend, sparkline, tone = "default" }: Props) {
+  const { lang } = useLanguage();
   return (
     <Card className="p-6 border-border/70 hover:shadow-sm transition-shadow">
       <div className="flex items-start gap-4">
@@ -23,8 +25,11 @@ export function KpiCard({ icon: Icon, value, label, labelUrdu, subline, trend, s
         </div>
         <div className="min-w-0 flex-1">
           <p className={cn("font-heading text-3xl font-bold tracking-tight tabular-nums", tone === "destructive" && "text-destructive")}>{value}</p>
-          <p dir="rtl" lang="ur" className="font-urdu text-base text-foreground leading-tight mt-1 truncate">{labelUrdu}</p>
-          <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground truncate">{label}</p>
+          {lang === "ur" ? (
+            <p dir="rtl" lang="ur" className="font-urdu text-base text-foreground leading-tight mt-1 truncate">{labelUrdu}</p>
+          ) : (
+            <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground truncate">{label}</p>
+          )}
           {subline && <p className="text-[11px] text-muted-foreground mt-1">{subline}</p>}
           {trend && (
             <p

@@ -109,12 +109,12 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
               {lang === "ur" ? "فعال نظام" : "Active system"}
             </DropdownMenuLabel>
             <DropdownMenuItem onClick={() => setSystem("madrassa")}>
-              🕌 <span className="font-urdu ms-2">{lang === "ur" ? "مدرسہ" : "مدرسہ"}</span>
-              <span className="ms-auto text-[10px] text-muted-foreground">Madrassa</span>
+              🕌 <span className="font-urdu ms-2">{lang === "ur" ? "مدرسہ" : "Madrassa"}</span>
+              <span className="ms-auto text-[10px] text-muted-foreground">{lang === "ur" ? "مدرسہ" : "Madrassa"}</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setSystem("school")}>
-              🏫 <span className="font-urdu ms-2">{lang === "ur" ? "اسکول" : "اسکول"}</span>
-              <span className="ms-auto text-[10px] text-muted-foreground">School</span>
+              🏫 <span className="font-urdu ms-2">{lang === "ur" ? "اسکول" : "School"}</span>
+              <span className="ms-auto text-[10px] text-muted-foreground">{lang === "ur" ? "اسکول" : "School"}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -131,7 +131,7 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72">
             <DropdownMenuLabel className="flex items-center justify-between">
-              <span>{lang === "ur" ? "اعلانات · Notifications" : "Notifications · اعلانات"}</span>
+              <span>{lang === "ur" ? "اعلانات" : "Notifications"}</span>
               <Link
                 to="/notifications"
                 className="text-[10px] text-muted-foreground hover:text-foreground"
@@ -147,7 +147,7 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
             ].map((n, i) => (
               <DropdownMenuItem key={i} className="flex-col items-start gap-0.5">
                 <span className={cn("text-xs", n.tone)}>{lang === "ur" ? n.u : n.t}</span>
-                <span className="font-urdu text-sm text-muted-foreground">{n.u}</span>
+                <span className="font-urdu text-sm text-muted-foreground">{lang === "ur" ? n.u : n.t}</span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
