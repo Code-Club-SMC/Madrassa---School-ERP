@@ -23,9 +23,17 @@ import { UserDetailSheet } from "@/features/users/user-detail-sheet";
 import { generateSecurePassword } from "@/lib/generate-password";
 import { Users2 } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
-import { authClient } from "@/lib/auth-client";
 import { requireRoles } from "@/lib/route-guards";
-import { toAppUser, type RawAuthUser } from "@/lib/auth-session";
+import { toAppUser } from "@/lib/auth-session";
+
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, { credentials: "include", ...init });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as any).error ?? "Request failed");
+  }
+  return res.json() as Promise<T>;
+}
 
 export const Route = createFileRoute("/_authenticated/users")({
   beforeLoad: requireRoles(["super_admin"]),
@@ -114,23 +122,18 @@ function UsersPage() {
     let active = true;
     setLoadingUsers(true);
 
-    authClient.admin.listUsers({
-      query: {
-        limit: 100,
-        offset: 0,
-        sortBy: "createdAt",
-        sortDirection: "desc",
-      },
-    }).then((result) => {
-      if (!active) return;
-      if (result.error) {
-        toast.error(authErrorMessage(result.error, "Could not load users from Better Auth"));
-        return;
-      }
-      setList((result.data?.users ?? []).map((user) => toAppUser(user as unknown as RawAuthUser)));
-    }).finally(() => {
-      if (active) setLoadingUsers(false);
-    });
+    api<{ users: User[] }>("/api/users")
+      .then((result) => {
+        if (!active) return;
+        setList(result.users);
+      })
+      .catch((error) => {
+        if (!active) return;
+        toast.error(error.message ?? "Could not load users");
+      })
+      .finally(() => {
+        if (active) setLoadingUsers(false);
+      });
 
     return () => {
       active = false;
@@ -144,35 +147,33 @@ function UsersPage() {
       throw new Error("Super admin creation is not allowed from user management");
     }
 
-    const result = await authClient.admin.createUser({
-      email: user.email,
-      password: _password,
-      name: user.name,
-      role: user.role,
-      data: authUserData(user),
-    });
-    assertAuthResult(result, "Could not create user");
+    try {
+      const result = await api<{ user: User }>("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...user,
+          password: _password,
+        }),
+      });
 
-    const authUser = result.data?.user;
-    const savedUser: User = {
-      ...user,
-      id: authUser?.id ?? user.id,
-      createdAt:
-        authUser?.createdAt instanceof Date
-          ? authUser.createdAt.toISOString()
-          : typeof authUser?.createdAt === "string"
-            ? authUser.createdAt
-            : user.createdAt,
-    };
+      const savedUser: User = {
+        ...user,
+        id: result.user.id,
+        createdAt: result.user.createdAt ?? user.createdAt,
+      };
 
-    setList((l) => [savedUser, ...l]);
-    setCreds({
-      nameUrdu: savedUser.nameUrdu ?? savedUser.name,
-      nameEnglish: savedUser.name,
-      email: savedUser.email,
-      role: savedUser.role,
-      password: _password,
-    });
+      setList((l) => [savedUser, ...l]);
+      setCreds({
+        nameUrdu: savedUser.nameUrdu ?? savedUser.name,
+        nameEnglish: savedUser.name,
+        email: savedUser.email,
+        role: savedUser.role,
+        password: _password,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create user");
+    }
   }
 
   async function handleUpdate(u: User) {
@@ -182,22 +183,18 @@ function UsersPage() {
       throw new Error("Super admin updates are not allowed from user management");
     }
 
-    if (previous?.role !== u.role) {
-      const roleResult = await authClient.admin.setRole({
-        userId: u.id,
-        role: u.role,
+    try {
+      await api(`/api/users/${u.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(u),
       });
-      assertAuthResult(roleResult, "Could not update user role");
+
+      setList((l) => l.map((x) => (x.id === u.id ? u : x)));
+      setEditUser(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update user");
     }
-
-    const result = await authClient.admin.updateUser({
-      userId: u.id,
-      data: authUserData(u),
-    });
-    assertAuthResult(result, "Could not update user");
-
-    setList((l) => l.map((x) => (x.id === u.id ? u : x)));
-    setEditUser(null);
   }
 
   async function handleDeactivate(u: User) {
@@ -208,16 +205,11 @@ function UsersPage() {
 
     const nextStatus = u.status === "active" ? "inactive" : "active";
     try {
-      const statusResult = nextStatus === "active"
-        ? await authClient.admin.unbanUser({ userId: u.id })
-        : await authClient.admin.banUser({ userId: u.id, banReason: "Disabled by Super Admin" });
-      assertAuthResult(statusResult, nextStatus === "active" ? "Could not activate user" : "Could not deactivate user");
-
-      const result = await authClient.admin.updateUser({
-        userId: u.id,
-        data: { status: nextStatus },
+      await api(`/api/users/${u.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
       });
-      assertAuthResult(result, "Could not update user status");
 
       setList((l) => l.map((x) => (x.id === u.id ? { ...x, status: nextStatus } : x)));
       toast.success(nextStatus === "active" ? "اکاؤنٹ فعال ہو گیا · Activated" : "اکاؤنٹ غیر فعال ہو گیا · Deactivated");
@@ -234,30 +226,22 @@ function UsersPage() {
 
     const pwd = generateSecurePassword();
     try {
-      const passwordResult = await authClient.admin.setUserPassword({
-        userId: resetUser.id,
-        newPassword: pwd,
+      await api(`/api/users/${resetUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwd, mustChangePassword: true }),
       });
-      assertAuthResult(passwordResult, "Could not reset password");
 
-      const result = await authClient.admin.updateUser({
-        userId: resetUser.id,
-        data: { mustChangePassword: true },
+      setList((l) => l.map((x) => (x.id === resetUser.id ? { ...x, mustChangePassword: true } : x)));
+      setCreds({
+        nameUrdu: resetUser.nameUrdu ?? resetUser.name,
+        nameEnglish: resetUser.name,
+        email: resetUser.email,
+        role: resetUser.role,
+        password: pwd,
       });
-      assertAuthResult(result, "Could not mark password for change");
-    } catch {
-      return;
-    }
-
-    setList((l) => l.map((x) => (x.id === resetUser.id ? { ...x, mustChangePassword: true } : x)));
-    setCreds({
-      nameUrdu: resetUser.nameUrdu ?? resetUser.name,
-      nameEnglish: resetUser.name,
-      email: resetUser.email,
-      role: resetUser.role,
-      password: pwd,
-    });
-    setResetUser(null);
+      setResetUser(null);
+    } catch {}
   }
 
   async function confirmDelete() {
@@ -270,8 +254,7 @@ function UsersPage() {
     }
 
     try {
-      const result = await authClient.admin.removeUser({ userId: deleteUser.id });
-      assertAuthResult(result, "Could not delete user");
+      await api(`/api/users/${deleteUser.id}`, { method: "DELETE" });
       setList((l) => l.filter((x) => x.id !== deleteUser.id));
       toast.success("صارف حذف کر دیا گیا · User deleted");
       setDeleteUser(null);
