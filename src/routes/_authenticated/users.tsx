@@ -40,35 +40,6 @@ export const Route = createFileRoute("/_authenticated/users")({
   component: UsersPage,
 });
 
-function authErrorMessage(error: { message?: string } | null | undefined, fallback: string) {
-  return error?.message ?? fallback;
-}
-
-function assertAuthResult(result: { error?: { message?: string } | null }, fallback: string) {
-  if (!result.error) return;
-  const message = authErrorMessage(result.error, fallback);
-  toast.error(message);
-  throw new Error(message);
-}
-
-function authUserData(user: User) {
-  return {
-    name: user.name,
-    email: user.email,
-    nameUrdu: user.nameUrdu,
-    phone: user.phone,
-    cnic: user.cnic,
-    status: user.status,
-    systemAccess: user.systemAccess ?? "both",
-    mustChangePassword: user.mustChangePassword ?? true,
-    linkedTeacherId: user.linkedTeacherId,
-    linkedStudentIds: user.linkedStudentIds,
-    permissions: user.permissions,
-    department: user.department,
-    designation: user.designation,
-  };
-}
-
 function UsersPage() {
   const { user: currentUser, isLoading: sessionLoading } = useSession();
   const [list, setList] = useState<User[]>(seedUsers);

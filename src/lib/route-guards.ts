@@ -15,6 +15,21 @@ type GuardContext = {
     href: string;
     pathname: string;
   };
+  context: {
+    authUser?: {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      nameUrdu?: string;
+      phone?: string;
+      cnic?: string;
+      systemAccess?: string;
+      mustChangePassword?: boolean;
+      department?: string;
+      designation?: string;
+    };
+  };
 };
 
 function bestNavMatch(pathname: string) {
@@ -38,20 +53,17 @@ function assertParentPathAccess(pathname: string, user: User) {
   }
 }
 
-export async function requireAuth({ location }: GuardContext): Promise<AuthRouteContext> {
-  const res = await fetch("/auth/validate-session", {
-    headers: { Accept: "application/json" },
-  });
-  const data = (await res.json().catch(() => ({ user: null }))) as { user: null | Record<string, unknown> };
+export async function requireAuth({ location, context }: GuardContext): Promise<AuthRouteContext> {
+  const authUser = context.authUser ?? null;
 
-  if (!data.user) {
+  if (!authUser) {
     throw redirect({
       to: "/login",
       search: { redirect: location.href },
     });
   }
 
-  const user = toAppUser(data.user);
+  const user = toAppUser(authUser);
 
   if (!hasAnyRole(user, [...staffRoles, "parent"])) {
     throw redirect({ to: "/login", search: { redirect: undefined } });
@@ -62,7 +74,7 @@ export async function requireAuth({ location }: GuardContext): Promise<AuthRoute
 
   return {
     auth: {
-      session: { user: data.user } as Record<string, unknown>,
+      session: { user: authUser } as Record<string, unknown>,
       user,
     },
   };

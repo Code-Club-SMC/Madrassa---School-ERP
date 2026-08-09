@@ -1,0 +1,14 @@
+node_modules
+.git
+.github
+.env
+.env.*
+!.env.example
+dist
+.output
+.vercel
+.wrangler
+coverage
+*.log
+.DS_Store
+Thumbs.db
