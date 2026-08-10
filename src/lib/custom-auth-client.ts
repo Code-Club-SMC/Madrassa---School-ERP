@@ -14,6 +14,7 @@ export function useCustomAuth() {
     try {
       const res = await fetch("/auth/me", {
         headers: { Accept: "application/json" },
+        credentials: "include",
       });
       const data = await res.json();
       if (!data.user) return null;

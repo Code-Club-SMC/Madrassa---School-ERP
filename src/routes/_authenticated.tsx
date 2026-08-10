@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState, redirect } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { Topbar } from "@/components/app/topbar";
@@ -10,6 +10,14 @@ import { useSystem } from "@/components/system-context";
 import { HRProvider } from "@/stores/hr-store";
 
 export const Route = createFileRoute("/_authenticated")({
+  beforeLoad: ({ context }) => {
+    if (!context.authUser) {
+      throw redirect({
+        to: "/login",
+        search: { redirect: undefined },
+      });
+    }
+  },
   component: AuthenticatedLayout,
 });
 

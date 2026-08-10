@@ -108,6 +108,7 @@ import { Route as ApiStudentsIdRouteImport } from './routes/api/students/$id'
 import { Route as ApiTeachersIndexRouteImport } from './routes/api/teachers/index'
 import { Route as ApiTeachersIdRouteImport } from './routes/api/teachers/$id'
 import { Route as ApiUsersIndexRouteImport } from './routes/api/users/index'
+import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
 import { Route as AuthenticatedMadrassaExamsIndexRouteImport } from './routes/_authenticated/madrassa/exams/index'
 import { Route as AuthenticatedMadrassaExamsBoardRouteImport } from './routes/_authenticated/madrassa/exams/board'
 import { Route as AuthenticatedSchoolExamsIndexRouteImport } from './routes/_authenticated/school/exams/index'
@@ -716,6 +717,11 @@ const ApiUsersIndexRoute = ApiUsersIndexRouteImport.update({
   path: '/api/users/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUsersIdRoute = ApiUsersIdRouteImport.update({
+  id: '/api/users/$id',
+  path: '/api/users/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedMadrassaExamsIndexRoute =
   AuthenticatedMadrassaExamsIndexRouteImport.update({
     id: '/',
@@ -1207,6 +1213,7 @@ export interface FileRoutesByFullPath {
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
   '/api/students/$id': typeof ApiStudentsIdRouteWithChildren
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
+  '/api/users/$id': typeof ApiUsersIdRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/finance/': typeof AuthenticatedFinanceIndexRoute
   '/hr/': typeof AuthenticatedHrIndexRoute
@@ -1368,6 +1375,7 @@ export interface FileRoutesByTo {
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
   '/api/students/$id': typeof ApiStudentsIdRouteWithChildren
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
+  '/api/users/$id': typeof ApiUsersIdRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
   '/finance': typeof AuthenticatedFinanceIndexRoute
   '/hr': typeof AuthenticatedHrIndexRoute
@@ -1540,6 +1548,7 @@ export interface FileRoutesById {
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
   '/api/students/$id': typeof ApiStudentsIdRouteWithChildren
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
+  '/api/users/$id': typeof ApiUsersIdRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/_authenticated/finance/': typeof AuthenticatedFinanceIndexRoute
   '/_authenticated/hr/': typeof AuthenticatedHrIndexRoute
@@ -1712,6 +1721,7 @@ export interface FileRouteTypes {
     | '/api/setup/super-admin'
     | '/api/students/$id'
     | '/api/teachers/$id'
+    | '/api/users/$id'
     | '/admission/'
     | '/finance/'
     | '/hr/'
@@ -1873,6 +1883,7 @@ export interface FileRouteTypes {
     | '/api/setup/super-admin'
     | '/api/students/$id'
     | '/api/teachers/$id'
+    | '/api/users/$id'
     | '/admission'
     | '/finance'
     | '/hr'
@@ -2044,6 +2055,7 @@ export interface FileRouteTypes {
     | '/api/setup/super-admin'
     | '/api/students/$id'
     | '/api/teachers/$id'
+    | '/api/users/$id'
     | '/_authenticated/admission/'
     | '/_authenticated/finance/'
     | '/_authenticated/hr/'
@@ -2157,6 +2169,7 @@ export interface RootRouteChildren {
   ApiPromotionsRulesRoute: typeof ApiPromotionsRulesRoute
   ApiSetupSuperAdminRoute: typeof ApiSetupSuperAdminRouteWithChildren
   ApiTeachersIdRoute: typeof ApiTeachersIdRouteWithChildren
+  ApiUsersIdRoute: typeof ApiUsersIdRoute
   ApiAcademicYearsIndexRoute: typeof ApiAcademicYearsIndexRoute
   ApiNotificationsIndexRoute: typeof ApiNotificationsIndexRoute
   ApiTeachersIndexRoute: typeof ApiTeachersIndexRoute
@@ -2876,6 +2889,13 @@ declare module '@tanstack/react-router' {
       path: '/api/users'
       fullPath: '/api/users/'
       preLoaderRoute: typeof ApiUsersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/users/$id': {
+      id: '/api/users/$id'
+      path: '/api/users/$id'
+      fullPath: '/api/users/$id'
+      preLoaderRoute: typeof ApiUsersIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/madrassa/exams/': {
@@ -4071,6 +4091,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPromotionsRulesRoute: ApiPromotionsRulesRoute,
   ApiSetupSuperAdminRoute: ApiSetupSuperAdminRouteWithChildren,
   ApiTeachersIdRoute: ApiTeachersIdRouteWithChildren,
+  ApiUsersIdRoute: ApiUsersIdRoute,
   ApiAcademicYearsIndexRoute: ApiAcademicYearsIndexRoute,
   ApiNotificationsIndexRoute: ApiNotificationsIndexRoute,
   ApiTeachersIndexRoute: ApiTeachersIndexRoute,

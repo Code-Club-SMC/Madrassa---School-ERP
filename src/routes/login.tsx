@@ -77,7 +77,7 @@ function LoginPage() {
         return;
       }
 
-      window.location.href = redirect ?? (role === "parent" ? "/parents" : "/dashboard");
+      navigate({ to: redirect ?? (role === "parent" ? "/parents" : "/dashboard") });
     } catch (err) {
       setError(
         err instanceof Error

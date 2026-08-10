@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { user, account } from "@/db/schema/auth";
-import { desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { z } from "zod";
 import { createFileRoute } from "@tanstack/react-router";
 import bcrypt from "bcryptjs";

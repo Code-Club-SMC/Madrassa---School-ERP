@@ -41,6 +41,17 @@ function parseLangFromCookie(cookie: string | null): "ur" | "en" {
   return match?.[1] === "en" ? "en" : "ur";
 }
 
+function parseAuthToken(cookie: string | null): string | null {
+  if (typeof document !== "undefined") {
+    const clientCookie = document.cookie;
+    const match = clientCookie.match(/msmis_auth_token=([^;]+)/);
+    return match?.[1] ?? null;
+  }
+  if (!cookie) return null;
+  const match = cookie.match(/msmis_auth_token=([^;]+)/);
+  return match?.[1] ?? null;
+}
+
 function NotFoundComponent() {
   const { lang, setLang } = useLanguage();
   return (
@@ -121,20 +132,27 @@ export const Route = createRootRouteWithContext<RootContext>()({
     const initialLang = parseLangFromCookie(cookie);
 
     let authUser: RootContext["authUser"];
-    if (cookie) {
-      const cookies = cookie.split("; ").reduce((acc: Record<string, string>, c: string) => {
-        const [key, ...rest] = c.split("=");
-        acc[key] = rest.join("=");
-        return acc;
-      }, {} as Record<string, string>);
-      const token = cookies["msmis_auth_token"];
-      if (token) {
-        try {
-          const decoded = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
-          if (decoded.exp && Date.now() < decoded.exp) {
-            authUser = decoded;
-          }
-        } catch {}
+    const token = parseAuthToken(cookie);
+    if (token) {
+      try {
+        const decoded = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
+        if (decoded.exp && Date.now() < decoded.exp) {
+          authUser = {
+            id: decoded.userId,
+            name: decoded.name,
+            email: decoded.email,
+            role: decoded.role ?? "teacher",
+            ...(decoded.nameUrdu ? { nameUrdu: decoded.nameUrdu } : {}),
+            ...(decoded.phone ? { phone: decoded.phone } : {}),
+            ...(decoded.cnic ? { cnic: decoded.cnic } : {}),
+            ...(decoded.systemAccess ? { systemAccess: decoded.systemAccess } : {}),
+            ...(decoded.mustChangePassword !== undefined ? { mustChangePassword: decoded.mustChangePassword } : {}),
+            ...(decoded.department ? { department: decoded.department } : {}),
+            ...(decoded.designation ? { designation: decoded.designation } : {}),
+          };
+        }
+      } catch {
+        // ignore invalid token format
       }
     }
 

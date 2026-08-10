@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useLanguage } from "@/components/language-context";
 import {
   ImagePlus,
   CheckCircle2,
@@ -40,6 +41,129 @@ import { CredentialsOverlay } from "@/features/users/credentials-display";
 import type { AdmissionAcceptanceWarning, ParentCreds } from "@/components/students/student-types";
 import { toast } from "sonner";
 
+const TEXT = {
+  ur: {
+    successTitle: "داخلہ کامیابی سے مکمل ہوا",
+    publicTitle: "درخواست جمع ہو گئی",
+    rollLabel: "رول نمبر",
+    refLabel: "رفرنس نمبر",
+    printForm: "فارم پرنٹ کریں",
+    backToHub: "واپس داخلہ مرکز",
+    officeInfo: "دفتری معلومات",
+    officeInfoEn: "Office Info",
+    admissionDate: "تاریخ داخلہ",
+    previousAdmNo: "پرانہ داخلہ نمبر",
+    correspondingDate: "بمطابق",
+    requestedClass: "مطلوبہ درجہ",
+    entryTestMarks: "امتحان داخلہ میں حاصل کردہ نمبرات",
+    academicYear: "برائے تعلیمی سال",
+    photoUpload: "تصویر اپ لوڈ کریں",
+    photoHint: "پاسپورٹ-size تصویر · PNG/JPG (زیادہ سے زیادہ 2 MB)",
+    selected: "منتخب",
+    studentInfo: "طالب علم کی معلومات",
+    fatherName: "ولدیت",
+    dobDigits: "تاریخ پیدائش (ہندسوں میں)",
+    dobWords: "تاریخ پیدائش (لفظوں میں)",
+    address: "پتہ",
+    occupation: "پیشہ",
+    religion: "مذہب",
+    previousSchool: "سابقہ سکول کا نام و پتہ",
+    certificateNo: "سرٹیفیکیٹ اور فائل نمبر",
+    admittedClass: "کلاس جس میں داخل ہوا",
+    studentName: "نام",
+    studentNameUr: "طالب علم کا نام (اردو)",
+    studentNameEn: "نام (انگریزی)",
+    fatherNameUr: "ولد کا نام",
+    dob: "تاریخ پیدائش",
+    gender: "جنس",
+    male: "بنین",
+    female: "بنات",
+    currentAddress: "موجودہ پتہ",
+    permanentAddress: "دائمی پتہ",
+    guardianInfo: "ولی / سرپرست کی معلومات",
+    guardianName: "ولی کا نام",
+    guardianRelation: "ولی سے تعلق",
+    guardianPhone: "فون نمبر",
+    guardianCnic: "شناختی کارڈ نمبر",
+    siblingSearch: "بھائی / بہن تلاش کریں",
+    searchByName: "نام یا رول نمبر تلاش کریں...",
+    noResults: "کوئی نتیجہ نہیں ملا",
+    addSibling: "بھائی / بہن شامل کریں",
+    declaration: "میں اقرار کرتا/کرتی ہوں کہ مندرجہ بالا تمام معلومات درست ہیں اور ادارے کے تمام قواعد و ضوابط قبول ہیں۔",
+    cancel: "منسوخ",
+    print: "پرنٹ",
+    submitPublic: "درخواست جمع کروائیں",
+    submitInternal: "داخلہ محفوظ کریں",
+    fillSample: "نمونہ ڈیٹا بھریں",
+    originalPdf: "اصل پی ڈی ایف",
+    personal: "ذاتی",
+    system: "نظام",
+    enrollment: "درج فہرست",
+    guardian: "ولی",
+    edit: "ترمیم",
+  },
+  en: {
+    successTitle: "Admission Successful",
+    publicTitle: "Application Submitted",
+    rollLabel: "Roll Number",
+    refLabel: "Reference No.",
+    printForm: "Print Form",
+    backToHub: "Back to Admission Hub",
+    officeInfo: "Office Information",
+    officeInfoEn: "Office Info",
+    admissionDate: "Admission Date",
+    previousAdmNo: "Previous Admission No.",
+    correspondingDate: "Corresponding Date",
+    requestedClass: "Requested Class/Darja",
+    entryTestMarks: "Entry Test Marks",
+    academicYear: "For Academic Year",
+    photoUpload: "Upload Photo",
+    photoHint: "Passport-size photo · PNG/JPG (max 2 MB)",
+    selected: "Selected",
+    studentInfo: "Student Information",
+    fatherName: "Father Name",
+    dobDigits: "Date of Birth (Digits)",
+    dobWords: "Date of Birth (In Words)",
+    address: "Address",
+    occupation: "Occupation",
+    religion: "Religion",
+    previousSchool: "Previous School Name & Address",
+    certificateNo: "Certificate / File No.",
+    admittedClass: "Admitted Class",
+    studentName: "Student Name",
+    studentNameUr: "Student Name (Urdu)",
+    studentNameEn: "Student Name (English)",
+    fatherNameUr: "Father's Name",
+    dob: "Date of Birth",
+    gender: "Gender",
+    male: "Male",
+    female: "Female",
+    currentAddress: "Current Address",
+    permanentAddress: "Permanent Address",
+    guardianInfo: "Guardian Information",
+    guardianName: "Guardian Name",
+    guardianRelation: "Relation to Guardian",
+    guardianPhone: "Phone Number",
+    guardianCnic: "CNIC Number",
+    siblingSearch: "Search Siblings",
+    searchByName: "Search by name or roll no...",
+    noResults: "No results found",
+    addSibling: "Add Sibling",
+    declaration: "I declare that all information above is correct and I accept all the rules and regulations of the institution.",
+    cancel: "Cancel",
+    print: "Print",
+    submitPublic: "Submit Application",
+    submitInternal: "Save Admission",
+    fillSample: "Fill Sample Data",
+    originalPdf: "Original PDF",
+    personal: "Personal",
+    system: "System",
+    enrollment: "Enrollment",
+    guardian: "Guardian",
+    edit: "Edit",
+  },
+};
+
 type State = Record<string, string>;
 type PhotoState = { name: string; dataUrl: string };
 type GradeOption = ReturnType<typeof gradeOptionsForVariant>[number];
@@ -71,6 +195,8 @@ export function PdfFormRenderer({
   variant: AdmissionVariant;
   isPublic?: boolean;
 }) {
+  const { lang } = useLanguage();
+  const t = TEXT[lang];
   const navigate = useNavigate();
   const [form, setForm] = useState<State>({});
   const [declaration, setDeclaration] = useState(false);
@@ -79,6 +205,7 @@ export function PdfFormRenderer({
   const [refNo, setRefNo] = useState<string | null>(null);
   const [savedPrintForm, setSavedPrintForm] = useState<State | null>(null);
   const [creds, setCreds] = useState<ParentCreds | null>(null);
+  const isRtl = lang === "ur";
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const val = (k: string) => form[k] ?? "";
@@ -219,26 +346,26 @@ export function PdfFormRenderer({
         <Card className="max-w-xl mx-auto text-center">
           <CardContent className="py-12 flex flex-col items-center gap-4">
             <CheckCircle2 className="h-16 w-16 text-emerald-600" />
-            <h2 className="font-urdu text-2xl font-bold leading-loose" dir="rtl" lang="ur">
-              داخلہ کامیابی سے مکمل ہوا
+            <h2 className={`text-2xl font-bold leading-loose ${isRtl ? "font-urdu" : "font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+              {isPublic ? t.publicTitle : t.successTitle}
             </h2>
             <p className="text-sm text-muted-foreground">
               {isPublic ? "Application Submitted" : "Admission Confirmed"}
             </p>
             <div className="rounded-xl bg-muted p-6 mt-2 min-w-[16rem]">
               <p className="text-xs text-muted-foreground uppercase tracking-widest">
-                {isPublic ? "Application Reference" : "Roll Number"}
+                {isPublic ? t.refLabel : t.rollLabel}
               </p>
               <p className="font-heading font-bold text-3xl text-primary mt-1">{refNo}</p>
             </div>
             <div className="flex gap-2 mt-2">
               <Button variant="outline" onClick={handlePrint}>
                 <Printer className="h-4 w-4 me-2" />
-                <span className="font-urdu">فارم پرنٹ کریں</span>
+                <span className={`${isRtl ? "font-urdu" : ""}`}>{t.printForm}</span>
               </Button>
               {!isPublic && (
                 <Button onClick={() => navigate({ to: "/admission" })}>
-                  <span className="font-urdu">واپس داخلہ مرکز</span>
+                  <span className={`${isRtl ? "font-urdu" : ""}`}>{t.backToHub}</span>
                 </Button>
               )}
             </div>
@@ -255,31 +382,31 @@ export function PdfFormRenderer({
       <Card className="text-center">
         <CardContent className="py-8 space-y-2">
           <p
-            className="font-urdu text-base text-muted-foreground leading-loose"
-            dir="rtl"
-            lang="ur"
+            className={`text-base text-muted-foreground leading-loose ${isRtl ? "font-urdu" : ""}`}
+            dir={isRtl ? "rtl" : "ltr"}
+            lang={lang}
           >
             {institution.nameUrdu}
           </p>
-          <h1 className="font-urdu text-3xl font-bold leading-loose" dir="rtl" lang="ur">
-            {variant.titleUrdu}
+          <h1 className={`text-3xl font-bold leading-loose ${isRtl ? "font-urdu" : "font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+            {isRtl ? variant.titleUrdu : variant.titleEnglish}
           </h1>
-          {variant.subtitleUrdu && (
+          {(isRtl ? variant.subtitleUrdu : variant.subtitleEnglish) && (
             <p
-              className="font-urdu text-lg text-muted-foreground leading-loose"
-              dir="rtl"
-              lang="ur"
+              className={`text-lg text-muted-foreground leading-loose ${isRtl ? "font-urdu" : ""}`}
+              dir={isRtl ? "rtl" : "ltr"}
+              lang={lang}
             >
-              {variant.subtitleUrdu}
+              {isRtl ? variant.subtitleUrdu : variant.subtitleEnglish}
             </p>
           )}
           <p className="text-xs uppercase tracking-widest text-muted-foreground">
-            {variant.titleEnglish}
+            {isRtl ? variant.titleUrdu : variant.titleEnglish}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Button type="button" variant="outline" size="sm" onClick={fillSampleData}>
               <Wand2 className="h-4 w-4 me-2" />
-              <span className="font-urdu">نمونہ ڈیٹا بھریں</span>
+              <span className={`${isRtl ? "font-urdu" : ""}`}>{t.fillSample}</span>
             </Button>
             <a
               href={variant.pdfPath}
@@ -287,11 +414,11 @@ export function PdfFormRenderer({
               rel="noreferrer"
               className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-input bg-background px-3 text-xs font-medium text-primary shadow-sm underline-offset-4 hover:bg-accent hover:text-accent-foreground"
             >
-              Original PDF
+              {t.originalPdf}
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </div>
-          {variant.addressUrdu && (
+          {variant.addressUrdu && isRtl && (
             <p
               className="font-urdu text-sm text-muted-foreground leading-loose mt-2"
               dir="rtl"
@@ -306,18 +433,18 @@ export function PdfFormRenderer({
       {/* Meta row — form/admission numbers (present in all variants) */}
       <Card>
         <CardHeader>
-          <CardTitle className="font-urdu text-end leading-loose" dir="rtl" lang="ur">
-            دفتری معلومات
-            <span className="text-muted-foreground font-sans text-xs ms-2">Office Info</span>
+          <CardTitle className={`text-end text-lg leading-loose ${isRtl ? "font-urdu" : "font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+            {t.officeInfo}
+            <span className={`text-xs text-muted-foreground ms-2 uppercase tracking-widest ${isRtl ? "font-sans" : ""}`}>{t.officeInfoEn}</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <BilingualLabel urdu="تاریخ داخلہ" english="Admission Date" htmlFor="adm_date">
+          <BilingualLabel urdu={t.admissionDate} english={t.admissionDate} htmlFor="adm_date" lang={lang}>
             <DatePickerInput
               id="adm_date"
               value={val("adm_date")}
               calendarType="gregorian"
-              placeholder="تاریخ داخلہ منتخب کریں"
+              placeholder={isRtl ? "تاریخ داخلہ منتخب کریں" : "Select admission date"}
               onChange={setAdmissionDate}
             />
           </BilingualLabel>
@@ -363,11 +490,12 @@ export function PdfFormRenderer({
                   id="req_darja"
                   value={val("req_darja")}
                   options={requestedGradeOptions}
-                  placeholder="درجہ منتخب کریں"
+                  placeholder={lang === "ur" ? "درجہ منتخب کریں" : "Select class"}
                   onValueChange={(value) => {
                     set("req_darja", value);
                     set("candidate_darja", value);
                   }}
+                  lang={lang}
                 />
               </BilingualLabel>
               <BilingualLabel
@@ -406,12 +534,10 @@ export function PdfFormRenderer({
           <CardContent className="py-6">
             <label className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer flex flex-col items-center gap-2 hover:border-primary/50 transition-colors">
               <ImagePlus className="h-8 w-8 text-muted-foreground" />
-              <span className="font-urdu text-sm leading-loose" dir="rtl" lang="ur">
-                تصویر اپ لوڈ کریں
+              <span className={`text-sm leading-loose ${isRtl ? "font-urdu" : ""}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+                {t.photoUpload}
               </span>
-              <span className="text-xs text-muted-foreground">
-                Passport-size photo · PNG/JPG (max 2 MB)
-              </span>
+              <span className="text-xs text-muted-foreground">{t.photoHint}</span>
               <input
                 name="photo"
                 type="file"
@@ -427,7 +553,7 @@ export function PdfFormRenderer({
                   alt=""
                   className="h-16 w-12 rounded border border-border object-cover"
                 />
-                <p className="text-xs text-muted-foreground">Selected: {photo.name}</p>
+                <p className="text-xs text-muted-foreground">{t.selected}: {photo.name}</p>
               </div>
             )}
           </CardContent>
@@ -435,13 +561,15 @@ export function PdfFormRenderer({
       )}
 
       {/* Body per layout */}
-      {variant.layout === "school" && <SchoolFields form={form} set={set} />}
+      {variant.layout === "school" && <SchoolFields form={form} set={set} lang={lang} t={t} />}
       {variant.layout === "madrassa-short" && (
         <MadrassaShortFields
           form={form}
           set={set}
           variant={variant}
           isGirls={variant.category === "madrassa-girls"}
+          lang={lang}
+          t={t}
         />
       )}
       {variant.layout === "madrassa-long" && (
@@ -450,15 +578,16 @@ export function PdfFormRenderer({
           set={set}
           variant={variant}
           isGirls={variant.category === "madrassa-girls"}
+          lang={lang}
+          t={t}
         />
       )}
 
       {/* Declaration + submit */}
       <label className="flex items-start gap-3 p-4 rounded-xl bg-muted/50 cursor-pointer">
         <Checkbox checked={declaration} onCheckedChange={(v) => setDeclaration(v === true)} />
-        <span className="font-urdu text-sm leading-loose text-end flex-1" dir="rtl" lang="ur">
-          میں اقرار کرتا/کرتی ہوں کہ مندرجہ بالا تمام معلومات درست ہیں اور ادارے کے تمام قواعد و
-          ضوابط قبول ہیں۔
+        <span className={`text-sm leading-loose text-end flex-1 ${isRtl ? "font-urdu" : ""}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+          {t.declaration}
         </span>
       </label>
 
@@ -469,18 +598,18 @@ export function PdfFormRenderer({
             isPublic ? navigate({ to: "/apply", search: {} }) : navigate({ to: "/admission" })
           }
         >
-          <ArrowLeft className="h-4 w-4 me-2 rtl:rotate-180" />
-          <span className="font-urdu">منسوخ</span>
+          <ArrowLeft className={`h-4 w-4 ${isRtl ? "rotate-180" : ""}`} />
+          <span className={`${isRtl ? "font-urdu" : ""}`}>{t.cancel}</span>
         </Button>
         <div className="flex gap-2">
           <Button variant="outline" size="lg" onClick={handlePrint}>
             <Printer className="h-4 w-4 me-2" />
-            <span className="font-urdu">پرنٹ</span>
+            <span className={`${isRtl ? "font-urdu" : ""}`}>{t.print}</span>
           </Button>
           <Button size="lg" onClick={submit} disabled={!declaration || submitting}>
             {submitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
-            <span className="font-urdu">
-              {isPublic ? "درخواست جمع کروائیں" : "داخلہ محفوظ کریں"}
+            <span className={`${isRtl ? "font-urdu" : ""}`}>
+              {isPublic ? t.submitPublic : t.submitInternal}
             </span>
           </Button>
         </div>
@@ -493,18 +622,21 @@ function Section({
   urdu,
   english,
   children,
+  lang,
 }: {
   urdu: string;
   english: string;
   children: React.ReactNode;
+  lang: "ur" | "en";
 }) {
+  const isRtl = lang === "ur";
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-urdu text-end text-lg leading-loose" dir="rtl" lang="ur">
-          {urdu}
-          <span className="font-sans text-xs text-muted-foreground ms-2 uppercase tracking-widest">
-            {english}
+        <CardTitle className={`text-end text-lg leading-loose ${isRtl ? "font-urdu" : "font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+          {isRtl ? urdu : english}
+          <span className={`text-xs text-muted-foreground ms-2 uppercase tracking-widest ${isRtl ? "font-sans" : ""}`}>
+            {isRtl ? english : urdu}
           </span>
         </CardTitle>
       </CardHeader>
@@ -513,7 +645,7 @@ function Section({
   );
 }
 
-type FieldProps = { form: State; set: (k: string, v: string) => void };
+type FieldProps = { form: State; set: (k: string, v: string) => void; lang: "ur" | "en"; t: typeof TEXT["ur"] };
 
 function gradeOptionsForVariant(variant: AdmissionVariant) {
   const section = variant.category === "madrassa-girls" ? "banat" : "baneen";
@@ -533,22 +665,25 @@ function MadrassaGradeSelect({
   options,
   placeholder,
   onValueChange,
+  lang = "ur",
 }: {
   id: string;
   value: string;
   options: GradeOption[];
   placeholder: string;
   onValueChange: (value: string) => void;
+  lang?: "ur" | "en";
 }) {
+  const isRtl = lang === "ur";
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger id={id} className="font-urdu" dir="rtl">
+      <SelectTrigger id={id} className={isRtl ? "font-urdu" : ""} dir={isRtl ? "rtl" : "ltr"}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         {options.map((option) => (
           <SelectItem key={option.id} value={option.id}>
-            <span className="font-urdu">{option.nameUrdu}</span>
+            <span className={isRtl ? "font-urdu" : ""}>{option.nameUrdu}</span>
             <span className="text-xs text-muted-foreground ms-2">{option.rollPrefix}</span>
           </SelectItem>
         ))}
@@ -560,109 +695,114 @@ function MadrassaGradeSelect({
 /* ============================================================
  * School layout — Al-Qasim / Zainab (Shoba School)
  * ============================================================ */
-function SchoolFields({ form, set }: FieldProps) {
+function SchoolFields({ form, set, lang, t }: FieldProps) {
   const val = (k: string) => form[k] ?? "";
+  const isRtl = lang === "ur";
   return (
     <>
-      <Section urdu="طالب علم کی معلومات" english="Student Info">
-        <BilingualLabel urdu="نام" english="Name" htmlFor="name" required>
+      <Section urdu={t.studentInfo} english={t.studentInfo} lang={lang}>
+        <BilingualLabel urdu={t.studentNameUr} english={t.studentNameEn} htmlFor="name" required lang={lang}>
           <Input
             id="name"
             name="name"
             required
             autoComplete="name"
-            className="font-urdu"
+            className={isRtl ? "font-urdu" : ""}
             value={val("name")}
             onChange={(e) => set("name", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="ولدیت" english="Father Name" htmlFor="father" required>
+        <BilingualLabel urdu={t.fatherNameUr} english={t.fatherName} htmlFor="father" required lang={lang}>
           <Input
             id="father"
             name="father"
             required
-            className="font-urdu"
+            className={isRtl ? "font-urdu" : ""}
             value={val("father")}
             onChange={(e) => set("father", e.target.value)}
           />
         </BilingualLabel>
         <BilingualLabel
-          urdu="تاریخ پیدائش (ہندسوں میں)"
-          english="DOB (Digits)"
+          urdu={t.dobDigits}
+          english={t.dobDigits}
           htmlFor="dob_digits"
           required
+          lang={lang}
         >
           <DatePickerInput
             id="dob_digits"
             value={val("dob_digits")}
             calendarType="gregorian"
-            placeholder="تاریخ پیدائش منتخب کریں"
+            placeholder={isRtl ? "تاریخ پیدائش منتخب کریں" : "Select date of birth"}
             onChange={(value) => set("dob_digits", value)}
           />
         </BilingualLabel>
         <BilingualLabel
-          urdu="تاریخ پیدائش (لفظوں میں)"
-          english="DOB (In Words)"
+          urdu={t.dobWords}
+          english={t.dobWords}
           htmlFor="dob_words"
+          lang={lang}
         >
           <Input
             id="dob_words"
             name="dob_words"
-            className="font-urdu"
+            className={isRtl ? "font-urdu" : ""}
             value={val("dob_words")}
             onChange={(e) => set("dob_words", e.target.value)}
           />
         </BilingualLabel>
         <div className="md:col-span-2">
-          <BilingualLabel urdu="پتہ" english="Address" htmlFor="address" required>
+          <BilingualLabel urdu={t.address} english={t.address} htmlFor="address" required lang={lang}>
             <Textarea
               id="address"
               name="address"
               required
               autoComplete="street-address"
-              className="font-urdu"
+              className={isRtl ? "font-urdu" : ""}
               value={val("address")}
               onChange={(e) => set("address", e.target.value)}
             />
           </BilingualLabel>
         </div>
-        <BilingualLabel urdu="پیشہ" english="Occupation" htmlFor="occupation">
+        <BilingualLabel urdu={t.occupation} english={t.occupation} htmlFor="occupation" lang={lang}>
           <Input
             id="occupation"
             name="occupation"
-            className="font-urdu"
+            className={isRtl ? "font-urdu" : ""}
             value={val("occupation")}
             onChange={(e) => set("occupation", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="مذہب" english="Religion" htmlFor="religion">
+        <BilingualLabel urdu={t.religion} english={t.religion} htmlFor="religion" lang={lang}>
           <Input
             id="religion"
             name="religion"
-            className="font-urdu"
+            className={isRtl ? "font-urdu" : ""}
             value={val("religion")}
             onChange={(e) => set("religion", e.target.value)}
           />
         </BilingualLabel>
         <div className="md:col-span-2">
           <BilingualLabel
-            urdu="سابقہ سکول کا نام و پتہ"
-            english="Previous School Name & Address"
+            urdu={t.previousSchool}
+            english={t.previousSchool}
             htmlFor="prev_school"
+            lang={lang}
           >
             <Textarea
               id="prev_school"
               name="prev_school"
-              className="font-urdu"
+              className={isRtl ? "font-urdu" : ""}
               value={val("prev_school")}
               onChange={(e) => set("prev_school", e.target.value)}
             />
           </BilingualLabel>
         </div>
         <BilingualLabel
-          urdu="سرٹیفیکیٹ اور فائل نمبر"
-          english="Certificate / File No."
+          urdu={t.certificateNo}
+          english={t.certificateNo}
           htmlFor="cert_no"
+          lang={lang}
         >
           <Input
             id="cert_no"
@@ -672,40 +812,42 @@ function SchoolFields({ form, set }: FieldProps) {
           />
         </BilingualLabel>
         <BilingualLabel
-          urdu="کلاس جس میں داخل ہوا"
-          english="Admitted Class"
+          urdu={t.admittedClass}
+          english={t.admittedClass}
           htmlFor="class"
           required
+          lang={lang}
         >
           <Input
             id="class"
             name="class"
             required
-            className="font-urdu"
+            className={isRtl ? "font-urdu" : ""}
             value={val("class")}
             onChange={(e) => set("class", e.target.value)}
           />
         </BilingualLabel>
       </Section>
 
-      <Section urdu="سرپرست" english="Guardian">
+      <Section urdu="سرپرست" english="Guardian" lang={lang}>
         <BilingualLabel
           urdu="سرپرست کا نام"
           english="Guardian Name"
           htmlFor="guardian_name"
           required
+          lang={lang}
         >
           <Input
             id="guardian_name"
             name="guardian_name"
             required
             autoComplete="name"
-            className="font-urdu"
+            className={isRtl ? "font-urdu" : ""}
             value={val("guardian_name")}
             onChange={(e) => set("guardian_name", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="سرپرست ای میل" english="Guardian Email" htmlFor="guardian_email">
+        <BilingualLabel urdu="سرپرست ای میل" english="Guardian Email" htmlFor="guardian_email" lang={lang}>
           <Input
             id="guardian_email"
             name="guardian_email"
@@ -755,6 +897,8 @@ function MadrassaShortFields({
   set,
   variant,
   isGirls,
+  lang,
+  t,
 }: FieldProps & { variant: AdmissionVariant; isGirls: boolean }) {
   const val = (k: string) => form[k] ?? "";
   const gradeOptions = gradeOptionsForVariant(variant);
@@ -780,7 +924,7 @@ function MadrassaShortFields({
         </CardContent>
       </Card>
 
-      <Section urdu={isGirls ? "طالبہ کے کوائف" : "طالب علم کے کوائف"} english="Student Details">
+      <Section urdu={isGirls ? "طالبہ کے کوائف" : "طالب علم کے کوائف"} english="Student Details" lang={lang}>
         <BilingualLabel
           urdu={isGirls ? "نام طالبہ" : "نام طالب علم"}
           english="Student Name"
@@ -816,13 +960,14 @@ function MadrassaShortFields({
             onChange={(value) => set("dob", value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="شعبہ" english="Section / Shoba" htmlFor="shoba" required>
+        <BilingualLabel urdu="شعبہ" english="Section / Shoba" htmlFor="shoba" required lang={lang}>
           <MadrassaGradeSelect
             id="shoba"
             value={val("shoba")}
             options={gradeOptions}
-            placeholder="شعبہ منتخب کریں"
+            placeholder={lang === "ur" ? "شعبہ منتخب کریں" : "Select section"}
             onValueChange={(value) => set("shoba", value)}
+            lang={lang}
           />
         </BilingualLabel>
         <div className="md:col-span-2">
@@ -872,12 +1017,13 @@ function MadrassaShortFields({
         </div>
       </Section>
 
-      <Section urdu="سرپرست" english="Guardian">
+      <Section urdu="سرپرست" english="Guardian" lang={lang}>
         <BilingualLabel
           urdu="سرپرست کا نام"
           english="Guardian Name"
           htmlFor="guardian_name"
           required
+          lang={lang}
         >
           <Input
             id="guardian_name"
@@ -935,6 +1081,8 @@ function MadrassaLongFields({
   set,
   variant,
   isGirls,
+  lang,
+  t,
 }: FieldProps & { variant: AdmissionVariant; isGirls: boolean }) {
   const val = (k: string) => form[k] ?? "";
   const gradeOptions = gradeOptionsForVariant(variant);
@@ -957,8 +1105,8 @@ function MadrassaLongFields({
         </CardContent>
       </Card>
 
-      <Section urdu="کوائف نامہ" english="Personal Particulars">
-        <BilingualLabel urdu="نام" english="Name" htmlFor="name" required>
+      <Section urdu="کوائف نامہ" english="Personal Particulars" lang={lang}>
+        <BilingualLabel urdu="نام" english="Name" htmlFor="name" required lang={lang}>
           <Input
             id="name"
             name="name"
@@ -1090,6 +1238,7 @@ function MadrassaLongFields({
       <Section
         urdu={isGirls ? "جدید طالبات کے لیے" : "جدید طلباء کے لیے"}
         english="For New Students"
+        lang={lang}
       >
         <div className="md:col-span-2">
           <p
@@ -1192,8 +1341,9 @@ function MadrassaLongFields({
       <Section
         urdu={isGirls ? "قدیم طالبات کے لیے" : "قدیم طلباء کے لیے"}
         english="For Existing Students"
+        lang={lang}
       >
-        <BilingualLabel urdu="گذشتہ سال کا رول نمبر" english="Previous Year Roll No.">
+        <BilingualLabel urdu="گذشتہ سال کا رول نمبر" english="Previous Year Roll No." lang={lang}>
           <Input value={val("prev_roll")} onChange={(e) => set("prev_roll", e.target.value)} />
         </BilingualLabel>
         <BilingualLabel urdu="درجہ" english="Class / Darja">
@@ -1218,6 +1368,7 @@ function MadrassaLongFields({
       <Section
         urdu={isGirls ? "عہد نامہ (طالبہ)" : "عہد نامہ (طالب علم)"}
         english="Pledge (Ahd-Nama)"
+        lang={lang}
       >
         <div className="md:col-span-2">
           <p
@@ -1233,21 +1384,22 @@ function MadrassaLongFields({
             گا/گی۔
           </p>
         </div>
-        <BilingualLabel urdu="امیدوار درجہ" english="Candidate Darja">
+        <BilingualLabel urdu="امیدوار درجہ" english="Candidate Darja" lang={lang}>
           <MadrassaGradeSelect
             id="candidate_darja"
             value={val("candidate_darja")}
             options={gradeOptions}
-            placeholder="درجہ منتخب کریں"
+            placeholder={lang === "ur" ? "درجہ منتخب کریں" : "Select class"}
             onValueChange={(value) => {
               set("candidate_darja", value);
               set("req_darja", value);
             }}
+            lang={lang}
           />
         </BilingualLabel>
       </Section>
 
-      <Section urdu="برائے سرپرست" english="For Guardian">
+      <Section urdu="برائے سرپرست" english="For Guardian" lang={lang}>
         <div className="md:col-span-2">
           <p
             className="font-urdu text-xs text-muted-foreground text-end leading-loose"
@@ -1370,7 +1522,7 @@ function MadrassaLongFields({
         </BilingualLabel>
       </Section>
 
-      <Section urdu="دفتری کاروائی" english="Office Action">
+      <Section urdu="دفتری کاروائی" english="Office Action" lang={lang}>
         <div className="md:col-span-2">
           <BilingualLabel urdu="مہتمم کی رائے" english="Muhtamim's Remarks">
             <Textarea
