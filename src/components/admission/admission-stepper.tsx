@@ -9,9 +9,10 @@ export const ADMISSION_STEPS = [
   { id: 5, urdu: "جائزہ", english: "Review" },
 ] as const;
 
-type Props = { current: number };
+type Props = { current: number; lang?: "ur" | "en" };
 
-export function AdmissionStepper({ current }: Props) {
+export function AdmissionStepper({ current, lang = "ur" }: Props) {
+  const isUrdu = lang === "ur";
   return (
     <div className="sticky top-0 z-10 bg-background border-b border-border py-4 px-2 sm:px-6">
       <ol className="flex items-center gap-2">
@@ -33,11 +34,12 @@ export function AdmissionStepper({ current }: Props) {
                 </div>
                 <span
                   className={cn(
-                    "font-urdu text-[11px] sm:text-xs whitespace-nowrap",
+                    "text-[11px] sm:text-xs whitespace-nowrap",
                     done || active ? "text-primary" : "text-muted-foreground",
+                    isUrdu ? "font-urdu" : "font-heading",
                   )}
                 >
-                  {step.urdu}
+                  {isUrdu ? step.urdu : step.english}
                 </span>
               </div>
               {idx < ADMISSION_STEPS.length - 1 && (

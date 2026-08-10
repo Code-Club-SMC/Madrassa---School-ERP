@@ -10,6 +10,7 @@ import {
 } from "@/lib/admission-variants";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/components/language-context";
 
 const searchSchema = z.object({ variant: z.string().optional() });
 
@@ -20,7 +21,9 @@ export const Route = createFileRoute("/_authenticated/admission/new")({
 
 function NewAdmissionRoute() {
   const { variant: variantKey } = Route.useSearch();
+  const { lang } = useLanguage();
   const variant = getVariant(variantKey);
+  const category = variant ? ADMISSION_CATEGORIES.find((c) => c.key === variant.category) : null;
 
   if (variant) {
     return (
@@ -28,7 +31,7 @@ function NewAdmissionRoute() {
         <PageHeader
           title="New Admission"
           titleUrdu="نیا داخلہ"
-          description={variant.titleEnglish}
+          description={lang === "ur" ? (category?.descriptionUrdu ?? variant.titleUrdu) : variant.titleEnglish}
         />
         <PdfFormRenderer variant={variant} />
       </>
@@ -40,7 +43,7 @@ function NewAdmissionRoute() {
       <PageHeader
         title="Choose Admission Form"
         titleUrdu="داخلہ فارم منتخب کریں"
-        description="Select the department and exact official form before entering admission details."
+        description={lang === "ur" ? "داخلہ فارم اور شعبہ منتخب کریں" : "Select the department and exact official form before entering admission details."}
       />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {ADMISSION_CATEGORIES.map((category) => {
@@ -52,10 +55,10 @@ function NewAdmissionRoute() {
                   {category.icon}
                 </div>
                 <div className="min-w-0">
-                  <h2 className="font-urdu text-lg font-semibold leading-loose" dir="rtl" lang="ur">
-                    {category.labelUrdu}
+                  <h2 className={`text-lg font-semibold leading-loose ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                    {lang === "ur" ? category.labelUrdu : category.labelEnglish}
                   </h2>
-                  <p className="text-xs uppercase tracking-widest text-muted-foreground">{category.labelEnglish}</p>
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">{lang === "ur" ? category.descriptionUrdu : category.descriptionEnglish}</p>
                 </div>
               </div>
               <div className="space-y-2">
@@ -64,12 +67,12 @@ function NewAdmissionRoute() {
                     <Link to="/admission/new" search={{ variant: variant.key }}>
                       <ChevronLeft className="h-4 w-4 shrink-0 rtl:rotate-180" />
                       <span className="min-w-0 flex-1">
-                        <span className="block font-urdu text-sm leading-loose" dir="rtl" lang="ur">
-                          {variant.titleUrdu}
+                        <span className={`block text-sm leading-loose ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                          {lang === "ur" ? variant.titleUrdu : variant.titleEnglish}
                         </span>
-                        {variant.subtitleUrdu && (
-                          <span className="block font-urdu text-xs text-muted-foreground" dir="rtl" lang="ur">
-                            {variant.subtitleUrdu}
+                        {(lang === "ur" ? variant.subtitleUrdu : variant.subtitleEnglish) && (
+                          <span className={`block text-xs text-muted-foreground leading-loose ${lang === "ur" ? "font-urdu" : ""}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                            {lang === "ur" ? variant.subtitleUrdu : variant.subtitleEnglish}
                           </span>
                         )}
                       </span>

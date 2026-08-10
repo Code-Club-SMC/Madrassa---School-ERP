@@ -26,6 +26,7 @@ export const Route = createFileRoute("/auth/login")({
             });
           }
 
+          
           const [foundAccount] = await db
             .select()
             .from(account)

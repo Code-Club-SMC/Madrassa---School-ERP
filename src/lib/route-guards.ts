@@ -3,13 +3,6 @@ import { hasAnyRole, staffRoles, toAppUser } from "@/lib/auth-session";
 import { navItems } from "@/lib/nav-config";
 import type { User, UserRole } from "@/types";
 
-export type AuthRouteContext = {
-  auth: {
-    session: Record<string, unknown>;
-    user: User;
-  };
-};
-
 type GuardContext = {
   location: {
     href: string;
@@ -53,7 +46,7 @@ function assertParentPathAccess(pathname: string, user: User) {
   }
 }
 
-export async function requireAuth({ location, context }: GuardContext): Promise<AuthRouteContext> {
+export async function requireAuth({ location, context }: GuardContext): Promise<void> {
   const authUser = context.authUser ?? null;
 
   if (!authUser) {
@@ -71,22 +64,16 @@ export async function requireAuth({ location, context }: GuardContext): Promise<
 
   assertParentPathAccess(location.pathname, user);
   assertPathRoleAccess(location.pathname, user);
-
-  return {
-    auth: {
-      session: { user: authUser } as Record<string, unknown>,
-      user,
-    },
-  };
 }
 
 export function requireRoles(roles: readonly UserRole[]) {
-  return async (ctx: GuardContext): Promise<AuthRouteContext> => {
-    const authContext = await requireAuth(ctx);
-    if (!hasAnyRole(authContext.auth.user, roles)) {
+  return async (ctx: GuardContext): Promise<void> => {
+    await requireAuth(ctx);
+    const authUser = ctx.context.authUser;
+    if (!authUser) return;
+    const user = toAppUser(authUser);
+    if (!hasAnyRole(user, roles)) {
       throw redirect({ to: "/dashboard" });
     }
-
-    return authContext;
   };
 }

@@ -72,7 +72,7 @@ function DashboardPage() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      navigate({ to: "/login" });
+      navigate({ to: "/login", search: { redirect: undefined } });
     }
   }, [user, isLoading, navigate]);
 

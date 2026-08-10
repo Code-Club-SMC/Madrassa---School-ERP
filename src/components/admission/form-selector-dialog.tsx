@@ -15,6 +15,24 @@ import {
   ADMISSION_VARIANTS,
   type AdmissionCategoryKey,
 } from "@/lib/admission-variants";
+import { useLanguage } from "@/components/language-context";
+
+const TEXT = {
+  ur: {
+    selectDepartment: "شعبہ منتخب کریں",
+    selectForm: "فارم منتخب کریں",
+    chooseDepartment: "شعبہ منتخب کریں",
+    chooseForm: "فارم منتخب کریں",
+    back: "واپس",
+  },
+  en: {
+    selectDepartment: "Choose the department",
+    selectForm: "Choose the specific admission form",
+    chooseDepartment: "Choose the department for this admission",
+    chooseForm: "Choose the specific admission form",
+    back: "Back",
+  },
+};
 
 export function AdmissionFormSelectorDialog({
   open,
@@ -23,6 +41,8 @@ export function AdmissionFormSelectorDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const { lang } = useLanguage();
+  const t = TEXT[lang];
   const navigate = useNavigate();
   const [category, setCategory] = useState<AdmissionCategoryKey | null>(null);
 
@@ -38,11 +58,11 @@ export function AdmissionFormSelectorDialog({
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-urdu text-2xl leading-loose text-end" dir="rtl" lang="ur">
-            {category ? "فارم منتخب کریں" : "شعبہ منتخب کریں"}
+          <DialogTitle className={`text-2xl leading-loose text-end ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+            {category ? t.selectForm : t.selectDepartment}
           </DialogTitle>
           <DialogDescription className="text-end">
-            {category ? "Choose the specific admission form" : "Choose the department for this admission"}
+            {category ? t.chooseForm : t.chooseDepartment}
           </DialogDescription>
         </DialogHeader>
 
@@ -59,14 +79,11 @@ export function AdmissionFormSelectorDialog({
                 )}
               >
                 <div className="text-4xl mb-3">{c.icon}</div>
-                <p className="font-urdu text-lg font-semibold leading-loose" dir="rtl" lang="ur">
-                  {c.labelUrdu}
+                <p className={`text-lg font-semibold leading-loose ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                  {lang === "ur" ? c.labelUrdu : c.labelEnglish}
                 </p>
-                <p className="text-[11px] uppercase tracking-widest text-muted-foreground mt-1">
-                  {c.labelEnglish}
-                </p>
-                <p className="font-urdu text-xs text-muted-foreground mt-2 leading-loose" dir="rtl" lang="ur">
-                  {c.descriptionUrdu}
+                <p className={`text-xs text-muted-foreground mt-2 leading-loose ${lang === "ur" ? "font-urdu" : ""}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                  {lang === "ur" ? c.descriptionUrdu : c.descriptionEnglish}
                 </p>
               </button>
             ))}
@@ -85,24 +102,22 @@ export function AdmissionFormSelectorDialog({
               >
                 <ChevronLeft className="h-5 w-5 text-muted-foreground shrink-0 rtl:rotate-180" />
                 <div className="min-w-0 flex-1">
-                  <p className="font-urdu text-base font-semibold leading-loose" dir="rtl" lang="ur">
-                    {v.titleUrdu}
+                  <p className={`text-base font-semibold leading-loose ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                    {lang === "ur" ? v.titleUrdu : v.titleEnglish}
                   </p>
-                  {v.subtitleUrdu && (
-                    <p className="font-urdu text-sm text-muted-foreground leading-loose" dir="rtl" lang="ur">
-                      {v.subtitleUrdu}
+                  {(lang === "ur" ? v.subtitleUrdu : v.subtitleEnglish) && (
+                    <p className={`text-sm text-muted-foreground leading-loose ${lang === "ur" ? "font-urdu" : ""}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                      {lang === "ur" ? v.subtitleUrdu : v.subtitleEnglish}
                     </p>
                   )}
-                  <p className="text-[11px] uppercase tracking-widest text-muted-foreground mt-1">
-                    {v.titleEnglish}
-                  </p>
                 </div>
               </button>
             ))}
             <div className="pt-2">
               <Button variant="ghost" size="sm" onClick={reset} className="gap-1">
                 <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
-                <span className="font-urdu">واپس</span>
+                {lang === "ur" && <span className="font-urdu">{t.back}</span>}
+                {lang === "en" && t.back}
               </Button>
             </div>
           </div>
