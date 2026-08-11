@@ -220,7 +220,7 @@ export async function updateSchoolSection(
   return updated;
 }
 
-export async function listMadrassaCategories(request: Request) {
+export async function listMadrassaCategories(request: Request, academicYearId?: string) {
   await requirePermission(request, "madrassa_categories", "view");
   await ensureAcademicSeeded();
 
@@ -234,7 +234,12 @@ export async function listMadrassaCategories(request: Request) {
         count: count(),
       })
       .from(studentEnrollments)
-      .where(eq(studentEnrollments.status, "active"))
+      .where(
+        and(
+          eq(studentEnrollments.status, "active"),
+          academicYearId ? eq(studentEnrollments.academicYearId, academicYearId) : undefined,
+        ),
+      )
       .groupBy(studentEnrollments.madrassaSubcategoryId, studentEnrollments.institutionId),
   ]);
 

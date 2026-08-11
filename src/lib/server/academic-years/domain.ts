@@ -3,6 +3,9 @@ import type {
   AcademicYearStatus,
   AcademicYearSystem,
 } from "@/db/schema/academic-years";
+import { and, eq, ne, sql } from "drizzle-orm";
+import { academicYears } from "@/db/schema/academic-years";
+import { db } from "@/db";
 import { HttpError } from "@/lib/server/http";
 
 export function assertValidAcademicYearDates(startDate: string, endDate: string) {
@@ -11,6 +14,41 @@ export function assertValidAcademicYearDates(startDate: string, endDate: string)
 
   if (!start || !end) throw new HttpError("تعلیمی سال کی تاریخیں درست نہیں", 400);
   if (end <= start) throw new HttpError("اختتامی تاریخ آغاز کے بعد ہونی چاہیے", 400);
+}
+
+export async function assertNoAcademicYearOverlap(
+  system: AcademicYearSystem,
+  startDate: string,
+  endDate: string,
+  excludeId?: string,
+) {
+  const start = dateOnlyValue(startDate);
+  const end = dateOnlyValue(endDate);
+  if (!start || !end) return;
+
+  const conditions = [
+    eq(academicYears.system, system),
+    eq(academicYears.status, "active"),
+    sql`${academicYears.startDate} < ${endDate}`,
+    sql`${academicYears.endDate} > ${startDate}`,
+  ];
+
+  if (excludeId) {
+    conditions.push(ne(academicYears.id, excludeId));
+  }
+
+  const overlapping = await db
+    .select({ id: academicYears.id, name: academicYears.name })
+    .from(academicYears)
+    .where(and(...conditions))
+    .limit(1);
+
+  if (overlapping.length > 0) {
+    throw new HttpError(
+      `اس مدت میں پہلے سے ایک تعلیمی سال موجود ہے: ${overlapping[0].name}`,
+      409,
+    );
+  }
 }
 
 export function nextAcademicYearStatus(

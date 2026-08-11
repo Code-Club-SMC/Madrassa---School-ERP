@@ -16,6 +16,7 @@ import {
   assertAcademicYearCalendar,
   assertAcademicYearEditable,
   assertActiveAcademicYear,
+  assertNoAcademicYearOverlap,
   assertValidAcademicYearDates,
   defaultCalendarTypeForSystem,
 } from "@/lib/server/academic-years/domain";
@@ -85,6 +86,7 @@ export async function createAcademicYear(
 ) {
   await requirePermission(request, "settings_academic_year", "manage");
   assertValidAcademicYearDates(input.startDate, input.endDate);
+  await assertNoAcademicYearOverlap(input.system, input.startDate, input.endDate);
   const calendarType = normalizeAcademicYearCalendar(input.system, input.calendarType);
 
   const [row] = await db
@@ -116,6 +118,7 @@ export async function updateAcademicYear(
   const startDate = input.startDate ?? year.startDate;
   const endDate = input.endDate ?? year.endDate;
   assertValidAcademicYearDates(startDate, endDate);
+  await assertNoAcademicYearOverlap(year.system, startDate, endDate, academicYearId);
 
   const [row] = await db
     .update(academicYears)

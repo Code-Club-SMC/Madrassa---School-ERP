@@ -43,6 +43,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-context";
 
 export const Route = createFileRoute("/_authenticated/settings/academic-year")({
   component: AcademicYearPage,
@@ -99,11 +100,11 @@ const STATUS_TONE: Record<YearStatus, string> = {
   locked: "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-300",
 };
 
-const STATUS_LABEL: Record<YearStatus, string> = {
-  active: "فعال",
-  archived: "محفوظ شدہ",
-  upcoming: "آنے والا",
-  locked: "مقفل",
+const STATUS_LABEL: Record<YearStatus, { en: string; ur: string }> = {
+  active: { en: "Active", ur: "فعال" },
+  archived: { en: "Archived", ur: "محفوظ شدہ" },
+  upcoming: { en: "Upcoming", ur: "آنے والا" },
+  locked: { en: "Locked", ur: "مقفل" },
 };
 
 const SYSTEM_META: Record<
@@ -112,32 +113,43 @@ const SYSTEM_META: Record<
     title: string;
     titleUrdu: string;
     currentLabel: string;
+    currentLabelUrdu: string;
     calendarLabel: string;
+    calendarLabelUrdu: string;
   }
 > = {
   school: {
-    title: "اسکول کے تعلیمی سال",
+    title: "School Academic Years",
     titleUrdu: "اسکول کے تعلیمی سال",
-    currentLabel: "موجودہ اسکول سال",
-    calendarLabel: "شمسی",
+    currentLabel: "Current School Year",
+    currentLabelUrdu: "موجودہ اسکول سال",
+    calendarLabel: "Gregorian",
+    calendarLabelUrdu: "شمسی",
   },
   madrassa: {
-    title: "مدارس کے تعلیمی سال",
+    title: "Madrassa Academic Years",
     titleUrdu: "مدارس کے تعلیمی سال",
-    currentLabel: "موجودہ مدرسہ سال",
-    calendarLabel: "ہجری · محرم تا ذوالحجہ",
+    currentLabel: "Current Madrassa Year",
+    currentLabelUrdu: "موجودہ مدرسہ سال",
+    calendarLabel: "Hijri · Muharram to Dhul Hijjah",
+    calendarLabelUrdu: "ہجری · محرم تا ذوالحجہ",
   },
 };
 
 function AcademicYearPage() {
   const queryClient = useQueryClient();
+  const { lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [form, setForm] = useState<NewYearForm>(() => defaultForm("school"));
 
+  const isUrdu = lang === "ur";
+
+  const t = (en: string, ur: string) => (isUrdu ? ur : en);
+
   const yearsQuery = useQuery({
     queryKey: academicYearKeys.all,
-    queryFn: getAcademicYears,
+    queryFn: () => getAcademicYears(t),
     staleTime: 30_000,
   });
 
@@ -151,24 +163,24 @@ function AcademicYearPage() {
   );
 
   const createMutation = useMutation({
-    mutationFn: createAcademicYear,
+    mutationFn: (input: { name: string; hijriName: string | null; system: AcademicYearSystem; calendarType: CalendarType; startDate: string; endDate: string; carryForwardEnabled: boolean; }): Promise<AcademicYearsResponse> => createAcademicYear(input, t),
     onSuccess: async () => {
-      toast.success("تعلیمی سال بنا دیا گیا");
+      toast.success(t("Academic year created", "تعلیمی سال بنا دیا گیا"));
       setOpen(false);
       setForm(defaultForm(form.system));
       await queryClient.invalidateQueries({ queryKey: academicYearKeys.all });
     },
-    onError: (error) => toast.error(errorMessage(error, "تعلیمی سال نہیں بن سکا")),
+    onError: (error) => toast.error(errorMessage(error, t("Could not create academic year", "تعلیمی سال نہیں بن سکا"))),
   });
 
   const actionMutation = useMutation({
-    mutationFn: runYearAction,
+    mutationFn: (variables: ConfirmAction): Promise<AcademicYearsResponse> => runYearAction(variables, t),
     onSuccess: async (_, variables) => {
-      toast.success(actionSuccessMessage(variables.action));
+      toast.success(actionSuccessMessage(variables.action, t));
       setConfirm(null);
       await queryClient.invalidateQueries({ queryKey: academicYearKeys.all });
     },
-    onError: (error) => toast.error(errorMessage(error, "تعلیمی سال اپ ڈیٹ نہیں ہو سکا")),
+    onError: (error) => toast.error(errorMessage(error, t("Could not update academic year", "تعلیمی سال اپ ڈیٹ نہیں ہو سکا"))),
   });
 
   function openNewYear(system: AcademicYearSystem) {
@@ -180,8 +192,8 @@ function AcademicYearPage() {
     if (!form.name.trim() || !form.startDate || !form.endDate) {
       toast.error(
         form.system === "madrassa"
-          ? "ہجری سال، آغاز کی تاریخ اور اختتام کی تاریخ لازمی ہیں"
-          : "سال کا عنوان، آغاز کی تاریخ اور اختتام کی تاریخ لازمی ہیں",
+          ? t("Hijri year, start date and end date are required", "ہجری سال، آغاز کی تاریخ اور اختتام کی تاریخ لازمی ہیں")
+          : t("Year title, start date and end date are required", "سال کا عنوان، آغاز کی تاریخ اور اختتام کی تاریخ لازمی ہیں"),
       );
       return;
     }
@@ -200,32 +212,15 @@ function AcademicYearPage() {
   return (
     <div>
       <PageHeader
-        title="تعلیمی سال"
+        title={t("Academic Year", "تعلیمی سال")}
         titleUrdu="تعلیمی سال"
-        description="داخلوں، ترقی، فیس، حاضری اور رپورٹس کے لیے اسکول اور مدرسہ کے فعال تعلیمی سال مقرر کریں۔"
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              onClick={() => openNewYear("school")}
-            >
-              <Plus className="h-4 w-4" />
-              اسکول سال
-            </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => openNewYear("madrassa")}>
-              <Plus className="h-4 w-4" />
-              مدرسہ سال
-            </Button>
-          </div>
-        }
+        description={t("Set up active academic years for admissions, progression, fees, attendance and reports.", "داخلوں، ترقی، فیس، حاضری اور رپورٹس کے لیے اسکول اور مدرسہ کے فعال تعلیمی سال مقرر کریں۔")}
       />
 
       {yearsQuery.isError && (
         <Alert variant="destructive" className="mb-4">
-          <AlertTitle>تعلیمی سال لوڈ نہیں ہو سکے</AlertTitle>
-          <AlertDescription>{errorMessage(yearsQuery.error, "دوبارہ کوشش کریں")}</AlertDescription>
+          <AlertTitle>{t("Could not load academic years", "تعلیمی سال لوڈ نہیں ہو سکے")}</AlertTitle>
+          <AlertDescription>{errorMessage(yearsQuery.error, t("Try again", "دوبارہ کوشش کریں"))}</AlertDescription>
         </Alert>
       )}
 
@@ -234,19 +229,24 @@ function AcademicYearPage() {
           system="school"
           years={grouped.school}
           loading={yearsQuery.isLoading}
-          pendingAction={actionMutation.isPending ? actionMutation.variables : undefined}
+          pendingAction={actionMutation.isPending ? (actionMutation.variables as ConfirmAction) : undefined}
           onAction={setConfirm}
           onCreate={() => openNewYear("school")}
+          t={t}
+          lang={lang}
         />
         <AcademicYearSection
           system="madrassa"
           years={grouped.madrassa}
           loading={yearsQuery.isLoading}
-          pendingAction={actionMutation.isPending ? actionMutation.variables : undefined}
+          pendingAction={actionMutation.isPending ? (actionMutation.variables as ConfirmAction) : undefined}
           onAction={setConfirm}
           onCreate={() => openNewYear("madrassa")}
+          t={t}
+          lang={lang}
         />
       </div>
+
 
       <NewAcademicYearDialog
         open={open}
@@ -255,6 +255,8 @@ function AcademicYearPage() {
         onOpenChange={setOpen}
         onFormChange={setForm}
         onSubmit={submitNewYear}
+        t={t}
+        lang={lang}
       />
 
       <ConfirmYearActionDialog
@@ -264,8 +266,10 @@ function AcademicYearPage() {
           if (!nextOpen) setConfirm(null);
         }}
         onConfirm={() => {
-          if (confirm) actionMutation.mutate(confirm);
+          if (confirm) actionMutation.mutate(confirm as any);
         }}
+        t={t}
+        lang={lang}
       />
     </div>
   );
@@ -278,6 +282,8 @@ function AcademicYearSection({
   pendingAction,
   onAction,
   onCreate,
+  t,
+  lang,
 }: {
   system: AcademicYearSystem;
   years: AcademicYear[];
@@ -285,6 +291,8 @@ function AcademicYearSection({
   pendingAction: ConfirmAction | undefined;
   onAction: (action: ConfirmAction) => void;
   onCreate: () => void;
+  t: (en: string, ur: string) => string;
+  lang: "ur" | "en";
 }) {
   const meta = SYSTEM_META[system];
   const active = years.find((year) => year.status === "active");
@@ -297,31 +305,31 @@ function AcademicYearSection({
             <div className="flex items-center gap-2">
               <CalendarRange className="h-4 w-4 text-primary" />
               <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                {meta.currentLabel}
+                {lang === "ur" ? meta.currentLabelUrdu : meta.currentLabel}
               </p>
             </div>
             {active ? (
               <>
                 <h2 className="font-urdu text-2xl font-bold mt-3">{active.name}</h2>
                 <p className="font-urdu text-base text-muted-foreground mt-0.5">
-                  {active.hijriName ? `ہجری ${active.hijriName}` : meta.calendarLabel}
+                  {active.hijriName ? `ہجری ${active.hijriName}` : (lang === "ur" ? meta.calendarLabelUrdu : meta.calendarLabel)}
                 </p>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-4 text-sm">
-                  <Row label="آغاز" value={formatUrduDate(active.startDate)} />
-                  <Row label="اختتام" value={formatUrduDate(active.endDate)} />
-                  <Row label="کیلنڈر" value={calendarLabel(active.calendarType)} />
-                  <Row label="حالت" value={<StatusBadge status={active.status} />} />
+                  <Row label={t("Start", "آغاز")} value={formatSystemDate(active.startDate, active.system)} />
+                  <Row label={t("End", "اختتام")} value={formatSystemDate(active.endDate, active.system)} />
+                  <Row label={t("Calendar", "کیلنڈر")} value={calendarLabel(active.calendarType, t)} />
+                  <Row label={t("Status", "حالت")} value={<StatusBadge status={active.status} lang={lang} />} />
                 </div>
               </>
             ) : (
               <div className="mt-4">
-                <h2 className="font-urdu text-xl font-bold">کوئی فعال سال نہیں</h2>
+                <h2 className="font-urdu text-xl font-bold">{t("No active year", "کوئی فعال سال نہیں")}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  داخلہ شروع کرنے کے لیے اس نظام کا فعال تعلیمی سال لازمی ہے۔
+                  {t("An active academic year is required to start admissions.", "داخلہ شروع کرنے کے لیے اس نظام کا فعال تعلیمی سال لازمی ہے۔")}
                 </p>
                 <Button size="sm" className="gap-1.5 mt-4" onClick={onCreate}>
                   <Plus className="h-4 w-4" />
-                  سال بنائیں
+                  {t("Create Year", "سال بنائیں")}
                 </Button>
               </div>
             )}
@@ -329,40 +337,27 @@ function AcademicYearSection({
         </div>
       </Card>
 
-      <Card className="overflow-hidden">
-        <div className="flex items-center justify-between gap-3 p-4 border-b border-border bg-muted/30">
-          <div>
-            <h3 className="font-urdu font-semibold text-sm">{meta.title}</h3>
-            <p className="font-urdu text-sm text-muted-foreground">{meta.titleUrdu}</p>
+      {years.length > 0 && (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-3 border-b">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("All Years", "تمام سال")}
+            </p>
           </div>
-          <Button size="sm" variant="outline" className="gap-1.5" onClick={onCreate}>
-            <Plus className="h-4 w-4" />
-            نیا
-          </Button>
-        </div>
-
-        <div className="divide-y divide-border">
-          {loading ? (
-            <div className="flex items-center gap-2 p-4 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              تعلیمی سال لوڈ ہو رہے ہیں...
-            </div>
-          ) : years.length === 0 ? (
-            <div className="p-4 text-sm text-muted-foreground">
-              ابھی کوئی سال مقرر نہیں کیا گیا۔
-            </div>
-          ) : (
-            years.map((year) => (
+          <div className="divide-y">
+            {years.map((year) => (
               <YearRow
                 key={year.id}
                 year={year}
                 pendingAction={pendingAction}
                 onAction={onAction}
+                lang={lang}
+                t={t}
               />
-            ))
-          )}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+      )}
     </section>
   );
 }
@@ -371,10 +366,14 @@ function YearRow({
   year,
   pendingAction,
   onAction,
+  lang,
+  t,
 }: {
   year: AcademicYear;
   pendingAction: ConfirmAction | undefined;
   onAction: (action: ConfirmAction) => void;
+  lang: "ur" | "en";
+  t: (en: string, ur: string) => string;
 }) {
   const pending = pendingAction?.year.id === year.id ? pendingAction.action : null;
 
@@ -387,15 +386,15 @@ function YearRow({
         <div className="min-w-0">
           <p className="font-semibold text-sm truncate">{year.name}</p>
           <p className="font-urdu text-sm text-muted-foreground">
-            {year.hijriName ? `ہجری ${year.hijriName}` : calendarLabel(year.calendarType)}
+            {year.hijriName ? `ہجری ${year.hijriName}` : calendarLabel(year.calendarType, (en, ur) => (lang === "ur" ? ur : en))}
           </p>
           <p className="font-urdu text-xs text-muted-foreground mt-0.5">
-            {formatUrduDate(year.startDate)} تا {formatUrduDate(year.endDate)}
+            {formatSystemDate(year.startDate, year.system)} تا {formatSystemDate(year.endDate, year.system)}
           </p>
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <StatusBadge status={year.status} />
+        <StatusBadge status={year.status} lang={lang} />
         {year.status !== "active" && year.status !== "locked" && (
           <Button
             size="sm"
@@ -405,7 +404,7 @@ function YearRow({
             {pending === "activate" ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              "فعال کریں"
+              t("Activate", "فعال کریں")
             )}
           </Button>
         )}
@@ -421,7 +420,7 @@ function YearRow({
             ) : (
               <Lock className="h-3.5 w-3.5" />
             )}
-            مقفل کریں
+            {t("Lock", "مقفل کریں")}
           </Button>
         )}
         {year.status !== "active" && year.status !== "archived" && (
@@ -436,7 +435,7 @@ function YearRow({
             ) : (
               <Archive className="h-3.5 w-3.5" />
             )}
-            محفوظ کریں
+            {t("Archive", "محفوظ کریں")}
           </Button>
         )}
       </div>
@@ -444,161 +443,6 @@ function YearRow({
   );
 }
 
-function NewAcademicYearDialog({
-  open,
-  form,
-  submitting,
-  onOpenChange,
-  onFormChange,
-  onSubmit,
-}: {
-  open: boolean;
-  form: NewYearForm;
-  submitting: boolean;
-  onOpenChange: (open: boolean) => void;
-  onFormChange: (form: NewYearForm) => void;
-  onSubmit: () => void;
-}) {
-  const isMadrassa = form.system === "madrassa";
-
-  function applyMadrassaHijriYear(date: Date) {
-    const range = hijriAcademicYearRange(date);
-    onFormChange({
-      ...form,
-      name: `${range.hijriYear}ھ`,
-      hijriName: range.hijriYear,
-      startDate: formatDateOnly(range.startDate),
-      endDate: formatDateOnly(range.endDate),
-    });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        dir="rtl"
-        lang="ur"
-        className="max-h-[92vh] overflow-y-auto text-right font-urdu sm:max-w-2xl"
-      >
-        <DialogHeader className="space-y-2 pr-8 text-right sm:text-right">
-          <DialogTitle className="text-xl leading-8">
-            {isMadrassa ? "نیا مدرسہ تعلیمی سال" : "نیا اسکول تعلیمی سال"}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="grid gap-5">
-          <Alert className="py-4 pl-4 pr-4 [&>svg]:left-auto [&>svg]:right-4 [&>svg~*]:pl-0 [&>svg~*]:pr-7">
-            <CalendarRange className="h-4 w-4" />
-            <AlertTitle>{isMadrassa ? "ہجری تعلیمی سال" : "شمسی تعلیمی سال"}</AlertTitle>
-            <AlertDescription className="leading-7">
-              {isMadrassa
-                ? "ہجری سال منتخب کریں؛ نظام یکم محرم سے آخری ذوالحجہ تک کی شمسی تاریخیں خود بھر دے گا۔"
-                : "اسکول کے آغاز اور اختتام کی تصدیق شدہ تاریخیں درج کریں۔"}
-            </AlertDescription>
-          </Alert>
-
-          <div className={cn("grid gap-4", isMadrassa && "sm:grid-cols-2")}>
-            <div className="space-y-1.5">
-              <Label>سال کا عنوان</Label>
-              <Input
-                value={form.name}
-                onChange={(event) => onFormChange({ ...form, name: event.target.value })}
-                placeholder={isMadrassa ? "1448ھ" : "2026-2027"}
-                disabled={submitting}
-                className="h-10 text-right font-urdu"
-              />
-            </div>
-            {isMadrassa && (
-              <DatePickerField
-                label="ہجری سال"
-                value={form.hijriName}
-                calendarType="hijri"
-                disabled={submitting}
-                placeholder="ہجری سال منتخب کریں"
-                displayValue={form.hijriName ? formatHijriYear(form.hijriName) : undefined}
-                selectedDate={parseDateOnly(form.startDate)}
-                onSelect={applyMadrassaHijriYear}
-                helpText="ہجری کیلنڈر سے کوئی دن منتخب کریں؛ اسی سال کا مکمل تعلیمی دورانیہ خود مقرر ہو جائے گا۔"
-              />
-            )}
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <DatePickerField
-              label="آغاز کی تاریخ"
-              value={form.startDate}
-              calendarType={isMadrassa ? "hijri" : "gregorian"}
-              disabled={submitting}
-              placeholder="آغاز منتخب کریں"
-              onSelect={(date) => {
-                const hijriYear = isMadrassa ? hijriYearFromDate(date) : form.hijriName;
-                onFormChange({
-                  ...form,
-                  startDate: formatDateOnly(date),
-                  hijriName: isMadrassa ? hijriYear : form.hijriName,
-                  name: isMadrassa ? `${hijriYear}ھ` : form.name,
-                });
-              }}
-              helpText={
-                form.startDate && isMadrassa
-                  ? `محفوظ شمسی تاریخ: ${formatUrduDate(form.startDate)}`
-                  : undefined
-              }
-            />
-            <DatePickerField
-              label="اختتام کی تاریخ"
-              value={form.endDate}
-              calendarType={isMadrassa ? "hijri" : "gregorian"}
-              disabled={submitting}
-              placeholder="اختتام منتخب کریں"
-              onSelect={(date) => {
-                onFormChange({
-                  ...form,
-                  endDate: formatDateOnly(date),
-                });
-              }}
-              helpText={
-                form.endDate && isMadrassa
-                  ? `محفوظ شمسی تاریخ: ${formatUrduDate(form.endDate)}`
-                  : undefined
-              }
-            />
-          </div>
-
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4">
-            <Checkbox
-              className="mt-1"
-              checked={form.carryForwardEnabled}
-              onCheckedChange={(value) =>
-                onFormChange({ ...form, carryForwardEnabled: value === true })
-              }
-              disabled={submitting}
-            />
-            <span className="space-y-1.5">
-              <span className="block text-sm font-medium leading-6">
-                سالانہ ترقی میں طلبہ شامل کریں
-              </span>
-              <span className="block text-xs leading-6 text-muted-foreground">
-                یہ فوری طور پر کسی طالب علم کو منتقل نہیں کرتا۔ یہ صرف اس تعلیمی سال کی پالیسی محفوظ
-                کرتا ہے تاکہ سالانہ ترقی یا رول اوور چلاتے وقت فعال طلبہ کو اگلے سال میں لے جایا جا
-                سکے۔
-              </span>
-            </span>
-          </label>
-        </div>
-
-        <DialogFooter className="sm:justify-start sm:space-x-0 sm:space-x-reverse sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            منسوخ
-          </Button>
-          <Button onClick={onSubmit} disabled={submitting}>
-            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            بنائیں
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function DatePickerField({
   label,
@@ -610,6 +454,7 @@ function DatePickerField({
   selectedDate,
   helpText,
   onSelect,
+  lang,
 }: {
   label: string;
   value: string;
@@ -620,6 +465,7 @@ function DatePickerField({
   selectedDate?: Date | null;
   helpText?: string;
   onSelect: (date: Date) => void;
+  lang: "ur" | "en";
 }) {
   const selected = selectedDate ?? parseDateOnly(value);
   const selectedKey = selected ? formatDateOnly(selected) : "";
@@ -629,6 +475,7 @@ function DatePickerField({
   const [visibleMonth, setVisibleMonth] = useState<Date | undefined>(() =>
     selectedKey ? (parseDateOnly(selectedKey) ?? undefined) : undefined,
   );
+  const isRTL = lang === "ur";
 
   useEffect(() => {
     setVisibleMonth(selectedKey ? (parseDateOnly(selectedKey) ?? undefined) : undefined);
@@ -656,13 +503,13 @@ function DatePickerField({
             type="button"
             variant="outline"
             disabled={disabled}
-            className="h-10 w-full justify-between gap-2 px-3 font-urdu"
+            className={cn("h-10 w-full justify-between gap-2 px-3", isRTL ? "font-urdu text-right" : "text-left")}
           >
-            <span className="min-w-0 flex-1 truncate text-right">{resolvedValue}</span>
+            <span className="min-w-0 flex-1 truncate">{resolvedValue}</span>
             <CalendarIcon className="h-4 w-4 shrink-0 opacity-70" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent dir="rtl" lang="ur" align="start" className="w-auto p-0 font-urdu">
+        <PopoverContent dir={isRTL ? "rtl" : "ltr"} lang={lang} align="start" className={cn("w-auto p-0", isRTL ? "font-urdu" : "")}>
           {calendarType === "hijri" ? (
             <HijriCalendar
               mode="single"
@@ -820,33 +667,203 @@ function HijriCalendar({
   );
 }
 
+function NewAcademicYearDialog({
+  open,
+  form,
+  submitting,
+  onOpenChange,
+  onFormChange,
+  onSubmit,
+  t,
+  lang,
+}: {
+  open: boolean;
+  form: NewYearForm;
+  submitting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onFormChange: (form: NewYearForm) => void;
+  onSubmit: () => void;
+  t: (en: string, ur: string) => string;
+  lang: "ur" | "en";
+}) {
+  const isMadrassa = form.system === "madrassa";
+  const isRTL = lang === "ur";
+
+  function applyMadrassaHijriYear(date: Date) {
+    const range = hijriAcademicYearRange(date);
+    onFormChange({
+      ...form,
+      name: `${range.hijriYear}ھ`,
+      hijriName: range.hijriYear,
+      startDate: formatDateOnly(range.startDate),
+      endDate: formatDateOnly(range.endDate),
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        dir={isRTL ? "rtl" : "ltr"}
+        lang={lang}
+        className={cn(
+          "max-h-[92vh] overflow-y-auto sm:max-w-2xl",
+          isRTL ? "text-right font-urdu" : "text-left",
+        )}
+      >
+        <DialogHeader className={cn("space-y-2", isRTL ? "pr-8 text-right" : "pl-8 text-left")}>
+          <DialogTitle className="text-xl leading-8">
+            {isMadrassa ? t("New Madrassa Academic Year", "نیا مدرسہ تعلیمی سال") : t("New School Academic Year", "نیا اسکول تعلیمی سال")}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="grid gap-5">
+          <Alert className={cn("py-4", isRTL ? "pl-4 pr-4 [&>svg]:left-auto [&>svg]:right-4 [&>svg~*]:pl-0 [&>svg~*]:pr-7" : "[&>svg]:right-auto [&>svg]:left-4 [&>svg~*]:pr-0 [&>svg~*]:pl-7")}>
+            <CalendarRange className="h-4 w-4" />
+            <AlertTitle>{isMadrassa ? t("Hijri Academic Year", "ہجری تعلیمی سال") : t("Gregorian Academic Year", "شمسی تعلیمی سال")}</AlertTitle>
+            <AlertDescription className="leading-7">
+              {isMadrassa
+                ? t("Select the Hijri year; the system will auto-fill the Gregorian date range from Muharram to Dhul Hijjah.", "ہجری سال منتخب کریں؛ نظام یکم محرم سے آخری ذوالحجہ تک کی شمسی تاریخیں خود بھر دے گا۔")
+                : t("Enter verified start and end dates for the school year.", "اسکول کے آغاز اور اختتام کی تصدیق شدہ تاریخیں درج کریں۔")}
+            </AlertDescription>
+          </Alert>
+
+          <div className={cn("grid gap-4", isMadrassa && "sm:grid-cols-2")}>
+            <div className="space-y-1.5">
+              <Label>{t("Year Title", "سال کا عنوان")}</Label>
+              <Input
+                value={form.name}
+                onChange={(event) => onFormChange({ ...form, name: event.target.value })}
+                placeholder={isMadrassa ? "1448ھ" : "2026-2027"}
+                disabled={submitting}
+                className={cn("h-10", isRTL ? "text-right font-urdu" : "text-left")}
+              />
+            </div>
+            {isMadrassa && (
+              <DatePickerField
+                label={t("Hijri Year", "ہجری سال")}
+                value={form.hijriName}
+                calendarType="hijri"
+                disabled={submitting}
+                placeholder={t("Select Hijri year", "ہجری سال منتخب کریں")}
+                displayValue={form.hijriName ? formatHijriYear(form.hijriName) : undefined}
+                selectedDate={parseDateOnly(form.startDate)}
+                onSelect={applyMadrassaHijriYear}
+                helpText={t("Select a day from the Hijri calendar; the complete academic period for that year will be set automatically.", "ہجری کیلنڈر سے کوئی دن منتخب کریں؛ اسی سال کا مکمل تعلیمی دورانیہ خود مقرر ہو جائے گا۔")}
+                lang={lang}
+              />
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <DatePickerField
+              label={t("Start Date", "آغاز کی تاریخ")}
+              value={form.startDate}
+              calendarType={isMadrassa ? "hijri" : "gregorian"}
+              disabled={submitting}
+              placeholder={t("Select start", "آغاز منتخب کریں")}
+              onSelect={(date) => {
+                const hijriYear = isMadrassa ? hijriYearFromDate(date) : form.hijriName;
+                onFormChange({
+                  ...form,
+                  startDate: formatDateOnly(date),
+                  hijriName: isMadrassa ? hijriYear : form.hijriName,
+                  name: isMadrassa ? `${hijriYear}ھ` : form.name,
+                });
+              }}
+              helpText={
+                form.startDate && isMadrassa
+                  ? `${t("Saved date", "محفوظ تاریخ")}: ${formatHijriDate(form.startDate)}`
+                  : undefined
+              }
+              lang={lang}
+            />
+            <DatePickerField
+              label={t("End Date", "اختتام کی تاریخ")}
+              value={form.endDate}
+              calendarType={isMadrassa ? "hijri" : "gregorian"}
+              disabled={submitting}
+              placeholder={t("Select end", "اختتام منتخب کریں")}
+              onSelect={(date) => {
+                onFormChange({
+                  ...form,
+                  endDate: formatDateOnly(date),
+                });
+              }}
+              helpText={
+                form.endDate && isMadrassa
+                  ? `${t("Saved date", "محفوظ تاریخ")}: ${formatHijriDate(form.endDate)}`
+                  : undefined
+              }
+              lang={lang}
+            />
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-4">
+            <Checkbox
+              className="mt-1"
+              checked={form.carryForwardEnabled}
+              onCheckedChange={(value) =>
+                onFormChange({ ...form, carryForwardEnabled: value === true })
+              }
+              disabled={submitting}
+            />
+            <span className="space-y-1.5">
+              <span className="block text-sm font-medium leading-6">
+                {t("Enroll students in annual promotion", "سالانہ ترقی میں طلبہ شامل کریں")}
+              </span>
+              <span className="block text-xs leading-6 text-muted-foreground">
+                {t("This does not immediately transfer any student. It only stores the academic year policy so active students can be carried forward to the next year when running annual promotion or rollover.", "یہ فوری طور پر کسی طالب علم کو منتقل نہیں کرتا۔ یہ صرف اس تعلیمی سال کی پالیسی محفوظ کرتا ہے تاکہ سالانہ ترقی یا رول اوور چلاتے وقت فعال طلبہ کو اگلے سال میں لے جایا جا سکے۔")}
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <DialogFooter className={cn("sm:justify-start sm:gap-2", isRTL ? "sm:space-x-reverse" : "sm:space-x-0")}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            {t("Cancel", "منسوخ")}
+          </Button>
+          <Button onClick={onSubmit} disabled={submitting}>
+            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t("Create", "بنائیں")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ConfirmYearActionDialog({
   confirm,
   submitting,
   onOpenChange,
   onConfirm,
+  t,
+  lang,
 }: {
   confirm: ConfirmAction | null;
   submitting: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  t: (en: string, ur: string) => string;
+  lang: "ur" | "en";
 }) {
+  const isRTL = lang === "ur";
   return (
     <AlertDialog open={Boolean(confirm)} onOpenChange={onOpenChange}>
-      <AlertDialogContent dir="rtl" lang="ur" className="text-right font-urdu">
-        <AlertDialogHeader className="text-right sm:text-right">
+      <AlertDialogContent dir={isRTL ? "rtl" : "ltr"} lang={lang} className={cn("text-right", isRTL ? "font-urdu" : "text-left")}>
+        <AlertDialogHeader className={cn("text-right", isRTL ? "sm:text-right" : "sm:text-left")}>
           <AlertDialogTitle>
-            {confirm ? `تعلیمی سال ${actionLabel(confirm.action)}؟` : "عمل کی تصدیق"}
+            {confirm ? t(`Confirm ${confirm.action} academic year`, `تعلیمی سال ${actionLabel(confirm.action, t)}؟`) : t("Confirm action", "عمل کی تصدیق")}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {confirm ? confirmationDescription(confirm) : "یہ عمل تعلیمی سال کو اپ ڈیٹ کرے گا۔"}
+            {confirm ? confirmationDescription(confirm, t) : t("This action will update the academic year.", "یہ عمل تعلیمی سال کو اپ ڈیٹ کرے گا۔")}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="sm:justify-start sm:space-x-0 sm:space-x-reverse sm:gap-2">
-          <AlertDialogCancel disabled={submitting}>منسوخ</AlertDialogCancel>
+        <AlertDialogFooter className={cn("sm:justify-start sm:gap-2", isRTL ? "sm:space-x-reverse" : "sm:space-x-0")}>
+          <AlertDialogCancel disabled={submitting}>{t("Cancel", "منسوخ")}</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm} disabled={submitting}>
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            تصدیق کریں
+            {t("Confirm", "تصدیق کریں")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -863,10 +880,11 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function StatusBadge({ status }: { status: YearStatus }) {
+function StatusBadge({ status, lang }: { status: YearStatus; lang: "ur" | "en" }) {
+  const label = lang === "ur" ? STATUS_LABEL[status].ur : STATUS_LABEL[status].en;
   return (
     <Badge variant="outline" className={STATUS_TONE[status]}>
-      {STATUS_LABEL[status]}
+      {label}
     </Badge>
   );
 }
@@ -886,37 +904,37 @@ function calendarTypeForSystem(system: AcademicYearSystem): CalendarType {
   return system === "madrassa" ? "hijri" : "gregorian";
 }
 
-function calendarLabel(calendarType: CalendarType) {
-  return calendarType === "hijri" ? "ہجری" : "شمسی";
+function calendarLabel(calendarType: CalendarType, t: (en: string, ur: string) => string) {
+  return calendarType === "hijri" ? t("Hijri", "ہجری") : t("Gregorian", "شمسی");
 }
 
-function actionLabel(action: ConfirmAction["action"]) {
-  if (action === "activate") return "فعال کریں";
-  if (action === "lock") return "مقفل کریں";
-  return "محفوظ کریں";
+function actionLabel(action: ConfirmAction["action"], t: (en: string, ur: string) => string) {
+  if (action === "activate") return t("Activate", "فعال کریں");
+  if (action === "lock") return t("Lock", "مقفل کریں");
+  return t("Archive", "محفوظ کریں");
 }
 
-function actionSuccessMessage(action: ConfirmAction["action"]) {
-  if (action === "activate") return "تعلیمی سال فعال کر دیا گیا";
-  if (action === "lock") return "تعلیمی سال مقفل کر دیا گیا";
-  return "تعلیمی سال محفوظ کر دیا گیا";
+function actionSuccessMessage(action: ConfirmAction["action"], t: (en: string, ur: string) => string) {
+  if (action === "activate") return t("Academic year activated", "تعلیمی سال فعال کر دیا گیا");
+  if (action === "lock") return t("Academic year locked", "تعلیمی سال مقفل کر دیا گیا");
+  return t("Academic year archived", "تعلیمی سال محفوظ کر دیا گیا");
 }
 
-function confirmationDescription(confirm: ConfirmAction) {
+function confirmationDescription(confirm: ConfirmAction, t: (en: string, ur: string) => string) {
   if (confirm.action === "activate") {
-    return `${confirm.year.name} کو فعال کرنے سے اسی نظام کا موجودہ فعال سال محفوظ ہو جائے گا۔ نئے داخلے اسی سال میں درج ہوں گے۔`;
+    return t(`${confirm.year.name} will become active. New enrollments will be recorded under this year.`, `${confirm.year.name} کو فعال کرنے سے اسی نظام کا موجودہ فعال سال محفوظ ہو جائے گا۔ نئے داخلے اسی سال میں درج ہوں گے۔`);
   }
   if (confirm.action === "lock") {
-    return `${confirm.year.name} کو مقفل کرنے کے بعد اس سال سے متعلق داخلوں، ترقی اور ریکارڈ میں تبدیلی نہیں ہو سکے گی۔`;
+    return t(`Locking ${confirm.year.name} will prevent changes to admissions, promotions, and records under this year.`, `${confirm.year.name} کو مقفل کرنے کے بعد اس سال سے متعلق داخلوں، ترقی اور ریکارڈ میں تبدیلی نہیں ہو سکے گی۔`);
   }
-  return `${confirm.year.name} کو محفوظ کرنے کے بعد یہ فعال کارروائیوں میں استعمال نہیں ہو گا، لیکن سابقہ ریکارڈ باقی رہے گا۔`;
+  return t(`Archiving ${confirm.year.name} will remove it from active workflows, but historical records will remain preserved.`, `${confirm.year.name} کو محفوظ کرنے کے بعد یہ فعال کارروائیوں میں استعمال نہیں ہو گا، لیکن سابقہ ریکارڈ باقی رہے گا۔`);
 }
 
-async function getAcademicYears(): Promise<AcademicYearsResponse> {
+async function getAcademicYears(t: (en: string, ur: string) => string): Promise<AcademicYearsResponse> {
   const response = await fetch("/api/academic-years", { credentials: "include" });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payloadError(payload, "تعلیمی سال لوڈ نہیں ہو سکے"));
-  return payload;
+  if (!response.ok) throw new Error(payloadError(payload, t("Could not load academic years", "تعلیمی سال لوڈ نہیں ہو سکے")));
+  return payload as AcademicYearsResponse;
 }
 
 async function createAcademicYear(input: {
@@ -927,7 +945,7 @@ async function createAcademicYear(input: {
   startDate: string;
   endDate: string;
   carryForwardEnabled: boolean;
-}) {
+}, t: (en: string, ur: string) => string): Promise<AcademicYearsResponse> {
   const response = await fetch("/api/academic-years", {
     method: "POST",
     credentials: "include",
@@ -935,11 +953,11 @@ async function createAcademicYear(input: {
     body: JSON.stringify(input),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payloadError(payload, "تعلیمی سال نہیں بن سکا"));
-  return payload;
+  if (!response.ok) throw new Error(payloadError(payload, t("Could not create academic year", "تعلیمی سال نہیں بن سکا")));
+  return payload as AcademicYearsResponse;
 }
 
-async function runYearAction(confirm: ConfirmAction) {
+async function runYearAction(confirm: ConfirmAction, t: (en: string, ur: string) => string): Promise<AcademicYearsResponse> {
   const path =
     confirm.action === "archive"
       ? `/api/academic-years/${confirm.year.id}`
@@ -949,8 +967,8 @@ async function runYearAction(confirm: ConfirmAction) {
     credentials: "include",
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payloadError(payload, "تعلیمی سال اپ ڈیٹ نہیں ہو سکا"));
-  return payload;
+  if (!response.ok) throw new Error(payloadError(payload, t("Could not update academic year", "تعلیمی سال اپ ڈیٹ نہیں ہو سکا")));
+  return payload as AcademicYearsResponse;
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -1014,6 +1032,10 @@ function formatUrduDate(value: string) {
     month: "short",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function formatSystemDate(value: string, system: AcademicYearSystem) {
+  return system === "madrassa" ? formatHijriDate(value) : formatUrduDate(value);
 }
 
 function formatPickerDate(value: string, calendarType: CalendarType) {
