@@ -20,36 +20,12 @@ import { Home, RefreshCw } from "lucide-react";
 type RootContext = {
   queryClient: QueryClient;
   initialLang?: "ur" | "en";
-  authUser?: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    nameUrdu?: string;
-    phone?: string;
-    cnic?: string;
-    systemAccess?: string;
-    mustChangePassword?: boolean;
-    department?: string;
-    designation?: string;
-  };
 };
 
 function parseLangFromCookie(cookie: string | null): "ur" | "en" {
   if (!cookie) return "ur";
   const match = cookie.match(/msmis-lang=(ur|en)/);
   return match?.[1] === "en" ? "en" : "ur";
-}
-
-function parseAuthToken(cookie: string | null): string | null {
-  if (typeof document !== "undefined") {
-    const clientCookie = document.cookie;
-    const match = clientCookie.match(/msmis_auth_token=([^;]+)/);
-    return match?.[1] ?? null;
-  }
-  if (!cookie) return null;
-  const match = cookie.match(/msmis_auth_token=([^;]+)/);
-  return match?.[1] ?? null;
 }
 
 function NotFoundComponent() {
@@ -69,6 +45,7 @@ function NotFoundComponent() {
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <Link
             to="/"
+            
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <Home className="h-4 w-4 me-2" />
@@ -131,32 +108,7 @@ export const Route = createRootRouteWithContext<RootContext>()({
     const cookie = typeof ctx?.request?.headers?.get === 'function' ? ctx.request.headers.get("cookie") : null;
     const initialLang = parseLangFromCookie(cookie);
 
-    let authUser: RootContext["authUser"];
-    const token = parseAuthToken(cookie);
-    if (token) {
-      try {
-        const decoded = JSON.parse(Buffer.from(token, "base64").toString("utf-8"));
-        if (decoded.exp && Date.now() < decoded.exp) {
-          authUser = {
-            id: decoded.userId,
-            name: decoded.name,
-            email: decoded.email,
-            role: decoded.role ?? "teacher",
-            ...(decoded.nameUrdu ? { nameUrdu: decoded.nameUrdu } : {}),
-            ...(decoded.phone ? { phone: decoded.phone } : {}),
-            ...(decoded.cnic ? { cnic: decoded.cnic } : {}),
-            ...(decoded.systemAccess ? { systemAccess: decoded.systemAccess } : {}),
-            ...(decoded.mustChangePassword !== undefined ? { mustChangePassword: decoded.mustChangePassword } : {}),
-            ...(decoded.department ? { department: decoded.department } : {}),
-            ...(decoded.designation ? { designation: decoded.designation } : {}),
-          };
-        }
-      } catch {
-        // ignore invalid token format
-      }
-    }
-
-    return { initialLang, authUser };
+    return { initialLang };
   },
   head: () => ({
     meta: [

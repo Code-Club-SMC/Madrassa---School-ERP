@@ -1,3 +1,4 @@
+
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { AlertCircle, Loader2, School, UserRound, UsersRound } from "lucide-react";
@@ -6,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/components/language-context";
 import { DraggableLanguageToggle } from "@/components/app/draggable-language-toggle";
-import { useCustomAuth } from "@/lib/custom-auth-client";
-import { toAppUser } from "@/lib/auth-session";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -28,7 +28,7 @@ const institutionUnits = [
 function LoginPage() {
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
-  const auth = useCustomAuth();
+  const auth = useAuth();
   const { redirect } = Route.useSearch();
   const [mode, setMode] = useState<LoginMode>("staff");
   const [staffEmail, setStaffEmail] = useState("");
@@ -77,7 +77,8 @@ function LoginPage() {
         return;
       }
 
-      navigate({ to: redirect ?? (role === "parent" ? "/parents" : "/dashboard") });
+      const destination = redirect ?? (role === "parent" ? "/parents" : "/dashboard");
+      navigate({ to: destination });
     } catch (err) {
       setError(
         err instanceof Error

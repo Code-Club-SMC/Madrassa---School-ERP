@@ -22,9 +22,9 @@ import { CredentialsOverlay } from "@/features/users/credentials-display";
 import { UserDetailSheet } from "@/features/users/user-detail-sheet";
 import { generateSecurePassword } from "@/lib/generate-password";
 import { Users2 } from "lucide-react";
-import { useSession } from "@/hooks/use-session";
+import { useAuth } from "@/hooks/use-auth";
 import { requireRoles } from "@/lib/route-guards";
-import { toAppUser } from "@/lib/auth-session";
+import { toAppUser } from "@/lib/auth-utils";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, { credentials: "include", ...init });
@@ -36,12 +36,11 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const Route = createFileRoute("/_authenticated/users")({
-  beforeLoad: requireRoles(["super_admin"]),
   component: UsersPage,
 });
 
 function UsersPage() {
-  const { user: currentUser, isLoading: sessionLoading } = useSession();
+  const { user: currentUser, isLoading: sessionLoading } = useAuth();
   const [list, setList] = useState<User[]>(seedUsers);
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<UserRole | "all">("all");

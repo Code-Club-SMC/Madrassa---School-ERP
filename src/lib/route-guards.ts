@@ -1,5 +1,5 @@
 import { redirect } from "@tanstack/react-router";
-import { hasAnyRole, staffRoles, toAppUser } from "@/lib/auth-session";
+import { hasAnyRole, staffRoles, toAppUser } from "@/lib/auth-utils";
 import { navItems } from "@/lib/nav-config";
 import type { User, UserRole } from "@/types";
 

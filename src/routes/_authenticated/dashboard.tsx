@@ -42,9 +42,8 @@ import {
 } from "@/mock";
 import { formatPKR, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { useSession } from "@/hooks/use-session";
+import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/components/language-context";
-import { useCustomAuth } from "@/lib/custom-auth-client";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -65,8 +64,7 @@ const ACTIVITY_TONE = {
 } as const;
 
 function DashboardPage() {
-  const { user, isLoading } = useSession();
-  const auth = useCustomAuth();
+  const { user, isLoading } = useAuth();
   const { lang } = useLanguage();
   const navigate = useNavigate();
 

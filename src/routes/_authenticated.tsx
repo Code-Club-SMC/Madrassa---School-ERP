@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Outlet, useRouterState, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState, redirect } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { Topbar } from "@/components/app/topbar";
@@ -8,21 +8,16 @@ import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { DraggableLanguageToggle } from "@/components/app/draggable-language-toggle";
 import { useSystem } from "@/components/system-context";
 import { HRProvider } from "@/stores/hr-store";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: ({ context }) => {
-    if (!context.authUser) {
-      throw redirect({
-        to: "/login",
-        search: { redirect: undefined },
-      });
-    }
-  },
   component: AuthenticatedLayout,
 });
 
 function AuthenticatedLayout() {
+  const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const { user, isLoading } = useAuth();
   const { system, setSystem } = useSystem();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -30,6 +25,24 @@ function AuthenticatedLayout() {
     if (pathname.startsWith("/madrassa")) setSystem("madrassa");
     if (pathname.startsWith("/school")) setSystem("school");
   }, [pathname, setSystem]);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate({ to: "/login", search: { redirect: undefined } });
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-dvh">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <HRProvider>
