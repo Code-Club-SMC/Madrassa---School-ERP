@@ -15,7 +15,7 @@ import { navItems } from "@/lib/nav-config";
 import { useSystem } from "@/components/system-context";
 import { useTheme } from "@/components/theme-provider";
 import { useLanguage } from "@/components/language-context";
-import { useSession } from "@/hooks/use-session";
+import { useAuth } from "@/hooks/use-auth";
 import type { UserRole } from "@/types";
 
 type Props = { open: boolean; onOpenChange: (v: boolean) => void };
@@ -25,7 +25,7 @@ export function CommandPalette({ open, onOpenChange }: Props) {
   const { system, setSystem } = useSystem();
   const { toggle } = useTheme();
   const { lang, setLang } = useLanguage();
-  const { user } = useSession();
+  const { user } = useAuth();
   const role = (user?.role ?? "parent") as UserRole;
 
   // ⌘K / Ctrl+K toggle

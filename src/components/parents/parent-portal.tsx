@@ -29,14 +29,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSession } from "@/hooks/use-session";
+import { useAuth } from "@/hooks/use-auth";
 import { formatDate, formatPKR, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getGuardianDashboard, listGuardianAccounts, parentKeys } from "./parent-api";
 import type { GuardianAccount, ParentStudent } from "./parent-types";
 
 export function ParentPortal() {
-  const { user } = useSession();
+  const { user } = useAuth();
   if (user?.role === "parent") return <GuardianSelfPortal />;
   return <GuardianAccountsWorkspace />;
 }

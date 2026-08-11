@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { can, canView, getAccessibleModules } from "@/lib/permissions/utils";
 import { getSuperAdminPermissions, ROLE_DEFAULTS } from "@/lib/permissions/role-defaults";
-import { useSession } from "@/hooks/use-session";
+import { useAuth } from "@/hooks/use-auth";
 import type { ModuleKey, PermissionAction, UserPermissions } from "@/lib/permissions/module-registry";
 import type { UserRole } from "@/types";
 
@@ -14,7 +14,7 @@ function resolvePermissions(role: UserRole, stored: UserPermissions | undefined)
 }
 
 export function usePermissions() {
-  const { user } = useSession();
+  const { user } = useAuth();
   const role = (user?.role ?? "parent") as UserRole;
   const stored = user?.permissions;
   const permissions = useMemo(() => resolvePermissions(role, stored), [role, stored]);

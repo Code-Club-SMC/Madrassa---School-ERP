@@ -1,14 +1,14 @@
-import { auth } from "@/lib/auth";
-import { toAppUser } from "@/lib/auth-session";
+import { getSessionUser } from "@/lib/auth-helpers.server";
 import type { ModuleKey, PermissionAction, UserPermissions } from "@/lib/permissions/module-registry";
 import { getSuperAdminPermissions, ROLE_DEFAULTS, type DefaultableRole } from "@/lib/permissions/role-defaults";
 import { can } from "@/lib/permissions/utils";
-import type { User } from "@/types";
+import type { User, UserRole } from "@/types";
 import { AdmissionError } from "./errors";
 
 export async function getRequestUser(request: Request): Promise<User | null> {
-  const session = await auth.api.getSession({ headers: request.headers });
-  return session?.user ? toAppUser(session.user) : null;
+  const session = await getSessionUser();
+  if (!session) return null;
+  return { ...session, role: session.role as UserRole, status: session.status as User["status"], systemAccess: session.systemAccess as User["systemAccess"] };
 }
 
 export async function requireAdmissionPermission(

@@ -14,7 +14,7 @@ import {
 import { useTheme } from "@/components/theme-provider";
 import { useSystem } from "@/components/system-context";
 import { useLanguage } from "@/components/language-context";
-import { useSession } from "@/hooks/use-session";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { PAGE_TITLES } from "@/lib/nav-config";
 
@@ -25,7 +25,7 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
   const { theme, toggle } = useTheme();
   const { system, setSystem } = useSystem();
   const { lang, setLang } = useLanguage();
-  const { user, logout } = useSession();
+  const { user, logout } = useAuth();
 
   const current = PAGE_TITLES[pathname] ?? { en: "MSMIS", ur: "ایم ایس ایم آئی ایس" };
   const initials = (user?.name ?? "MSMIS")

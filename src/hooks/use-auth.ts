@@ -1,22 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { loginServer, logoutServer, getUserServer } from "@/lib/auth.server";
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  nameUrdu?: string;
-  phone?: string;
-  cnic?: string;
-  systemAccess?: string;
-  mustChangePassword?: boolean;
-  department?: string;
-  designation?: string;
-};
+import type { User, UserRole } from "@/types";
 
 type AuthState = {
-  user: User | null;
+  user: (User & { role: UserRole }) | null;
   isLoading: boolean;
 };
 
@@ -27,8 +14,9 @@ export function useAuth() {
     try {
       const response = await getUserServer();
       const data = await response.json();
-      setState({ user: data.user, isLoading: false });
-      return data.user;
+      const user = data.user ? { ...data.user, role: data.user.role as UserRole } : null;
+      setState({ user, isLoading: false });
+      return user;
     } catch {
       setState({ user: null, isLoading: false });
       return null;
@@ -41,8 +29,9 @@ export function useAuth() {
     if (!response.ok || data.error) {
       throw new Error(data.error ?? "Login failed");
     }
-    setState({ user: data.user, isLoading: false });
-    return data.user;
+    const user = { ...data.user, role: data.user.role as UserRole };
+    setState({ user, isLoading: false });
+    return user;
   }, []);
 
   const logout = useCallback(async () => {

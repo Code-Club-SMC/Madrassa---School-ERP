@@ -4,26 +4,56 @@ import { user, account } from "@/db/schema/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { verifyPassword } from "@better-auth/utils/password";
-import { cookies } from "@tanstack/react-start/server";
+import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
 
 const SESSION_COOKIE = "msmis_session";
 
+type SessionPayload = {
+  userId: string;
+  email: string;
+  role: string;
+  name: string;
+  nameUrdu?: string;
+  phone?: string;
+  cnic?: string;
+  systemAccess?: string;
+  mustChangePassword?: boolean;
+  department?: string;
+  designation?: string;
+};
+
 function createSessionToken(foundUser: typeof user.$inferSelect) {
-  const payload = {
+  const payload: SessionPayload = {
     userId: foundUser.id,
     email: foundUser.email,
-    role: foundUser.role,
+    role: foundUser.role ?? "teacher",
     name: foundUser.name,
-    nameUrdu: foundUser.nameUrdu,
-    phone: foundUser.phone,
-    cnic: foundUser.cnic,
-    systemAccess: foundUser.systemAccess,
-    mustChangePassword: foundUser.mustChangePassword,
-    department: foundUser.department,
-    designation: foundUser.designation,
+    nameUrdu: foundUser.nameUrdu ?? undefined,
+    phone: foundUser.phone ?? undefined,
+    cnic: foundUser.cnic ?? undefined,
+    systemAccess: foundUser.systemAccess ?? undefined,
+    mustChangePassword: foundUser.mustChangePassword ?? undefined,
+    department: foundUser.department ?? undefined,
+    designation: foundUser.designation ?? undefined,
   };
 
   return Buffer.from(JSON.stringify(payload)).toString("base64");
+}
+
+function userResponse(foundUser: typeof user.$inferSelect) {
+  return {
+    id: foundUser.id,
+    name: foundUser.name,
+    email: foundUser.email,
+    role: foundUser.role ?? "teacher",
+    nameUrdu: foundUser.nameUrdu ?? undefined,
+    phone: foundUser.phone ?? undefined,
+    cnic: foundUser.cnic ?? undefined,
+    systemAccess: foundUser.systemAccess ?? undefined,
+    mustChangePassword: foundUser.mustChangePassword ?? undefined,
+    department: foundUser.department ?? undefined,
+    designation: foundUser.designation ?? undefined,
+  };
 }
 
 export const loginServer = createServerFn({ method: "POST" })
@@ -59,38 +89,21 @@ export const loginServer = createServerFn({ method: "POST" })
 
     const token = createSessionToken(foundUser);
 
-    cookies().set(SESSION_COOKIE, token, {
+    setCookie(SESSION_COOKIE, token, {
       path: "/",
       httpOnly: true,
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60,
     });
 
-    return new Response(
-      JSON.stringify({
-        user: {
-          id: foundUser.id,
-          name: foundUser.name,
-          email: foundUser.email,
-          role: foundUser.role,
-          nameUrdu: foundUser.nameUrdu,
-          phone: foundUser.phone,
-          cnic: foundUser.cnic,
-          systemAccess: foundUser.systemAccess,
-          mustChangePassword: foundUser.mustChangePassword,
-          department: foundUser.department,
-          designation: foundUser.designation,
-        },
-      }),
-      {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ user: userResponse(foundUser) }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
   });
 
 export const logoutServer = createServerFn({ method: "POST" }).handler(async () => {
-  cookies().delete(SESSION_COOKIE, { path: "/" });
+  deleteCookie(SESSION_COOKIE, { path: "/" });
   return new Response(JSON.stringify({ success: true }), {
     status: 200,
     headers: { "content-type": "application/json" },
@@ -98,7 +111,7 @@ export const logoutServer = createServerFn({ method: "POST" }).handler(async () 
 });
 
 export const getUserServer = createServerFn({ method: "GET" }).handler(async () => {
-  const sessionCookie = cookies().get(SESSION_COOKIE)?.value;
+  const sessionCookie = getCookie(SESSION_COOKIE);
   if (!sessionCookie) {
     return new Response(JSON.stringify({ user: null }), {
       status: 200,
@@ -116,27 +129,10 @@ export const getUserServer = createServerFn({ method: "GET" }).handler(async () 
       });
     }
 
-    return new Response(
-      JSON.stringify({
-        user: {
-          id: foundUser.id,
-          name: foundUser.name,
-          email: foundUser.email,
-          role: foundUser.role,
-          nameUrdu: foundUser.nameUrdu,
-          phone: foundUser.phone,
-          cnic: foundUser.cnic,
-          systemAccess: foundUser.systemAccess,
-          mustChangePassword: foundUser.mustChangePassword,
-          department: foundUser.department,
-          designation: foundUser.designation,
-        },
-      }),
-      {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ user: userResponse(foundUser) }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
   } catch {
     return new Response(JSON.stringify({ user: null }), {
       status: 200,

@@ -686,7 +686,7 @@ async function maybeCreateParentAccount(
   try {
     identity = await createUniqueParentLoginIdentity(parentLoginName);
     const password = input.parentPassword ?? generateSecurePassword(12);
-    const result = await auth.api.createUser({
+    const result = await (auth as any).api.createUser({
       body: {
         name: application.guardianName,
         email: identity.email,
@@ -728,7 +728,7 @@ async function maybeCreateParentAccount(
 
 async function cleanupParentAccount(userId: string) {
   try {
-    const ctx = await auth.$context;
+    const ctx = await (auth as any).$context;
     await ctx.internalAdapter.deleteUser(userId);
   } catch {
     // Best-effort cleanup only. The event log still shows the accepted admission context.

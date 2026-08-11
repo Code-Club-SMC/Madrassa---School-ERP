@@ -2,8 +2,9 @@ import { timingSafeEqual } from "crypto";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { user } from "@/db/schema/auth";
-import { auth } from "@/lib/auth";
+import { user, account } from "@/db/schema/auth";
+import { getSessionUser } from "@/lib/auth-helpers.server";
+import { hashPassword } from "@/lib/server/password";
 
 const tokenHeaderByKind = {
   setup: "x-setup-token",
@@ -17,7 +18,7 @@ const tokenEnvByKind = {
 
 export const bootstrapSuperAdminSchema = z.object({
   name: z.string().trim().min(1),
-  email: z.email().transform((email) => email.toLowerCase()),
+  email: z.string().email().transform((email) => email.toLowerCase()),
   password: z.string().min(8),
   nameUrdu: z.string().trim().min(1).optional(),
   phone: z.string().trim().min(1).optional(),
@@ -28,14 +29,14 @@ export const bootstrapSuperAdminSchema = z.object({
 });
 
 export const recoverSuperAdminSchema = z.object({
-  email: z.email().transform((email) => email.toLowerCase()),
+  email: z.string().email().transform((email) => email.toLowerCase()),
   newPassword: z.string().min(8),
 });
 
 export const updateSuperAdminSchema = z
   .object({
     name: z.string().trim().min(1).optional(),
-    email: z.email().transform((email) => email.toLowerCase()).optional(),
+    email: z.string().email().transform((email) => email.toLowerCase()).optional(),
     nameUrdu: z.string().trim().min(1).nullable().optional(),
     phone: z.string().trim().min(1).nullable().optional(),
     cnic: z.string().trim().min(1).nullable().optional(),
@@ -127,26 +128,32 @@ export async function createFirstSuperAdmin(input: z.infer<typeof bootstrapSuper
     return json({ error: "Super admin already exists" }, 409);
   }
 
-  const result = await auth.api.createUser({
-    body: {
-      name: input.name,
-      email: input.email,
-      password: input.password,
-      role: "super_admin",
-      data: {
-        nameUrdu: input.nameUrdu,
-        phone: input.phone,
-        cnic: input.cnic,
-        department: input.department,
-        designation: input.designation,
-        status: "active",
-        systemAccess: "both",
-        mustChangePassword: input.mustChangePassword ?? true,
-      },
-    },
-  });
+  const hashedPassword = await hashPassword(input.password);
+  const [created] = await db.insert(user).values({
+    name: input.name,
+    email: input.email,
+    username: input.email,
+    role: "super_admin",
+    status: "active",
+    createdBy: input.email,
+    createdAt: new Date().toISOString(),
+    nameUrdu: input.nameUrdu,
+    phone: input.phone,
+    cnic: input.cnic,
+    department: input.department,
+    designation: input.designation,
+    systemAccess: "both",
+    mustChangePassword: input.mustChangePassword ?? true,
+  } as any).returning();
 
-  return json({ user: publicSuperAdmin(result.user), mustChangePassword: input.mustChangePassword ?? true }, 201);
+  await db.insert(account).values({
+    userId: created.id,
+    providerId: "credential",
+    accountId: created.id,
+    password: hashedPassword,
+  } as any);
+
+  return json({ user: publicSuperAdmin(created), mustChangePassword: input.mustChangePassword ?? true }, 201);
 }
 
 export async function recoverSuperAdminPassword(input: z.infer<typeof recoverSuperAdminSchema>) {
@@ -157,40 +164,22 @@ export async function recoverSuperAdminPassword(input: z.infer<typeof recoverSup
     return json({ error: "Email does not match the existing super admin" }, 403);
   }
 
-  const ctx = await auth.$context;
-  const hashedPassword = await ctx.password.hash(input.newPassword);
-  const accounts = await ctx.internalAdapter.findAccounts(current.superAdmin.id);
-  const credentialAccount = accounts.find((account) => account.providerId === "credential");
-
-  if (credentialAccount) {
-    await ctx.internalAdapter.updatePassword(current.superAdmin.id, hashedPassword);
-  } else {
-    await ctx.internalAdapter.linkAccount({
-      userId: current.superAdmin.id,
-      providerId: "credential",
-      accountId: current.superAdmin.id,
-      password: hashedPassword,
-    });
-  }
-
-  await db
-    .update(user)
-    .set({ mustChangePassword: true, updatedAt: new Date() })
-    .where(eq(user.id, current.superAdmin.id));
-  await ctx.internalAdapter.deleteUserSessions(current.superAdmin.id);
+  const hashedPassword = await hashPassword(input.newPassword);
+  await db.update(account).set({ password: hashedPassword }).where(eq(account.userId, current.superAdmin.id));
+  await db.update(user).set({ mustChangePassword: true, updatedAt: new Date() }).where(eq(user.id, current.superAdmin.id));
 
   return json({ status: true, userId: current.superAdmin.id, mustChangePassword: true });
 }
 
 export async function updateCurrentSuperAdmin(request: Request, input: z.infer<typeof updateSuperAdminSchema>) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session?.user || session.user.role !== "super_admin") {
+  const session = await getSessionUser();
+  if (!session || session.role !== "super_admin") {
     return json({ error: "Super admin session required" }, 403);
   }
 
   const current = await getOnlySuperAdmin();
   if (!current.ok) return current.response;
-  if (current.superAdmin.id !== session.user.id) {
+  if (current.superAdmin.id !== session.id) {
     return json({ error: "Only the existing super admin can update this profile" }, 403);
   }
 

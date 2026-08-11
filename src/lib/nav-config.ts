@@ -69,6 +69,7 @@ export const navItems: NavItem[] = [
   { group: "madrassa", url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
   { group: "madrassa", url: "/madrassa/categories", icon: Layers, en: "Categories", ur: "اقسام", roles: ADMINS },
   { group: "madrassa", url: "/madrassa/hifz", icon: Sparkles, en: "Hifz Tracker", ur: "حفظ ٹریکر", roles: ANY_STAFF },
+  { group: "madrassa", url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
 
   // ---------- SCHOOL ----------
   { group: "school", url: "/school/students", icon: Users2, en: "Students", ur: "طلبہ", roles: ANY_STAFF },
@@ -100,7 +101,6 @@ export const navItems: NavItem[] = [
 
   // ---------- ADMIN (bottom-pinned) ----------
   { group: "admin", url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },
-  { group: "admin", url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
   { group: "admin", url: "/settings/concessions", icon: HandCoins, en: "Concessions", ur: "رعایات", roles: ADMINS },
   { group: "admin", url: "/settings/templates", icon: MessageSquareText, en: "Msg Templates", ur: "پیغام سانچے", roles: ADMINS },
   { group: "admin", url: "/settings/backup", icon: DatabaseBackup, en: "Backup", ur: "بیک اپ", roles: ["super_admin"] },

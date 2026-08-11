@@ -718,7 +718,7 @@ export async function retryGuardianParentAccount(
   try {
     identity = await createUniqueParentLoginIdentity(guardian.name);
     const password = input.password ?? generateSecurePassword(12);
-    const result = await auth.api.createUser({
+    const result = await (auth as any).api.createUser({
       body: {
         name: guardian.name,
         email: identity.email,

@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LogOut, School } from "lucide-react";
+import { LogOut, School, ChevronDown, ChevronRight } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,8 +20,9 @@ import { useLanguage } from "@/components/language-context";
 import { institution } from "@/mock";
 import { cn } from "@/lib/utils";
 import { visibleFor, type NavItem } from "@/lib/nav-config";
-import { useSession } from "@/hooks/use-session";
+import { useAuth } from "@/hooks/use-auth";
 import type { UserRole } from "@/types";
+import { useState, useMemo } from "react";
 
 function initials(name: string) {
   return name
@@ -33,13 +34,15 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+type SectionKey = "madrassa" | "school" | "shared" | "admin";
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { system, setSystem } = useSystem();
   const { lang, setLang } = useLanguage();
-  const { user, logout } = useSession();
+  const { user, logout } = useAuth();
   const role = (user?.role ?? "parent") as UserRole;
   const isParent = role === "parent";
 
@@ -50,12 +53,19 @@ export function AppSidebar() {
   const adminNav = visibleFor(role, "admin");
   const sidebarSide = lang === "en" ? "left" : "right";
 
-  const allUrls = [...globalNav, ...madrassaNav, ...schoolNav, ...sharedNav, ...adminNav].map(
-    (i) => i.url,
+  const [openSection, setOpenSection] = useState<SectionKey | null>("madrassa");
+
+  const toggleSection = (section: SectionKey) => {
+    setOpenSection((current) => (current === section ? null : section));
+  };
+
+  const allUrls = useMemo(
+    () => [...globalNav, ...madrassaNav, ...schoolNav, ...sharedNav, ...adminNav].map((i) => i.url),
+    [globalNav, madrassaNav, schoolNav, sharedNav, adminNav],
   );
+
   const isActive = (url: string) => {
     if (pathname === url) return true;
-    // If any other registered nav item also starts with this url, require an exact match for the parent.
     const hasMoreSpecific = allUrls.some((u) => u !== url && u.startsWith(url + "/"));
     if (hasMoreSpecific) return false;
     return pathname.startsWith(url + "/");
@@ -92,6 +102,46 @@ export function AppSidebar() {
     </SidebarMenuItem>
   );
 
+  const sectionLabel = (en: string, ur: string) =>
+    lang === "ur" ? (
+      <span className="font-urdu text-sm leading-tight" dir="rtl" lang="ur">
+        {ur}
+      </span>
+    ) : (
+      <span className="text-sm leading-tight font-medium">{en}</span>
+    );
+
+  const renderAccordionSection = (key: SectionKey, labelEn: string, labelUr: string, items: NavItem[]) => {
+    if (!collapsed && items.length === 0) return null;
+    const isOpen = openSection === key;
+
+    return (
+      <SidebarGroup className="px-1.5 pt-2">
+        {!collapsed && (
+          <SidebarGroupLabel className="flex flex-col items-start gap-0 h-auto py-1 mb-1 text-sidebar-foreground/70">
+            <button
+              type="button"
+              onClick={() => toggleSection(key)}
+              className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-start transition hover:bg-sidebar-accent/60"
+            >
+              {sectionLabel(labelEn, labelUr)}
+              {isOpen ? (
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/60" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-sidebar-foreground/60" />
+              )}
+            </button>
+          </SidebarGroupLabel>
+        )}
+        {isOpen && !collapsed && (
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0">{items.map(renderItem)}</SidebarMenu>
+          </SidebarGroupContent>
+        )}
+      </SidebarGroup>
+    );
+  };
+
   return (
     <Sidebar collapsible="icon" side={sidebarSide}>
       <SidebarHeader className="border-b border-sidebar-border py-3">
@@ -119,13 +169,7 @@ export function AppSidebar() {
         <SidebarGroup className="px-1.5 pt-3">
           {!collapsed && (
             <SidebarGroupLabel className="flex flex-col items-start gap-0 h-auto py-1 mb-1 text-sidebar-foreground/70">
-              {lang === "ur" ? (
-                <span className="font-urdu text-sm leading-tight" dir="rtl" lang="ur">
-                  عمومی
-                </span>
-              ) : (
-                <span className="text-sm leading-tight font-medium">Global</span>
-              )}
+              {sectionLabel("Global", "عمومی")}
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
@@ -163,65 +207,16 @@ export function AppSidebar() {
         )}
 
         {!isParent && (system === "madrassa" ? madrassaNav : schoolNav).length > 0 && (
-          <SidebarGroup key={system} className="px-1.5 pt-2 animate-in fade-in-50 duration-300">
-            {!collapsed && (
-              <SidebarGroupLabel className="flex flex-col items-start gap-0 h-auto py-1 mb-1 text-sidebar-foreground/70">
-                {lang === "ur" ? (
-                  <span className="font-urdu text-sm leading-tight" dir="rtl" lang="ur">
-                    {system === "madrassa" ? "مدرسہ" : "اسکول"}
-                  </span>
-                ) : (
-                  <span className="text-sm leading-tight font-medium">
-                    {system === "madrassa" ? "Madrassa" : "School"}
-                  </span>
-                )}
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0">
-                {(system === "madrassa" ? madrassaNav : schoolNav).map(renderItem)}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          renderAccordionSection(
+            system === "madrassa" ? "madrassa" : "school",
+            system === "madrassa" ? "Madrassa" : "School",
+            system === "madrassa" ? "مدرسہ" : "اسکول",
+            system === "madrassa" ? madrassaNav : schoolNav,
+          )
         )}
 
-        {sharedNav.length > 0 && (
-          <SidebarGroup className="px-1.5 pt-2">
-            {!collapsed && (
-              <SidebarGroupLabel className="flex flex-col items-start gap-0 h-auto py-1 mb-1 text-sidebar-foreground/70">
-                {lang === "ur" ? (
-                  <span className="font-urdu text-sm leading-tight" dir="rtl" lang="ur">
-                    مشترکہ
-                  </span>
-                ) : (
-                  <span className="text-sm leading-tight font-medium">Shared</span>
-                )}
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0">{sharedNav.map(renderItem)}</SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {adminNav.length > 0 && (
-          <SidebarGroup className="mt-auto border-t border-sidebar-border pt-3 px-1.5">
-            {!collapsed && (
-              <SidebarGroupLabel className="flex flex-col items-start gap-0 h-auto py-1 mb-1 text-sidebar-foreground/70">
-                {lang === "ur" ? (
-                  <span className="font-urdu text-sm leading-tight" dir="rtl" lang="ur">
-                    انتظامیہ
-                  </span>
-                ) : (
-                  <span className="text-sm leading-tight font-medium">Admin</span>
-                )}
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0">{adminNav.map(renderItem)}</SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        {renderAccordionSection("shared", "Shared", "مشترکہ", sharedNav)}
+        {renderAccordionSection("admin", "Admin", "انتظامیہ", adminNav)}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border py-3">

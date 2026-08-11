@@ -130,7 +130,7 @@ export async function createTeacher(request: Request, input: z.infer<typeof crea
 
   const profileId = randomUUID();
   const password = input.password ?? generateSecurePassword(12);
-  const result = await auth.api.createUser({
+  const result = await (auth as any).api.createUser({
     body: {
       name: input.name,
       email: input.email,
@@ -698,7 +698,7 @@ async function assertNoTimetableConflict(
 
 async function cleanupAuthUser(userId: string) {
   try {
-    const ctx = await auth.$context;
+    const ctx = await (auth as any).$context;
     await ctx.internalAdapter.deleteUser(userId);
   } catch {
     // Best-effort cleanup; preserve the original profile creation failure.
