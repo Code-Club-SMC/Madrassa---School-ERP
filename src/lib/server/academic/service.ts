@@ -56,6 +56,7 @@ export const madrassaSubcategoryInputSchema = z.object({
   darja: z.string().trim().nullable().optional(),
   govtEquivalent: z.string().trim().nullable().optional(),
   durationYears: z.coerce.number().int().positive().nullable().optional(),
+  fee: z.coerce.number().int().nonnegative().nullable().optional(),
   active: z.boolean().optional(),
 });
 
@@ -337,6 +338,7 @@ export async function createMadrassaSubcategory(
       darja: input.darja ?? null,
       govtEquivalent: input.govtEquivalent ?? null,
       durationYears: input.durationYears ?? null,
+      fee: input.fee ?? null,
       displayOrder: await nextMadrassaSubcategoryOrder(categoryId),
       active: input.active ?? true,
     })

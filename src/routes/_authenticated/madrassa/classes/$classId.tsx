@@ -1,0 +1,352 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ClipboardList, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/shared/page-header";
+import { BilingualLabel } from "@/components/shared/bilingual-label";
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useLanguage } from "@/components/language-context";
+import { useAuth } from "@/hooks/use-auth";
+import { createExamSubject, listExamSubjects } from "@/components/exams/exam-api";
+import type { ExamSubject } from "@/components/exams/exam-types";
+
+export const Route = createFileRoute("/_authenticated/madrassa/classes/$classId")({
+  component: ClassDetailPage,
+});
+
+type MadrassaSubcategory = {
+  id: string;
+  categoryId: string;
+  name: string;
+  nameUrdu: string;
+  rollPrefix: string;
+  darja: string | null;
+  govtEquivalent: string | null;
+  durationYears: number | null;
+  fee: number | null;
+  enrollmentCount: number;
+  qasmiaCount: number;
+  zainabCount: number;
+};
+
+type AcademicYear = {
+  id: string;
+  name: string;
+  system: "school" | "madrassa";
+  status: "upcoming" | "active" | "locked" | "archived";
+};
+
+function ClassDetailPage() {
+  const navigate = useNavigate();
+  const { classId } = Route.useParams();
+  const { user, isLoading } = useAuth();
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
+
+  const t = useMemo(() => (en: string, ur: string) => (isUrdu ? ur : en), [isUrdu]);
+
+  const [classData, setClassData] = useState<MadrassaSubcategory | null>(null);
+  const [years, setYears] = useState<AcademicYear[]>([]);
+  const [subjects, setSubjects] = useState<ExamSubject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [form, setForm] = useState({
+    code: "",
+    name: "",
+    nameUrdu: "",
+    group: "general",
+    totalMarks: 100,
+    passingMarks: 33,
+  });
+
+  const tRef = useRef<(en: string, ur: string) => string>(() => (en: string, ur: string) => ur);
+  tRef.current = t;
+
+  const loadClass = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [categoriesRes, yearsRes] = await Promise.all([
+        fetch("/api/academic/madrassa/categories", { credentials: "include" }),
+        fetch("/api/academic-years", { credentials: "include" }),
+      ]);
+
+      if (categoriesRes.status === 401 || categoriesRes.status === 403) {
+        navigate({ to: "/login", search: { redirect: undefined } });
+        return;
+      }
+      if (yearsRes.status === 401 || yearsRes.status === 403) {
+        navigate({ to: "/login", search: { redirect: undefined } });
+        return;
+      }
+
+      const categoriesPayload = await categoriesRes.json().catch(() => ({}));
+      if (!categoriesRes.ok) throw new Error(categoriesPayload.error || "Could not load classes");
+
+      const yearsPayload = await yearsRes.json().catch(() => ({}));
+      if (!yearsRes.ok) throw new Error(yearsPayload.error || "Could not load academic years");
+
+      const categories = categoriesPayload.categories ?? [];
+      const allSubcategories = categories.flatMap((c: any) => c.subcategories ?? []);
+      const found = allSubcategories.find((s: MadrassaSubcategory) => s.id === classId);
+
+      if (found) {
+        setClassData(found);
+      } else {
+        toast.error(tRef.current("Class not found", "کلاس نہیں ملی"));
+        navigate({ to: "/madrassa/classes" });
+      }
+
+      setYears((yearsPayload.years ?? []) as AcademicYear[]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load class");
+    } finally {
+      setLoading(false);
+    }
+  }, [classId, navigate]);
+
+  const loadSubjects = useCallback(async () => {
+    if (!classId) return;
+    setSubjectsLoading(true);
+    try {
+      const payload = await listExamSubjects({
+        system: "madrassa",
+        madrassaSubcategoryId: classId,
+      });
+      setSubjects(payload.subjects);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load subjects");
+    } finally {
+      setSubjectsLoading(false);
+    }
+  }, [classId]);
+
+  useEffect(() => {
+    void loadClass();
+  }, [loadClass]);
+
+  useEffect(() => {
+    void loadSubjects();
+  }, [loadSubjects]);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate({ to: "/login", search: { redirect: undefined } });
+    }
+  }, [user, isLoading, navigate]);
+
+  const selectedYear = useMemo(
+    () => years.find((y) => y.system === "madrassa" && y.status === "active"),
+    [years],
+  );
+
+  const addSubject = async () => {
+    if (!form.code.trim() || !form.name.trim() || !form.nameUrdu.trim()) {
+      toast.error(t("Code, name, and Urdu name are required", "کوڈ، نام اور اردو نام درکار ہیں"));
+      return;
+    }
+
+    setPending(true);
+    try {
+      await createExamSubject({
+        system: "madrassa",
+        madrassaSubcategoryId: classId,
+        code: form.code,
+        name: form.name,
+        nameUrdu: form.nameUrdu,
+        group: form.group,
+        totalMarks: form.totalMarks,
+        passingMarks: form.passingMarks,
+        displayOrder: subjects.length + 1,
+      });
+      toast.success(t("Subject added", "مضمون شامل کر دیا گیا"));
+      setOpen(false);
+      setForm({ code: "", name: "", nameUrdu: "", group: "general", totalMarks: 100, passingMarks: 33 });
+      await loadSubjects();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not add subject");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <p className="text-sm text-muted-foreground">{t("Loading...", "لوڈ ہو رہا ہے...")}</p>
+      </div>
+    );
+  }
+
+  if (!user || !classData) {
+    return null;
+  }
+
+  return (
+    <div>
+      <PageHeader
+        title={isUrdu ? classData.nameUrdu : classData.name}
+        titleUrdu={classData.nameUrdu}
+        description={
+          selectedYear
+            ? t(`Subjects and details for ${selectedYear.name}`, `${selectedYear.name} کے مضامین اور تفصیلات`)
+            : t("Subjects and class details", "مضامین اور کلاس کی تفصیلات")
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/madrassa/classes" })}>
+              {t("Back", "پیچھے")}
+            </Button>
+            <Button size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4" />
+              {t("Add Subject", "مضمون شامل کریں")}
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground">{t("Class Name", "کلاس کا نام")}</p>
+          <p className="font-heading text-lg font-bold mt-1">{isUrdu ? classData.nameUrdu : classData.name}</p>
+          <p className="font-urdu text-sm text-muted-foreground">{isUrdu ? classData.name : classData.nameUrdu}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground">{t("Roll Prefix", "رول سابقہ")}</p>
+          <p className="font-heading text-2xl font-bold mt-1">{classData.rollPrefix}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground">{t("Fee", "فیس")}</p>
+          <p className="font-heading text-2xl font-bold mt-1">{classData.fee ?? 0}</p>
+        </Card>
+      </div>
+
+      <Card className="overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("Subject", "مضمون")}</TableHead>
+              <TableHead>{t("Code", "کوڈ")}</TableHead>
+              <TableHead>{t("Group", "گروپ")}</TableHead>
+              <TableHead className="text-end">{t("Marks", "نمارات")}</TableHead>
+              <TableHead className="text-end">{t("Status", "حالت")}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {subjectsLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-muted-foreground">{t("Loading subjects...", "مضامین لوڈ ہو رہے ہیں...")}</TableCell>
+              </TableRow>
+            ) : subjects.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-muted-foreground">{t("No subjects found for this class.", "اس کلاس کے لیے کوئی مضمون نہیں ملا۔")}</TableCell>
+              </TableRow>
+            ) : (
+              subjects.map((subject) => (
+                <TableRow key={subject.id}>
+                  <TableCell>
+                    <p className="font-medium">{subject.name}</p>
+                    <p className="font-urdu text-sm text-muted-foreground">{subject.nameUrdu}</p>
+                  </TableCell>
+                  <TableCell className="font-mono">{subject.code}</TableCell>
+                  <TableCell>{subject.group}</TableCell>
+                  <TableCell className="text-end font-mono">
+                    {subject.totalMarks} / {subject.passingMarks}
+                  </TableCell>
+                  <TableCell className="text-end">
+                    <Badge variant={subject.active ? "secondary" : "outline"}>{subject.active ? t("Active", "فعال") : t("Inactive", "غیر فعال")}</Badge>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      <ResponsiveDialog
+        title={t("Add Subject", "مضمون شامل کریں")}
+        description={t("Create a subject for this class.", "اس کلاس کے لیے مضمون بنائیں۔")}
+        open={open}
+        onOpenChange={setOpen}
+        icon={ClipboardList}
+      >
+        <div className="grid gap-4 p-1">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <BilingualLabel urdu="کوڈ" english="Code">
+              <Input
+                value={form.code}
+                onChange={(e) => setForm({ ...form, code: e.target.value })}
+                placeholder={t("Code", "کوڈ")}
+              />
+            </BilingualLabel>
+            <BilingualLabel urdu="گروپ" english="Group">
+              <Input
+                value={form.group}
+                onChange={(e) => setForm({ ...form, group: e.target.value })}
+                placeholder={t("Group", "گروپ")}
+              />
+            </BilingualLabel>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <BilingualLabel urdu="نام" english="Name">
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder={t("Subject Name", "مضمون کا نام")}
+              />
+            </BilingualLabel>
+            <BilingualLabel urdu="اردو نام" english="Urdu Name">
+              <Input
+                dir="rtl"
+                lang="ur"
+                className="font-urdu"
+                value={form.nameUrdu}
+                onChange={(e) => setForm({ ...form, nameUrdu: e.target.value })}
+                placeholder={t("Urdu Name", "اردو نام")}
+              />
+            </BilingualLabel>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <BilingualLabel urdu="کل نمبرات" english="Total Marks">
+              <Input
+                type="number"
+                min={0}
+                value={form.totalMarks}
+                onChange={(e) => setForm({ ...form, totalMarks: Number(e.target.value) })}
+              />
+            </BilingualLabel>
+            <BilingualLabel urdu="پاس نمبرات" english="Passing Marks">
+              <Input
+                type="number"
+                min={0}
+                value={form.passingMarks}
+                onChange={(e) => setForm({ ...form, passingMarks: Number(e.target.value) })}
+              />
+            </BilingualLabel>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              {t("Cancel", "منسوخ کریں")}
+            </Button>
+            <Button onClick={addSubject} disabled={pending}>
+              {pending ? t("Adding...", "شامل ہو رہا ہے...") : t("Add", "شامل کریں")}
+            </Button>
+          </div>
+        </div>
+      </ResponsiveDialog>
+    </div>
+  );
+}

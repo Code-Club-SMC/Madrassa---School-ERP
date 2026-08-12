@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import { BookOpen, Plus, Users2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
@@ -60,8 +60,15 @@ function ClassesPage() {
   const { user, isLoading } = useAuth();
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
+  const location = useLocation();
 
-  const t = (en: string, ur: string) => (isUrdu ? ur : en);
+  const t = useMemo(() => (en: string, ur: string) => (isUrdu ? ur : en), [isUrdu]);
+
+  const isDetailPage = location.pathname !== "/madrassa/classes";
+
+  if (isDetailPage) {
+    return <Outlet />;
+  }
 
   const [category, setCategory] = useState<MadrassaCategory | null>(null);
   const [loading, setLoading] = useState(true);
@@ -174,6 +181,7 @@ function ClassesPage() {
             nameUrdu: f.urdu.trim() || f.english.trim(),
             rollPrefix: f.rollPrefix.trim() || undefined,
             darja: f.darja.trim() || null,
+            fee: f.fee ? Number(f.fee) : null,
           }),
         },
       );
@@ -274,37 +282,39 @@ function ClassesPage() {
       {selectedYearId && !loading && category && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {classes.map((d) => (
-            <Card key={d.id} className="p-5 hover:border-primary/40 transition-colors">
-              <div className="flex items-start justify-between mb-3">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <BookOpen className="h-5 w-5 text-primary" />
+            <Link key={d.id} to="/madrassa/classes/$classId" params={{ classId: d.id }} className="block">
+              <Card className="p-5 hover:border-primary/40 transition-colors cursor-pointer h-full">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <BookOpen className="h-5 w-5 text-primary" />
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">
+                    {d.rollPrefix}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="text-[10px]">
-                  {d.rollPrefix}
-                </Badge>
-              </div>
-              <p className="font-urdu text-xl font-semibold">{isUrdu ? d.nameUrdu : d.name}</p>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">
-                {isUrdu ? d.name : d.nameUrdu}
-              </p>
-              <div className="mt-4 pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span className="text-muted-foreground">
-                  {d.govtEquivalent ?? d.darja ?? "Dars-e-Nizami"}
-                </span>
-                <span className="inline-flex items-center gap-1 font-mono text-foreground">
-                  <Users2 className="h-3 w-3" />
-                  {d.enrollmentCount}
-                </span>
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <Badge variant="secondary" className="text-[11px]">
-                  Qasmia {d.qasmiaCount}
-                </Badge>
-                <Badge variant="secondary" className="text-[11px]">
-                  Zainab {d.zainabCount}
-                </Badge>
-              </div>
-            </Card>
+                <p className="font-urdu text-xl font-semibold">{isUrdu ? d.nameUrdu : d.name}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">
+                  {isUrdu ? d.name : d.nameUrdu}
+                </p>
+                <div className="mt-4 pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="text-muted-foreground">
+                    {d.govtEquivalent ?? d.darja ?? "Dars-e-Nizami"}
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-mono text-foreground">
+                    <Users2 className="h-3 w-3" />
+                    {d.enrollmentCount}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <Badge variant="secondary" className="text-[11px]">
+                    Qasmia {d.qasmiaCount}
+                  </Badge>
+                  <Badge variant="secondary" className="text-[11px]">
+                    Zainab {d.zainabCount}
+                  </Badge>
+                </div>
+              </Card>
+            </Link>
           ))}
         </div>
       )}
