@@ -53,7 +53,7 @@ type AcademicYear = {
   status: "upcoming" | "active" | "locked" | "archived";
 };
 
-const emptyForm = { urdu: "", english: "", darja: "", rollPrefix: "" };
+const emptyForm = { urdu: "", english: "", darja: "", rollPrefix: "", fee: "" };
 
 function ClassesPage() {
   const navigate = useNavigate();
@@ -222,6 +222,10 @@ function ClassesPage() {
                 <SelectValue placeholder={t("Select year", "سال منتخب کریں")} />
               </SelectTrigger>
               <SelectContent>
+                {yearsLoading && <SelectItem value="loading" disabled>{t("Loading...", "لوڈ ہو رہا ہے...")}</SelectItem>}
+                {!yearsLoading && years.filter((y) => y.system === "madrassa").length === 0 && (
+                  <SelectItem value="none" disabled>{t("No academic years found", "کوئی تعلیمی سال نہیں ملا")}</SelectItem>
+                )}
                 {years
                   .filter((y) => y.system === "madrassa")
                   .map((y) => (
@@ -357,6 +361,15 @@ function ClassesPage() {
               readOnly
               disabled
               className={cn("h-10 bg-muted", isUrdu ? "font-urdu text-right" : "text-left")}
+            />
+          </BilingualLabel>
+          <BilingualLabel urdu="فیس" english="Fee" lang={lang}>
+            <Input
+              type="number"
+              min={0}
+              value={f.fee}
+              onChange={(e) => setF({ ...f, fee: e.target.value })}
+              placeholder="0"
             />
           </BilingualLabel>
         </div>

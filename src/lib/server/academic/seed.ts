@@ -1,13 +1,10 @@
 import { db } from "@/db";
 import {
   institutions,
-  madrassaCategories,
-  madrassaSubcategories,
   programs,
   schoolClasses,
   schoolClassSections,
 } from "@/db/schema/academic";
-import { madrassaCategories as madrassaCategorySeed } from "@/mock/categories";
 import { schoolClasses as schoolClassSeed } from "@/mock/classes";
 
 export const ACADEMIC_INSTITUTIONS = [
@@ -196,62 +193,6 @@ export async function seedAcademicCatalog() {
             name: section.name,
             group: section.group,
             active: true,
-          },
-        });
-    }
-  }
-
-  for (const [categoryIndex, category] of madrassaCategorySeed.entries()) {
-    await db
-      .insert(madrassaCategories)
-      .values({
-        id: category.id,
-        name: category.name,
-        nameUrdu: category.nameUrdu,
-        description: category.description,
-        descriptionUrdu: category.descriptionUrdu,
-        displayOrder: categoryIndex + 1,
-      })
-      .onConflictDoUpdate({
-        target: madrassaCategories.id,
-        set: {
-          name: category.name,
-          nameUrdu: category.nameUrdu,
-          description: category.description,
-          descriptionUrdu: category.descriptionUrdu,
-          displayOrder: categoryIndex + 1,
-          active: true,
-          updatedAt: new Date(),
-        },
-      });
-
-    for (const [subcategoryIndex, subcategory] of category.subcategories.entries()) {
-      await db
-        .insert(madrassaSubcategories)
-        .values({
-          id: subcategory.id,
-          categoryId: category.id,
-          name: subcategory.name,
-          nameUrdu: subcategory.nameUrdu,
-          rollPrefix: subcategory.rollPrefix,
-          darja: subcategory.darja,
-          govtEquivalent: subcategory.govtEquivalent,
-          durationYears: subcategory.durationYears,
-          displayOrder: subcategoryIndex + 1,
-        })
-        .onConflictDoUpdate({
-          target: madrassaSubcategories.id,
-          set: {
-            categoryId: category.id,
-            name: subcategory.name,
-            nameUrdu: subcategory.nameUrdu,
-            rollPrefix: subcategory.rollPrefix,
-            darja: subcategory.darja,
-            govtEquivalent: subcategory.govtEquivalent,
-            durationYears: subcategory.durationYears,
-            displayOrder: subcategoryIndex + 1,
-            active: true,
-            updatedAt: new Date(),
           },
         });
     }

@@ -75,7 +75,6 @@ const statusTone: Record<string, string> = {
 
 export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
   const [options, setOptions] = useState<AcademicOptions>(emptyOptions);
-  const [scopeId, setScopeId] = useState("");
   const [subjects, setSubjects] = useState<ExamSubject[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -86,26 +85,21 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
     group: "general",
     totalMarks: 100,
     passingMarks: 33,
+    scopeId: "",
   });
 
   const loadOptions = useCallback(async () => {
     const next = await loadAcademicOptions();
     setOptions(next);
-    const firstScope =
-      system === "school"
-        ? next.classes.find((item) => item.active)?.id
-        : next.categories.flatMap((category) => category.subcategories).find((item) => item.active)?.id;
-    setScopeId((current) => current || firstScope || "");
   }, [system]);
 
   const loadSubjects = useCallback(async () => {
-    if (!scopeId) return;
     setLoading(true);
     try {
       const payload = await listExamSubjects({
         system,
-        schoolClassId: system === "school" ? scopeId : undefined,
-        madrassaSubcategoryId: system === "madrassa" ? scopeId : undefined,
+        schoolClassId: system === "school" ? form.scopeId || undefined : undefined,
+        madrassaSubcategoryId: system === "madrassa" ? form.scopeId || undefined : undefined,
       });
       setSubjects(payload.subjects);
     } catch (error) {
@@ -113,7 +107,7 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
     } finally {
       setLoading(false);
     }
-  }, [scopeId, system]);
+  }, [system, form.scopeId]);
 
   useEffect(() => {
     void loadOptions().catch((error) => toast.error(error instanceof Error ? error.message : "Could not load options"));
@@ -124,7 +118,8 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
   }, [loadSubjects]);
 
   async function handleCreate() {
-    if (!scopeId) {
+    const targetScopeId = form.scopeId;
+    if (!targetScopeId) {
       toast.error(system === "school" ? "Select a class first" : "Select a darja first");
       return;
     }
@@ -136,8 +131,8 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
     try {
       await createExamSubject({
         system,
-        schoolClassId: system === "school" ? scopeId : undefined,
-        madrassaSubcategoryId: system === "madrassa" ? scopeId : undefined,
+        schoolClassId: system === "school" ? targetScopeId : undefined,
+        madrassaSubcategoryId: system === "madrassa" ? targetScopeId : undefined,
         code: form.code,
         name: form.name,
         nameUrdu: form.nameUrdu,
@@ -148,7 +143,7 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
       });
       toast.success("Subject created");
       setOpen(false);
-      setForm({ code: "", name: "", nameUrdu: "", group: "general", totalMarks: 100, passingMarks: 33 });
+      setForm({ code: "", name: "", nameUrdu: "", group: "general", totalMarks: 100, passingMarks: 33, scopeId: targetScopeId });
       await loadSubjects();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not create subject");
@@ -169,15 +164,13 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
         }
       />
 
-      <Card className="mb-4 p-4">
-        <Label className="mb-1.5 block text-xs text-muted-foreground">
-          {system === "school" ? "Class" : "Darja / Subcategory"}
-        </Label>
-        <Select value={scopeId} onValueChange={setScopeId}>
-          <SelectTrigger className="max-w-md">
-            <SelectValue placeholder={system === "school" ? "Select class" : "Select darja"} />
+      <div className="mb-4 flex items-center gap-2">
+        <Select value={form.scopeId} onValueChange={(value) => setForm({ ...form, scopeId: value })}>
+          <SelectTrigger className="h-9 w-48">
+            <SelectValue placeholder={system === "school" ? "All classes" : "All darjas"} />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="">{system === "school" ? "All Classes" : "All Darjas"}</SelectItem>
             {system === "school"
               ? options.classes.map((item) => (
                   <SelectItem key={item.id} value={item.id}>
@@ -193,7 +186,7 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
                 )}
           </SelectContent>
         </Select>
-      </Card>
+      </div>
 
       <Card className="overflow-hidden">
         <Table>
@@ -267,6 +260,30 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
             </Field>
             <Field label="Passing Marks">
               <Input type="number" value={form.passingMarks} onChange={(event) => setForm({ ...form, passingMarks: Number(event.target.value) })} />
+            </Field>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label={system === "school" ? "Class" : "Darja / Subcategory"}>
+              <Select value={form.scopeId} onValueChange={(value) => setForm({ ...form, scopeId: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder={system === "school" ? "Select class" : "Select darja"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {system === "school"
+                    ? options.classes.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name} · {item.nameUrdu}
+                        </SelectItem>
+                      ))
+                    : options.categories.flatMap((category) =>
+                        category.subcategories.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {category.name} · {item.name}
+                          </SelectItem>
+                        )),
+                      )}
+                </SelectContent>
+              </Select>
             </Field>
           </div>
           <div className="flex justify-end gap-2">

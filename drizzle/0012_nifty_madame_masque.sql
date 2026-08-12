@@ -1,0 +1,1 @@
+ALTER TABLE "madrassa_subcategories" ADD COLUMN "fee" integer;

@@ -129,6 +129,7 @@ export const madrassaSubcategories = pgTable(
     darja: text("darja"),
     govtEquivalent: text("govt_equivalent"),
     durationYears: integer("duration_years"),
+    fee: integer("fee"),
     displayOrder: integer("display_order").notNull(),
     active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
