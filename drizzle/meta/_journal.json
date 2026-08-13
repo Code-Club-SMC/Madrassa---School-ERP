@@ -92,6 +92,13 @@
       "when": 1786527034355,
       "tag": "0012_nifty_madame_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786619939095,
+      "tag": "0013_small_madelyne_pryor",
+      "breakpoints": true
     }
   ]
 }
