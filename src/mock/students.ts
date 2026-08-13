@@ -1,5 +1,5 @@
 import type { Darja, Gender, Section, Student, StudentStatus, System } from "@/types";
-import { madrassaSubcategories } from "@/mock/categories";
+import { allSubcategories } from "@/mock/categories";
 import { schoolClasses } from "@/mock/classes";
 
 // 20 hand-curated Pakistani students spanning Madrassa tracks + School grades.
@@ -476,7 +476,7 @@ const seeds: Seed[] = [
 ];
 
 function findSubcat(id?: string) {
-  return madrassaSubcategories.find((s) => s.id === id);
+  return allSubcategories.find((s) => s.id === id);
 }
 
 export const students: Student[] = seeds.map((s) => ({

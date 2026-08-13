@@ -10,6 +10,7 @@ import * as financeSchema from "@/db/schema/finance";
 import * as notificationSchema from "@/db/schema/notifications";
 import * as studentSchema from "@/db/schema/students";
 import * as teacherSchema from "@/db/schema/teachers";
+import * as timetableSchema from "@/db/schema/timetable";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -30,5 +31,6 @@ export const db = drizzle(pool, {
     ...teacherSchema,
     ...financeSchema,
     ...notificationSchema,
+    ...timetableSchema,
   },
 });

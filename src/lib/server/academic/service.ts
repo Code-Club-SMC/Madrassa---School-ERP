@@ -273,6 +273,13 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
   });
 }
 
+export async function listMadrassaSubcategories(request: Request) {
+  await requirePermission(request, "madrassa_categories", "view");
+  await ensureAcademicSeeded();
+
+  return db.select().from(madrassaSubcategories).orderBy(asc(madrassaSubcategories.displayOrder), asc(madrassaSubcategories.name));
+}
+
 export async function createMadrassaCategory(request: Request, input: z.infer<typeof madrassaCategoryInputSchema>) {
   await requirePermission(request, "madrassa_categories", "create");
   await ensureAcademicSeeded();

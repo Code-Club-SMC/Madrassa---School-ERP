@@ -223,3 +223,25 @@ export type ExamReportPayload = {
   positions: ExamReportPayload["rows"];
   failList: ExamReportPayload["rows"];
 };
+
+export type TimetablePeriod = {
+  id: string;
+  madrassaSubcategoryId: string;
+  timeStart: string;
+  timeEnd: string;
+  label: string;
+  labelUrdu: string;
+  displayOrder: number;
+  isBreak: boolean;
+  createdAt: string;
+  updatedAt: string;
+  slots: Array<{
+    id: string;
+    periodId: string;
+    dayOfWeek: number;
+    subjectId: string | null;
+    createdAt: string;
+    updatedAt: string;
+    subject: ExamSubject | null;
+  }>;
+};

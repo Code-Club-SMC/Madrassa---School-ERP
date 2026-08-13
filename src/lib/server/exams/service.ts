@@ -295,6 +295,16 @@ export async function updateExamSubject(
   return { subject: serializeSubject(updated) };
 }
 
+export async function deleteExamSubject(request: Request, id: string) {
+  const [current] = await db.select().from(examSubjects).where(eq(examSubjects.id, id)).limit(1);
+  if (!current) throw new HttpError("Subject not found", 404);
+  await requireExamPermission(request, current.system, "delete");
+
+  await db.delete(examSubjects).where(eq(examSubjects.id, id));
+
+  return { subject: serializeSubject(current) };
+}
+
 export async function listExamSessions(request: Request, query: z.infer<typeof examListQuerySchema>) {
   await requireExamPermission(request, query.system, "view");
   const clauses = compactSql([

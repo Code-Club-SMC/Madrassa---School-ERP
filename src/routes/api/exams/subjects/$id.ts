@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { subjectUpdateSchema, updateExamSubject } from "@/lib/server/exams/service";
+import { deleteExamSubject, subjectUpdateSchema, updateExamSubject } from "@/lib/server/exams/service";
 import { errorResponse } from "@/lib/server/http";
 import { json, parseJsonBody } from "@/lib/server/super-admin";
 
@@ -14,6 +14,13 @@ export const Route = createFileRoute("/api/exams/subjects/$id")({
           return json(await updateExamSubject(request, params.id, body.data));
         } catch (error) {
           return errorResponse(error, "Could not update exam subject");
+        }
+      },
+      DELETE: async ({ request, params }) => {
+        try {
+          return json(await deleteExamSubject(request, params.id));
+        } catch (error) {
+          return errorResponse(error, "Could not delete exam subject");
         }
       },
     },

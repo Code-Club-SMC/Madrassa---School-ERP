@@ -55,6 +55,31 @@ export function createExamSubject(input: {
   });
 }
 
+export function updateExamSubject(id: string, input: {
+  system?: ExamSystem;
+  schoolClassId?: string;
+  madrassaSubcategoryId?: string;
+  code?: string;
+  name?: string;
+  nameUrdu?: string;
+  group?: string;
+  totalMarks?: number;
+  passingMarks?: number;
+  displayOrder?: number;
+  active?: boolean;
+}) {
+  return requestJson<{ subject: ExamSubject }>(`/api/exams/subjects/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteExamSubject(id: string) {
+  return requestJson<{ subject: ExamSubject }>(`/api/exams/subjects/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export function listExamSessions(system: ExamSystem) {
   return requestJson<{ exams: ExamSession[] }>(`/api/exams/sessions?system=${system}`);
 }
@@ -165,4 +190,65 @@ export function getExamReport(input: { system?: ExamSystem | "both"; examId?: st
   if (input.examId) params.set("examId", input.examId);
   if (input.academicYear) params.set("academicYear", input.academicYear);
   return requestJson<ExamReportPayload>(`/api/exams/reports/summary?${params.toString()}`);
+}
+
+export type TimetablePeriod = {
+  id: string;
+  madrassaSubcategoryId: string;
+  timeStart: string;
+  timeEnd: string;
+  label: string;
+  labelUrdu: string;
+  displayOrder: number;
+  isBreak: boolean;
+  createdAt: string;
+  updatedAt: string;
+  slots: Array<{
+    id: string;
+    periodId: string;
+    dayOfWeek: number;
+    subjectId: string | null;
+    createdAt: string;
+    updatedAt: string;
+    subject: ExamSubject | null;
+  }>;
+};
+
+export function listTimetablePeriods(subcategoryId: string) {
+  return requestJson<{ periods: TimetablePeriod[] }>(`/api/academic/madrassa/timetable?subcategoryId=${subcategoryId}`);
+}
+
+export function createTimetablePeriod(input: {
+  madrassaSubcategoryId: string;
+  timeStart: string;
+  timeEnd: string;
+  label: string;
+  labelUrdu: string;
+  isBreak?: boolean;
+  slots: Array<{ dayOfWeek: number; subjectId: string | null }>;
+}) {
+  return requestJson<{ period: TimetablePeriod }>("/api/academic/madrassa/timetable", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateTimetablePeriod(id: string, input: {
+  timeStart?: string;
+  timeEnd?: string;
+  label?: string;
+  labelUrdu?: string;
+  isBreak?: boolean;
+  slots?: Array<{ dayOfWeek: number; subjectId: string | null }>;
+}) {
+  return requestJson<{ period: TimetablePeriod }>(`/api/academic/madrassa/timetable/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteTimetablePeriod(id: string) {
+  return requestJson<{ success: true }>(`/api/academic/madrassa/timetable/${id}`, {
+    method: "DELETE",
+  });
 }

@@ -113,6 +113,7 @@ import { Route as ApiAcademicYearsIdActivateRouteImport } from './routes/api/aca
 import { Route as ApiAcademicYearsIdLockRouteImport } from './routes/api/academic-years/$id/lock'
 import { Route as ApiAcademicMadrassaCategoriesRouteImport } from './routes/api/academic/madrassa/categories'
 import { Route as ApiAcademicMadrassaSubcategoriesRouteImport } from './routes/api/academic/madrassa/subcategories'
+import { Route as ApiAcademicMadrassaTimetableRouteImport } from './routes/api/academic/madrassa/timetable'
 import { Route as ApiAcademicSchoolClassesRouteImport } from './routes/api/academic/school/classes'
 import { Route as ApiAdmissionApplicationsIdRouteImport } from './routes/api/admission/applications/$id'
 import { Route as ApiAttendanceMadrassaMarkRouteImport } from './routes/api/attendance/madrassa/mark'
@@ -150,6 +151,8 @@ import { Route as AuthenticatedSchoolExamsIdIndexRouteImport } from './routes/_a
 import { Route as AuthenticatedSchoolExamsIdResultsRouteImport } from './routes/_authenticated/school/exams/$id/results'
 import { Route as AuthenticatedSchoolExamsIdSeatingRouteImport } from './routes/_authenticated/school/exams/$id/seating'
 import { Route as ApiAcademicMadrassaCategoriesIdRouteImport } from './routes/api/academic/madrassa/categories/$id'
+import { Route as ApiAcademicMadrassaTimetableIdRouteImport } from './routes/api/academic/madrassa/timetable/$id'
+import { Route as ApiAcademicMadrassaTimetableStatusRouteImport } from './routes/api/academic/madrassa/timetable/status'
 import { Route as ApiAcademicSchoolClassesIdRouteImport } from './routes/api/academic/school/classes/$id'
 import { Route as ApiAdmissionApplicationsIdAcceptRouteImport } from './routes/api/admission/applications/$id/accept'
 import { Route as ApiAdmissionApplicationsIdRejectRouteImport } from './routes/api/admission/applications/$id/reject'
@@ -746,6 +749,12 @@ const ApiAcademicMadrassaSubcategoriesRoute =
     path: '/api/academic/madrassa/subcategories',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAcademicMadrassaTimetableRoute =
+  ApiAcademicMadrassaTimetableRouteImport.update({
+    id: '/api/academic/madrassa/timetable',
+    path: '/api/academic/madrassa/timetable',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAcademicSchoolClassesRoute =
   ApiAcademicSchoolClassesRouteImport.update({
     id: '/api/academic/school/classes',
@@ -953,6 +962,18 @@ const ApiAcademicMadrassaCategoriesIdRoute =
     id: '/$id',
     path: '/$id',
     getParentRoute: () => ApiAcademicMadrassaCategoriesRoute,
+  } as any)
+const ApiAcademicMadrassaTimetableIdRoute =
+  ApiAcademicMadrassaTimetableIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiAcademicMadrassaTimetableRoute,
+  } as any)
+const ApiAcademicMadrassaTimetableStatusRoute =
+  ApiAcademicMadrassaTimetableStatusRouteImport.update({
+    id: '/status',
+    path: '/status',
+    getParentRoute: () => ApiAcademicMadrassaTimetableRoute,
   } as any)
 const ApiAcademicSchoolClassesIdRoute =
   ApiAcademicSchoolClassesIdRouteImport.update({
@@ -1209,6 +1230,7 @@ export interface FileRoutesByFullPath {
   '/api/academic-years/$id/lock': typeof ApiAcademicYearsIdLockRoute
   '/api/academic/madrassa/categories': typeof ApiAcademicMadrassaCategoriesRouteWithChildren
   '/api/academic/madrassa/subcategories': typeof ApiAcademicMadrassaSubcategoriesRoute
+  '/api/academic/madrassa/timetable': typeof ApiAcademicMadrassaTimetableRouteWithChildren
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
@@ -1246,6 +1268,8 @@ export interface FileRoutesByFullPath {
   '/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
   '/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
   '/api/academic/madrassa/categories/$id': typeof ApiAcademicMadrassaCategoriesIdRouteWithChildren
+  '/api/academic/madrassa/timetable/$id': typeof ApiAcademicMadrassaTimetableIdRoute
+  '/api/academic/madrassa/timetable/status': typeof ApiAcademicMadrassaTimetableStatusRoute
   '/api/academic/school/classes/$id': typeof ApiAcademicSchoolClassesIdRouteWithChildren
   '/api/admission/applications/$id/accept': typeof ApiAdmissionApplicationsIdAcceptRoute
   '/api/admission/applications/$id/reject': typeof ApiAdmissionApplicationsIdRejectRoute
@@ -1368,6 +1392,7 @@ export interface FileRoutesByTo {
   '/api/academic-years/$id/lock': typeof ApiAcademicYearsIdLockRoute
   '/api/academic/madrassa/categories': typeof ApiAcademicMadrassaCategoriesRouteWithChildren
   '/api/academic/madrassa/subcategories': typeof ApiAcademicMadrassaSubcategoriesRoute
+  '/api/academic/madrassa/timetable': typeof ApiAcademicMadrassaTimetableRouteWithChildren
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
@@ -1405,6 +1430,8 @@ export interface FileRoutesByTo {
   '/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
   '/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
   '/api/academic/madrassa/categories/$id': typeof ApiAcademicMadrassaCategoriesIdRouteWithChildren
+  '/api/academic/madrassa/timetable/$id': typeof ApiAcademicMadrassaTimetableIdRoute
+  '/api/academic/madrassa/timetable/status': typeof ApiAcademicMadrassaTimetableStatusRoute
   '/api/academic/school/classes/$id': typeof ApiAcademicSchoolClassesIdRouteWithChildren
   '/api/admission/applications/$id/accept': typeof ApiAdmissionApplicationsIdAcceptRoute
   '/api/admission/applications/$id/reject': typeof ApiAdmissionApplicationsIdRejectRoute
@@ -1538,6 +1565,7 @@ export interface FileRoutesById {
   '/api/academic-years/$id/lock': typeof ApiAcademicYearsIdLockRoute
   '/api/academic/madrassa/categories': typeof ApiAcademicMadrassaCategoriesRouteWithChildren
   '/api/academic/madrassa/subcategories': typeof ApiAcademicMadrassaSubcategoriesRoute
+  '/api/academic/madrassa/timetable': typeof ApiAcademicMadrassaTimetableRouteWithChildren
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
@@ -1575,6 +1603,8 @@ export interface FileRoutesById {
   '/_authenticated/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
   '/_authenticated/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
   '/api/academic/madrassa/categories/$id': typeof ApiAcademicMadrassaCategoriesIdRouteWithChildren
+  '/api/academic/madrassa/timetable/$id': typeof ApiAcademicMadrassaTimetableIdRoute
+  '/api/academic/madrassa/timetable/status': typeof ApiAcademicMadrassaTimetableStatusRoute
   '/api/academic/school/classes/$id': typeof ApiAcademicSchoolClassesIdRouteWithChildren
   '/api/admission/applications/$id/accept': typeof ApiAdmissionApplicationsIdAcceptRoute
   '/api/admission/applications/$id/reject': typeof ApiAdmissionApplicationsIdRejectRoute
@@ -1708,6 +1738,7 @@ export interface FileRouteTypes {
     | '/api/academic-years/$id/lock'
     | '/api/academic/madrassa/categories'
     | '/api/academic/madrassa/subcategories'
+    | '/api/academic/madrassa/timetable'
     | '/api/academic/school/classes'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
@@ -1745,6 +1776,8 @@ export interface FileRouteTypes {
     | '/school/exams/$id/results'
     | '/school/exams/$id/seating'
     | '/api/academic/madrassa/categories/$id'
+    | '/api/academic/madrassa/timetable/$id'
+    | '/api/academic/madrassa/timetable/status'
     | '/api/academic/school/classes/$id'
     | '/api/admission/applications/$id/accept'
     | '/api/admission/applications/$id/reject'
@@ -1867,6 +1900,7 @@ export interface FileRouteTypes {
     | '/api/academic-years/$id/lock'
     | '/api/academic/madrassa/categories'
     | '/api/academic/madrassa/subcategories'
+    | '/api/academic/madrassa/timetable'
     | '/api/academic/school/classes'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
@@ -1904,6 +1938,8 @@ export interface FileRouteTypes {
     | '/school/exams/$id/results'
     | '/school/exams/$id/seating'
     | '/api/academic/madrassa/categories/$id'
+    | '/api/academic/madrassa/timetable/$id'
+    | '/api/academic/madrassa/timetable/status'
     | '/api/academic/school/classes/$id'
     | '/api/admission/applications/$id/accept'
     | '/api/admission/applications/$id/reject'
@@ -2036,6 +2072,7 @@ export interface FileRouteTypes {
     | '/api/academic-years/$id/lock'
     | '/api/academic/madrassa/categories'
     | '/api/academic/madrassa/subcategories'
+    | '/api/academic/madrassa/timetable'
     | '/api/academic/school/classes'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
@@ -2073,6 +2110,8 @@ export interface FileRouteTypes {
     | '/_authenticated/school/exams/$id/results'
     | '/_authenticated/school/exams/$id/seating'
     | '/api/academic/madrassa/categories/$id'
+    | '/api/academic/madrassa/timetable/$id'
+    | '/api/academic/madrassa/timetable/status'
     | '/api/academic/school/classes/$id'
     | '/api/admission/applications/$id/accept'
     | '/api/admission/applications/$id/reject'
@@ -2137,6 +2176,7 @@ export interface RootRouteChildren {
   ApiUsersIndexRoute: typeof ApiUsersIndexRoute
   ApiAcademicMadrassaCategoriesRoute: typeof ApiAcademicMadrassaCategoriesRouteWithChildren
   ApiAcademicMadrassaSubcategoriesRoute: typeof ApiAcademicMadrassaSubcategoriesRoute
+  ApiAcademicMadrassaTimetableRoute: typeof ApiAcademicMadrassaTimetableRouteWithChildren
   ApiAcademicSchoolClassesRoute: typeof ApiAcademicSchoolClassesRouteWithChildren
   ApiAttendanceMadrassaMarkRoute: typeof ApiAttendanceMadrassaMarkRoute
   ApiAttendanceMadrassaRosterRoute: typeof ApiAttendanceMadrassaRosterRoute
@@ -2888,6 +2928,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAcademicMadrassaSubcategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/academic/madrassa/timetable': {
+      id: '/api/academic/madrassa/timetable'
+      path: '/api/academic/madrassa/timetable'
+      fullPath: '/api/academic/madrassa/timetable'
+      preLoaderRoute: typeof ApiAcademicMadrassaTimetableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/academic/school/classes': {
       id: '/api/academic/school/classes'
       path: '/api/academic/school/classes'
@@ -3146,6 +3193,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/academic/madrassa/categories/$id'
       preLoaderRoute: typeof ApiAcademicMadrassaCategoriesIdRouteImport
       parentRoute: typeof ApiAcademicMadrassaCategoriesRoute
+    }
+    '/api/academic/madrassa/timetable/$id': {
+      id: '/api/academic/madrassa/timetable/$id'
+      path: '/$id'
+      fullPath: '/api/academic/madrassa/timetable/$id'
+      preLoaderRoute: typeof ApiAcademicMadrassaTimetableIdRouteImport
+      parentRoute: typeof ApiAcademicMadrassaTimetableRoute
+    }
+    '/api/academic/madrassa/timetable/status': {
+      id: '/api/academic/madrassa/timetable/status'
+      path: '/status'
+      fullPath: '/api/academic/madrassa/timetable/status'
+      preLoaderRoute: typeof ApiAcademicMadrassaTimetableStatusRouteImport
+      parentRoute: typeof ApiAcademicMadrassaTimetableRoute
     }
     '/api/academic/school/classes/$id': {
       id: '/api/academic/school/classes/$id'
@@ -3959,6 +4020,23 @@ const ApiAcademicMadrassaCategoriesRouteWithChildren =
     ApiAcademicMadrassaCategoriesRouteChildren,
   )
 
+interface ApiAcademicMadrassaTimetableRouteChildren {
+  ApiAcademicMadrassaTimetableIdRoute: typeof ApiAcademicMadrassaTimetableIdRoute
+  ApiAcademicMadrassaTimetableStatusRoute: typeof ApiAcademicMadrassaTimetableStatusRoute
+}
+
+const ApiAcademicMadrassaTimetableRouteChildren: ApiAcademicMadrassaTimetableRouteChildren =
+  {
+    ApiAcademicMadrassaTimetableIdRoute: ApiAcademicMadrassaTimetableIdRoute,
+    ApiAcademicMadrassaTimetableStatusRoute:
+      ApiAcademicMadrassaTimetableStatusRoute,
+  }
+
+const ApiAcademicMadrassaTimetableRouteWithChildren =
+  ApiAcademicMadrassaTimetableRoute._addFileChildren(
+    ApiAcademicMadrassaTimetableRouteChildren,
+  )
+
 interface ApiAcademicSchoolClassesIdSectionsRouteChildren {
   ApiAcademicSchoolClassesIdSectionsSectionIdRoute: typeof ApiAcademicSchoolClassesIdSectionsSectionIdRoute
 }
@@ -4050,6 +4128,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAcademicMadrassaCategoriesRoute:
     ApiAcademicMadrassaCategoriesRouteWithChildren,
   ApiAcademicMadrassaSubcategoriesRoute: ApiAcademicMadrassaSubcategoriesRoute,
+  ApiAcademicMadrassaTimetableRoute:
+    ApiAcademicMadrassaTimetableRouteWithChildren,
   ApiAcademicSchoolClassesRoute: ApiAcademicSchoolClassesRouteWithChildren,
   ApiAttendanceMadrassaMarkRoute: ApiAttendanceMadrassaMarkRoute,
   ApiAttendanceMadrassaRosterRoute: ApiAttendanceMadrassaRosterRoute,

@@ -105,7 +105,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 export const Route = createRootRouteWithContext<RootContext>()({
   beforeLoad: async (ctx: any) => {
-    const cookie = typeof ctx?.request?.headers?.get === 'function' ? ctx.request.headers.get("cookie") : null;
+    let cookie = typeof ctx?.request?.headers?.get === 'function' ? ctx.request.headers.get("cookie") : null;
+    if (!cookie && typeof document !== "undefined") {
+      cookie = document.cookie || null;
+    }
     const initialLang = parseLangFromCookie(cookie);
 
     return { initialLang };

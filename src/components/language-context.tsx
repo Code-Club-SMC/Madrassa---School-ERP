@@ -25,13 +25,16 @@ export function LanguageProvider({ children, initialLang }: Props) {
     const root = document.documentElement;
     root.lang = lang;
     root.dir = lang === "ur" ? "rtl" : "ltr";
-    try {
-      localStorage.setItem("msmis-lang", lang);
-    } catch {}
   }, [lang]);
 
   const setLang = useCallback((l: Language) => {
     setLangState(l);
+    try {
+      localStorage.setItem("msmis-lang", l);
+    } catch {}
+    try {
+      document.cookie = `msmis-lang=${l}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    } catch {}
   }, []);
 
   const value = useMemo(() => ({ lang, setLang }), [lang, setLang]);
