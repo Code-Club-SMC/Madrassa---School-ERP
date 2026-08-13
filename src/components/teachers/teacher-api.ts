@@ -2,7 +2,6 @@ import type {
   AcademicInstitution,
   AcademicProgram,
   ExamSubjectOption,
-  MadrassaCategoryOption,
   SchoolClassOption,
   TeacherCredentials,
   TeacherDetail,

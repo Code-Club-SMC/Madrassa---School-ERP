@@ -1,5 +1,5 @@
 import type { Darja, Gender, Section, Student, StudentStatus, System } from "@/types";
-import { madrassaCategories, allSubcategories } from "@/mock/categories";
+import { madrassaSubcategories } from "@/mock/categories";
 import { schoolClasses } from "@/mock/classes";
 
 // 20 hand-curated Pakistani students spanning Madrassa tracks + School grades.
@@ -17,7 +17,6 @@ type Seed = {
   dob: string;
   city: string;
   system: System;
-  categoryId?: ReturnType<typeof inferCategoryId>;
   subcategoryId?: string;
   darja?: Darja;
   hifzJuzCompleted?: number;
@@ -36,10 +35,6 @@ type Seed = {
   siblingIds?: string[];
 };
 
-function inferCategoryId(): Student["categoryId"] {
-  return undefined;
-}
-
 const seeds: Seed[] = [
   {
     id: "S1000",
@@ -53,7 +48,6 @@ const seeds: Seed[] = [
     dob: "2014-05-12",
     city: "Lahore",
     system: "madrassa",
-    categoryId: "hifz",
     subcategoryId: "bn-hifz-1",
     hifzJuzCompleted: 6,
     hifzStartedAt: "2024-02-01",
@@ -77,7 +71,6 @@ const seeds: Seed[] = [
     dob: "2012-08-30",
     city: "Karachi",
     system: "madrassa",
-    categoryId: "hifz",
     subcategoryId: "bn-hifz-2",
     hifzJuzCompleted: 18,
     hifzStartedAt: "2023-03-15",
@@ -100,7 +93,6 @@ const seeds: Seed[] = [
     dob: "2010-11-04",
     city: "Faisalabad",
     system: "madrassa",
-    categoryId: "hifz",
     subcategoryId: "bn-hifz-3",
     hifzJuzCompleted: 27,
     hifzStartedAt: "2021-09-10",
@@ -123,7 +115,6 @@ const seeds: Seed[] = [
     dob: "2017-02-18",
     city: "Lahore",
     system: "madrassa",
-    categoryId: "qaida_nazira",
     subcategoryId: "bt-nazira-1",
     monthlyFeeRupees: 800,
     status: "active",
@@ -145,7 +136,6 @@ const seeds: Seed[] = [
     dob: "2013-07-21",
     city: "Lahore",
     system: "madrassa",
-    categoryId: "qaida_nazira",
     subcategoryId: "bt-nazira-2",
     monthlyFeeRupees: 1000,
     status: "active",
@@ -166,7 +156,6 @@ const seeds: Seed[] = [
     dob: "2011-04-08",
     city: "Multan",
     system: "madrassa",
-    categoryId: "preparatory",
     subcategoryId: "bn-idadiya-awwal",
     darja: "idadiya_awwal",
     monthlyFeeRupees: 2000,
@@ -188,7 +177,6 @@ const seeds: Seed[] = [
     dob: "2007-12-15",
     city: "Rawalpindi",
     system: "madrassa",
-    categoryId: "dars_nizami",
     subcategoryId: "bn-dars-salisa",
     darja: "dars_salisa",
     wifaqRollNumber: "WMA-2024-44512",
@@ -212,7 +200,6 @@ const seeds: Seed[] = [
     dob: "2006-06-25",
     city: "Lahore",
     system: "madrassa",
-    categoryId: "dars_nizami",
     subcategoryId: "bn-dars-rabia",
     darja: "dars_rabia",
     wifaqRollNumber: "WMA-2024-44621",
@@ -234,9 +221,8 @@ const seeds: Seed[] = [
     gender: "male",
     institutionSection: "baneen",
     dob: "2002-09-10",
-    city: "Lahore",
+    city: "Karachi",
     system: "madrassa",
-    categoryId: "dars_nizami",
     subcategoryId: "bn-daurah-hadith",
     darja: "daurah_hadith",
     wifaqRollNumber: "WMA-2024-49001",
@@ -260,7 +246,6 @@ const seeds: Seed[] = [
     dob: "2000-01-22",
     city: "Karachi",
     system: "madrassa",
-    categoryId: "takhassus",
     subcategoryId: "bn-takhassus-1",
     darja: "takhassus_year_1",
     monthlyFeeRupees: 0,
@@ -490,11 +475,8 @@ const seeds: Seed[] = [
   },
 ];
 
-function findCategory(id?: Student["categoryId"]) {
-  return madrassaCategories.find((c) => c.id === id);
-}
 function findSubcat(id?: string) {
-  return allSubcategories.find((s) => s.id === id);
+  return madrassaSubcategories.find((s) => s.id === id);
 }
 
 export const students: Student[] = seeds.map((s) => ({
@@ -511,7 +493,6 @@ export const students: Student[] = seeds.map((s) => ({
   address: `House #${s.id.slice(-3)}, ${s.city}`,
   city: s.city,
   system: s.system,
-  categoryId: s.categoryId,
   subcategoryId: s.subcategoryId,
   darja: s.darja,
   wifaqRollNumber: s.wifaqRollNumber,
@@ -539,12 +520,11 @@ export function studentsForSystem(system: "madrassa" | "school") {
   return students.filter((s) => s.system === system || s.system === "both");
 }
 
-/** Useful for displays: get the category + subcategory of a Madrassa student. */
+/** Useful for displays: get the subcategory of a Madrassa student. */
 export function studentMadrassaPath(s: Student) {
   if (s.system !== "madrassa") return null;
-  const cat = findCategory(s.categoryId);
   const sub = findSubcat(s.subcategoryId);
-  return cat && sub ? { cat, sub } : null;
+  return sub ? { sub } : null;
 }
 
 /** Useful for displays: get the class + section of a school student. */

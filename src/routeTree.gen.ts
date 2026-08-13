@@ -112,6 +112,7 @@ import { Route as AuthenticatedSchoolExamsBoardRouteImport } from './routes/_aut
 import { Route as ApiAcademicYearsIdActivateRouteImport } from './routes/api/academic-years/$id/activate'
 import { Route as ApiAcademicYearsIdLockRouteImport } from './routes/api/academic-years/$id/lock'
 import { Route as ApiAcademicMadrassaCategoriesRouteImport } from './routes/api/academic/madrassa/categories'
+import { Route as ApiAcademicMadrassaSubcategoriesRouteImport } from './routes/api/academic/madrassa/subcategories'
 import { Route as ApiAcademicSchoolClassesRouteImport } from './routes/api/academic/school/classes'
 import { Route as ApiAdmissionApplicationsIdRouteImport } from './routes/api/admission/applications/$id'
 import { Route as ApiAttendanceMadrassaMarkRouteImport } from './routes/api/attendance/madrassa/mark'
@@ -739,6 +740,12 @@ const ApiAcademicMadrassaCategoriesRoute =
     path: '/api/academic/madrassa/categories',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAcademicMadrassaSubcategoriesRoute =
+  ApiAcademicMadrassaSubcategoriesRouteImport.update({
+    id: '/api/academic/madrassa/subcategories',
+    path: '/api/academic/madrassa/subcategories',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAcademicSchoolClassesRoute =
   ApiAcademicSchoolClassesRouteImport.update({
     id: '/api/academic/school/classes',
@@ -1201,6 +1208,7 @@ export interface FileRoutesByFullPath {
   '/api/academic-years/$id/activate': typeof ApiAcademicYearsIdActivateRoute
   '/api/academic-years/$id/lock': typeof ApiAcademicYearsIdLockRoute
   '/api/academic/madrassa/categories': typeof ApiAcademicMadrassaCategoriesRouteWithChildren
+  '/api/academic/madrassa/subcategories': typeof ApiAcademicMadrassaSubcategoriesRoute
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
@@ -1359,6 +1367,7 @@ export interface FileRoutesByTo {
   '/api/academic-years/$id/activate': typeof ApiAcademicYearsIdActivateRoute
   '/api/academic-years/$id/lock': typeof ApiAcademicYearsIdLockRoute
   '/api/academic/madrassa/categories': typeof ApiAcademicMadrassaCategoriesRouteWithChildren
+  '/api/academic/madrassa/subcategories': typeof ApiAcademicMadrassaSubcategoriesRoute
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
@@ -1528,6 +1537,7 @@ export interface FileRoutesById {
   '/api/academic-years/$id/activate': typeof ApiAcademicYearsIdActivateRoute
   '/api/academic-years/$id/lock': typeof ApiAcademicYearsIdLockRoute
   '/api/academic/madrassa/categories': typeof ApiAcademicMadrassaCategoriesRouteWithChildren
+  '/api/academic/madrassa/subcategories': typeof ApiAcademicMadrassaSubcategoriesRoute
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
@@ -1697,6 +1707,7 @@ export interface FileRouteTypes {
     | '/api/academic-years/$id/activate'
     | '/api/academic-years/$id/lock'
     | '/api/academic/madrassa/categories'
+    | '/api/academic/madrassa/subcategories'
     | '/api/academic/school/classes'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
@@ -1855,6 +1866,7 @@ export interface FileRouteTypes {
     | '/api/academic-years/$id/activate'
     | '/api/academic-years/$id/lock'
     | '/api/academic/madrassa/categories'
+    | '/api/academic/madrassa/subcategories'
     | '/api/academic/school/classes'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
@@ -2023,6 +2035,7 @@ export interface FileRouteTypes {
     | '/api/academic-years/$id/activate'
     | '/api/academic-years/$id/lock'
     | '/api/academic/madrassa/categories'
+    | '/api/academic/madrassa/subcategories'
     | '/api/academic/school/classes'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
@@ -2123,6 +2136,7 @@ export interface RootRouteChildren {
   ApiTeachersIndexRoute: typeof ApiTeachersIndexRoute
   ApiUsersIndexRoute: typeof ApiUsersIndexRoute
   ApiAcademicMadrassaCategoriesRoute: typeof ApiAcademicMadrassaCategoriesRouteWithChildren
+  ApiAcademicMadrassaSubcategoriesRoute: typeof ApiAcademicMadrassaSubcategoriesRoute
   ApiAcademicSchoolClassesRoute: typeof ApiAcademicSchoolClassesRouteWithChildren
   ApiAttendanceMadrassaMarkRoute: typeof ApiAttendanceMadrassaMarkRoute
   ApiAttendanceMadrassaRosterRoute: typeof ApiAttendanceMadrassaRosterRoute
@@ -2865,6 +2879,13 @@ declare module '@tanstack/react-router' {
       path: '/api/academic/madrassa/categories'
       fullPath: '/api/academic/madrassa/categories'
       preLoaderRoute: typeof ApiAcademicMadrassaCategoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/academic/madrassa/subcategories': {
+      id: '/api/academic/madrassa/subcategories'
+      path: '/api/academic/madrassa/subcategories'
+      fullPath: '/api/academic/madrassa/subcategories'
+      preLoaderRoute: typeof ApiAcademicMadrassaSubcategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/academic/school/classes': {
@@ -4028,6 +4049,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUsersIndexRoute: ApiUsersIndexRoute,
   ApiAcademicMadrassaCategoriesRoute:
     ApiAcademicMadrassaCategoriesRouteWithChildren,
+  ApiAcademicMadrassaSubcategoriesRoute: ApiAcademicMadrassaSubcategoriesRoute,
   ApiAcademicSchoolClassesRoute: ApiAcademicSchoolClassesRouteWithChildren,
   ApiAttendanceMadrassaMarkRoute: ApiAttendanceMadrassaMarkRoute,
   ApiAttendanceMadrassaRosterRoute: ApiAttendanceMadrassaRosterRoute,

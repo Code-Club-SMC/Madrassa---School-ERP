@@ -124,19 +124,6 @@ export type SchoolClassOption = {
   }>;
 };
 
-export type MadrassaCategoryOption = {
-  id: string;
-  name: string;
-  nameUrdu: string;
-  active?: boolean;
-  subcategories: Array<{
-    id: string;
-    name: string;
-    nameUrdu: string;
-    active?: boolean;
-  }>;
-};
-
 export type ExamSubjectOption = {
   id: string;
   code: string;
