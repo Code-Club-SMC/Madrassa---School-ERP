@@ -44,7 +44,6 @@ function WifaqBoardPage() {
           <TabsTrigger value="register">Registration · اندراج</TabsTrigger>
           <TabsTrigger value="zimni">Zimni Supplementary · ضمنی</TabsTrigger>
         </TabsList>
-
         <TabsContent value="register">
           <Card className="overflow-x-auto mt-3">
             <Table>

@@ -4,6 +4,7 @@ import { ClipboardList, Plus, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
+import { BookLoader } from "@/components/shared/book-loader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -428,11 +429,7 @@ function TimetablePage() {
   };
 
   if (authLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-sm text-muted-foreground">{t("Loading...", "لوڈ ہو رہا ہے...")}</p>
-      </div>
-    );
+    return <BookLoader className="h-96" />;
   }
 
   if (!user) {

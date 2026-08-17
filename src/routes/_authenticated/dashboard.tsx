@@ -30,6 +30,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { TeacherDashboard } from "@/components/teachers/teacher-dashboard";
 import { ParentPortal } from "@/components/parents/parent-portal";
 import { KpiCard } from "@/components/shared/kpi-card";
+import { BookLoader } from "@/components/shared/book-loader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,11 +76,7 @@ function DashboardPage() {
   }, [user, isLoading, navigate]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <BookLoader className="h-96" />;
   }
 
   if (!user) {

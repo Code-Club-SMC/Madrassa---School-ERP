@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { BookLoader } from "@/components/shared/book-loader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,6 +61,8 @@ type AcademicYear = {
 
 function ClassDetailPage() {
   const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
   const { classId } = Route.useParams();
   const { user, isLoading } = useAuth();
   const { lang } = useLanguage();
@@ -108,15 +111,6 @@ function ClassDetailPage() {
         fetch("/api/academic-years", { credentials: "include" }),
       ]);
 
-      if (categoriesRes.status === 401 || categoriesRes.status === 403) {
-        navigate({ to: "/login", search: { redirect: undefined } });
-        return;
-      }
-      if (yearsRes.status === 401 || yearsRes.status === 403) {
-        navigate({ to: "/login", search: { redirect: undefined } });
-        return;
-      }
-
       const categoriesPayload = await categoriesRes.json().catch(() => ({}));
       if (!categoriesRes.ok) throw new Error(categoriesPayload.error || "Could not load classes");
 
@@ -131,7 +125,6 @@ function ClassDetailPage() {
         setClassData(found);
       } else {
         toast.error(tRef.current("Class not found", "کلاس نہیں ملی"));
-        navigate({ to: "/madrassa/classes" });
       }
 
       setYears((yearsPayload.years ?? []) as AcademicYear[]);
@@ -140,7 +133,7 @@ function ClassDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [classId, navigate]);
+  }, [classId]);
 
   const loadSubjects = useCallback(async () => {
     if (!classId) return;
@@ -229,19 +222,13 @@ function ClassDetailPage() {
     }
   };
 
-  useEffect(() => {
+   useEffect(() => {
     void loadClass();
   }, [loadClass]);
 
   useEffect(() => {
     void loadSubjects();
   }, [loadSubjects]);
-
-  useEffect(() => {
-    if (!isLoading && !user) {
-      navigate({ to: "/login", search: { redirect: undefined } });
-    }
-  }, [user, isLoading, navigate]);
 
   const selectedYear = useMemo(
     () => years.find((y) => y.system === "madrassa" && y.status === "active"),
@@ -279,11 +266,7 @@ function ClassDetailPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-sm text-muted-foreground">{t("Loading...", "لوڈ ہو رہا ہے...")}</p>
-      </div>
-    );
+    return <BookLoader className="h-96" />;
   }
 
   if (!user) {
@@ -291,11 +274,7 @@ function ClassDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-sm text-muted-foreground">{t("Loading class...", "کلاس لوڈ ہو رہی ہے...")}</p>
-      </div>
-    );
+    return <BookLoader className="h-96" />;
   }
 
   if (!classData) {

@@ -235,3 +235,53 @@
     background: color-mix(in oklab, var(--sidebar-foreground) 40%, transparent);
   }
 }
+
+/* ---------- Animated book loader ---------- */
+@layer components {
+  .animate-book-float {
+    animation: book-float 2.4s ease-in-out infinite;
+  }
+
+  .animate-book-glow {
+    animation: book-glow 2.4s ease-in-out infinite;
+  }
+
+  .animate-book-fade {
+    animation: book-fade 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes book-float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotate(-6deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-8px) rotate(6deg);
+  }
+}
+
+@keyframes book-glow {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes book-fade {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}

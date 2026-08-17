@@ -9,6 +9,7 @@ import { DraggableLanguageToggle } from "@/components/app/draggable-language-tog
 import { useSystem } from "@/components/system-context";
 import { HRProvider } from "@/stores/hr-store";
 import { useAuth } from "@/hooks/use-auth";
+import { BookLoader } from "@/components/shared/book-loader";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -33,11 +34,7 @@ function AuthenticatedLayout() {
   }, [user, isLoading, navigate]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-dvh">
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      </div>
-    );
+    return <BookLoader />;
   }
 
   if (!user) {

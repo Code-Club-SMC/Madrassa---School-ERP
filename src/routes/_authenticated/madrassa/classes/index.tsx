@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { BookOpen, Plus, Users2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { BookLoader } from "@/components/shared/book-loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,7 +21,7 @@ import {
 import { useLanguage } from "@/components/language-context";
 import { useAuth } from "@/hooks/use-auth";
 
-export const Route = createFileRoute("/_authenticated/madrassa/classes")({
+export const Route = createFileRoute("/_authenticated/madrassa/classes/")({
   component: ClassesPage,
 });
 
@@ -60,15 +61,8 @@ function ClassesPage() {
   const { user, isLoading } = useAuth();
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
-  const location = useLocation();
 
   const t = useMemo(() => (en: string, ur: string) => (isUrdu ? ur : en), [isUrdu]);
-
-  const isDetailPage = location.pathname !== "/madrassa/classes";
-
-  if (isDetailPage) {
-    return <Outlet />;
-  }
 
   const [category, setCategory] = useState<MadrassaCategory | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,11 +197,7 @@ function ClassesPage() {
   }, [category, f, navigate, loadClasses, t]);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-sm text-muted-foreground">{t("Loading...", "لوڈ ہو رہا ہے...")}</p>
-      </div>
-    );
+    return <BookLoader className="h-96" />;
   }
 
   if (!user) {
@@ -282,8 +272,11 @@ function ClassesPage() {
       {selectedYearId && !loading && category && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {classes.map((d) => (
-            <Link key={d.id} to="/madrassa/classes/$classId" params={{ classId: d.id }} className="block">
-              <Card className="p-5 hover:border-primary/40 transition-colors cursor-pointer h-full">
+              <Card
+                key={d.id}
+                className="p-5 hover:border-primary/40 transition-colors cursor-pointer h-full"
+                onClick={() => navigate({ to: "/madrassa/classes/$classId", params: { classId: d.id } })}
+              >
                 <div className="flex items-start justify-between mb-3">
                   <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
                     <BookOpen className="h-5 w-5 text-primary" />
@@ -314,7 +307,6 @@ function ClassesPage() {
                   </Badge>
                 </div>
               </Card>
-            </Link>
           ))}
         </div>
       )}
