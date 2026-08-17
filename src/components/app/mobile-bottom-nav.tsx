@@ -6,10 +6,10 @@ import { cn } from "@/lib/utils";
 
 export function MobileBottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { system } = useSystem();
+  const { module } = useSystem();
   const { lang } = useLanguage();
 
-  const studentsUrl = system === "madrassa" ? "/madrassa/students" : "/school/students";
+  const studentsUrl = module === "madrassa" ? "/madrassa/students" : "/school/students";
 
   const items = [
     { url: "/dashboard", icon: LayoutDashboard, en: "Home", ur: "ہوم" },

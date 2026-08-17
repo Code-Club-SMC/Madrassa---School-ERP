@@ -429,7 +429,7 @@ function TimetablePage() {
   };
 
   if (authLoading) {
-    return <BookLoader className="h-96" />;
+    return <BookLoader text="Loading..." className="h-96" />;
   }
 
   if (!user) {

@@ -1,27 +1,28 @@
-export type AdmissionCategoryKey = "school" | "madrassa-boys" | "madrassa-girls";
+export type AdmissionCategoryKey = "male" | "female";
+export type AdmissionSectionKey = "madrassa" | "school";
 
 export type AdmissionVariantKey =
-  | "school-boys"
-  | "school-girls"
   | "madrassa-boys-nazira"
   | "madrassa-boys-hifz"
   | "madrassa-boys-general"
   | "madrassa-girls-general"
-  | "madrassa-girls-nazira";
+  | "madrassa-girls-nazira"
+  | "school-boys-main"
+  | "school-girls-main"
+  | "school-girls-shoba";
 
 export type AdmissionVariant = {
   key: AdmissionVariantKey;
   category: AdmissionCategoryKey;
+  section: AdmissionSectionKey;
   titleUrdu: string;
   subtitleUrdu?: string;
   titleEnglish: string;
   subtitleEnglish?: string;
   pdfPath: string;
   templateImagePath: string;
-  /** Long detailed madrassa form (kawaif nama + pledge) vs short form */
   layout: "school" | "madrassa-short" | "madrassa-long";
   allowPhoto: boolean;
-  /** Institution address line (Urdu) shown in the form header. */
   addressUrdu?: string;
 };
 
@@ -33,39 +34,19 @@ export const ADMISSION_CATEGORIES: {
   descriptionEnglish: string;
   icon: string;
 }[] = [
-  { key: "school", labelUrdu: "شعبہ سکول", labelEnglish: "School Section", descriptionUrdu: "القاسم اکیڈمی و جامعہ زینب للبنات (شعبہ سکول)", descriptionEnglish: "Al-Qasim Academy & Jamyah Zainab lilbanat (School Section)", icon: "🏫" },
-  { key: "madrassa-boys", labelUrdu: "مدرسہ (بنین)", labelEnglish: "Madrassa — Boys", descriptionUrdu: "جامعہ قاسمیہ للبنین ٹل پاکستان", descriptionEnglish: "Jamia Qasimia lilBanin Thall, Pakistan", icon: "🕌" },
-  { key: "madrassa-girls", labelUrdu: "مدرسہ (بنات)", labelEnglish: "Madrassa — Girls", descriptionUrdu: "جامعہ زینب للبنات ٹل پاکستان", descriptionEnglish: "Jamyah Zainab lilbanat Thall, Pakistan", icon: "🌙" },
+  { key: "male", labelUrdu: "جاسمہ قاسمیہ", labelEnglish: "Jamia Qasimia", descriptionUrdu: "جامعہ قاسمیہ للبنین ٹل پاکستان", descriptionEnglish: "Jamia Qasimia lilBanin Thall, Pakistan", icon: "🕌" },
+  { key: "female", labelUrdu: "زینب للبنات", labelEnglish: "Jamyah Zainab", descriptionUrdu: "جامعہ زینب للبنات ٹل پاکستان", descriptionEnglish: "Jamyah Zainab lilbanat Thall, Pakistan", icon: "🌙" },
 ];
 
 export const ADMISSION_VARIANTS: AdmissionVariant[] = [
   {
-    key: "school-boys",
-    category: "school",
-    titleUrdu: "القاسم اکیڈمی ٹل، ہنگو (شعبہ سکول)",
-    titleEnglish: "Al-Qasim Academy Thall, HANGU (Shoba School)",
-    pdfPath: "/Al-Qasim Academy Thall, Hangu (School Department).pdf",
-    templateImagePath: "/admission-templates/school-boys.png",
-    layout: "school",
-    allowPhoto: true,
-  },
-  {
-    key: "school-girls",
-    category: "school",
-    titleUrdu: "جامعہ زینب للبنات ٹل، ہنگو (شعبہ سکول)",
-    titleEnglish: "Jamyah Zainab lilbanat Thall, HANGU (Shoba School)",
-    pdfPath: "/jam-e-zanib-lilbanat-thall-hangu-shoba-school.pdf",
-    templateImagePath: "/admission-templates/school-girls.png",
-    layout: "school",
-    allowPhoto: false,
-  },
-  {
     key: "madrassa-boys-nazira",
-    category: "madrassa-boys",
-    titleUrdu: "جامعہ قاسمیہ للبنین ٹل پاکستان",
-    subtitleUrdu: "داخلہ فارم برائے ناظرہ و قاعدہ",
-    subtitleEnglish: "Admission Form for Nazira & Qaida",
-    titleEnglish: "Jamia Qasimia lilBanin Thall — Nazira & Qaida",
+    category: "male",
+    section: "madrassa",
+    titleUrdu: "داخلہ فارم برائے ناظرہ و قاعدہ",
+    subtitleUrdu: "جامعہ قاسمیہ للبنین",
+    subtitleEnglish: "Jamia Qasimia lilBanin",
+    titleEnglish: "Nazira & Qaida",
     pdfPath: "/Jamia Qasmia Lil-Baneen Thall Pakistan (For Nazira & Qaida).pdf",
     templateImagePath: "/admission-templates/madrassa-boys-nazira.png",
     layout: "madrassa-short",
@@ -74,11 +55,12 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
   },
   {
     key: "madrassa-boys-hifz",
-    category: "madrassa-boys",
-    titleUrdu: "جامعہ قاسمیہ للبنین ٹل پاکستان",
-    subtitleUrdu: "داخلہ فارم برائے حفظ",
-    subtitleEnglish: "Admission Form for Hifz",
-    titleEnglish: "Jamia Qasimia lilBanin Thall — Hifz",
+    category: "male",
+    section: "madrassa",
+    titleUrdu: "داخلہ فارم برائے حفظ",
+    subtitleUrdu: "جامعہ قاسمیہ للبنین",
+    subtitleEnglish: "Jamia Qasimia lilBanin",
+    titleEnglish: "Hifz",
     pdfPath: "/Jamia Qasmia Lil-Baneen Thall Pakistan (For Hifz).pdf",
     templateImagePath: "/admission-templates/madrassa-boys-hifz.png",
     layout: "madrassa-short",
@@ -87,23 +69,36 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
   },
   {
     key: "madrassa-boys-general",
-    category: "madrassa-boys",
-    titleUrdu: "جامعہ قاسمیہ ٹل پاکستان",
-    subtitleUrdu: "فارم داخلہ (درس نظامی)",
-    subtitleEnglish: "Admission Form (Dars-e-Nizami)",
-    titleEnglish: "Jamia Qasimia Thall — Dars-e-Nizami",
+    category: "male",
+    section: "madrassa",
+    titleUrdu: "فارم داخلہ (درس نظامی)",
+    subtitleUrdu: "جامعہ قاسمیہ",
+    subtitleEnglish: "Jamia Qasimia",
+    titleEnglish: "Dars-e-Nizami",
     pdfPath: "/Jamia Qasmia Thall Pakistan.pdf",
     templateImagePath: "/admission-templates/madrassa-boys-general.png",
     layout: "madrassa-long",
     allowPhoto: true,
   },
   {
+    key: "school-boys-main",
+    category: "male",
+    section: "school",
+    titleUrdu: "القاسم اکیڈمی ٹل، ہنگو",
+    titleEnglish: "Al-Qasim Academy Thall, Hangu",
+    pdfPath: "/Al-Qasim Academy Thall Hangu (School Department).pdf",
+    templateImagePath: "/admission-templates/school-boys.png",
+    layout: "school",
+    allowPhoto: true,
+  },
+  {
     key: "madrassa-girls-general",
-    category: "madrassa-girls",
-    titleUrdu: "جامعہ زینب للبنات ٹل پاکستان",
-    subtitleUrdu: "فارم داخلہ (درس نظامی)",
-    subtitleEnglish: "Admission Form (Dars-e-Nizami)",
-    titleEnglish: "Jamia Zainab lilBanat Thall — Dars-e-Nizami",
+    category: "female",
+    section: "madrassa",
+    titleUrdu: "فارم داخلہ (درس نظامی)",
+    subtitleUrdu: "جامعہ زینب للبنات",
+    subtitleEnglish: "Jamyah Zainab lilbanat",
+    titleEnglish: "Dars-e-Nizami",
     pdfPath: "/Jamia Zainab Lil-Banat Thall Pakistan.pdf",
     templateImagePath: "/admission-templates/madrassa-girls-general.png",
     layout: "madrassa-long",
@@ -111,14 +106,37 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
   },
   {
     key: "madrassa-girls-nazira",
-    category: "madrassa-girls",
-    titleUrdu: "جامعہ زینب للبنات ٹل پاکستان",
-    subtitleUrdu: "داخلہ فارم برائے ناظرہ و قاعدہ",
-    subtitleEnglish: "Admission Form for Nazira & Qaida",
-    titleEnglish: "Jamia Zainab lilBanat — Nazira & Qaida",
+    category: "female",
+    section: "madrassa",
+    titleUrdu: "داخلہ فارم برائے ناظرہ و قاعدہ",
+    subtitleUrdu: "جامعہ زینب للبنات",
+    subtitleEnglish: "Jamyah Zainab lilbanat",
+    titleEnglish: "Nazira & Qaida",
     pdfPath: "/Jamia Zainab Lil-Banat Thall Pakistan (For Nazira & Qaida).pdf",
     templateImagePath: "/admission-templates/madrassa-girls-nazira.png",
     layout: "madrassa-short",
+    allowPhoto: false,
+  },
+  {
+    key: "school-girls-main",
+    category: "female",
+    section: "school",
+    titleUrdu: "جامعہ زینب للبنات ٹل، ہنگو",
+    titleEnglish: "Jamyah Zainab lilbanat Thall, Hangu",
+    pdfPath: "/Jamyah Zainab lilbanat Thall Hangu (School Department).pdf",
+    templateImagePath: "/admission-templates/school-girls.png",
+    layout: "school",
+    allowPhoto: false,
+  },
+  {
+    key: "school-girls-shoba",
+    category: "female",
+    section: "school",
+    titleUrdu: "جامعہ زینب للبنات ٹل، ہنگو (شعبہ سکول)",
+    titleEnglish: "Jamyah Zainab lilbanat Thall, HANGU (Shoba School)",
+    pdfPath: "/jam-e-zanib-lilbanat-thall-hangu-shoba-school.pdf",
+    templateImagePath: "/admission-templates/school-girls.png",
+    layout: "school",
     allowPhoto: false,
   },
 ];

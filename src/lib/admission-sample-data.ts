@@ -56,7 +56,7 @@ const femaleSample: PersonSample = {
 };
 
 export function buildAdmissionSampleData(variant: AdmissionVariant): Record<string, string> {
-  const isGirls = variant.key === "school-girls" || variant.key.startsWith("madrassa-girls");
+  const isGirls = variant.key.startsWith("school-girls") || variant.key.startsWith("madrassa-girls");
   const person = isGirls ? femaleSample : maleSample;
 
   if (variant.layout === "school") return schoolSample(person, isGirls);

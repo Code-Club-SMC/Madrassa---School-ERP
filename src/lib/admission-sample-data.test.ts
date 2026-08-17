@@ -28,7 +28,7 @@ describe("admission sample data", () => {
   });
 
   test("uses female sample data for girls school forms", () => {
-    const variant = getVariant("school-girls");
+    const variant = getVariant("school-girls-main");
     if (!variant) throw new Error("girls school variant missing");
 
     const sample = buildAdmissionSampleData(variant);

@@ -1,26 +1,43 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-export type ActiveSystem = "madrassa" | "school";
-type Ctx = { system: ActiveSystem; setSystem: (s: ActiveSystem) => void };
+export type GenderSection = "male" | "female";
+export type ActiveModule = "madrassa" | "school";
 
-const SystemCtx = createContext<Ctx>({ system: "madrassa", setSystem: () => {} });
+type Ctx = {
+  gender: GenderSection;
+  setGender: (g: GenderSection) => void;
+  module: ActiveModule;
+  setModule: (m: ActiveModule) => void;
+};
+
+const SystemCtx = createContext<Ctx>({ gender: "male", setGender: () => {}, module: "madrassa", setModule: () => {} });
 
 export function SystemProvider({ children }: { children: ReactNode }) {
-  const [system, setSystemState] = useState<ActiveSystem>("madrassa");
+  const [gender, setGenderState] = useState<GenderSection>("male");
+  const [module, setModuleState] = useState<ActiveModule>("madrassa");
 
   useEffect(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("msmis-system") : null;
-    if (stored === "madrassa" || stored === "school") setSystemState(stored);
+    const storedGender = typeof window !== "undefined" ? localStorage.getItem("msmis-gender") : null;
+    if (storedGender === "male" || storedGender === "female") setGenderState(storedGender);
+    const storedModule = typeof window !== "undefined" ? localStorage.getItem("msmis-module") : null;
+    if (storedModule === "madrassa" || storedModule === "school") setModuleState(storedModule);
   }, []);
 
-  const setSystem = useCallback((s: ActiveSystem) => {
-    setSystemState(s);
+  const setGender = useCallback((g: GenderSection) => {
+    setGenderState(g);
     try {
-      localStorage.setItem("msmis-system", s);
+      localStorage.setItem("msmis-gender", g);
     } catch {}
   }, []);
 
-  const value = useMemo(() => ({ system, setSystem }), [system, setSystem]);
+  const setModule = useCallback((m: ActiveModule) => {
+    setModuleState(m);
+    try {
+      localStorage.setItem("msmis-module", m);
+    } catch {}
+  }, []);
+
+  const value = useMemo(() => ({ gender, setGender, module, setModule }), [gender, setGender, module, setModule]);
 
   return <SystemCtx.Provider value={value}>{children}</SystemCtx.Provider>;
 }

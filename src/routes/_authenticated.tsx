@@ -19,13 +19,13 @@ function AuthenticatedLayout() {
   const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const { user, isLoading } = useAuth();
-  const { system, setSystem } = useSystem();
+  const { module, setModule } = useSystem();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    if (pathname.startsWith("/madrassa")) setSystem("madrassa");
-    if (pathname.startsWith("/school")) setSystem("school");
-  }, [pathname, setSystem]);
+    if (pathname.startsWith("/madrassa")) setModule("madrassa");
+    if (pathname.startsWith("/school")) setModule("school");
+  }, [pathname, setModule]);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -34,7 +34,7 @@ function AuthenticatedLayout() {
   }, [user, isLoading, navigate]);
 
   if (isLoading) {
-    return <BookLoader />;
+    return <BookLoader text="Loading..." className="h-dvh" />;
   }
 
   if (!user) {

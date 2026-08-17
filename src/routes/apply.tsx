@@ -11,8 +11,10 @@ import {
   ADMISSION_VARIANTS,
   getVariant,
   type AdmissionCategoryKey,
+  type AdmissionSectionKey,
 } from "@/lib/admission-variants";
 import { institution } from "@/mock";
+import { useMemo } from "react";
 
 const searchSchema = z.object({ variant: z.string().optional() });
 
@@ -21,12 +23,32 @@ export const Route = createFileRoute("/apply")({
   component: PublicApply,
 });
 
+const SECTION_LABELS = {
+  madrassa: { ur: "مدرسہ", en: "Madrassa" },
+  school: { ur: "اسکول", en: "School" },
+} as const;
+
 function PublicApply() {
   const { variant: variantKey } = Route.useSearch();
   const navigate = Route.useNavigate();
   const variant = getVariant(variantKey);
-  const [category, setCategory] = useState<AdmissionCategoryKey | null>(null);
-  const variants = category ? ADMISSION_VARIANTS.filter((v) => v.category === category) : [];
+  const [institution, setInstitution] = useState<AdmissionCategoryKey | null>(null);
+
+  const variants = useMemo(() => {
+    if (!institution) return [];
+    return ADMISSION_VARIANTS.filter((v) => v.category === institution);
+  }, [institution]);
+
+  const sections = useMemo(() => {
+    if (!institution) return [];
+    const grouped = new Map<AdmissionSectionKey, typeof variants>();
+    for (const v of variants) {
+      const arr = grouped.get(v.section) ?? [];
+      arr.push(v);
+      grouped.set(v.section, arr);
+    }
+    return Array.from(grouped.entries()).map(([key, items]) => ({ key, items }));
+  }, [institution, variants]);
 
   return (
     <div className="min-h-dvh bg-muted/30">
@@ -58,28 +80,25 @@ function PublicApply() {
             </div>
             <PdfFormRenderer variant={variant} isPublic />
           </>
-        ) : !category ? (
+        ) : !institution ? (
           <Card className="p-6">
-            <h2 className="font-urdu text-2xl font-semibold text-end leading-loose mb-1" dir="rtl" lang="ur">
+            <h2 className="font-urdu text-2xl font-semibold text-end leading-loose mb-6" dir="rtl" lang="ur">
               شعبہ منتخب کریں
             </h2>
-            <p className="text-[11px] uppercase tracking-widest text-muted-foreground text-end mb-6">
-              Choose Department
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {ADMISSION_CATEGORIES.map((c) => (
                 <button
                   key={c.key}
                   type="button"
-                  onClick={() => setCategory(c.key)}
+                  onClick={() => setInstitution(c.key)}
                   className={cn(
-                    "rounded-2xl border-2 border-border p-5 text-center transition-all",
+                    "group rounded-2xl border-2 border-border p-6 text-center transition-all",
                     "hover:border-primary/60 hover:bg-primary/5",
                   )}
                 >
-                  <div className="text-4xl mb-3">{c.icon}</div>
-                  <p className="font-urdu text-lg font-semibold leading-loose" dir="rtl" lang="ur">{c.labelUrdu}</p>
-                  <p className="text-[11px] uppercase tracking-widest text-muted-foreground mt-1">{c.labelEnglish}</p>
+                  <div className="text-5xl mb-4">{c.icon}</div>
+                  <p className="font-urdu text-xl font-semibold leading-loose" dir="rtl" lang="ur">{c.labelUrdu}</p>
+                  <p className="text-[11px] uppercase tracking-widest text-muted-foreground mt-2">{c.labelEnglish}</p>
                 </button>
               ))}
             </div>
@@ -90,27 +109,40 @@ function PublicApply() {
               <h2 className="font-urdu text-2xl font-semibold text-end leading-loose" dir="rtl" lang="ur">
                 فارم منتخب کریں
               </h2>
-              <Button variant="ghost" size="sm" onClick={() => setCategory(null)}>
+              <Button variant="ghost" size="sm" onClick={() => setInstitution(null)}>
                 <span className="font-urdu">واپس</span>
               </Button>
             </div>
-            <div className="space-y-2">
-              {variants.map((v) => (
-                <button
-                  key={v.key}
-                  type="button"
-                  onClick={() => navigate({ search: { variant: v.key } })}
-                  className="w-full flex items-center justify-between gap-3 rounded-xl border border-border p-4 text-end hover:border-primary/60 hover:bg-primary/5 transition-all"
-                >
-                  <ChevronLeft className="h-5 w-5 text-muted-foreground shrink-0 rtl:rotate-180" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-urdu text-base font-semibold leading-loose" dir="rtl" lang="ur">{v.titleUrdu}</p>
-                    {v.subtitleUrdu && (
-                      <p className="font-urdu text-sm text-muted-foreground leading-loose" dir="rtl" lang="ur">{v.subtitleUrdu}</p>
-                    )}
-                    <p className="text-[11px] uppercase tracking-widest text-muted-foreground mt-1">{v.titleEnglish}</p>
+            <div className="space-y-5">
+              {sections.map((section) => (
+                <div key={section.key}>
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border" />
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      {SECTION_LABELS[section.key].ur} / {SECTION_LABELS[section.key].en}
+                    </p>
+                    <div className="h-px flex-1 bg-border" />
                   </div>
-                </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {section.items.map((v) => (
+                      <button
+                        key={v.key}
+                        type="button"
+                        onClick={() => navigate({ search: { variant: v.key } })}
+                        className="w-full flex items-center justify-between gap-3 rounded-xl border border-border p-4 text-end hover:border-primary/60 hover:bg-primary/5 transition-all"
+                      >
+                        <ChevronLeft className="h-5 w-5 text-muted-foreground shrink-0 rtl:rotate-180" />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-urdu text-base font-semibold leading-loose" dir="rtl" lang="ur">{v.titleUrdu}</p>
+                          {v.subtitleUrdu && (
+                            <p className="font-urdu text-sm text-muted-foreground leading-loose" dir="rtl" lang="ur">{v.subtitleUrdu}</p>
+                          )}
+                          <p className="text-[11px] uppercase tracking-widest text-muted-foreground mt-1">{v.titleEnglish}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </Card>

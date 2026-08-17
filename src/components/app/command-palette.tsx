@@ -22,7 +22,7 @@ type Props = { open: boolean; onOpenChange: (v: boolean) => void };
 
 export function CommandPalette({ open, onOpenChange }: Props) {
   const navigate = useNavigate();
-  const { system, setSystem } = useSystem();
+  const { module, setModule } = useSystem();
   const { toggle } = useTheme();
   const { lang, setLang } = useLanguage();
   const { user } = useAuth();
@@ -59,18 +59,18 @@ export function CommandPalette({ open, onOpenChange }: Props) {
         <CommandGroup heading={lang === "ur" ? "اعمال" : "Actions"}>
           <CommandItem
             onSelect={() => {
-              setSystem(system === "madrassa" ? "school" : "madrassa");
+              setModule(module === "madrassa" ? "school" : "madrassa");
               onOpenChange(false);
             }}
           >
             <ArrowLeftRight className="me-2 h-4 w-4" />
             {lang === "ur"
-              ? system === "madrassa"
+              ? module === "madrassa"
                 ? "اسکول میں جائیں"
                 : "مدرسہ میں جائیں"
-              : `Switch to ${system === "madrassa" ? "School" : "Madrassa"}`}
+              : `Switch to ${module === "madrassa" ? "School" : "Madrassa"}`}
             <span className="font-urdu ms-2 text-muted-foreground">
-              {system === "madrassa" ? "اسکول" : "مدرسہ"}
+              {module === "madrassa" ? "اسکول" : "مدرسہ"}
             </span>
           </CommandItem>
           <CommandItem

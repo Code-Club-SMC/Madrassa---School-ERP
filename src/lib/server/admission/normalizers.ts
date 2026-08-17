@@ -34,7 +34,7 @@ export function normalizeAdmissionForm(variantKey: AdmissionVariantKey, form: Re
     nameUrdu: name,
     fatherName,
     fatherNameUrdu: fatherName,
-    gender: variantKey === "school-girls" || variantKey.startsWith("madrassa-girls") ? "female" : "male",
+    gender: variantKey.startsWith("school-girls") || variantKey.startsWith("madrassa-girls") ? "female" : "male",
     dob: parseDate(form.dob_digits || form.dob || form.dob_age),
     cnicBForm: nullable(form.b_form || form.cnic_b_form || form.student_cnic),
     guardianName,

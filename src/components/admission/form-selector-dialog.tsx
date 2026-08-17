@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ArrowLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,22 +14,23 @@ import {
   ADMISSION_CATEGORIES,
   ADMISSION_VARIANTS,
   type AdmissionCategoryKey,
+  type AdmissionSectionKey,
 } from "@/lib/admission-variants";
 import { useLanguage } from "@/components/language-context";
 
 const TEXT = {
   ur: {
     selectDepartment: "شعبہ منتخب کریں",
-    selectForm: "فارم منتخب کریں",
     chooseDepartment: "شعبہ منتخب کریں",
-    chooseForm: "فارم منتخب کریں",
+    madrassa: "مدرسہ",
+    school: "اسکول",
     back: "واپس",
   },
   en: {
-    selectDepartment: "Choose the department",
-    selectForm: "Choose the specific admission form",
-    chooseDepartment: "Choose the department for this admission",
-    chooseForm: "Choose the specific admission form",
+    selectDepartment: "Choose the section",
+    chooseDepartment: "Choose the section for this admission",
+    madrassa: "Madrassa",
+    school: "School",
     back: "Back",
   },
 };
@@ -44,53 +45,103 @@ export function AdmissionFormSelectorDialog({
   const { lang } = useLanguage();
   const t = TEXT[lang];
   const navigate = useNavigate();
-  const [category, setCategory] = useState<AdmissionCategoryKey | null>(null);
+  const [selectedSection, setSelectedSection] = useState<{ category: AdmissionCategoryKey; section: AdmissionSectionKey } | null>(null);
 
-  const reset = () => setCategory(null);
   const close = (v: boolean) => {
     onOpenChange(v);
-    if (!v) setTimeout(reset, 200);
+    if (!v) setSelectedSection(null);
   };
 
-  const variants = category ? ADMISSION_VARIANTS.filter((v) => v.category === category) : [];
+  const institutionVariants = useMemo(() => {
+    const grouped = new Map<AdmissionCategoryKey, AdmissionVariant[]>();
+    for (const v of ADMISSION_VARIANTS) {
+      const arr = grouped.get(v.category) ?? [];
+      arr.push(v);
+      grouped.set(v.category, arr);
+    }
+    return Array.from(grouped.entries()).map(([key, items]) => ({ key, items }));
+  }, []);
+
+  const sectionsFor = (items: AdmissionVariant[]) => {
+    const grouped = new Map<AdmissionSectionKey, AdmissionVariant[]>();
+    for (const v of items) {
+      const arr = grouped.get(v.section) ?? [];
+      arr.push(v);
+      grouped.set(v.section, arr);
+    }
+    return Array.from(grouped.entries()).map(([key, items]) => ({ key, items }));
+  };
+
+  const selectedVariants = selectedSection
+    ? ADMISSION_VARIANTS.filter((v) => v.category === selectedSection.category && v.section === selectedSection.section)
+    : [];
+
+  const categoryLabel = (key: AdmissionCategoryKey) => {
+    const c = ADMISSION_CATEGORIES.find((c) => c.key === key);
+    return c ? (lang === "ur" ? c.labelUrdu : c.labelEnglish) : key;
+  };
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className={`text-2xl leading-loose text-end ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
-            {category ? t.selectForm : t.selectDepartment}
+            {selectedSection ? t.selectForm : t.selectDepartment}
           </DialogTitle>
           <DialogDescription className="text-end">
-            {category ? t.chooseForm : t.chooseDepartment}
+            {selectedSection ? t.chooseForm : t.chooseDepartment}
           </DialogDescription>
         </DialogHeader>
 
-        {!category ? (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
-            {ADMISSION_CATEGORIES.map((c) => (
-              <button
-                key={c.key}
-                type="button"
-                onClick={() => setCategory(c.key)}
-                className={cn(
-                  "group rounded-2xl border-2 border-border p-5 text-center transition-all",
-                  "hover:border-primary/60 hover:bg-primary/5 hover:shadow-sm",
-                )}
-              >
-                <div className="text-4xl mb-3">{c.icon}</div>
-                <p className={`text-lg font-semibold leading-loose ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
-                  {lang === "ur" ? c.labelUrdu : c.labelEnglish}
-                </p>
-                <p className={`text-xs text-muted-foreground mt-2 leading-loose ${lang === "ur" ? "font-urdu" : ""}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
-                  {lang === "ur" ? c.descriptionUrdu : c.descriptionEnglish}
-                </p>
-              </button>
-            ))}
+        {!selectedSection ? (
+          <div className="space-y-5 mt-2">
+            {institutionVariants.map((group) => {
+              const category = ADMISSION_CATEGORIES.find((c) => c.key === group.key);
+              if (!category) return null;
+              const sections = sectionsFor(group.items);
+
+              return (
+                <div key={group.key}>
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border" />
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      {lang === "ur" ? category.labelUrdu : category.labelEnglish}
+                    </p>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {sections.map((section) => (
+                      <button
+                        key={section.key}
+                        type="button"
+                        onClick={() => setSelectedSection({ category: group.key, section: section.key })}
+                        className={cn(
+                          "w-full rounded-xl border-2 border-border p-5 text-center transition-all",
+                          "hover:border-primary/60 hover:bg-primary/5 hover:shadow-sm",
+                        )}
+                      >
+                        <p className={`text-lg font-semibold leading-loose ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                          {section.key === "madrassa"
+                            ? lang === "ur"
+                              ? t.madrassa
+                              : t.madrassa
+                            : lang === "ur"
+                              ? t.school
+                              : t.school}
+                        </p>
+                        <p className={`text-xs text-muted-foreground mt-1 leading-loose ${lang === "ur" ? "font-urdu" : ""}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                          {categoryLabel(group.key)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="space-y-2 mt-2">
-            {variants.map((v) => (
+            {selectedVariants.map((v) => (
               <button
                 key={v.key}
                 type="button"
@@ -114,8 +165,8 @@ export function AdmissionFormSelectorDialog({
               </button>
             ))}
             <div className="pt-2">
-              <Button variant="ghost" size="sm" onClick={reset} className="gap-1">
-                <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
+              <Button variant="ghost" size="sm" onClick={() => setSelectedSection(null)} className="gap-1">
+                <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
                 {lang === "ur" && <span className="font-urdu">{t.back}</span>}
                 {lang === "en" && t.back}
               </Button>

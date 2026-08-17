@@ -197,7 +197,7 @@ function ClassesPage() {
   }, [category, f, navigate, loadClasses, t]);
 
   if (isLoading) {
-    return <BookLoader className="h-96" />;
+    return <BookLoader text="Loading..." className="h-96" />;
   }
 
   if (!user) {

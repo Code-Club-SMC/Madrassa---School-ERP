@@ -567,7 +567,7 @@ export function PdfFormRenderer({
           form={form}
           set={set}
           variant={variant}
-          isGirls={variant.category === "madrassa-girls"}
+          isGirls={variant.category === "female"}
           lang={lang}
           t={t}
         />
@@ -577,7 +577,7 @@ export function PdfFormRenderer({
           form={form}
           set={set}
           variant={variant}
-          isGirls={variant.category === "madrassa-girls"}
+          isGirls={variant.category === "female"}
           lang={lang}
           t={t}
         />
@@ -648,7 +648,7 @@ function Section({
 type FieldProps = { form: State; set: (k: string, v: string) => void; lang: "ur" | "en"; t: typeof TEXT["ur"] };
 
 function gradeOptionsForVariant(variant: AdmissionVariant) {
-  const section = variant.category === "madrassa-girls" ? "banat" : "baneen";
+  const section = variant.category === "female" ? "banat" : "baneen";
   const kinds: MadrassaGradeKind[] =
     variant.key === "madrassa-boys-hifz"
       ? ["hifz"]

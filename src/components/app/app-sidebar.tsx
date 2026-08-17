@@ -40,7 +40,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { system, setSystem } = useSystem();
+  const { gender, setGender, module, setModule } = useSystem();
   const { lang, setLang } = useLanguage();
   const { user, logout } = useAuth();
   const role = (user?.role ?? "parent") as UserRole;
@@ -53,10 +53,18 @@ export function AppSidebar() {
   const adminNav = visibleFor(role, "admin");
   const sidebarSide = lang === "en" ? "left" : "right";
 
-  const [openSection, setOpenSection] = useState<SectionKey | null>("madrassa");
+  const [openSections, setOpenSections] = useState<Set<SectionKey>>(new Set(["madrassa", "school"]));
 
   const toggleSection = (section: SectionKey) => {
-    setOpenSection((current) => (current === section ? null : section));
+    setOpenSections((current) => {
+      const next = new Set(current);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
   };
 
   const allUrls = useMemo(
@@ -113,7 +121,7 @@ export function AppSidebar() {
 
   const renderAccordionSection = (key: SectionKey, labelEn: string, labelUr: string, items: NavItem[]) => {
     if (!collapsed && items.length === 0) return null;
-    const isOpen = openSection === key;
+    const isOpen = openSections.has(key);
 
     return (
       <SidebarGroup className="px-1.5 pt-2">
@@ -181,10 +189,10 @@ export function AppSidebar() {
           <div className="px-3 pt-3 pb-1">
             <div className="grid grid-cols-2 bg-sidebar-accent/40 rounded-lg p-1 gap-1">
               <button
-                onClick={() => setSystem("madrassa")}
+                onClick={() => setModule("madrassa")}
                 className={cn(
                   "rounded-md py-2 text-sm font-medium transition-all duration-150",
-                  system === "madrassa"
+                  module === "madrassa"
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                     : "text-sidebar-foreground/70 hover:text-sidebar-foreground",
                 )}
@@ -192,10 +200,10 @@ export function AppSidebar() {
                 {lang === "ur" ? "🕌 مدرسہ" : "🕌 Madrassa"}
               </button>
               <button
-                onClick={() => setSystem("school")}
+                onClick={() => setModule("school")}
                 className={cn(
                   "rounded-md py-2 text-sm font-medium transition-all duration-150",
-                  system === "school"
+                  module === "school"
                     ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                     : "text-sidebar-foreground/70 hover:text-sidebar-foreground",
                 )}
@@ -206,12 +214,20 @@ export function AppSidebar() {
           </div>
         )}
 
-        {!isParent && (system === "madrassa" ? madrassaNav : schoolNav).length > 0 && (
+        {!isParent && module === "madrassa" && madrassaNav.length > 0 && (
           renderAccordionSection(
-            system === "madrassa" ? "madrassa" : "school",
-            system === "madrassa" ? "Madrassa" : "School",
-            system === "madrassa" ? "مدرسہ" : "اسکول",
-            system === "madrassa" ? madrassaNav : schoolNav,
+            "madrassa",
+            gender === "male" ? "Jamia Qasimia" : "Jamyah Zainab",
+            gender === "male" ? "جاسمہ قاسمیہ" : "زینب للبنات",
+            madrassaNav,
+          )
+        )}
+        {!isParent && module === "school" && schoolNav.length > 0 && (
+          renderAccordionSection(
+            "school",
+            gender === "male" ? "Jamia Qasimia" : "Jamyah Zainab",
+            gender === "male" ? "جاسمہ قاسمیہ" : "زینب للبنات",
+            schoolNav,
           )
         )}
 

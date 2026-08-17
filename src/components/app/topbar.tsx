@@ -23,7 +23,7 @@ type TopbarProps = { onOpenPalette: () => void };
 export function Topbar({ onOpenPalette }: TopbarProps) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { theme, toggle } = useTheme();
-  const { system, setSystem } = useSystem();
+  const { gender, setGender, module, setModule } = useSystem();
   const { lang, setLang } = useLanguage();
   const { user, logout } = useAuth();
 
@@ -94,13 +94,13 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
                 "bg-primary/10 text-primary hover:bg-primary/15",
               )}
             >
-              {system === "madrassa"
+              {gender === "male"
                 ? lang === "ur"
-                  ? "🕌 مدرسہ"
-                  : "🕌 Madrassa"
+                  ? "🕌 جاسمہ قاسمیہ"
+                  : "🕌 Jamia Qasimia"
                 : lang === "ur"
-                  ? "🏫 اسکول"
-                  : "🏫 School"}
+                  ? "🌙 زینب للبنات"
+                  : "🌙 Jamyah Zainab"}
               <ArrowLeftRight className="h-3 w-3 opacity-60" />
             </Button>
           </DropdownMenuTrigger>
@@ -108,13 +108,13 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
             <DropdownMenuLabel className="text-[10px] uppercase tracking-wide">
               {lang === "ur" ? "فعال نظام" : "Active system"}
             </DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => setSystem("madrassa")}>
-              🕌 <span className="font-urdu ms-2">{lang === "ur" ? "مدرسہ" : "Madrassa"}</span>
-              <span className="ms-auto text-[10px] text-muted-foreground">{lang === "ur" ? "مدرسہ" : "Madrassa"}</span>
+            <DropdownMenuItem onClick={() => setGender("male")}>
+              🕌 <span className="font-urdu ms-2">{lang === "ur" ? "جاسمہ قاسمیہ" : "Jamia Qasimia"}</span>
+              <span className="ms-auto text-[10px] text-muted-foreground">{lang === "ur" ? "جاسمہ قاسمیہ" : "Jamia Qasimia"}</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSystem("school")}>
-              🏫 <span className="font-urdu ms-2">{lang === "ur" ? "اسکول" : "School"}</span>
-              <span className="ms-auto text-[10px] text-muted-foreground">{lang === "ur" ? "اسکول" : "School"}</span>
+            <DropdownMenuItem onClick={() => setGender("female")}>
+              🌙 <span className="font-urdu ms-2">{lang === "ur" ? "زینب للبنات" : "Jamyah Zainab"}</span>
+              <span className="ms-auto text-[10px] text-muted-foreground">{lang === "ur" ? "زینب للبنات" : "Jamyah Zainab"}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

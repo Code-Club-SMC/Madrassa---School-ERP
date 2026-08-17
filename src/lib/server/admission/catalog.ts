@@ -9,8 +9,9 @@ import { AdmissionError } from "./errors";
 import type { Section } from "@/types";
 
 export const admissionVariantKeys = [
-  "school-boys",
-  "school-girls",
+  "school-boys-main",
+  "school-girls-main",
+  "school-girls-shoba",
   "madrassa-boys-nazira",
   "madrassa-boys-hifz",
   "madrassa-boys-general",
@@ -28,12 +29,18 @@ type VariantTarget = {
 };
 
 export const variantTargets: Record<AdmissionVariantKey, VariantTarget> = {
-  "school-boys": {
+  "school-boys-main": {
     institutionId: "al_qasim_academy",
     programId: "al_qasim_school",
     requiresSchoolClass: true,
   },
-  "school-girls": {
+  "school-girls-main": {
+    institutionId: "jamia_zainab_banat",
+    programId: "zainab_school_support",
+    defaultSchoolClassId: "c1",
+    supportClassOnly: true,
+  },
+  "school-girls-shoba": {
     institutionId: "jamia_zainab_banat",
     programId: "zainab_school_support",
     defaultSchoolClassId: "c1",
