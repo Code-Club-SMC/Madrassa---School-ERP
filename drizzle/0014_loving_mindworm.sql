@@ -1,0 +1,1 @@
+ALTER TABLE "madrassa_categories" ADD COLUMN "section" text DEFAULT 'male' NOT NULL;

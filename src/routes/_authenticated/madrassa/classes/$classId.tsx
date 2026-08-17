@@ -32,6 +32,7 @@ import { useLanguage } from "@/components/language-context";
 import { useAuth } from "@/hooks/use-auth";
 import { createExamSubject, deleteExamSubject, listExamSubjects, updateExamSubject } from "@/components/exams/exam-api";
 import type { ExamSubject } from "@/components/exams/exam-types";
+import { useSystem } from "@/components/system-context";
 
 export const Route = createFileRoute("/_authenticated/madrassa/classes/$classId")({
   component: ClassDetailPage,
@@ -66,6 +67,7 @@ function ClassDetailPage() {
   const { classId } = Route.useParams();
   const { user, isLoading } = useAuth();
   const { lang } = useLanguage();
+  const { gender } = useSystem();
   const isUrdu = lang === "ur";
 
   const t = useMemo(() => (en: string, ur: string) => (isUrdu ? ur : en), [isUrdu]);

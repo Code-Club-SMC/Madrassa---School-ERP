@@ -107,6 +107,7 @@ export const madrassaCategories = pgTable(
     descriptionUrdu: text("description_urdu").notNull(),
     displayOrder: integer("display_order").notNull(),
     active: boolean("active").default(true).notNull(),
+    section: text("section").notNull().default("male"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -132,6 +133,7 @@ export const madrassaSubcategories = pgTable(
     fee: integer("fee"),
     displayOrder: integer("display_order").notNull(),
     active: boolean("active").default(true).notNull(),
+    section: text("section").notNull().default("male"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -142,6 +144,7 @@ export const madrassaSubcategories = pgTable(
     index("madrassa_subcategories_category_idx").on(table.categoryId),
     index("madrassa_subcategories_darja_idx").on(table.darja),
     index("madrassa_subcategories_active_idx").on(table.active),
+    index("madrassa_subcategories_section_idx").on(table.section),
   ],
 );
 

@@ -47,6 +47,7 @@ import {
   updateTimetablePeriod,
 } from "@/components/exams/exam-api";
 import type { ExamSubject, TimetablePeriod } from "@/components/exams/exam-types";
+import { useSystem } from "@/components/system-context";
 
 type MadrassaSubcategory = {
   id: string;
@@ -83,6 +84,7 @@ function TimetablePage() {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const { lang } = useLanguage();
+  const { gender } = useSystem();
   const isUrdu = lang === "ur";
   const t = useMemo(() => (en: string, ur: string) => (isUrdu ? ur : en), [isUrdu]);
 
@@ -123,15 +125,17 @@ function TimetablePage() {
   );
 
    const loadCategories = useCallback(async () => {
-    setLoadingCategories(true);
-    try {
-      const res = await fetch("/api/academic/madrassa/categories", { credentials: "include" });
-      if (res.status === 401 || res.status === 403) {
-        navigate({ to: "/login", search: { redirect: undefined } });
-        return;
-      }
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload.error || "Could not load classes");
+     setLoadingCategories(true);
+     try {
+       const params = new URLSearchParams();
+       params.set("section", gender);
+       const res = await fetch(`/api/academic/madrassa/categories?${params.toString()}`, { credentials: "include" });
+       if (res.status === 401 || res.status === 403) {
+         navigate({ to: "/login", search: { redirect: undefined } });
+         return;
+       }
+       const payload = await res.json().catch(() => ({}));
+       if (!res.ok) throw new Error(payload.error || "Could not load classes");
 
       const cats = (payload.categories ?? []) as MadrassaCategory[];
       setCategories(cats);

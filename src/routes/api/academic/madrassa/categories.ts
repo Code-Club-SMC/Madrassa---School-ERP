@@ -14,7 +14,8 @@ export const Route = createFileRoute("/api/academic/madrassa/categories")({
         try {
           const url = new URL(request.url);
           const academicYearId = url.searchParams.get("academicYearId") || undefined;
-          return json({ categories: await listMadrassaCategories(request, academicYearId) });
+          const section = url.searchParams.get("section") || undefined;
+          return json({ categories: await listMadrassaCategories(request, academicYearId, section) });
         } catch (error) {
           return errorResponse(error, "Could not load madrassa categories");
         }

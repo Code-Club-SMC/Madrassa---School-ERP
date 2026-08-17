@@ -42,6 +42,7 @@ export const madrassaCategoryInputSchema = z.object({
   nameUrdu: z.string().trim().min(1),
   description: z.string().trim().optional(),
   descriptionUrdu: z.string().trim().optional(),
+  section: z.enum(["male", "female"]).default("male"),
   active: z.boolean().optional(),
 });
 
@@ -58,6 +59,7 @@ export const madrassaSubcategoryInputSchema = z.object({
   durationYears: z.coerce.number().int().positive().nullable().optional(),
   fee: z.coerce.number().int().nonnegative().nullable().optional(),
   active: z.boolean().optional(),
+  section: z.enum(["male", "female"]).optional(),
 });
 
 export const madrassaSubcategoryUpdateSchema = madrassaSubcategoryInputSchema.partial().refine(hasAnyKey, {
@@ -221,7 +223,7 @@ export async function updateSchoolSection(
   return updated;
 }
 
-export async function listMadrassaCategories(request: Request, academicYearId?: string) {
+export async function listMadrassaCategories(request: Request, academicYearId?: string, section?: string) {
   await requirePermission(request, "madrassa_categories", "view");
   await ensureAcademicSeeded();
 
@@ -249,28 +251,30 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
     countMap.set(`${row.subcategoryId ?? ""}:${row.institutionId}`, Number(row.count));
   }
 
-  return categories.map((category) => {
-    const children = subcategories
-      .filter((subcategory) => subcategory.categoryId === category.id)
-      .map((subcategory) => {
-        const qasmiaCount = countMap.get(`${subcategory.id}:jamia_qasmia_baneen`) ?? 0;
-        const zainabCount = countMap.get(`${subcategory.id}:jamia_zainab_banat`) ?? 0;
-        return {
-          ...subcategory,
-          qasmiaCount,
-          zainabCount,
-          enrollmentCount: qasmiaCount + zainabCount,
-        };
-      });
+  return categories
+    .filter((category) => !section || category.section === section)
+    .map((category) => {
+      const children = subcategories
+        .filter((subcategory) => subcategory.categoryId === category.id && (!section || subcategory.section === section))
+        .map((subcategory) => {
+          const qasmiaCount = countMap.get(`${subcategory.id}:jamia_qasmia_baneen`) ?? 0;
+          const zainabCount = countMap.get(`${subcategory.id}:jamia_zainab_banat`) ?? 0;
+          return {
+            ...subcategory,
+            qasmiaCount,
+            zainabCount,
+            enrollmentCount: qasmiaCount + zainabCount,
+          };
+        });
 
-    return {
-      ...category,
-      subcategories: children,
-      enrollmentCount: children.reduce((sum, child) => sum + child.enrollmentCount, 0),
-      qasmiaCount: children.reduce((sum, child) => sum + child.qasmiaCount, 0),
-      zainabCount: children.reduce((sum, child) => sum + child.zainabCount, 0),
-    };
-  });
+      return {
+        ...category,
+        subcategories: children,
+        enrollmentCount: children.reduce((sum, child) => sum + child.enrollmentCount, 0),
+        qasmiaCount: children.reduce((sum, child) => sum + child.qasmiaCount, 0),
+        zainabCount: children.reduce((sum, child) => sum + child.zainabCount, 0),
+      };
+    });
 }
 
 export async function listMadrassaSubcategories(request: Request) {
@@ -287,12 +291,13 @@ export async function createMadrassaCategory(request: Request, input: z.infer<ty
   const [created] = await db
     .insert(madrassaCategories)
     .values({
-      id: uniqueId("cat", input.name),
+      id,
       name: input.name,
       nameUrdu: input.nameUrdu,
       description: input.description ?? input.name,
       descriptionUrdu: input.descriptionUrdu ?? input.nameUrdu,
       displayOrder: await nextMadrassaCategoryOrder(),
+      section: input.section ?? "male",
       active: input.active ?? true,
     })
     .returning();
@@ -315,6 +320,7 @@ export async function updateMadrassaCategory(
     .update(madrassaCategories)
     .set({
       ...input,
+      section: input.section ?? undefined,
       updatedAt: new Date(),
     })
     .where(eq(madrassaCategories.id, id))
@@ -348,6 +354,7 @@ export async function createMadrassaSubcategory(
       fee: input.fee ?? null,
       displayOrder: await nextMadrassaSubcategoryOrder(categoryId),
       active: input.active ?? true,
+      section: input.section ?? category.section,
     })
     .returning();
 
@@ -366,12 +373,23 @@ export async function updateMadrassaSubcategory(
     await assertNoActiveMadrassaSubcategoryEnrollments(subcategoryId);
   }
 
+  const updateData: Record<string, unknown> = {
+    ...input,
+    updatedAt: new Date(),
+  };
+
+  if (input.categoryId && input.categoryId !== categoryId) {
+    const [newCategory] = await db.select({ id: madrassaCategories.id, section: madrassaCategories.section }).from(madrassaCategories).where(eq(madrassaCategories.id, input.categoryId)).limit(1);
+    if (!newCategory) throw new HttpError("Madrassa category not found", 404);
+    updateData.categoryId = input.categoryId;
+    updateData.section = newCategory.section;
+  } else if (input.categoryId) {
+    updateData.categoryId = input.categoryId;
+  }
+
   const [updated] = await db
     .update(madrassaSubcategories)
-    .set({
-      ...input,
-      updatedAt: new Date(),
-    })
+    .set(updateData)
     .where(and(eq(madrassaSubcategories.id, subcategoryId), eq(madrassaSubcategories.categoryId, categoryId)))
     .returning();
 

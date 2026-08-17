@@ -1,0 +1,2 @@
+ALTER TABLE "madrassa_subcategories" ADD COLUMN "section" text DEFAULT 'male' NOT NULL;--> statement-breakpoint
+CREATE INDEX "madrassa_subcategories_section_idx" ON "madrassa_subcategories" USING btree ("section");

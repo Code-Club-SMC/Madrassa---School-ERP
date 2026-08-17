@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useLanguage } from "@/components/language-context";
 import { useAuth } from "@/hooks/use-auth";
+import { useSystem } from "@/components/system-context";
 
 export const Route = createFileRoute("/_authenticated/madrassa/classes/")({
   component: ClassesPage,
@@ -37,6 +38,7 @@ type MadrassaSubcategory = {
   enrollmentCount: number;
   qasmiaCount: number;
   zainabCount: number;
+  section: string;
 };
 
 type MadrassaCategory = {
@@ -54,21 +56,28 @@ type AcademicYear = {
   status: "upcoming" | "active" | "locked" | "archived";
 };
 
-const emptyForm = { urdu: "", english: "", darja: "", rollPrefix: "", fee: "" };
+const emptyForm = { categoryId: "", urdu: "", english: "", darja: "", rollPrefix: "", fee: "" };
 
 function ClassesPage() {
   const navigate = useNavigate();
   const { user, isLoading } = useAuth();
+  const { gender } = useSystem();
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
 
   const t = useMemo(() => (en: string, ur: string) => (isUrdu ? ur : en), [isUrdu]);
 
   const [category, setCategory] = useState<MadrassaCategory | null>(null);
+  const [allCategories, setAllCategories] = useState<MadrassaCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [open, setOpen] = useState(false);
   const [f, setF] = useState(emptyForm);
+
+  const openAddDialog = useCallback(() => {
+    setF((prev) => ({ ...prev, categoryId: category?.id ?? "" }));
+    setOpen(true);
+  }, [category]);
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [selectedYearId, setSelectedYearId] = useState<string>("");
   const [yearsLoading, setYearsLoading] = useState(true);
@@ -102,13 +111,39 @@ function ClassesPage() {
     }
   }, [navigate]);
 
+  const allowedCategoryNames = useMemo(() => {
+    if (gender === "male") {
+      return new Set(["Nazira", "Hifz", "Dars-e-Nizami"]);
+    }
+    return new Set(["Nazira", "Dars-e-Nizami"]);
+  }, [gender]);
+
+  const categorySectionMap = useMemo(() => {
+    const base = new Map<string, string>();
+    base.set("Nazira", "male");
+    base.set("Hifz", "male");
+    base.set("Dars-e-Nizami", "male");
+    if (gender === "female") {
+      base.set("Nazira", "female");
+      base.set("Dars-e-Nizami", "female");
+    }
+    return base;
+  }, [gender]);
+
+  const visibleCategories = useMemo(() => {
+    const filtered = allCategories.filter((c) => allowedCategoryNames.has(c.name) || allowedCategoryNames.has(c.nameUrdu));
+    return filtered.map((c) => ({
+      ...c,
+      section: categorySectionMap.get(c.name) ?? c.section ?? gender,
+    }));
+  }, [allCategories, allowedCategoryNames, categorySectionMap, gender]);
+
   const loadClasses = useCallback(async () => {
     setLoading(true);
     try {
-      const url = selectedYearId
-        ? `/api/academic/madrassa/categories?academicYearId=${encodeURIComponent(selectedYearId)}`
-        : "/api/academic/madrassa/categories";
-      const response = await fetch(url, { credentials: "include" });
+      const params = new URLSearchParams();
+      if (selectedYearId) params.set("academicYearId", selectedYearId);
+      const response = await fetch(`/api/academic/madrassa/categories?${params.toString()}`, { credentials: "include" });
       if (response.status === 401 || response.status === 403) {
         navigate({ to: "/login", search: { redirect: undefined } });
         return;
@@ -116,17 +151,20 @@ function ClassesPage() {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not load classes");
       const categories = (payload.categories ?? []) as MadrassaCategory[];
-      setCategory(
-        categories.find((item) => item.id === "dars_nizami") ??
-          categories.find((item) => item.name.toLowerCase().includes("dars")) ??
-          null,
-      );
+      const filtered = categories.filter((c) => allowedCategoryNames.has(c.name) || allowedCategoryNames.has(c.nameUrdu));
+      setAllCategories(filtered);
+      const defaultCategory =
+        filtered.find((item) => item.id === "dars_nizami") ??
+        filtered.find((item) => item.name.toLowerCase().includes("dars")) ??
+        filtered[0] ??
+        null;
+      setCategory(defaultCategory);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not load classes");
     } finally {
       setLoading(false);
     }
-  }, [selectedYearId, navigate]);
+  }, [selectedYearId, navigate, allowedCategoryNames]);
 
   useEffect(() => {
     void loadYears();
@@ -142,7 +180,10 @@ function ClassesPage() {
     }
   }, [user, isLoading, navigate]);
 
-  const classes = category?.subcategories ?? [];
+  const classes = (category?.subcategories ?? []).filter((s) => {
+    const expected = categorySectionMap.get(category?.name ?? "") ?? gender;
+    return !expected || s.section === expected;
+  });
   const total = useMemo(
     () => classes.reduce((sum, item) => sum + item.enrollmentCount, 0),
     [classes],
@@ -153,19 +194,25 @@ function ClassesPage() {
     [years, selectedYearId],
   );
 
-  const canAddClass = Boolean(category && selectedYearId);
+  const canAddClass = Boolean(selectedYearId);
 
   const addClass = useCallback(async () => {
-    if (!category) return;
+    if (!f.categoryId) {
+      toast.error(t("Please select a category", "زمرہ منتخب کریں"));
+      return;
+    }
     if (!f.urdu.trim() && !f.english.trim()) {
       toast.error(t("Name required", "نام درکار ہے"));
       return;
     }
 
+    const selectedCategory = allCategories.find((c) => c.id === f.categoryId);
+    const section = selectedCategory ? (categorySectionMap.get(selectedCategory.name) ?? gender) : gender;
+
     setPending(true);
     try {
       const response = await fetch(
-        `/api/academic/madrassa/categories/${category.id}/subcategories`,
+        `/api/academic/madrassa/categories/${f.categoryId}/subcategories`,
         {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -176,6 +223,7 @@ function ClassesPage() {
             rollPrefix: f.rollPrefix.trim() || undefined,
             darja: f.darja.trim() || null,
             fee: f.fee ? Number(f.fee) : null,
+            section,
           }),
         },
       );
@@ -194,7 +242,7 @@ function ClassesPage() {
     } finally {
       setPending(false);
     }
-  }, [category, f, navigate, loadClasses, t]);
+  }, [f, navigate, loadClasses, t, allCategories, categorySectionMap, gender]);
 
   if (isLoading) {
     return <BookLoader text="Loading..." className="h-96" />;
@@ -233,7 +281,7 @@ function ClassesPage() {
                   ))}
               </SelectContent>
             </Select>
-            <Button size="sm" className="gap-1.5" onClick={() => setOpen(true)} disabled={!canAddClass}>
+            <Button size="sm" className="gap-1.5" onClick={openAddDialog} disabled={!canAddClass}>
               <Plus className="h-4 w-4" />
               {t("Add Class", "کلاس شامل کریں")}
             </Button>
@@ -241,21 +289,34 @@ function ClassesPage() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">{t("Classes", "کلاسز")} · {t("Classes", "کلاسز")}</p>
-          <p className="font-heading text-2xl font-bold mt-1">{classes.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">{t("Active Students", "طلبہ")} · {t("Active Students", "طلبہ")}</p>
-          <p className="font-heading text-2xl font-bold mt-1">{total}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">{t("Academic Year", "تعلیمی سال")} · {t("Academic Year", "تعلیمی سال")}</p>
-          <p className="font-heading text-lg font-bold mt-1 truncate">
-            {selectedYear?.name ?? t("Select year", "سال منتخب کریں")}
-          </p>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+        {visibleCategories.map((c) => {
+          const expectedSection = categorySectionMap.get(c.name) ?? gender;
+          const categoryClasses = c.subcategories.filter((s) => !expectedSection || s.section === expectedSection);
+          const classCount = categoryClasses.length;
+          const studentCount = categoryClasses.reduce((sum, item) => sum + item.enrollmentCount, 0);
+          const isActive = category?.id === c.id;
+          return (
+            <Card
+              key={c.id}
+              className={cn(
+                "p-4 transition-colors cursor-pointer h-full",
+                isActive ? "border-primary" : "hover:border-primary/40",
+              )}
+              onClick={() => setCategory(c)}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xl font-bold leading-tight">{isUrdu ? c.nameUrdu : c.name}</p>
+                <div className="text-right">
+                  <p className="text-2xl font-bold">{classCount}</p>
+                  <p className="text-xs text-muted-foreground">{t("Classes", "کلاسز")}</p>
+                  <p className="text-xl font-bold mt-1">{studentCount}</p>
+                  <p className="text-xs text-muted-foreground">{t("Students", "طلبہ")}</p>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
       </div>
 
       {!selectedYearId && (
@@ -264,9 +325,9 @@ function ClassesPage() {
         </Card>
       )}
       {selectedYearId && loading && <Card className="p-5 text-sm text-muted-foreground">{t("Loading classes...", "کلاسز لوڈ ہو رہی ہیں...")}</Card>}
-      {selectedYearId && !loading && !category && (
+      {selectedYearId && !loading && visibleCategories.length === 0 && (
         <Card className="p-5 text-sm text-muted-foreground">
-          {t("Dars-e-Nizami category is not configured.", "درس نظامی کا زمرہ ترتیب نہیں ہے۔")}
+          {t("No madrassa categories configured for this section.", "اس سیکشن کے لیے کوئی مدرسہ زمرہ ترتیب نہیں ہے۔")}
         </Card>
       )}
       {selectedYearId && !loading && category && (
@@ -341,6 +402,23 @@ function ClassesPage() {
               />
             </BilingualLabel>
           </div>
+          <BilingualLabel urdu="زمرہ" english="Category" required lang={lang}>
+            <Select
+              value={f.categoryId}
+              onValueChange={(value) => setF({ ...f, categoryId: value })}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder={t("Select category", "زمرہ منتخب کریں")} />
+              </SelectTrigger>
+              <SelectContent>
+                {visibleCategories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {isUrdu ? c.nameUrdu : c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </BilingualLabel>
           <div className={cn("grid gap-3", isUrdu ? "grid-cols-2" : "grid-cols-1")}>
             <BilingualLabel urdu="رول سابقہ" english="Roll Prefix" lang={lang}>
               <Input

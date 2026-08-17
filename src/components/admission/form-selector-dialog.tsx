@@ -114,7 +114,17 @@ export function AdmissionFormSelectorDialog({
                       <button
                         key={section.key}
                         type="button"
-                        onClick={() => setSelectedSection({ category: group.key, section: section.key })}
+                        onClick={() => {
+                          if (section.key === "school") {
+                            const schoolVariants = ADMISSION_VARIANTS.filter((v) => v.category === group.key && v.section === "school");
+                            if (schoolVariants.length > 0) {
+                              onOpenChange(false);
+                              navigate({ to: "/admission/new", search: { variant: schoolVariants[0].key } as never });
+                              return;
+                            }
+                          }
+                          setSelectedSection({ category: group.key, section: section.key });
+                        }}
                         className={cn(
                           "w-full rounded-xl border-2 border-border p-5 text-center transition-all",
                           "hover:border-primary/60 hover:bg-primary/5 hover:shadow-sm",
