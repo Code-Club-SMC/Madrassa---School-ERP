@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Plus, Users2 } from "lucide-react";
+import { BookOpen, Plus, Trash2, Users2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { BookLoader } from "@/components/shared/book-loader";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -73,6 +83,8 @@ function ClassesPage() {
   const [pending, setPending] = useState(false);
   const [open, setOpen] = useState(false);
   const [f, setF] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState<MadrassaSubcategory | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const openAddDialog = useCallback(() => {
     setF((prev) => ({ ...prev, categoryId: category?.id ?? "" }));
@@ -134,7 +146,7 @@ function ClassesPage() {
     const filtered = allCategories.filter((c) => allowedCategoryNames.has(c.name) || allowedCategoryNames.has(c.nameUrdu));
     return filtered.map((c) => ({
       ...c,
-      section: categorySectionMap.get(c.name) ?? c.section ?? gender,
+      section: categorySectionMap.get(c.name) ?? gender,
     }));
   }, [allCategories, allowedCategoryNames, categorySectionMap, gender]);
 
@@ -244,6 +256,30 @@ function ClassesPage() {
     }
   }, [f, navigate, loadClasses, t, allCategories, categorySectionMap, gender]);
 
+  const confirmDelete = async () => {
+    if (!deleteTarget || !category) return;
+    setDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/academic/madrassa/categories/${category.id}/subcategories/${deleteTarget.id}`,
+        { method: "DELETE", credentials: "include" },
+      );
+      if (response.status === 401 || response.status === 403) {
+        navigate({ to: "/login", search: { redirect: undefined } });
+        return;
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not delete class");
+      toast.success(t("Class deleted", "کلاس حذف ہو گئی"));
+      setDeleteTarget(null);
+      await loadClasses();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete class");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return <BookLoader text="Loading..." className="h-96" />;
   }
@@ -342,9 +378,22 @@ function ClassesPage() {
                   <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
                     <BookOpen className="h-5 w-5 text-primary" />
                   </div>
-                  <Badge variant="outline" className="text-[10px]">
-                    {d.rollPrefix}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline" className="text-[10px]">
+                      {d.rollPrefix}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(d);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <p className="font-urdu text-xl font-semibold">{isUrdu ? d.nameUrdu : d.name}</p>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide mt-0.5">
@@ -358,14 +407,6 @@ function ClassesPage() {
                     <Users2 className="h-3 w-3" />
                     {d.enrollmentCount}
                   </span>
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <Badge variant="secondary" className="text-[11px]">
-                    Qasmia {d.qasmiaCount}
-                  </Badge>
-                  <Badge variant="secondary" className="text-[11px]">
-                    Zainab {d.zainabCount}
-                  </Badge>
                 </div>
               </Card>
           ))}
@@ -462,6 +503,23 @@ function ClassesPage() {
           </Button>
         </div>
       </ResponsiveDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Delete class?", "کلاس حذف کریں؟")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("This action cannot be undone.", "یہ کارروائی واپس نہیں کی جا سکتی۔")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{t("Cancel", "منسوخ کریں")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? t("Deleting...", "حذف ہو رہا ہے...") : t("Delete", "حذف کریں")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

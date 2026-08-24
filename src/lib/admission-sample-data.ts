@@ -159,7 +159,7 @@ function madrassaLongSample(variant: AdmissionVariant, person: PersonSample) {
 }
 
 function firstGradeForVariant(variant: AdmissionVariant) {
-  const section = variant.category === "madrassa-girls" ? "banat" : "baneen";
+  const section = variant.category === "female" ? "banat" : "baneen";
   const kinds: MadrassaGradeKind[] =
     variant.key === "madrassa-boys-hifz"
       ? ["hifz"]

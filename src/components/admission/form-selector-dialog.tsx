@@ -15,20 +15,23 @@ import {
   ADMISSION_VARIANTS,
   type AdmissionCategoryKey,
   type AdmissionSectionKey,
+  type AdmissionVariant,
 } from "@/lib/admission-variants";
 import { useLanguage } from "@/components/language-context";
 
 const TEXT = {
   ur: {
     selectDepartment: "شعبہ منتخب کریں",
-    chooseDepartment: "شعبہ منتخب کریں",
+    selectForm: "فارم منتخب کریں",
+    chooseForm: "درست فارم منتخب کریں",
     madrassa: "مدرسہ",
     school: "اسکول",
     back: "واپس",
   },
   en: {
     selectDepartment: "Choose the section",
-    chooseDepartment: "Choose the section for this admission",
+    selectForm: "Select Form",
+    chooseForm: "Choose the correct form",
     madrassa: "Madrassa",
     school: "School",
     back: "Back",
@@ -88,9 +91,6 @@ export function AdmissionFormSelectorDialog({
           <DialogTitle className={`text-2xl leading-loose text-end ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
             {selectedSection ? t.selectForm : t.selectDepartment}
           </DialogTitle>
-          <DialogDescription className="text-end">
-            {selectedSection ? t.chooseForm : t.chooseDepartment}
-          </DialogDescription>
         </DialogHeader>
 
         {!selectedSection ? (

@@ -23,7 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
-import { institution } from "@/mock";
 import type { AdmissionVariant } from "@/lib/admission-variants";
 import { printAdmissionForm } from "@/lib/admission-print";
 import {
@@ -220,10 +219,11 @@ export function PdfFormRenderer({
   };
 
   const handlePrint = () => {
+    const institutionUrdu = variant.institutionUrdu;
     const opened = printAdmissionForm(
       variant,
       savedPrintForm ?? buildAdmissionPrintPayload(form),
-      institution.nameUrdu,
+      institutionUrdu,
       {
         photoDataUrl: photo?.dataUrl,
       },
@@ -386,7 +386,7 @@ export function PdfFormRenderer({
             dir={isRtl ? "rtl" : "ltr"}
             lang={lang}
           >
-            {institution.nameUrdu}
+            {variant.institutionUrdu}
           </p>
           <h1 className={`text-3xl font-bold leading-loose ${isRtl ? "font-urdu" : "font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
             {isRtl ? variant.titleUrdu : variant.titleEnglish}

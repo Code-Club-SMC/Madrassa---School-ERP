@@ -1,12 +1,14 @@
 import type { SchoolClass } from "@/types";
 
 // Pakistani school grade structure per §42.1
+// Al-Qasim Academy Thall — boys (baneen) school classes
 export const schoolClasses: SchoolClass[] = [
   {
     id: "nursery",
     name: "Nursery",
     nameUrdu: "نرسری",
     level: "pre_primary",
+    gender: "male",
     sections: [{ id: "nursery-A", name: "A" }],
   },
   {
@@ -14,6 +16,7 @@ export const schoolClasses: SchoolClass[] = [
     name: "KG",
     nameUrdu: "کے جی",
     level: "pre_primary",
+    gender: "male",
     sections: [{ id: "kg-A", name: "A" }, { id: "kg-B", name: "B" }],
   },
   {
@@ -21,6 +24,7 @@ export const schoolClasses: SchoolClass[] = [
     name: "Class 1",
     nameUrdu: "جماعت اول",
     level: "primary",
+    gender: "male",
     sections: [{ id: "c1-A", name: "A" }, { id: "c1-B", name: "B" }],
   },
   {
@@ -28,6 +32,7 @@ export const schoolClasses: SchoolClass[] = [
     name: "Class 2",
     nameUrdu: "جماعت دوم",
     level: "primary",
+    gender: "male",
     sections: [{ id: "c2-A", name: "A" }, { id: "c2-B", name: "B" }],
   },
   {
@@ -35,6 +40,7 @@ export const schoolClasses: SchoolClass[] = [
     name: "Class 3",
     nameUrdu: "جماعت سوم",
     level: "primary",
+    gender: "male",
     sections: [{ id: "c3-A", name: "A" }, { id: "c3-B", name: "B" }],
   },
   {
@@ -42,6 +48,7 @@ export const schoolClasses: SchoolClass[] = [
     name: "Class 4",
     nameUrdu: "جماعت چہارم",
     level: "primary",
+    gender: "male",
     sections: [{ id: "c4-A", name: "A" }, { id: "c4-B", name: "B" }],
   },
   {
@@ -49,6 +56,7 @@ export const schoolClasses: SchoolClass[] = [
     name: "Class 5",
     nameUrdu: "جماعت پنجم",
     level: "primary",
+    gender: "male",
     sections: [{ id: "c5-A", name: "A" }, { id: "c5-B", name: "B" }],
   },
   {
@@ -56,6 +64,7 @@ export const schoolClasses: SchoolClass[] = [
     name: "Class 6",
     nameUrdu: "جماعت ششم",
     level: "middle",
+    gender: "male",
     sections: [{ id: "c6-A", name: "A" }, { id: "c6-B", name: "B" }],
   },
   {
@@ -63,6 +72,7 @@ export const schoolClasses: SchoolClass[] = [
     name: "Class 7",
     nameUrdu: "جماعت ہفتم",
     level: "middle",
+    gender: "male",
     sections: [{ id: "c7-A", name: "A" }, { id: "c7-B", name: "B" }],
   },
   {
@@ -70,6 +80,7 @@ export const schoolClasses: SchoolClass[] = [
     name: "Class 8",
     nameUrdu: "جماعت ہشتم",
     level: "middle",
+    gender: "male",
     sections: [{ id: "c8-A", name: "A" }, { id: "c8-B", name: "B" }],
   },
   {
@@ -78,6 +89,7 @@ export const schoolClasses: SchoolClass[] = [
     nameUrdu: "جماعت نہم (میٹرک حصہ اول)",
     level: "secondary",
     govtEquivalent: "SSC Part I",
+    gender: "male",
     sections: [
       { id: "c9-sci", name: "Science", group: "science" },
       { id: "c9-arts", name: "Arts", group: "arts" },
@@ -89,6 +101,7 @@ export const schoolClasses: SchoolClass[] = [
     nameUrdu: "جماعت دہم (میٹرک حصہ دوم)",
     level: "secondary",
     govtEquivalent: "SSC Part II",
+    gender: "male",
     sections: [
       { id: "c10-sci", name: "Science", group: "science" },
       { id: "c10-arts", name: "Arts", group: "arts" },
@@ -100,6 +113,7 @@ export const schoolClasses: SchoolClass[] = [
     nameUrdu: "جماعت یازدہم (انٹر حصہ اول)",
     level: "higher_secondary",
     govtEquivalent: "HSSC Part I",
+    gender: "male",
     sections: [
       { id: "c11-pre-eng", name: "Pre-Engineering", group: "science" },
       { id: "c11-pre-med", name: "Pre-Medical", group: "science" },
@@ -113,6 +127,7 @@ export const schoolClasses: SchoolClass[] = [
     nameUrdu: "جماعت دوازدہم (انٹر حصہ دوم)",
     level: "higher_secondary",
     govtEquivalent: "HSSC Part II",
+    gender: "male",
     sections: [
       { id: "c12-pre-eng", name: "Pre-Engineering", group: "science" },
       { id: "c12-pre-med", name: "Pre-Medical", group: "science" },

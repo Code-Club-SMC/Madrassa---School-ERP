@@ -19,7 +19,13 @@ type Props = {
 };
 
 export function LanguageProvider({ children, initialLang }: Props) {
-  const [lang, setLangState] = useState<Language>(initialLang ?? "ur");
+  const [lang, setLangState] = useState<Language>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("msmis-lang");
+      if (stored === "en" || stored === "ur") return stored;
+    }
+    return initialLang ?? "ur";
+  });
 
   useEffect(() => {
     const root = document.documentElement;

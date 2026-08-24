@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  deleteMadrassaSubcategory,
   madrassaSubcategoryUpdateSchema,
   updateMadrassaSubcategory,
 } from "@/lib/server/academic/service";
@@ -19,6 +20,13 @@ export const Route = createFileRoute("/api/academic/madrassa/categories/$id/subc
           });
         } catch (error) {
           return errorResponse(error, "Could not update madrassa subcategory");
+        }
+      },
+      DELETE: async ({ request, params }) => {
+        try {
+          return json({ subcategory: await deleteMadrassaSubcategory(request, params.id, params.subcategoryId) });
+        } catch (error) {
+          return errorResponse(error, "Could not delete madrassa subcategory");
         }
       },
     },

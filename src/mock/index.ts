@@ -1,6 +1,9 @@
 // Centralized mock data for MSMIS — all UI surfaces source from here.
 // Replace with TanStack Query hooks when backend is ready.
 import { madrassaCategories as sharedMadrassaCategories } from "@/mock/categories";
+import { schoolClasses } from "@/mock/classes";
+
+export { schoolClasses };
 
 export type System = "madrassa" | "school" | "both";
 export type Gender = "male" | "female";
@@ -85,15 +88,6 @@ export type ActivityEvent = {
 };
 
 export const madrassaCategories: MadrassaCategory[] = sharedMadrassaCategories;
-
-export const schoolClasses = [
-  { id: "kg", name: "KG", nameUrdu: "نرسری" },
-  { id: "c1", name: "Class 1", nameUrdu: "جماعت اول" },
-  { id: "c2", name: "Class 2", nameUrdu: "جماعت دوم" },
-  { id: "c3", name: "Class 3", nameUrdu: "جماعت سوم" },
-  { id: "c4", name: "Class 4", nameUrdu: "جماعت چہارم" },
-  { id: "c5", name: "Class 5", nameUrdu: "جماعت پنجم" },
-];
 
 const urduFirst = [
   "محمد",

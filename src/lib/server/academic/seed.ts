@@ -162,6 +162,7 @@ export async function seedAcademicCatalog() {
         nameUrdu: schoolClass.nameUrdu,
         level: schoolClass.level,
         govtEquivalent: schoolClass.govtEquivalent,
+        gender: schoolClass.gender,
         displayOrder: index + 1,
       })
       .onConflictDoUpdate({
@@ -171,6 +172,7 @@ export async function seedAcademicCatalog() {
           nameUrdu: schoolClass.nameUrdu,
           level: schoolClass.level,
           govtEquivalent: schoolClass.govtEquivalent,
+          gender: schoolClass.gender,
           displayOrder: index + 1,
           active: true,
           updatedAt: new Date(),

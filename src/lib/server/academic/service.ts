@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, count, eq, max } from "drizzle-orm";
+import { and, asc, count, eq, max, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -11,6 +11,12 @@ import {
   schoolClassSections,
 } from "@/db/schema/academic";
 import { studentEnrollments } from "@/db/schema/students";
+import { admissionApplications } from "@/db/schema/admission";
+import { examMarks, examResults, examSessions, examSubjects } from "@/db/schema/exams";
+import { feeCharges } from "@/db/schema/finance";
+import { promotionRules } from "@/db/schema/academic-years";
+import { studentAttendance } from "@/db/schema/attendance";
+import { teacherAssignments, teacherTimetablePeriods } from "@/db/schema/teachers";
 import { requirePermission } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
 import { ensureAcademicSeeded } from "./seed";
@@ -100,6 +106,9 @@ export async function listSchoolClasses(request: Request) {
   await requirePermission(request, "school_classes", "view");
   await ensureAcademicSeeded();
 
+  const url = new URL(request.url);
+  const gender = url.searchParams.get("gender") as "male" | "female" | null;
+
   const [classes, sections, classCounts, sectionCounts] = await Promise.all([
     db.select().from(schoolClasses).orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name)),
     db.select().from(schoolClassSections).orderBy(asc(schoolClassSections.name)),
@@ -115,10 +124,12 @@ export async function listSchoolClasses(request: Request) {
       .groupBy(studentEnrollments.schoolSectionId),
   ]);
 
+  const filtered = gender ? classes.filter((c) => c.gender === gender) : classes;
+
   const classCountMap = new Map(classCounts.map((row) => [row.classId, Number(row.count)]));
   const sectionCountMap = new Map(sectionCounts.map((row) => [row.sectionId, Number(row.count)]));
 
-  return classes.map((schoolClass) => ({
+  return filtered.map((schoolClass) => ({
     ...schoolClass,
     enrollmentCount: classCountMap.get(schoolClass.id) ?? 0,
     sections: sections
@@ -252,7 +263,11 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
   }
 
   return categories
-    .filter((category) => !section || category.section === section)
+    .filter((category) => {
+      if (!section) return true;
+      if (category.section === section) return true;
+      return subcategories.some((subcategory) => subcategory.categoryId === category.id && subcategory.section === section);
+    })
     .map((category) => {
       const children = subcategories
         .filter((subcategory) => subcategory.categoryId === category.id && (!section || subcategory.section === section))
@@ -291,7 +306,7 @@ export async function createMadrassaCategory(request: Request, input: z.infer<ty
   const [created] = await db
     .insert(madrassaCategories)
     .values({
-      id,
+      id: uniqueId("category", input.name),
       name: input.name,
       nameUrdu: input.nameUrdu,
       description: input.description ?? input.name,
@@ -337,7 +352,7 @@ export async function createMadrassaSubcategory(
 ) {
   await requirePermission(request, "madrassa_categories", "create");
 
-  const [category] = await db.select({ id: madrassaCategories.id }).from(madrassaCategories).where(eq(madrassaCategories.id, categoryId)).limit(1);
+  const [category] = await db.select({ id: madrassaCategories.id, section: madrassaCategories.section }).from(madrassaCategories).where(eq(madrassaCategories.id, categoryId)).limit(1);
   if (!category) throw new HttpError("Madrassa category not found", 404);
 
   const [created] = await db
@@ -378,15 +393,6 @@ export async function updateMadrassaSubcategory(
     updatedAt: new Date(),
   };
 
-  if (input.categoryId && input.categoryId !== categoryId) {
-    const [newCategory] = await db.select({ id: madrassaCategories.id, section: madrassaCategories.section }).from(madrassaCategories).where(eq(madrassaCategories.id, input.categoryId)).limit(1);
-    if (!newCategory) throw new HttpError("Madrassa category not found", 404);
-    updateData.categoryId = input.categoryId;
-    updateData.section = newCategory.section;
-  } else if (input.categoryId) {
-    updateData.categoryId = input.categoryId;
-  }
-
   const [updated] = await db
     .update(madrassaSubcategories)
     .set(updateData)
@@ -395,6 +401,48 @@ export async function updateMadrassaSubcategory(
 
   if (!updated) throw new HttpError("Madrassa subcategory not found", 404);
   return updated;
+}
+
+export async function deleteMadrassaSubcategory(
+  request: Request,
+  categoryId: string,
+  subcategoryId: string,
+) {
+  await requirePermission(request, "madrassa_categories", "delete");
+
+  await assertMadrassaSubcategoryDeletable(subcategoryId);
+
+  const [deleted] = await db
+    .delete(madrassaSubcategories)
+    .where(and(eq(madrassaSubcategories.id, subcategoryId), eq(madrassaSubcategories.categoryId, categoryId)))
+    .returning();
+
+  if (!deleted) throw new HttpError("Madrassa subcategory not found", 404);
+  return deleted;
+}
+
+async function assertMadrassaSubcategoryDeletable(subcategoryId: string) {
+  const checks: Promise<{ label: string; count: number }>[] = [
+    db.select({ count: count() }).from(studentEnrollments).where(eq(studentEnrollments.madrassaSubcategoryId, subcategoryId)).then(([row]) => ({ label: "student enrollments", count: Number(row?.count ?? 0) })),
+    db.select({ count: count() }).from(examSubjects).where(eq(examSubjects.madrassaSubcategoryId, subcategoryId)).then(([row]) => ({ label: "exam subjects", count: Number(row?.count ?? 0) })),
+    db.select({ count: count() }).from(examSessions).where(eq(examSessions.madrassaSubcategoryId, subcategoryId)).then(([row]) => ({ label: "exam sessions", count: Number(row?.count ?? 0) })),
+    db.select({ count: count() }).from(examMarks).where(eq(examMarks.madrassaSubcategoryId, subcategoryId)).then(([row]) => ({ label: "exam marks", count: Number(row?.count ?? 0) })),
+    db.select({ count: count() }).from(examResults).where(eq(examResults.madrassaSubcategoryId, subcategoryId)).then(([row]) => ({ label: "exam results", count: Number(row?.count ?? 0) })),
+    db.select({ count: count() }).from(admissionApplications).where(eq(admissionApplications.madrassaSubcategoryId, subcategoryId)).then(([row]) => ({ label: "admission applications", count: Number(row?.count ?? 0) })),
+    db.select({ count: count() }).from(studentAttendance).where(eq(studentAttendance.madrassaSubcategoryId, subcategoryId)).then(([row]) => ({ label: "attendance records", count: Number(row?.count ?? 0) })),
+    db.select({ count: count() }).from(teacherAssignments).where(eq(teacherAssignments.madrassaSubcategoryId, subcategoryId)).then(([row]) => ({ label: "teacher assignments", count: Number(row?.count ?? 0) })),
+    db.select({ count: count() }).from(teacherTimetablePeriods).where(eq(teacherTimetablePeriods.madrassaSubcategoryId, subcategoryId)).then(([row]) => ({ label: "teacher timetable periods", count: Number(row?.count ?? 0) })),
+    db.select({ count: count() }).from(feeCharges).where(eq(feeCharges.madrassaSubcategoryId, subcategoryId)).then(([row]) => ({ label: "fee charges", count: Number(row?.count ?? 0) })),
+    db.select({ count: count() }).from(promotionRules).where(or(eq(promotionRules.sourceMadrassaSubcategoryId, subcategoryId), eq(promotionRules.targetMadrassaSubcategoryId, subcategoryId))).then(([row]) => ({ label: "promotion rules", count: Number(row?.count ?? 0) })),
+  ];
+
+  const results = await Promise.all(checks);
+  const blockers = results.filter((item) => item.count > 0);
+
+  if (blockers.length > 0) {
+    const details = blockers.map((item) => `${item.count} ${item.label}`).join(", ");
+    throw new HttpError(`Cannot delete class because it has related records: ${details}`, 409);
+  }
 }
 
 async function requireAnyAcademicView(request: Request) {

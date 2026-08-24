@@ -66,6 +66,7 @@ export const schoolClasses = pgTable(
     nameUrdu: text("name_urdu").notNull(),
     level: text("level").notNull(),
     govtEquivalent: text("govt_equivalent"),
+    gender: text("gender"),
     displayOrder: integer("display_order").notNull(),
     active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -77,6 +78,7 @@ export const schoolClasses = pgTable(
   (table) => [
     index("school_classes_level_idx").on(table.level),
     index("school_classes_active_idx").on(table.active),
+    index("school_classes_gender_idx").on(table.gender),
   ],
 );
 

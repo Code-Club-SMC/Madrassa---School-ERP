@@ -24,6 +24,8 @@ export type AdmissionVariant = {
   layout: "school" | "madrassa-short" | "madrassa-long";
   allowPhoto: boolean;
   addressUrdu?: string;
+  institutionUrdu: string;
+  institutionEnglish: string;
 };
 
 export const ADMISSION_CATEGORIES: {
@@ -34,7 +36,7 @@ export const ADMISSION_CATEGORIES: {
   descriptionEnglish: string;
   icon: string;
 }[] = [
-  { key: "male", labelUrdu: "جاسمہ قاسمیہ", labelEnglish: "Jamia Qasimia", descriptionUrdu: "جامعہ قاسمیہ للبنین ٹل پاکستان", descriptionEnglish: "Jamia Qasimia lilBanin Thall, Pakistan", icon: "🕌" },
+  { key: "male", labelUrdu: "جامعہ قاسمیہ", labelEnglish: "Jamia Qasimia", descriptionUrdu: "جامعہ قاسمیہ للبنین ٹل پاکستان", descriptionEnglish: "Jamia Qasimia lilBanin Thall, Pakistan", icon: "🕌" },
   { key: "female", labelUrdu: "زینب للبنات", labelEnglish: "Jamyah Zainab", descriptionUrdu: "جامعہ زینب للبنات ٹل پاکستان", descriptionEnglish: "Jamyah Zainab lilbanat Thall, Pakistan", icon: "🌙" },
 ];
 
@@ -52,6 +54,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     layout: "madrassa-short",
     allowPhoto: true,
     addressUrdu: "محلہ حاجی اللہ یار خان سرہ غنڈے ٹل ضلع ہنگو پاکستان",
+    institutionUrdu: "جامعہ قاسمیہ للبنین",
+    institutionEnglish: "Jamia Qasimia lilBanin",
   },
   {
     key: "madrassa-boys-hifz",
@@ -66,6 +70,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     layout: "madrassa-short",
     allowPhoto: true,
     addressUrdu: "محلہ حاجی اللہ یار خان سرہ غنڈے ٹل ضلع ہنگو پاکستان",
+    institutionUrdu: "جامعہ قاسمیہ للبنین",
+    institutionEnglish: "Jamia Qasimia lilBanin",
   },
   {
     key: "madrassa-boys-general",
@@ -79,6 +85,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     templateImagePath: "/admission-templates/madrassa-boys-general.png",
     layout: "madrassa-long",
     allowPhoto: true,
+    institutionUrdu: "جامعہ قاسمیہ للبنین",
+    institutionEnglish: "Jamia Qasimia lilBanin",
   },
   {
     key: "school-boys-main",
@@ -90,6 +98,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     templateImagePath: "/admission-templates/school-boys.png",
     layout: "school",
     allowPhoto: true,
+    institutionUrdu: "القاسم اکیڈمی ٹل",
+    institutionEnglish: "Al-Qasim Academy Thall",
   },
   {
     key: "madrassa-girls-general",
@@ -103,6 +113,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     templateImagePath: "/admission-templates/madrassa-girls-general.png",
     layout: "madrassa-long",
     allowPhoto: false,
+    institutionUrdu: "جامعہ زینب للبنات",
+    institutionEnglish: "Jamyah Zainab lilbanat",
   },
   {
     key: "madrassa-girls-nazira",
@@ -116,6 +128,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     templateImagePath: "/admission-templates/madrassa-girls-nazira.png",
     layout: "madrassa-short",
     allowPhoto: false,
+    institutionUrdu: "جامعہ زینب للبنات",
+    institutionEnglish: "Jamyah Zainab lilbanat",
   },
   {
     key: "school-girls-main",
@@ -127,6 +141,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     templateImagePath: "/admission-templates/school-girls.png",
     layout: "school",
     allowPhoto: false,
+    institutionUrdu: "جامعہ زینب للبنات",
+    institutionEnglish: "Jamyah Zainab lilbanat",
   },
   {
     key: "school-girls-shoba",
@@ -138,6 +154,8 @@ export const ADMISSION_VARIANTS: AdmissionVariant[] = [
     templateImagePath: "/admission-templates/school-girls.png",
     layout: "school",
     allowPhoto: false,
+    institutionUrdu: "جامعہ زینب للبنات",
+    institutionEnglish: "Jamyah Zainab lilbanat",
   },
 ];
 

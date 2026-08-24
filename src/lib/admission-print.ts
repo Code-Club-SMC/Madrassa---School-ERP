@@ -344,7 +344,7 @@ function signatureLabelsFor(variant: AdmissionVariant) {
 }
 
 function renderAhdNamaPage(variant: AdmissionVariant, form: Record<string, string>) {
-  const isGirls = variant.category === "madrassa-girls";
+  const isGirls = variant.category === "female";
   const studentLabel = isGirls ? "طالبہ" : "طالب علم";
   const title = isGirls
     ? "عہد نامہ از طالبہ جامعہ زینب للبنات ٹل"
