@@ -194,12 +194,6 @@ function metaFields(variant: AdmissionVariant): Field[] {
       { urdu: "مطلوبہ درجہ", english: "Requested Darja", key: "req_darja" },
       { urdu: "امتحان داخلہ نمبرات", english: "Entry-Test Marks", key: "entry_marks", ltr: true },
       { urdu: "تعلیمی سال", english: "Academic Year", key: "acad_year", ltr: true },
-      {
-        urdu: "پرانہ داخلہ نمبر",
-        english: "Previous Admission No.",
-        key: "prev_adm_no",
-        ltr: true,
-      },
       { urdu: "بمطابق", english: "Corresponding", key: "bmutabiq" },
     ];
   }
@@ -207,12 +201,6 @@ function metaFields(variant: AdmissionVariant): Field[] {
   if (variant.layout === "madrassa-short") {
     return [
       ...base,
-      {
-        urdu: "پرانہ داخلہ نمبر",
-        english: "Previous Admission No.",
-        key: "prev_adm_no",
-        ltr: true,
-      },
       { urdu: "بمطابق", english: "Corresponding", key: "bmutabiq" },
     ];
   }

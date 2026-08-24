@@ -88,7 +88,7 @@ export function AdmissionFormSelectorDialog({
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle className={`text-2xl leading-loose text-end ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+          <DialogTitle className={`text-2xl leading-loose ${lang === "ur" ? "text-end font-urdu" : "text-start font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
             {selectedSection ? t.selectForm : t.selectDepartment}
           </DialogTitle>
         </DialogHeader>
@@ -130,7 +130,7 @@ export function AdmissionFormSelectorDialog({
                           "hover:border-primary/60 hover:bg-primary/5 hover:shadow-sm",
                         )}
                       >
-                        <p className={`text-lg font-semibold leading-loose ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                        <p className={`text-lg font-semibold leading-loose ${lang === "ur" ? "text-end font-urdu" : "text-start font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
                           {section.key === "madrassa"
                             ? lang === "ur"
                               ? t.madrassa
@@ -139,7 +139,7 @@ export function AdmissionFormSelectorDialog({
                               ? t.school
                               : t.school}
                         </p>
-                        <p className={`text-xs text-muted-foreground mt-1 leading-loose ${lang === "ur" ? "font-urdu" : ""}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                        <p className={`text-xs text-muted-foreground mt-1 leading-loose ${lang === "ur" ? "text-end font-urdu" : "text-start"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
                           {categoryLabel(group.key)}
                         </p>
                       </button>
@@ -159,15 +159,19 @@ export function AdmissionFormSelectorDialog({
                   onOpenChange(false);
                   navigate({ to: "/admission/new", search: { variant: v.key } as never });
                 }}
-                className="w-full flex items-center justify-between gap-3 rounded-xl border border-border p-4 text-end hover:border-primary/60 hover:bg-primary/5 transition-all"
+                className={cn(
+                  "w-full flex items-center justify-between gap-3 rounded-xl border border-border p-4 transition-all",
+                  lang === "ur" ? "text-end" : "text-start",
+                  "hover:border-primary/60 hover:bg-primary/5",
+                )}
               >
                 <ChevronLeft className="h-5 w-5 text-muted-foreground shrink-0 rtl:rotate-180" />
                 <div className="min-w-0 flex-1">
-                  <p className={`text-base font-semibold leading-loose ${lang === "ur" ? "font-urdu" : "font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                  <p className={`text-base font-semibold leading-loose ${lang === "ur" ? "text-end font-urdu" : "text-start font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
                     {lang === "ur" ? v.titleUrdu : v.titleEnglish}
                   </p>
                   {(lang === "ur" ? v.subtitleUrdu : v.subtitleEnglish) && (
-                    <p className={`text-sm text-muted-foreground leading-loose ${lang === "ur" ? "font-urdu" : ""}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                    <p className={`text-sm text-muted-foreground leading-loose ${lang === "ur" ? "text-end font-urdu" : "text-start"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
                       {lang === "ur" ? v.subtitleUrdu : v.subtitleEnglish}
                     </p>
                   )}

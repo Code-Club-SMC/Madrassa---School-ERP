@@ -260,9 +260,9 @@ function StepPersonal({ form, update, lang }: { form: FormState; update: <K exte
   return (
     <Card>
       <CardHeader>
-        <CardTitle className={`font-heading ${lang === "ur" ? "font-urdu" : ""}`}>
-          {lang === "ur" ? t.personalTitle : t.personalTitle}
-          <span className={`font-urdu text-base text-muted-foreground ms-2`}>{t.personal}</span>
+        <CardTitle className={`${lang === "ur" ? "text-end font-urdu" : "text-start font-heading"}`}>
+          {t.personalTitle}
+          {lang === "ur" && <span className="text-base text-muted-foreground ms-2 font-urdu">{t.personal}</span>}
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -316,9 +316,9 @@ function StepSystem({ form, update, lang }: { form: FormState; update: <K extend
   return (
     <Card>
       <CardHeader>
-        <CardTitle className={`font-heading ${lang === "ur" ? "font-urdu" : ""}`}>
+        <CardTitle className={`${lang === "ur" ? "text-end font-urdu" : "text-start font-heading"}`}>
           {t.systemTitle}
-          <span className={`font-urdu text-base text-muted-foreground ms-2`}>{t.system}</span>
+          {lang === "ur" && <span className="text-base text-muted-foreground ms-2 font-urdu">{t.system}</span>}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -327,9 +327,9 @@ function StepSystem({ form, update, lang }: { form: FormState; update: <K extend
             <button key={o.value} type="button" onClick={() => update("system", o.value)}
               className={cn("border-2 rounded-2xl p-6 text-center transition-all", form.system === o.value ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/40")}>
               <div className="text-4xl mb-3">{o.icon}</div>
-              <p className={`text-lg font-semibold ${lang === "ur" ? "font-urdu" : "font-heading"}`}>{o.ur}</p>
-              <p className="text-sm text-muted-foreground">{o.en}</p>
-              <p className={`text-xs text-muted-foreground mt-2 ${lang === "ur" ? "font-urdu" : ""}`}>{o.desc}</p>
+              <p className={`text-lg font-semibold ${lang === "ur" ? "text-end font-urdu" : "text-start font-heading"}`}>{o.ur}</p>
+              <p className={`text-sm text-muted-foreground ${lang === "ur" ? "text-end" : "text-start"}`}>{o.en}</p>
+              <p className={`text-xs text-muted-foreground mt-2 ${lang === "ur" ? "text-end font-urdu" : "text-start"}`}>{o.desc}</p>
             </button>
           ))}
         </div>
@@ -384,9 +384,9 @@ function StepDetails({ form, update, lang }: { form: FormState; update: <K exten
   return (
     <Card>
       <CardHeader>
-        <CardTitle className={`font-heading ${lang === "ur" ? "font-urdu" : ""}`}>
+        <CardTitle className={`${lang === "ur" ? "text-end font-urdu" : "text-start font-heading"}`}>
           {t.detailsTitle}
-          <span className={`font-urdu text-base text-muted-foreground ms-2`}>{lang === "ur" ? "تفصیلات" : ""}</span>
+          <span className={`text-base text-muted-foreground ms-2 ${lang === "ur" ? "font-urdu" : ""}`}>{lang === "ur" ? "تفصیلات" : ""}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -405,9 +405,9 @@ function StepGuardian({ form, update, isPublic, lang }: { form: FormState; updat
   return (
     <Card>
       <CardHeader>
-        <CardTitle className={`font-heading ${lang === "ur" ? "font-urdu" : ""}`}>
+        <CardTitle className={`${lang === "ur" ? "text-end font-urdu" : "text-start font-heading"}`}>
           {t.guardianTitle}
-          <span className={`font-urdu text-base text-muted-foreground ms-2`}>{lang === "ur" ? "ولی کی معلومات" : ""}</span>
+          <span className={`text-base text-muted-foreground ms-2 ${lang === "ur" ? "font-urdu" : ""}`}>{lang === "ur" ? "ولی کی معلومات" : ""}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -425,7 +425,7 @@ function StepGuardian({ form, update, isPublic, lang }: { form: FormState; updat
         {!isPublic && (
           <div className="pt-2">
             <div className="h-px bg-border my-4" />
-            <p className={`text-sm mb-2 ${lang === "ur" ? "font-urdu" : ""}`}>
+            <p className={`text-sm mb-2 ${lang === "ur" ? "text-end font-urdu" : "text-start"}`}>
               {t.siblingSearch}
               {lang === "ur" && <span className="text-xs text-muted-foreground font-sans ms-2">Sibling search</span>}
             </p>
@@ -523,9 +523,9 @@ function SectionCard({ title, urdu, onEdit, children, lang }: { title: string; u
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className={`font-heading text-base ${lang === "ur" ? "font-urdu" : ""}`}>
+        <CardTitle className={`${lang === "ur" ? "text-end font-urdu" : "text-start font-heading"} text-base`}>
           {title}
-          <span className={`font-urdu text-sm text-muted-foreground ms-2`}>{urdu}</span>
+          {lang === "ur" && <span className="text-sm text-muted-foreground ms-2 font-urdu">{urdu}</span>}
         </CardTitle>
         <Button size="sm" variant="ghost" onClick={onEdit}><Pencil className="h-3.5 w-3.5 me-1" /> {lang === "ur" ? "ترمیم" : "Edit"}</Button>
       </CardHeader>

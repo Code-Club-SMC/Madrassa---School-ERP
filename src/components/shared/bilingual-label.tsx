@@ -14,7 +14,7 @@ export function BilingualLabel({ urdu, english, htmlFor, required, lang = "ur", 
   const isUrdu = lang === "ur";
   return (
     <div className="flex flex-col gap-1.5">
-      <Label htmlFor={htmlFor} dir={isUrdu ? "rtl" : "ltr"} lang={isUrdu ? "ur" : "en"} className="font-urdu text-base text-foreground leading-tight">
+      <Label htmlFor={htmlFor} dir={isUrdu ? "rtl" : "ltr"} lang={isUrdu ? "ur" : "en"} className={`${isUrdu ? "font-urdu" : "font-heading"} text-base text-foreground leading-tight`}>
         {isUrdu ? urdu : english}
         {required && <span className="text-destructive ms-1">*</span>}
       </Label>

@@ -51,7 +51,6 @@ const TEXT = {
     officeInfo: "دفتری معلومات",
     officeInfoEn: "Office Info",
     admissionDate: "تاریخ داخلہ",
-    previousAdmNo: "پرانہ داخلہ نمبر",
     correspondingDate: "بمطابق",
     requestedClass: "مطلوبہ درجہ",
     entryTestMarks: "امتحان داخلہ میں حاصل کردہ نمبرات",
@@ -111,7 +110,6 @@ const TEXT = {
     officeInfo: "Office Information",
     officeInfoEn: "Office Info",
     admissionDate: "Admission Date",
-    previousAdmNo: "Previous Admission No.",
     correspondingDate: "Corresponding Date",
     requestedClass: "Requested Class/Darja",
     entryTestMarks: "Entry Test Marks",
@@ -386,7 +384,7 @@ export function PdfFormRenderer({
             dir={isRtl ? "rtl" : "ltr"}
             lang={lang}
           >
-            {variant.institutionUrdu}
+            {isRtl ? variant.institutionUrdu : variant.institutionEnglish}
           </p>
           <h1 className={`text-3xl font-bold leading-loose ${isRtl ? "font-urdu" : "font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
             {isRtl ? variant.titleUrdu : variant.titleEnglish}
@@ -433,9 +431,9 @@ export function PdfFormRenderer({
       {/* Meta row — form/admission numbers (present in all variants) */}
       <Card>
         <CardHeader>
-          <CardTitle className={`text-end text-lg leading-loose ${isRtl ? "font-urdu" : "font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+          <CardTitle className={`${isRtl ? "text-end font-urdu" : "text-start font-heading"} text-lg leading-loose`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
             {t.officeInfo}
-            <span className={`text-xs text-muted-foreground ms-2 uppercase tracking-widest ${isRtl ? "font-sans" : ""}`}>{t.officeInfoEn}</span>
+            {isRtl && <span className="text-xs text-muted-foreground ms-2 font-sans uppercase tracking-widest">{t.officeInfoEn}</span>}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -449,20 +447,7 @@ export function PdfFormRenderer({
             />
           </BilingualLabel>
           {variant.layout !== "school" && (
-            <>
-              <BilingualLabel
-                urdu="پرانہ داخلہ نمبر"
-                english="Previous Adm. No."
-                htmlFor="prev_adm_no"
-              >
-                <Input
-                  id="prev_adm_no"
-                  name="prev_adm_no"
-                  value={val("prev_adm_no")}
-                  onChange={(e) => set("prev_adm_no", e.target.value)}
-                />
-              </BilingualLabel>
-              <BilingualLabel urdu="بمطابق" english="Corresponding Date" htmlFor="bmutabiq">
+            <BilingualLabel urdu="بمطابق" english="Corresponding Date" htmlFor="bmutabiq" lang={lang}>
                 <DatePickerInput
                   id="bmutabiq"
                   value={val("adm_date")}
@@ -476,7 +461,6 @@ export function PdfFormRenderer({
                   }}
                 />
               </BilingualLabel>
-            </>
           )}
           {variant.layout === "madrassa-long" && (
             <>
@@ -502,6 +486,7 @@ export function PdfFormRenderer({
                 urdu="امتحان داخلہ میں حاصل کردہ نمبرات"
                 english="Entry-Test Marks"
                 htmlFor="entry_marks"
+                lang={lang}
               >
                 <Input
                   id="entry_marks"
@@ -515,6 +500,7 @@ export function PdfFormRenderer({
                 urdu="برائے تعلیمی سال"
                 english="For Academic Year"
                 htmlFor="acad_year"
+                lang={lang}
               >
                 <Input
                   id="acad_year"
@@ -633,11 +619,9 @@ function Section({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className={`text-end text-lg leading-loose ${isRtl ? "font-urdu" : "font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+        <CardTitle className={`${isRtl ? "text-end font-urdu" : "text-start font-heading"} text-lg leading-loose`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
           {isRtl ? urdu : english}
-          <span className={`text-xs text-muted-foreground ms-2 uppercase tracking-widest ${isRtl ? "font-sans" : ""}`}>
-            {isRtl ? english : urdu}
-          </span>
+          {isRtl && <span className="text-xs text-muted-foreground ms-2 font-sans uppercase tracking-widest">{english}</span>}
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">{children}</CardContent>
@@ -901,26 +885,44 @@ function MadrassaShortFields({
   t,
 }: FieldProps & { variant: AdmissionVariant; isGirls: boolean }) {
   const val = (k: string) => form[k] ?? "";
+  const isRtl = lang === "ur";
   const gradeOptions = gradeOptionsForVariant(variant);
   return (
     <>
       <Card>
         <CardContent className="py-6 space-y-3">
-          <p className="font-urdu text-sm leading-loose text-end" dir="rtl" lang="ur">
-            بخدمت جناب مہتمم صاحب دامت برکاتہم! السلام علیکم ورحمۃ اللہ وبرکاتہ!
-          </p>
-          <p
-            className="font-urdu text-sm leading-loose text-end text-muted-foreground"
-            dir="rtl"
-            lang="ur"
-          >
-            میں جامعہ میں داخل ہونا چاہتا/چاہتی ہوں اور اقرار کرتا/کرتی ہوں کہ میں جامعہ کے جملہ
-            قوانین و ضوابط کا پابند رہوں گا/گی۔ بلند اخلاق پر عمل پیرا رہوں گا/گی۔ اساتذہ کرام اور
-            ارکان شوریٰ کا احترام کروں گا/گی۔ جامعہ کے مسلک پر پابند رہوں گا/گی۔ علمی مشاغل میں
-            مصروف رہوں گا/گی۔ اندرونی و بیرونی مدرسہ تجارتی کاروبار نہیں کروں گا/گی۔ عالمانہ وضع قطع
-            نشست و برخاست برقرار رکھوں گا/گی۔ ۱۰ رمضان سے پہلے مدرسہ نہیں چھوڑوں گا/گی۔ استدعا ہے کہ
-            داخلہ کی اجازت فرمائی جائے۔
-          </p>
+          {isRtl ? (
+            <>
+              <p className="font-urdu text-sm leading-loose text-end" dir="rtl" lang="ur">
+                بخدمت جناب مہتمم صاحب دامت برکاتہم! السلام علیکم ورحمۃ اللہ وبرکاتہ!
+              </p>
+              <p
+                className="font-urdu text-sm leading-loose text-end text-muted-foreground"
+                dir="rtl"
+                lang="ur"
+              >
+                میں جامعہ میں داخل ہونا چاہتا/چاہتی ہوں اور اقرار کرتا/کرتی ہوں کہ میں جامعہ کے جملہ
+                قوانین و ضوابط کا پابند رہوں گا/گی۔ بلند اخلاق پر عمل پیرا رہوں گا/گی۔ اساتذہ کرام اور
+                ارکان شوریٰ کا احترام کروں گا/گی۔ جامعہ کے مسلک پر پابند رہوں گا/گی۔ علمی مشاغل میں
+                مصروف رہوں گا/گی۔ اندرونی و بیرونی مدرسہ تجارتی کاروبار نہیں کروں گا/گی۔ عالمانہ وضع قطع
+                نشست و برخاست برقرار رکھوں گا/گی۔ ۱۰ رمضان سے پہلے مدرسہ نہیں چھوڑوں گا/گی۔ استدعا ہے کہ
+                داخلہ کی اجازت فرمائی جائے۔
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-heading text-sm leading-loose text-start">
+                Respectful greetings to the Honorable Principal! Peace and blessings be upon you.
+              </p>
+              <p className="font-heading text-sm leading-loose text-start text-muted-foreground">
+                I wish to enroll in this institution and pledge that I will abide by all its rules and regulations.
+                I will uphold high moral character, respect teachers and the advisory committee, remain committed to
+                the institution's creed, stay occupied in academic pursuits, refrain from commercial activities inside
+                or outside the institution, maintain a dignified demeanor, and not leave the institution before
+                the 10th of Ramadan. I request that admission be granted.
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -930,6 +932,7 @@ function MadrassaShortFields({
           english="Student Name"
           htmlFor="name"
           required
+          lang={lang}
         >
           <Input
             id="name"
@@ -941,7 +944,7 @@ function MadrassaShortFields({
             onChange={(e) => set("name", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="ولدیت" english="Father Name" htmlFor="father" required>
+        <BilingualLabel urdu="ولدیت" english="Father Name" htmlFor="father" required lang={lang}>
           <Input
             id="father"
             name="father"
@@ -951,7 +954,7 @@ function MadrassaShortFields({
             onChange={(e) => set("father", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="تاریخ پیدائش" english="Date of Birth" htmlFor="dob" required>
+        <BilingualLabel urdu="تاریخ پیدائش" english="Date of Birth" htmlFor="dob" required lang={lang}>
           <DatePickerInput
             id="dob"
             value={val("dob")}
@@ -976,6 +979,7 @@ function MadrassaShortFields({
             english="Current Address"
             htmlFor="curr_address"
             required
+            lang={lang}
           >
             <Textarea
               id="curr_address"
@@ -989,7 +993,7 @@ function MadrassaShortFields({
           </BilingualLabel>
         </div>
         <div className="md:col-span-2">
-          <BilingualLabel urdu="مستقل پتہ" english="Permanent Address" htmlFor="perm_address">
+          <BilingualLabel urdu="مستقل پتہ" english="Permanent Address" htmlFor="perm_address" lang={lang}>
             <Textarea
               id="perm_address"
               name="perm_address"
@@ -1005,6 +1009,7 @@ function MadrassaShortFields({
             urdu="سابقہ مدرسے کا نام و پتہ"
             english="Previous Madrassa Name & Address"
             htmlFor="prev_madrassa"
+            lang={lang}
           >
             <Textarea
               id="prev_madrassa"
@@ -1035,7 +1040,7 @@ function MadrassaShortFields({
             onChange={(e) => set("guardian_name", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="سرپرست کا رشتہ" english="Relation" htmlFor="guardian_rel" required>
+        <BilingualLabel urdu="سرپرست کا رشتہ" english="Relation" htmlFor="guardian_rel" required lang={lang}>
           <Input
             id="guardian_rel"
             name="guardian_rel"
@@ -1045,7 +1050,7 @@ function MadrassaShortFields({
             onChange={(e) => set("guardian_rel", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="رابطہ نمبر" english="Contact No." htmlFor="guardian_phone" required>
+        <BilingualLabel urdu="رابطہ نمبر" english="Contact No." htmlFor="guardian_phone" required lang={lang}>
           <Input
             id="guardian_phone"
             name="guardian_phone"
@@ -1085,23 +1090,38 @@ function MadrassaLongFields({
   t,
 }: FieldProps & { variant: AdmissionVariant; isGirls: boolean }) {
   const val = (k: string) => form[k] ?? "";
+  const isRtl = lang === "ur";
   const gradeOptions = gradeOptionsForVariant(variant);
   return (
     <>
       <Card>
         <CardContent className="py-6 space-y-2">
-          <p className="font-urdu text-sm leading-loose text-end" dir="rtl" lang="ur">
-            بخدمت جناب مہتمم صاحب دامت برکاتہم العالیہ، السلام علیکم ورحمۃ اللہ وبرکاتہ!
-          </p>
-          <p
-            className="font-urdu text-sm leading-loose text-end text-muted-foreground"
-            dir="rtl"
-            lang="ur"
-          >
-            گزارش ہے کہ میں آپ کے زیر سایہ جامعہ کے مطلوبہ درجہ میں داخلہ لینے کا خواہشمند/خواہشمندہ
-            ہوں۔ فارم ہذا کے صفحہ نمبر پر لکھا ہوا عہد نامہ میں نے بغور پڑھ لیا ہے۔ میں صدق دل سے
-            وعدہ کرتا/کرتی ہوں کہ اس پر کار بند اور عمل پیرا رہوں گا/گی۔
-          </p>
+          {isRtl ? (
+            <>
+              <p className="font-urdu text-sm leading-loose text-end" dir="rtl" lang="ur">
+                بخدمت جناب مہتمم صاحب دامت برکاتہم العالیہ، السلام علیکم ورحمۃ اللہ وبرکاتہ!
+              </p>
+              <p
+                className="font-urdu text-sm leading-loose text-end text-muted-foreground"
+                dir="rtl"
+                lang="ur"
+              >
+                گزارش ہے کہ میں آپ کے زیر سایہ جامعہ کے مطلوبہ درجہ میں داخلہ لینے کا خواہشمند/خواہشمندہ
+                ہوں۔ فارم ہذا کے صفحہ نمبر پر لکھا ہوا عہد نامہ میں نے بغور پڑھ لیا ہے۔ میں صدق دل سے
+                وعدہ کرتا/کرتی ہوں کہ اس پر کار بند اور عمل پیرا رہوں گا/گی۔
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-heading text-sm leading-loose text-start">
+                With utmost respect to the Honorable Principal! Peace and blessings be upon you.
+              </p>
+              <p className="font-heading text-sm leading-loose text-start text-muted-foreground">
+                I wish to enroll in my desired class under your guidance. I have carefully read the pledge
+                written on the form. I sincerely promise to act upon it with full commitment.
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -1117,7 +1137,7 @@ function MadrassaLongFields({
             onChange={(e) => set("name", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="ولدیت" english="Father Name" htmlFor="father" required>
+        <BilingualLabel urdu="ولدیت" english="Father Name" htmlFor="father" required lang={lang}>
           <Input
             id="father"
             name="father"
@@ -1127,7 +1147,7 @@ function MadrassaLongFields({
             onChange={(e) => set("father", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="تاریخ پیدائش یا عمر" english="DOB / Age" htmlFor="dob_age" required>
+        <BilingualLabel urdu="تاریخ پیدائش یا عمر" english="DOB / Age" htmlFor="dob_age" required lang={lang}>
           <DatePickerInput
             id="dob_age"
             value={val("dob_age")}
@@ -1140,39 +1160,39 @@ function MadrassaLongFields({
 
         {/* Current address */}
         <div className="md:col-span-2 rounded-xl border border-border p-4 space-y-3">
-          <p className="font-urdu text-sm font-semibold text-end" dir="rtl" lang="ur">
-            موجودہ پتہ · Current Address
+          <p className={`text-sm font-semibold ${isRtl ? "text-end font-urdu" : "text-start font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+            {isRtl ? "موجودہ پتہ" : "Current Address"}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <BilingualLabel urdu="گاؤں / محلہ" english="Village / Locality">
+            <BilingualLabel urdu="گاؤں / محلہ" english="Village / Locality" lang={lang}>
               <Input
                 className="font-urdu"
                 value={val("curr_village")}
                 onChange={(e) => set("curr_village", e.target.value)}
               />
             </BilingualLabel>
-            <BilingualLabel urdu="ڈاکخانہ / علاقہ" english="Post Office / Area">
+            <BilingualLabel urdu="ڈاکخانہ / علاقہ" english="Post Office / Area" lang={lang}>
               <Input
                 className="font-urdu"
                 value={val("curr_po")}
                 onChange={(e) => set("curr_po", e.target.value)}
               />
             </BilingualLabel>
-            <BilingualLabel urdu="تحصیل" english="Tehsil">
+            <BilingualLabel urdu="تحصیل" english="Tehsil" lang={lang}>
               <Input
                 className="font-urdu"
                 value={val("curr_tehsil")}
                 onChange={(e) => set("curr_tehsil", e.target.value)}
               />
             </BilingualLabel>
-            <BilingualLabel urdu="ضلع" english="District">
+            <BilingualLabel urdu="ضلع" english="District" lang={lang}>
               <Input
                 className="font-urdu"
                 value={val("curr_district")}
                 onChange={(e) => set("curr_district", e.target.value)}
               />
             </BilingualLabel>
-            <BilingualLabel urdu="فون نمبر" english="Phone No." htmlFor="curr_phone">
+            <BilingualLabel urdu="فون نمبر" english="Phone No." htmlFor="curr_phone" lang={lang}>
               <Input
                 id="curr_phone"
                 name="curr_phone"
@@ -1188,39 +1208,39 @@ function MadrassaLongFields({
 
         {/* Permanent address */}
         <div className="md:col-span-2 rounded-xl border border-border p-4 space-y-3">
-          <p className="font-urdu text-sm font-semibold text-end" dir="rtl" lang="ur">
-            مستقل پتہ · Permanent Address
+          <p className={`text-sm font-semibold ${isRtl ? "text-end font-urdu" : "text-start font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+            {isRtl ? "مستقل پتہ" : "Permanent Address"}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <BilingualLabel urdu="گاؤں / محلہ" english="Village / Locality">
+            <BilingualLabel urdu="گاؤں / محلہ" english="Village / Locality" lang={lang}>
               <Input
                 className="font-urdu"
                 value={val("perm_village")}
                 onChange={(e) => set("perm_village", e.target.value)}
               />
             </BilingualLabel>
-            <BilingualLabel urdu="ڈاکخانہ / علاقہ" english="Post Office / Area">
+            <BilingualLabel urdu="ڈاکخانہ / علاقہ" english="Post Office / Area" lang={lang}>
               <Input
                 className="font-urdu"
                 value={val("perm_po")}
                 onChange={(e) => set("perm_po", e.target.value)}
               />
             </BilingualLabel>
-            <BilingualLabel urdu="تحصیل" english="Tehsil">
+            <BilingualLabel urdu="تحصیل" english="Tehsil" lang={lang}>
               <Input
                 className="font-urdu"
                 value={val("perm_tehsil")}
                 onChange={(e) => set("perm_tehsil", e.target.value)}
               />
             </BilingualLabel>
-            <BilingualLabel urdu="ضلع" english="District">
+            <BilingualLabel urdu="ضلع" english="District" lang={lang}>
               <Input
                 className="font-urdu"
                 value={val("perm_district")}
                 onChange={(e) => set("perm_district", e.target.value)}
               />
             </BilingualLabel>
-            <BilingualLabel urdu="فون نمبر" english="Phone No." htmlFor="perm_phone">
+            <BilingualLabel urdu="فون نمبر" english="Phone No." htmlFor="perm_phone" lang={lang}>
               <Input
                 id="perm_phone"
                 name="perm_phone"
@@ -1241,26 +1261,33 @@ function MadrassaLongFields({
         lang={lang}
       >
         <div className="md:col-span-2">
-          <p
-            className="font-urdu text-xs text-muted-foreground text-end leading-loose"
-            dir="rtl"
-            lang="ur"
-          >
-            ہدایات: اسناد کی مصدقہ نقول فارم داخلہ کے ساتھ منسلک کریں اور انٹرویو کے دن اصل اسناد
-            ساتھ لے کر آئیں۔
-          </p>
+          {isRtl ? (
+            <p
+              className="font-urdu text-xs text-muted-foreground text-end leading-loose"
+              dir="rtl"
+              lang="ur"
+            >
+              ہدایات: اسناد کی مصدقہ نقول فارم داخلہ کے ساتھ منسلق کریں اور انٹرویو کے دن اصل اسناد
+              ساتھ لے کر آئیں۔
+            </p>
+          ) : (
+            <p className="font-heading text-xs text-muted-foreground text-start leading-loose">
+              Instructions: Attach attested copies of documents with the admission form and bring the
+              original documents on the interview day.
+            </p>
+          )}
         </div>
-        <BilingualLabel urdu="درس نظامی کا آخری پاس کردہ درجہ" english="Last Dars-e-Nizami Class">
+        <BilingualLabel urdu="درس نظامی کا آخری پاس کردہ درجہ" english="Last Dars-e-Nizami Class" lang={lang}>
           <Input
             className="font-urdu"
             value={val("dn_last")}
             onChange={(e) => set("dn_last", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="حاصل کردہ نمبرات" english="Marks Obtained">
+        <BilingualLabel urdu="حاصل کردہ نمبرات" english="Marks Obtained" lang={lang}>
           <Input value={val("dn_marks")} onChange={(e) => set("dn_marks", e.target.value)} />
         </BilingualLabel>
-        <BilingualLabel urdu="تقدیر" english="Grade">
+        <BilingualLabel urdu="تقدیر" english="Grade" lang={lang}>
           <Input
             className="font-urdu"
             value={val("dn_grade")}
@@ -1271,6 +1298,7 @@ function MadrassaLongFields({
           <BilingualLabel
             urdu="نام مدرسہ / جامعہ مع مکمل پتہ"
             english="Madrassa / Jamia Name & Address"
+            lang={lang}
           >
             <Textarea
               className="font-urdu"
@@ -1280,17 +1308,17 @@ function MadrassaLongFields({
           </BilingualLabel>
         </div>
 
-        <BilingualLabel urdu="وفاق کا آخری پاس کردہ درجہ" english="Last Wafaq Class">
+        <BilingualLabel urdu="وفاق کا آخری پاس کردہ درجہ" english="Last Wafaq Class" lang={lang}>
           <Input
             className="font-urdu"
             value={val("wf_last")}
             onChange={(e) => set("wf_last", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="حاصل کردہ نمبرات" english="Marks Obtained">
+        <BilingualLabel urdu="حاصل کردہ نمبرات" english="Marks Obtained" lang={lang}>
           <Input value={val("wf_marks")} onChange={(e) => set("wf_marks", e.target.value)} />
         </BilingualLabel>
-        <BilingualLabel urdu="تقدیر" english="Grade">
+        <BilingualLabel urdu="تقدیر" english="Grade" lang={lang}>
           <Input
             className="font-urdu"
             value={val("wf_grade")}
@@ -1314,6 +1342,7 @@ function MadrassaLongFields({
           <BilingualLabel
             urdu="کن کن مدارس میں تعلیم حاصل کی — نام مع پتہ"
             english="All Previous Madaris"
+            lang={lang}
           >
             <Textarea
               className="font-urdu"
@@ -1322,14 +1351,14 @@ function MadrassaLongFields({
             />
           </BilingualLabel>
         </div>
-        <BilingualLabel urdu="عصری علوم" english="Modern Education">
+        <BilingualLabel urdu="عصری علوم" english="Modern Education" lang={lang}>
           <Input
             className="font-urdu"
             value={val("modern_edu")}
             onChange={(e) => set("modern_edu", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="اضافی قابلیت" english="Additional Qualifications">
+        <BilingualLabel urdu="اضافی قابلیت" english="Additional Qualifications" lang={lang}>
           <Input
             className="font-urdu"
             value={val("extra_qual")}
@@ -1346,17 +1375,17 @@ function MadrassaLongFields({
         <BilingualLabel urdu="گذشتہ سال کا رول نمبر" english="Previous Year Roll No." lang={lang}>
           <Input value={val("prev_roll")} onChange={(e) => set("prev_roll", e.target.value)} />
         </BilingualLabel>
-        <BilingualLabel urdu="درجہ" english="Class / Darja">
+        <BilingualLabel urdu="درجہ" english="Class / Darja" lang={lang}>
           <Input
             className="font-urdu"
             value={val("prev_darja")}
             onChange={(e) => set("prev_darja", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="حاصل کردہ نمبرات" english="Marks Obtained">
+        <BilingualLabel urdu="حاصل کردہ نمبرات" english="Marks Obtained" lang={lang}>
           <Input value={val("prev_marks")} onChange={(e) => set("prev_marks", e.target.value)} />
         </BilingualLabel>
-        <BilingualLabel urdu="تقدیر" english="Grade">
+        <BilingualLabel urdu="تقدیر" english="Grade" lang={lang}>
           <Input
             className="font-urdu"
             value={val("prev_grade")}
@@ -1371,18 +1400,28 @@ function MadrassaLongFields({
         lang={lang}
       >
         <div className="md:col-span-2">
-          <p
-            className="font-urdu text-xs text-muted-foreground text-end leading-loose"
-            dir="rtl"
-            lang="ur"
-          >
-            میں صدق دل سے عہد کرتا/کرتی ہوں کہ تمام احکام شرعیہ اور جامعہ کے قواعد کا پابند رہوں
-            گا/گی، ہر فریضے کی ادائیگی، حسن اخلاق، سیاسی و غیر سیاسی تنظیموں سے عدم تعلق، جامعہ کی
-            اجازت کے بغیر سالانہ امتحان سے پہلے کہیں نہیں جانے، لڑائی جھگڑے سے اجتناب، اسباق و تکرار
-            کی پابندی، اور جامعہ کے مالی و انتظامی ضوابط کی پیروی کروں گا/گی۔ دو ماہانہ جائزوں کے
-            بعد اگر اساتذہ کی رائے میں اس درجے کی استعداد نہ ہوئی تو نچلے درجے میں منتقلی قبول کروں
-            گا/گی۔
-          </p>
+          {isRtl ? (
+            <p
+              className="font-urdu text-xs text-muted-foreground text-end leading-loose"
+              dir="rtl"
+              lang="ur"
+            >
+              میں صدق دل سے عہد کرتا/کرتی ہوں کہ تمام احکام شرعیہ اور جامعہ کے قواعد کا پابند رہوں
+              گا/گی، ہر فریضے کی ادائیگی، حسن اخلاق، سیاسی و غیر سیاسی تنظیموں سے عدم تعلق، جامعہ کی
+              اجازت کے بغیر سالانہ امتحان سے پہلے کہیں نہیں جانے، لڑائی جھگڑے سے اجتناب، اسباق و تکرار
+              کی پابندی، اور جامعہ کے مالی و انتظامی ضوابط کی پیروی کروں گا/گی۔ دو ماہانہ جائزوں کے
+              بعد اگر اساتذہ کی رائے میں اس درجے کی استعداد نہ ہوئی تو نچلے درجے میں منتقلی قبول کروں
+              گا/گی۔
+            </p>
+          ) : (
+            <p className="font-heading text-xs text-muted-foreground text-start leading-loose">
+              I solemnly pledge that I will abide by all Islamic injunctions and the institution&apos;s rules,
+              fulfill every duty, maintain good character, refrain from political and non-political organizations,
+              not leave before the annual exam without permission, avoid disputes, adhere to lessons and revision,
+              and follow the institution&apos;s financial and administrative regulations. If, after two monthly assessments,
+              the teachers do not consider me capable of this level, I will accept transfer to a lower level.
+            </p>
+          )}
         </div>
         <BilingualLabel urdu="امیدوار درجہ" english="Candidate Darja" lang={lang}>
           <MadrassaGradeSelect
@@ -1401,19 +1440,26 @@ function MadrassaLongFields({
 
       <Section urdu="برائے سرپرست" english="For Guardian" lang={lang}>
         <div className="md:col-span-2">
-          <p
-            className="font-urdu text-xs text-muted-foreground text-end leading-loose"
-            dir="rtl"
-            lang="ur"
-          >
-            انتباہ: فارم کا یہ حصہ طالب علم کے انٹرویو کے موقع پر پُر کیا جائے گا۔
-          </p>
+          {isRtl ? (
+            <p
+              className="font-urdu text-xs text-muted-foreground text-end leading-loose"
+              dir="rtl"
+              lang="ur"
+            >
+              انتباہ: فارم کا یہ حصہ طالب علم کے انٹرویو کے موقع پر پُر کیا جائے گا۔
+            </p>
+          ) : (
+            <p className="font-heading text-xs text-muted-foreground text-start leading-loose">
+              Note: This section of the form will be filled during the student&apos;s interview.
+            </p>
+          )}
         </div>
         <div className="md:col-span-2">
           <BilingualLabel
             urdu="شناختی کارڈ نمبر (13 ہندسے)"
             english="CNIC (13 digits)"
             htmlFor="cnic"
+            lang={lang}
           >
             <Input
               id="cnic"
@@ -1430,6 +1476,7 @@ function MadrassaLongFields({
           english="Guardian Name"
           htmlFor="guardian_name"
           required
+          lang={lang}
         >
           <Input
             id="guardian_name"
@@ -1441,7 +1488,7 @@ function MadrassaLongFields({
             onChange={(e) => set("guardian_name", e.target.value)}
           />
         </BilingualLabel>
-        <BilingualLabel urdu="ولدیت" english="Guardian Father Name">
+        <BilingualLabel urdu="ولدیت" english="Guardian Father Name" lang={lang}>
           <Input
             className="font-urdu"
             value={val("guardian_father")}
