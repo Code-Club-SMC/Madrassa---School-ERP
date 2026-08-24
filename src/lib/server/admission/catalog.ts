@@ -104,10 +104,10 @@ export async function resolveAdmissionTarget(
 
   const madrassaSubcategoryId = expectedMadrassaSection
     ? (override.madrassaSubcategoryId ??
-      resolveMadrassaSubcategoryId(
+      (await resolveMadrassaSubcategoryId(
         form.shoba || form.req_darja || form.darja,
         expectedMadrassaSection,
-      ) ??
+      )) ??
       target.defaultMadrassaSubcategoryId ??
       null)
     : null;
@@ -218,7 +218,28 @@ function variantAllowsSchoolClass(target: VariantTarget) {
   );
 }
 
-function resolveMadrassaSubcategoryId(value: string | undefined, section: Section | null) {
+async function resolveMadrassaSubcategoryId(value: string | undefined, section: Section | null) {
+  if (!value) return null;
+
+  // The admission form now stores the real subcategory id (from the classes table) in form.shoba.
+  const [subcategory] = await db
+    .select({
+      id: madrassaSubcategories.id,
+      section: madrassaSubcategories.section,
+    })
+    .from(madrassaSubcategories)
+    .where(eq(madrassaSubcategories.id, value))
+    .limit(1);
+
+  if (subcategory) {
+    if (section) {
+      const expectedDbSection = section === "baneen" ? "male" : "female";
+      if (subcategory.section !== expectedDbSection) return null;
+    }
+    return subcategory.id;
+  }
+
+  // Fallback for legacy catalog values (name / rollPrefix / darja).
   return findMadrassaGrade(value, section)?.id ?? null;
 }
 

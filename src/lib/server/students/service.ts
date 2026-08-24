@@ -89,6 +89,7 @@ export const listStudentsQuerySchema = z.object({
   programId: z.string().trim().optional(),
   classId: z.string().trim().optional(),
   subcategoryId: z.string().trim().optional(),
+  section: z.enum(["male", "female"]).optional(),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(25),
 });
@@ -189,6 +190,9 @@ export async function listStudents(
     query.classId ? eq(studentEnrollments.schoolClassId, query.classId) : undefined,
     query.subcategoryId
       ? eq(studentEnrollments.madrassaSubcategoryId, query.subcategoryId)
+      : undefined,
+    query.section && query.system === "madrassa"
+      ? eq(madrassaSubcategories.section, query.section)
       : undefined,
     isNull(studentEnrollments.endedAt),
     query.q

@@ -133,16 +133,6 @@ const madrassaLongSections: Section[] = [
     ],
   },
   {
-    urdu: "قدیم طلباء / طالبات کے لیے",
-    english: "For Existing Students",
-    fields: [
-      { urdu: "گذشتہ سال کا رول نمبر", english: "Previous Roll No.", key: "prev_roll", ltr: true },
-      { urdu: "درجہ", english: "Class / Darja", key: "prev_darja" },
-      { urdu: "حاصل کردہ نمبرات", english: "Marks Obtained", key: "prev_marks", ltr: true },
-      { urdu: "تقدیر", english: "Grade", key: "prev_grade" },
-    ],
-  },
-  {
     urdu: "سرپرست",
     english: "Guardian",
     fields: [
@@ -225,9 +215,7 @@ const esc = (value: string) =>
 function valueFor(form: Record<string, string>, key: string) {
   if (
     (key === "req_darja" ||
-      key === "shoba" ||
-      key === "candidate_darja" ||
-      key === "proposed_darja") &&
+      key === "shoba") &&
     form[key]
   ) {
     return getMadrassaGradeById(form[key])?.nameUrdu ?? form[key];
@@ -350,7 +338,6 @@ function renderAhdNamaPage(variant: AdmissionVariant, form: Record<string, strin
       <div class="line-grid compact">
         ${lineField(`${studentLabel} کا نام`, valueFor(form, "name"))}
         ${lineField("ولدیت", valueFor(form, "father"))}
-        ${lineField("امیدوار درجہ", valueFor(form, "candidate_darja") || valueFor(form, "req_darja"))}
       </div>
       <div class="manual-signatures">
         ${blankLine(`دستخط ${studentLabel}`)}
@@ -374,7 +361,6 @@ function renderAhdNamaPage(variant: AdmissionVariant, form: Record<string, strin
       <h3 class="urdu office-heading">دفتری کاروائی</h3>
       ${blankLine("مہتمم کی رائے")}
       <div class="line-grid compact">
-        ${blankLine("مجوزہ درجہ")}
         ${blankLine("دستخط ناظم تعلیمات")}
         ${blankLine("دستخط مہتمم")}
       </div>

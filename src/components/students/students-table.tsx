@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
-import { StatusBadge } from "@/components/shared/status-badge";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -41,12 +40,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { formatPKR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { StudentDetailsSheet } from "./student-details-sheet";
 import type { StudentListItem, StudentStatus, StudentSystem } from "./student-types";
 
-type Props = { system: StudentSystem };
+type Props = { system: StudentSystem; section?: "male" | "female" };
 
 type SchoolClassOption = {
   id: string;
@@ -67,7 +65,7 @@ type MadrassaCategoryOption = {
 
 const pageSize = 10;
 
-export function StudentsTable({ system }: Props) {
+export function StudentsTable({ system, section }: Props) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | StudentStatus>("all");
@@ -83,8 +81,14 @@ export function StudentsTable({ system }: Props) {
 
   const loadGroups = useCallback(async () => {
     try {
-      const url =
-        system === "school" ? "/api/academic/school/classes" : "/api/academic/madrassa/categories";
+      let url = "/api/academic/madrassa/categories";
+      if (system === "school") {
+        url = "/api/academic/school/classes";
+      } else if (section) {
+        const params = new URLSearchParams();
+        params.set("section", section);
+        url = `/api/academic/madrassa/categories?${params.toString()}`;
+      }
       const response = await fetch(url, { credentials: "include" });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not load filters");
@@ -93,7 +97,7 @@ export function StudentsTable({ system }: Props) {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not load filters");
     }
-  }, [system]);
+  }, [system, section]);
 
   const loadStudents = useCallback(async () => {
     setLoading(true);
@@ -109,6 +113,7 @@ export function StudentsTable({ system }: Props) {
         if (system === "school") params.set("classId", groupFilter);
         else params.set("subcategoryId", groupFilter);
       }
+      if (system === "madrassa" && section) params.set("section", section);
 
       const response = await fetch(`/api/students?${params.toString()}`, {
         credentials: "include",
@@ -124,7 +129,7 @@ export function StudentsTable({ system }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [groupFilter, page, query, statusFilter, system]);
+  }, [groupFilter, page, query, statusFilter, system, section]);
 
   useEffect(() => {
     void loadGroups();
@@ -242,25 +247,23 @@ export function StudentsTable({ system }: Props) {
             <TableRow className="bg-muted/40 hover:bg-muted/40">
               <TableHead className="w-[70px]">Roll #</TableHead>
               <TableHead>Student — طالبِ علم</TableHead>
+              <TableHead className="hidden md:table-cell">Father — والد</TableHead>
               <TableHead className="hidden md:table-cell">
                 {system === "madrassa" ? "Darja" : "Class"}
               </TableHead>
-              <TableHead className="hidden lg:table-cell">Guardian — ولی</TableHead>
-              <TableHead className="text-end">Fee</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead className="w-[60px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
                   Loading students...
                 </TableCell>
               </TableRow>
             ) : students.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-12">
+                <TableCell colSpan={5} className="py-12">
                   <EmptyState
                     icon={Users2}
                     heading="No students found"
@@ -307,26 +310,20 @@ export function StudentsTable({ system }: Props) {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div className="flex flex-col leading-tight">
+                      <span className="font-urdu text-sm">{student.fatherNameUrdu || student.fatherName}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {student.fatherName}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <div className="flex flex-col leading-tight">
                       <span className="font-urdu text-sm">{student.groupLabel}</span>
                       <span className="text-[11px] text-muted-foreground">
                         {student.groupEnglish}
                         {student.section ? ` · ${student.section}` : ""}
                       </span>
                     </div>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <div className="flex flex-col leading-tight">
-                      <span className="font-urdu text-sm">{student.guardianNameUrdu}</span>
-                      <span className="text-[11px] text-muted-foreground font-mono">
-                        {student.guardianPhone || "—"}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-end font-mono text-sm">
-                    {formatPKR(student.monthlyFee)}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={student.status} />
                   </TableCell>
                   <TableCell onClick={(event) => event.stopPropagation()}>
                     <DropdownMenu>

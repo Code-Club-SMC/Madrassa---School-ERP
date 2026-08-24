@@ -141,7 +141,6 @@ function madrassaLongSample(variant: AdmissionVariant, person: PersonSample) {
     prev_darja: "ناظرہ",
     prev_marks: "410/500",
     prev_grade: "ممتاز",
-    candidate_darja: grade?.id ?? "",
     cnic: person.cnic,
     guardian_name: person.guardian,
     guardian_father: person.guardianFather,
@@ -154,7 +153,6 @@ function madrassaLongSample(variant: AdmissionVariant, person: PersonSample) {
     support_freq: "ماہانہ",
     support_mode: "قسط وار",
     muhtamim_remarks: "داخلہ کے لیے موزوں ہے۔",
-    proposed_darja: grade?.nameUrdu ?? "",
   });
 }
 

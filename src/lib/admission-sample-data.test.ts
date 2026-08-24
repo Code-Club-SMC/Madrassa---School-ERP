@@ -12,8 +12,6 @@ describe("admission sample data", () => {
     const sample = buildAdmissionSampleData(variant);
 
     expect(sample.name).toBe("محمد عبداللہ");
-    expect(sample.req_darja.startsWith("bn-")).toBe(true);
-    expect(sample.candidate_darja.startsWith("bn-")).toBe(true);
   });
 
   test("uses female sample data for girls madrassa forms", () => {
@@ -23,8 +21,6 @@ describe("admission sample data", () => {
     const sample = buildAdmissionSampleData(variant);
 
     expect(sample.name).toBe("عائشہ فاطمہ");
-    expect(sample.req_darja.startsWith("bt-")).toBe(true);
-    expect(sample.candidate_darja.startsWith("bt-")).toBe(true);
   });
 
   test("uses female sample data for girls school forms", () => {
