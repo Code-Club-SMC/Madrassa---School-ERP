@@ -102,6 +102,7 @@ import { Route as ApiTeachersIndexRouteImport } from './routes/api/teachers/inde
 import { Route as ApiTeachersIdRouteImport } from './routes/api/teachers/$id'
 import { Route as ApiUsersIndexRouteImport } from './routes/api/users/index'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
+import { Route as AuthenticatedMadrassaCategoriesIndexRouteImport } from './routes/_authenticated/madrassa/categories/index'
 import { Route as AuthenticatedMadrassaClassesIndexRouteImport } from './routes/_authenticated/madrassa/classes/index'
 import { Route as AuthenticatedMadrassaClassesClassIdRouteImport } from './routes/_authenticated/madrassa/classes/$classId'
 import { Route as AuthenticatedMadrassaExamsIndexRouteImport } from './routes/_authenticated/madrassa/exams/index'
@@ -683,6 +684,12 @@ const ApiUsersIdRoute = ApiUsersIdRouteImport.update({
   path: '/api/users/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedMadrassaCategoriesIndexRoute =
+  AuthenticatedMadrassaCategoriesIndexRouteImport.update({
+    id: '/categories/',
+    path: '/categories/',
+    getParentRoute: () => AuthenticatedMadrassaRoute,
+  } as any)
 const AuthenticatedMadrassaClassesIndexRoute =
   AuthenticatedMadrassaClassesIndexRouteImport.update({
     id: '/classes/',
@@ -1251,6 +1258,7 @@ export interface FileRoutesByFullPath {
   '/api/teachers/$id/assignments': typeof ApiTeachersIdAssignmentsRouteWithChildren
   '/api/teachers/$id/timetable': typeof ApiTeachersIdTimetableRouteWithChildren
   '/api/teachers/me/dashboard': typeof ApiTeachersMeDashboardRoute
+  '/madrassa/categories/': typeof AuthenticatedMadrassaCategoriesIndexRoute
   '/madrassa/classes/': typeof AuthenticatedMadrassaClassesIndexRoute
   '/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
   '/school/exams/': typeof AuthenticatedSchoolExamsIndexRoute
@@ -1412,6 +1420,7 @@ export interface FileRoutesByTo {
   '/api/teachers/$id/assignments': typeof ApiTeachersIdAssignmentsRouteWithChildren
   '/api/teachers/$id/timetable': typeof ApiTeachersIdTimetableRouteWithChildren
   '/api/teachers/me/dashboard': typeof ApiTeachersMeDashboardRoute
+  '/madrassa/categories': typeof AuthenticatedMadrassaCategoriesIndexRoute
   '/madrassa/classes': typeof AuthenticatedMadrassaClassesIndexRoute
   '/madrassa/exams': typeof AuthenticatedMadrassaExamsIndexRoute
   '/school/exams': typeof AuthenticatedSchoolExamsIndexRoute
@@ -1584,6 +1593,7 @@ export interface FileRoutesById {
   '/api/teachers/$id/assignments': typeof ApiTeachersIdAssignmentsRouteWithChildren
   '/api/teachers/$id/timetable': typeof ApiTeachersIdTimetableRouteWithChildren
   '/api/teachers/me/dashboard': typeof ApiTeachersMeDashboardRoute
+  '/_authenticated/madrassa/categories/': typeof AuthenticatedMadrassaCategoriesIndexRoute
   '/_authenticated/madrassa/classes/': typeof AuthenticatedMadrassaClassesIndexRoute
   '/_authenticated/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
   '/_authenticated/school/exams/': typeof AuthenticatedSchoolExamsIndexRoute
@@ -1756,6 +1766,7 @@ export interface FileRouteTypes {
     | '/api/teachers/$id/assignments'
     | '/api/teachers/$id/timetable'
     | '/api/teachers/me/dashboard'
+    | '/madrassa/categories/'
     | '/madrassa/classes/'
     | '/madrassa/exams/'
     | '/school/exams/'
@@ -1917,6 +1928,7 @@ export interface FileRouteTypes {
     | '/api/teachers/$id/assignments'
     | '/api/teachers/$id/timetable'
     | '/api/teachers/me/dashboard'
+    | '/madrassa/categories'
     | '/madrassa/classes'
     | '/madrassa/exams'
     | '/school/exams'
@@ -2088,6 +2100,7 @@ export interface FileRouteTypes {
     | '/api/teachers/$id/assignments'
     | '/api/teachers/$id/timetable'
     | '/api/teachers/me/dashboard'
+    | '/_authenticated/madrassa/categories/'
     | '/_authenticated/madrassa/classes/'
     | '/_authenticated/madrassa/exams/'
     | '/_authenticated/school/exams/'
@@ -2838,6 +2851,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUsersIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/madrassa/categories/': {
+      id: '/_authenticated/madrassa/categories/'
+      path: '/categories'
+      fullPath: '/madrassa/categories/'
+      preLoaderRoute: typeof AuthenticatedMadrassaCategoriesIndexRouteImport
+      parentRoute: typeof AuthenticatedMadrassaRoute
+    }
     '/_authenticated/madrassa/classes/': {
       id: '/_authenticated/madrassa/classes/'
       path: '/classes'
@@ -3465,6 +3485,7 @@ interface AuthenticatedMadrassaRouteChildren {
   AuthenticatedMadrassaStudentsRoute: typeof AuthenticatedMadrassaStudentsRoute
   AuthenticatedMadrassaTimetableRoute: typeof AuthenticatedMadrassaTimetableRoute
   AuthenticatedMadrassaClassesClassIdRoute: typeof AuthenticatedMadrassaClassesClassIdRoute
+  AuthenticatedMadrassaCategoriesIndexRoute: typeof AuthenticatedMadrassaCategoriesIndexRoute
   AuthenticatedMadrassaClassesIndexRoute: typeof AuthenticatedMadrassaClassesIndexRoute
 }
 
@@ -3477,6 +3498,8 @@ const AuthenticatedMadrassaRouteChildren: AuthenticatedMadrassaRouteChildren = {
   AuthenticatedMadrassaTimetableRoute: AuthenticatedMadrassaTimetableRoute,
   AuthenticatedMadrassaClassesClassIdRoute:
     AuthenticatedMadrassaClassesClassIdRoute,
+  AuthenticatedMadrassaCategoriesIndexRoute:
+    AuthenticatedMadrassaCategoriesIndexRoute,
   AuthenticatedMadrassaClassesIndexRoute:
     AuthenticatedMadrassaClassesIndexRoute,
 }

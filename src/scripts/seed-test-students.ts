@@ -538,17 +538,18 @@ async function seedMadrassaCatalog() {
       .where(eq(madrassaCategories.id, category.id))
       .limit(1);
 
-    if (!existingCategory) {
-      await db.insert(madrassaCategories).values({
-        id: category.id,
-        name: category.name,
-        nameUrdu: category.nameUrdu,
-        description: category.description,
-        descriptionUrdu: category.descriptionUrdu,
-        displayOrder: category.displayOrder,
-        active: true,
-        section: category.section,
-      });
+      if (!existingCategory) {
+        const categorySection = category.subcategories[0]?.section ?? "male";
+        await db.insert(madrassaCategories).values({
+          id: category.id,
+          name: category.name,
+          nameUrdu: category.nameUrdu,
+          description: category.description,
+          descriptionUrdu: category.descriptionUrdu,
+          displayOrder: category.displayOrder ?? 0,
+          active: true,
+          section: categorySection,
+        });
       console.log(`Created madrassa category: ${category.nameUrdu}`);
     }
 
@@ -571,7 +572,7 @@ async function seedMadrassaCatalog() {
           rollPrefix: sub.rollPrefix,
           darja: sub.darja ?? null,
           govtEquivalent: sub.govtEquivalent ?? null,
-          durationYears: sub.durationYears ?? null,
+          durationYears: sub.durationYears,
           fee: null,
           displayOrder: displayOrder ?? 0,
           active: true,

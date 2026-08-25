@@ -233,8 +233,9 @@ async function resolveMadrassaSubcategoryId(value: string | undefined, section: 
 
   if (subcategory) {
     if (section) {
-      const expectedDbSection = section === "baneen" ? "male" : "female";
-      if (subcategory.section !== expectedDbSection) return null;
+      const expectedDbSections =
+        section === "baneen" ? ["baneen", "male"] : section === "banat" ? ["banat", "female"] : [section];
+      if (!expectedDbSections.includes(subcategory.section)) return null;
     }
     return subcategory.id;
   }

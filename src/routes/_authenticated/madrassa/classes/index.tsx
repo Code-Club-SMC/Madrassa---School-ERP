@@ -55,6 +55,11 @@ type MadrassaCategory = {
   id: string;
   name: string;
   nameUrdu: string;
+  description: string;
+  descriptionUrdu: string;
+  displayOrder: number;
+  active: boolean;
+  section: string;
   subcategories: MadrassaSubcategory[];
   enrollmentCount: number;
 };
@@ -123,38 +128,24 @@ function ClassesPage() {
     }
   }, [navigate]);
 
-  const allowedCategoryNames = useMemo(() => {
-    if (gender === "male") {
-      return new Set(["Nazira", "Hifz", "Dars-e-Nizami"]);
-    }
-    return new Set(["Nazira", "Dars-e-Nizami"]);
-  }, [gender]);
-
-  const categorySectionMap = useMemo(() => {
-    const base = new Map<string, string>();
-    base.set("Nazira", "male");
-    base.set("Hifz", "male");
-    base.set("Dars-e-Nizami", "male");
-    if (gender === "female") {
-      base.set("Nazira", "female");
-      base.set("Dars-e-Nizami", "female");
-    }
-    return base;
-  }, [gender]);
-
   const visibleCategories = useMemo(() => {
-    const filtered = allCategories.filter((c) => allowedCategoryNames.has(c.name) || allowedCategoryNames.has(c.nameUrdu));
-    return filtered.map((c) => ({
-      ...c,
-      section: categorySectionMap.get(c.name) ?? gender,
-    }));
-  }, [allCategories, allowedCategoryNames, categorySectionMap, gender]);
+    return allCategories
+      .filter((c) => {
+        const dbSection = c.section === "baneen" || c.section === "male" ? "male" : c.section === "banat" || c.section === "female" ? "female" : c.section;
+        return dbSection === gender;
+      })
+      .map((c) => ({
+        ...c,
+        section: c.section === "baneen" || c.section === "male" ? "male" : c.section === "banat" || c.section === "female" ? "female" : c.section,
+      }));
+  }, [allCategories, gender]);
 
   const loadClasses = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (selectedYearId) params.set("academicYearId", selectedYearId);
+      params.set("section", gender);
       const response = await fetch(`/api/academic/madrassa/categories?${params.toString()}`, { credentials: "include" });
       if (response.status === 401 || response.status === 403) {
         navigate({ to: "/login", search: { redirect: undefined } });
@@ -163,12 +154,11 @@ function ClassesPage() {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not load classes");
       const categories = (payload.categories ?? []) as MadrassaCategory[];
-      const filtered = categories.filter((c) => allowedCategoryNames.has(c.name) || allowedCategoryNames.has(c.nameUrdu));
-      setAllCategories(filtered);
+      setAllCategories(categories);
       const defaultCategory =
-        filtered.find((item) => item.id === "dars_nizami") ??
-        filtered.find((item) => item.name.toLowerCase().includes("dars")) ??
-        filtered[0] ??
+        categories.find((item) => item.id === "dars_nizami") ??
+        categories.find((item) => item.name.toLowerCase().includes("dars")) ??
+        categories[0] ??
         null;
       setCategory(defaultCategory);
     } catch (error) {
@@ -176,7 +166,7 @@ function ClassesPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedYearId, navigate, allowedCategoryNames]);
+  }, [selectedYearId, navigate, gender]);
 
   useEffect(() => {
     void loadYears();
@@ -193,7 +183,13 @@ function ClassesPage() {
   }, [user, isLoading, navigate]);
 
   const classes = (category?.subcategories ?? []).filter((s) => {
-    const expected = categorySectionMap.get(category?.name ?? "") ?? gender;
+    const expected = category?.section
+      ? category.section === "baneen" || category.section === "male"
+        ? "male"
+        : category.section === "banat" || category.section === "female"
+          ? "female"
+          : category.section
+      : (categorySectionMap.get(category?.name ?? "") ?? gender);
     return !expected || s.section === expected;
   });
   const total = useMemo(
@@ -219,7 +215,13 @@ function ClassesPage() {
     }
 
     const selectedCategory = allCategories.find((c) => c.id === f.categoryId);
-    const section = selectedCategory ? (categorySectionMap.get(selectedCategory.name) ?? gender) : gender;
+    const section = selectedCategory
+      ? selectedCategory.section === "baneen" || selectedCategory.section === "male"
+        ? "male"
+        : selectedCategory.section === "banat" || selectedCategory.section === "female"
+          ? "female"
+          : selectedCategory.section
+      : gender;
 
     setPending(true);
     try {

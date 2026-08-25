@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  deleteMadrassaCategory,
   madrassaCategoryUpdateSchema,
   updateMadrassaCategory,
 } from "@/lib/server/academic/service";
@@ -17,6 +18,13 @@ export const Route = createFileRoute("/api/academic/madrassa/categories/$id")({
           return json({ category: await updateMadrassaCategory(request, params.id, body.data) });
         } catch (error) {
           return errorResponse(error, "Could not update madrassa category");
+        }
+      },
+      DELETE: async ({ request, params }) => {
+        try {
+          return json({ category: await deleteMadrassaCategory(request, params.id) });
+        } catch (error) {
+          return errorResponse(error, "Could not delete madrassa category");
         }
       },
     },

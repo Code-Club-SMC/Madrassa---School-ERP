@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, or } from "drizzle-orm";
 import { db } from "@/db";
 import { madrassaCategories, madrassaSubcategories } from "@/db/schema/academic";
 
@@ -35,6 +35,16 @@ export const getAdmissionSubcategories = createServerFn({ method: "GET" })
       })
       .from(madrassaSubcategories)
       .innerJoin(madrassaCategories, eq(madrassaSubcategories.categoryId, madrassaCategories.id))
-      .where(data.section ? eq(madrassaSubcategories.section, data.section) : undefined)
+      .where(
+        data.section
+          ? or(
+              eq(madrassaSubcategories.section, data.section),
+              eq(
+                madrassaSubcategories.section,
+                data.section === "male" ? "baneen" : data.section === "female" ? "banat" : data.section,
+              ),
+            )
+          : undefined,
+      )
       .orderBy(asc(madrassaSubcategories.displayOrder), asc(madrassaSubcategories.name));
   });

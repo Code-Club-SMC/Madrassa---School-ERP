@@ -266,11 +266,17 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
     .filter((category) => {
       if (!section) return true;
       if (category.section === section) return true;
-      return subcategories.some((subcategory) => subcategory.categoryId === category.id && subcategory.section === section);
+      const dbSections =
+        section === "male" ? ["male", "baneen"] : section === "female" ? ["female", "banat"] : [section];
+      return subcategories.some(
+        (subcategory) => subcategory.categoryId === category.id && dbSections.includes(subcategory.section),
+      );
     })
     .map((category) => {
+      const dbSections =
+        section === "male" ? ["male", "baneen"] : section === "female" ? ["female", "banat"] : section ? [section] : [];
       const children = subcategories
-        .filter((subcategory) => subcategory.categoryId === category.id && (!section || subcategory.section === section))
+        .filter((subcategory) => subcategory.categoryId === category.id && (!section || dbSections.includes(subcategory.section)))
         .map((subcategory) => {
           const qasmiaCount = countMap.get(`${subcategory.id}:jamia_qasmia_baneen`) ?? 0;
           const zainabCount = countMap.get(`${subcategory.id}:jamia_zainab_banat`) ?? 0;
@@ -343,6 +349,15 @@ export async function updateMadrassaCategory(
 
   if (!updated) throw new HttpError("Madrassa category not found", 404);
   return updated;
+}
+
+export async function deleteMadrassaCategory(request: Request, id: string) {
+  await requirePermission(request, "madrassa_categories", "delete");
+  await assertNoActiveMadrassaCategoryEnrollments(id);
+
+  const [deleted] = await db.delete(madrassaCategories).where(eq(madrassaCategories.id, id)).returning();
+  if (!deleted) throw new HttpError("Madrassa category not found", 404);
+  return deleted;
 }
 
 export async function createMadrassaSubcategory(

@@ -192,7 +192,13 @@ export async function listStudents(
       ? eq(studentEnrollments.madrassaSubcategoryId, query.subcategoryId)
       : undefined,
     query.section && query.system === "madrassa"
-      ? eq(madrassaSubcategories.section, query.section)
+      ? or(
+          eq(madrassaSubcategories.section, query.section),
+          eq(
+            madrassaSubcategories.section,
+            query.section === "male" ? "baneen" : query.section === "female" ? "banat" : query.section,
+          ),
+        )
       : undefined,
     isNull(studentEnrollments.endedAt),
     query.q
