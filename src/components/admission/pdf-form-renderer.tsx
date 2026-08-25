@@ -200,9 +200,11 @@ const requiredFieldsByLayout = {
 export function PdfFormRenderer({
   variant,
   isPublic = false,
+  categoryId,
 }: {
   variant: AdmissionVariant;
   isPublic?: boolean;
+  categoryId?: string;
 }) {
   const { lang } = useLanguage();
   const t = TEXT[lang];
@@ -234,7 +236,13 @@ export function PdfFormRenderer({
   });
 
   const shobaOptions: GradeSelectOption[] | null = useMemo(() => {
-    if (!variantKind || !subcategoryData?.length) return null;
+    if (!subcategoryData?.length) return null;
+    if (categoryId) {
+      return subcategoryData
+        .filter((s: AdmissionSubcategoryOption) => s.categoryId === categoryId)
+        .map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+    }
+    if (!variantKind) return null;
     const filtered = subcategoryData.filter((s: AdmissionSubcategoryOption) => {
       const label = `${s.categoryName} ${s.categoryNameUrdu}`.toLowerCase();
       return variantKind === "hifz"
@@ -242,7 +250,7 @@ export function PdfFormRenderer({
         : label.includes("nazira") || label.includes("ناظرہ") || label.includes("قاعد");
     });
     return filtered.map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
-  }, [subcategoryData, variantKind]);
+  }, [subcategoryData, variantKind, categoryId]);
 
   const setAdmissionDate = (value: string, date: Date) => {
     setForm((current) => ({

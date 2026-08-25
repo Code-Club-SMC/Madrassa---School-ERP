@@ -11,8 +11,11 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/components/language-context";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { BookLoader } from "@/components/shared/book-loader";
 
-const searchSchema = z.object({ variant: z.string().optional() });
+const searchSchema = z.object({ variant: z.string().optional(), categoryId: z.string().optional() });
 
 export const Route = createFileRoute("/_authenticated/admission/new")({
   validateSearch: searchSchema,
@@ -20,9 +23,42 @@ export const Route = createFileRoute("/_authenticated/admission/new")({
 });
 
 function NewAdmissionRoute() {
-  const { variant: variantKey } = Route.useSearch();
+  const { variant: variantKey, categoryId } = Route.useSearch();
   const { lang } = useLanguage();
-  const variant = getVariant(variantKey);
+
+  const { data: categoryData, isLoading: categoryLoading } = useQuery({
+    queryKey: ["admission-category", categoryId],
+    queryFn: async () => {
+      if (!categoryId) return null;
+      const response = await fetch(`/api/academic/madrassa/categories/${categoryId}`, { credentials: "include" });
+      if (response.status === 401 || response.status === 403) {
+        throw new Error("Unauthorized");
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not load category");
+      return payload.category as { id: string; name: string; nameUrdu: string; section: string } | null;
+    },
+    enabled: !!categoryId && !variantKey,
+  });
+
+  const resolvedVariantKey = useMemo(() => {
+    if (variantKey) return variantKey;
+    if (!categoryData) return null;
+
+    const section = categoryData.section === "baneen" || categoryData.section === "male" ? "male" : "female";
+    const name = categoryData.name.toLowerCase();
+    const nameUrdu = categoryData.nameUrdu.toLowerCase();
+
+    if (name.includes("nazira") || name.includes("qaida") || nameUrdu.includes("ناظرہ") || nameUrdu.includes("قاعدہ")) {
+      return section === "male" ? "madrassa-boys-nazira" : "madrassa-girls-nazira";
+    }
+    if (name.includes("hifz") || nameUrdu.includes("حفظ")) {
+      return "madrassa-boys-hifz";
+    }
+    return section === "male" ? "madrassa-boys-general" : "madrassa-girls-general";
+  }, [variantKey, categoryData]);
+
+  const variant = getVariant(resolvedVariantKey);
   const category = variant ? ADMISSION_CATEGORIES.find((c) => c.key === variant.category) : null;
 
   if (variant) {
@@ -33,9 +69,13 @@ function NewAdmissionRoute() {
           titleUrdu="نیا داخلہ"
           description={lang === "ur" ? (category?.descriptionUrdu ?? variant.titleUrdu) : variant.titleEnglish}
         />
-        <PdfFormRenderer variant={variant} />
+        <PdfFormRenderer variant={variant} categoryId={categoryId ?? undefined} />
       </>
     );
+  }
+
+  if (categoryLoading) {
+    return <BookLoader text="Loading..." className="h-96" />;
   }
 
   return (

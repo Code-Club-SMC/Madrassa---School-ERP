@@ -189,7 +189,7 @@ function ClassesPage() {
         : category.section === "banat" || category.section === "female"
           ? "female"
           : category.section
-      : (categorySectionMap.get(category?.name ?? "") ?? gender);
+      : gender;
     return !expected || s.section === expected;
   });
   const total = useMemo(
@@ -256,7 +256,7 @@ function ClassesPage() {
     } finally {
       setPending(false);
     }
-  }, [f, navigate, loadClasses, t, allCategories, categorySectionMap, gender]);
+  }, [f, navigate, loadClasses, t, allCategories, gender]);
 
   const confirmDelete = async () => {
     if (!deleteTarget || !category) return;
@@ -329,7 +329,7 @@ function ClassesPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
         {visibleCategories.map((c) => {
-          const expectedSection = categorySectionMap.get(c.name) ?? gender;
+          const expectedSection = c.section === "baneen" || c.section === "male" ? "male" : c.section === "banat" || c.section === "female" ? "female" : c.section;
           const categoryClasses = c.subcategories.filter((s) => !expectedSection || s.section === expectedSection);
           const classCount = categoryClasses.length;
           const studentCount = categoryClasses.reduce((sum, item) => sum + item.enrollmentCount, 0);

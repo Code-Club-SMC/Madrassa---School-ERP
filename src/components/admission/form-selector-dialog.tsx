@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import {
@@ -18,6 +18,7 @@ import {
   type AdmissionVariant,
 } from "@/lib/admission-variants";
 import { useLanguage } from "@/components/language-context";
+import { toast } from "sonner";
 
 const TEXT = {
   ur: {
@@ -27,6 +28,8 @@ const TEXT = {
     madrassa: "مدرسہ",
     school: "اسکول",
     back: "واپس",
+    loadingCategories: "زمرے لوڈ ہو رہے ہیں...",
+    noCategories: "کوئی زمرہ نہیں ملا",
   },
   en: {
     selectDepartment: "Choose the section",
@@ -35,7 +38,19 @@ const TEXT = {
     madrassa: "Madrassa",
     school: "School",
     back: "Back",
+    loadingCategories: "Loading categories...",
+    noCategories: "No categories found",
   },
+};
+
+type CategoryOption = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  description: string;
+  descriptionUrdu: string;
+  active: boolean;
+  section: string;
 };
 
 export function AdmissionFormSelectorDialog({
@@ -49,10 +64,15 @@ export function AdmissionFormSelectorDialog({
   const t = TEXT[lang];
   const navigate = useNavigate();
   const [selectedSection, setSelectedSection] = useState<{ category: AdmissionCategoryKey; section: AdmissionSectionKey } | null>(null);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
 
   const close = (v: boolean) => {
     onOpenChange(v);
-    if (!v) setSelectedSection(null);
+    if (!v) {
+      setSelectedSection(null);
+      setCategories([]);
+    }
   };
 
   const institutionVariants = useMemo(() => {
@@ -83,6 +103,42 @@ export function AdmissionFormSelectorDialog({
     const c = ADMISSION_CATEGORIES.find((c) => c.key === key);
     return c ? (lang === "ur" ? c.labelUrdu : c.labelEnglish) : key;
   };
+
+  useEffect(() => {
+    if (!selectedSection || selectedSection.section !== "madrassa") {
+      setCategories([]);
+      return;
+    }
+
+    let cancelled = false;
+    setCategoriesLoading(true);
+    fetch(`/api/academic/madrassa/categories?section=${selectedSection.category}`, { credentials: "include" })
+      .then(async (response) => {
+        if (response.status === 401 || response.status === 403) {
+          navigate({ to: "/login", search: { redirect: undefined } });
+          return;
+        }
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Could not load categories");
+        if (!cancelled) {
+          setCategories((payload.categories ?? []) as CategoryOption[]);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          toast.error(error instanceof Error ? error.message : "Could not load categories");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setCategoriesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedSection, navigate]);
 
   return (
     <Dialog open={open} onOpenChange={close}>
@@ -148,6 +204,49 @@ export function AdmissionFormSelectorDialog({
                 </div>
               );
             })}
+          </div>
+        ) : selectedSection.section === "madrassa" ? (
+          <div className="space-y-2 mt-2">
+            {categoriesLoading && (
+              <p className={`text-sm text-muted-foreground text-center py-4 ${lang === "ur" ? "font-urdu" : ""}`}>{t.loadingCategories}</p>
+            )}
+            {!categoriesLoading && categories.length === 0 && (
+              <p className={`text-sm text-muted-foreground text-center py-4 ${lang === "ur" ? "font-urdu" : ""}`}>{t.noCategories}</p>
+            )}
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate({ to: "/admission/new", search: { categoryId: c.id } as never });
+                }}
+                className={cn(
+                  "w-full flex items-center justify-between gap-3 rounded-xl border border-border p-4 transition-all",
+                  lang === "ur" ? "text-end" : "text-start",
+                  "hover:border-primary/60 hover:bg-primary/5",
+                )}
+              >
+                <ChevronLeft className="h-5 w-5 text-muted-foreground shrink-0 rtl:rotate-180" />
+                <div className="min-w-0 flex-1">
+                  <p className={`text-base font-semibold leading-loose ${lang === "ur" ? "text-end font-urdu" : "text-start font-heading"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                    {lang === "ur" ? c.nameUrdu : c.name}
+                  </p>
+                  {c.description && (
+                    <p className={`text-sm text-muted-foreground leading-loose ${lang === "ur" ? "text-end font-urdu" : "text-start"}`} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                      {lang === "ur" ? c.descriptionUrdu : c.description}
+                    </p>
+                  )}
+                </div>
+              </button>
+            ))}
+            <div className="pt-2">
+              <Button variant="ghost" size="sm" onClick={() => { setSelectedSection(null); setCategories([]); }} className="gap-1">
+                <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
+                {lang === "ur" && <span className="font-urdu">{t.back}</span>}
+                {lang === "en" && t.back}
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-2 mt-2">
