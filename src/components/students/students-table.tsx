@@ -75,7 +75,6 @@ export function StudentsTable({ system, section }: Props) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<StudentListItem | null>(null);
-  const [statusFor, setStatusFor] = useState<StudentListItem | null>(null);
   const [schoolClasses, setSchoolClasses] = useState<SchoolClassOption[]>([]);
   const [madrassaCategories, setMadrassaCategories] = useState<MadrassaCategoryOption[]>([]);
 
@@ -241,122 +240,97 @@ export function StudentsTable({ system, section }: Props) {
         <p className="font-urdu text-sm">کل: {total}</p>
       </div>
 
-      <div className="rounded-lg border bg-card overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead className="w-[70px]">Roll #</TableHead>
-              <TableHead>Student — طالبِ علم</TableHead>
-              <TableHead className="hidden md:table-cell">Father — والد</TableHead>
-              <TableHead className="hidden md:table-cell">
-                {system === "madrassa" ? "Darja" : "Class"}
-              </TableHead>
-              <TableHead className="w-[60px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-                  Loading students...
-                </TableCell>
-              </TableRow>
-            ) : students.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="py-12">
-                  <EmptyState
-                    icon={Users2}
-                    heading="No students found"
-                    headingUrdu="کوئی طالبِ علم نہیں ملا"
-                    description="Accepted admissions create student records. Adjust filters or start a new admission."
-                    action={{
-                      label: "New Admission",
-                      onClick: () => void navigate({ to: "/admission/new" }),
-                    }}
-                  />
-                </TableCell>
-              </TableRow>
-            ) : (
-              students.map((student) => (
-                <TableRow
-                  key={student.id}
-                  className="cursor-pointer"
-                  onClick={() => setSelected(student)}
-                >
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {student.rollNo}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback
-                          className={cn(
-                            "text-xs font-bold",
-                            student.gender === "female"
-                              ? "bg-pink-500/10 text-pink-700 dark:text-pink-300"
-                              : "bg-primary/10 text-primary",
-                          )}
-                        >
-                          {initials(student.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="font-urdu text-sm leading-tight truncate">
-                          {student.nameUrdu}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">{student.name}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex flex-col leading-tight">
-                      <span className="font-urdu text-sm">{student.fatherNameUrdu || student.fatherName}</span>
-                      <span className="text-[11px] text-muted-foreground">
-                        {student.fatherName}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <div className="flex flex-col leading-tight">
-                      <span className="font-urdu text-sm">{student.groupLabel}</span>
-                      <span className="text-[11px] text-muted-foreground">
-                        {student.groupEnglish}
-                        {student.section ? ` · ${student.section}` : ""}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell onClick={(event) => event.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem onClick={() => setSelected(student)}>
-                          <Eye className="h-3.5 w-3.5 me-2" /> View details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link to="/students/$id" params={{ id: student.id }}>
-                            <Eye className="h-3.5 w-3.5 me-2" /> Open profile
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setStatusFor(student)}>
-                          <UserCog className="h-3.5 w-3.5 me-2" /> Update status
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setStatusFor(student)}>
-                          <LogOut className="h-3.5 w-3.5 me-2" /> Withdraw / Exit
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+<div className="rounded-lg border bg-card overflow-hidden">
+  <Table className="table-fixed w-full">
+    <TableHeader>
+      <TableRow className="bg-muted/40 hover:bg-muted/40">
+        <TableHead className="w-[15%] min-w-[110px]">Roll #</TableHead>
+        <TableHead className="w-[40%]">Student — طالبِ علم</TableHead>
+        <TableHead className="hidden md:table-cell w-[25%]">Father — والد</TableHead>
+        <TableHead className="hidden md:table-cell w-[20%]">
+          {system === "madrassa" ? "Darja" : "Class"}
+        </TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {loading ? (
+        <TableRow>
+          <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
+            Loading students...
+          </TableCell>
+        </TableRow>
+      ) : students.length === 0 ? (
+        <TableRow>
+          <TableCell colSpan={4} className="py-12">
+            <EmptyState
+              icon={Users2}
+              heading="No students found"
+              headingUrdu="کوئی طالبِ علم نہیں ملا"
+              description="Accepted admissions create student records. Adjust filters or start a new admission."
+              action={{
+                label: "New Admission",
+                onClick: () => void navigate({ to: "/admission/new" }),
+              }}
+            />
+          </TableCell>
+        </TableRow>
+      ) : (
+        students.map((student) => (
+          <TableRow
+            key={student.id}
+            className="cursor-pointer"
+            onClick={() => setSelected(student)}
+          >
+            <TableCell className="font-mono text-sm font-medium whitespace-nowrap">
+              {student.rollNo}
+            </TableCell>
+            <TableCell>
+              <div className="flex items-center gap-3 min-w-0">
+                <Avatar className="h-9 w-9 shrink-0">
+                  <AvatarFallback
+                    className={cn(
+                      "text-xs font-bold",
+                      student.gender === "female"
+                        ? "bg-pink-500/10 text-pink-700 dark:text-pink-300"
+                        : "bg-primary/10 text-primary",
+                    )}
+                  >
+                    {initials(student.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="font-urdu text-sm leading-tight truncate">
+                    {student.nameUrdu}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">{student.name}</p>
+                </div>
+              </div>
+            </TableCell>
+            <TableCell className="hidden md:table-cell">
+              <div className="flex flex-col leading-tight min-w-0">
+                <span className="font-urdu text-sm truncate">
+                  {student.fatherNameUrdu || student.fatherName}
+                </span>
+                <span className="text-[11px] text-muted-foreground truncate">
+                  {student.fatherName}
+                </span>
+              </div>
+            </TableCell>
+            <TableCell className="hidden md:table-cell">
+              <div className="flex flex-col leading-tight min-w-0">
+                <span className="font-urdu text-sm truncate">{student.groupLabel}</span>
+                <span className="text-[11px] text-muted-foreground truncate">
+                  {student.groupEnglish}
+                  {student.section ? ` · ${student.section}` : ""}
+                </span>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))
+      )}
+    </TableBody>
+  </Table>
+</div>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
@@ -385,14 +359,6 @@ export function StudentsTable({ system, section }: Props) {
       )}
 
       <StudentDetailsSheet student={selected} onClose={() => setSelected(null)} />
-      <StatusDialog
-        student={statusFor}
-        onClose={() => setStatusFor(null)}
-        onSaved={async () => {
-          setStatusFor(null);
-          await loadStudents();
-        }}
-      />
     </div>
   );
 }

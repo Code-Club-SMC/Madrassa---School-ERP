@@ -241,6 +241,10 @@ export async function listStudents(
         and(eq(studentGuardians.studentId, students.id), eq(studentGuardians.isPrimary, true)),
       )
       .leftJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
+      .leftJoin(
+        madrassaSubcategories,
+        eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
+      )
       .where(where),
   ]);
 
