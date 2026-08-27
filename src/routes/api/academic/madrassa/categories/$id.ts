@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   deleteMadrassaCategory,
+  getMadrassaCategory,
   madrassaCategoryUpdateSchema,
   updateMadrassaCategory,
 } from "@/lib/server/academic/service";
@@ -10,6 +11,13 @@ import { json, parseJsonBody } from "@/lib/server/super-admin";
 export const Route = createFileRoute("/api/academic/madrassa/categories/$id")({
   server: {
     handlers: {
+      GET: async ({ request, params }) => {
+        try {
+          return json({ category: await getMadrassaCategory(request, params.id) });
+        } catch (error) {
+          return errorResponse(error, "Could not load madrassa category");
+        }
+      },
       PATCH: async ({ request, params }) => {
         const body = await parseJsonBody(request, madrassaCategoryUpdateSchema);
         if (!body.ok) return body.response;

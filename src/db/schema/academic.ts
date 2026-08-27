@@ -110,6 +110,7 @@ export const madrassaCategories = pgTable(
     displayOrder: integer("display_order").notNull(),
     active: boolean("active").default(true).notNull(),
     section: text("section").notNull().default("male"),
+    formVariantKeys: text("form_variant_keys").array().notNull().default([]),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

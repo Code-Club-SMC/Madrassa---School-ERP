@@ -22,10 +22,13 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/language-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useSystem } from "@/components/system-context";
+import { ADMISSION_VARIANTS } from "@/lib/admission-variants";
 
 export const Route = createFileRoute("/_authenticated/madrassa/categories/")({
   component: CategoriesPage,
@@ -40,6 +43,7 @@ type MadrassaCategory = {
   displayOrder: number;
   active: boolean;
   section: string;
+  formVariantKeys: string[];
   subcategories?: { id: string }[];
 };
 
@@ -49,6 +53,7 @@ const emptyForm = {
   description: "",
   descriptionUrdu: "",
   active: true,
+  formVariantKeys: [] as string[],
 };
 
 function CategoriesPage() {
@@ -113,6 +118,7 @@ function CategoriesPage() {
       description: category.description,
       descriptionUrdu: category.descriptionUrdu,
       active: category.active,
+      formVariantKeys: category.formVariantKeys ?? [],
     });
     setOpen(true);
   }, []);
@@ -132,6 +138,7 @@ function CategoriesPage() {
         descriptionUrdu: f.descriptionUrdu.trim() || undefined,
         section: gender,
         active: f.active,
+        formVariantKeys: f.formVariantKeys,
       };
 
       if (editing) {
@@ -332,6 +339,33 @@ function CategoriesPage() {
               placeholder={t("Description", "تفصیل")}
             />
           </BilingualLabel>
+          <div className="grid gap-2">
+            <Label className="text-sm">{t("Admission Forms", "داخلہ فارمز")}</Label>
+            <p className="text-xs text-muted-foreground">{t("Select forms available for this category", "اس زمرے کے لیے دستیاب فارمز منتخب کریں")}</p>
+            <ScrollArea className="h-40 rounded-md border p-2">
+              <div className="grid gap-2">
+                {ADMISSION_VARIANTS.filter((v) => v.category === gender && v.section === "madrassa").map((variant) => (
+                  <label key={variant.key} className="flex items-start gap-2 rounded-md border p-2 hover:bg-muted/50 cursor-pointer">
+                    <Checkbox
+                      checked={f.formVariantKeys.includes(variant.key)}
+                      onCheckedChange={(checked) => {
+                        setF((prev) => ({
+                          ...prev,
+                          formVariantKeys: checked
+                            ? [...prev.formVariantKeys, variant.key]
+                            : prev.formVariantKeys.filter((key) => key !== variant.key),
+                        }));
+                      }}
+                    />
+                    <div className="grid gap-0.5">
+                      <span className="text-sm font-medium leading-tight font-urdu">{variant.titleUrdu}</span>
+                      <span className="text-[11px] text-muted-foreground leading-tight">{variant.titleEnglish}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
           <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
             <div className="grid gap-1">
               <Label className="text-sm">{t("Active", "فعال")}</Label>

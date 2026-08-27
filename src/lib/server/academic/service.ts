@@ -50,6 +50,7 @@ export const madrassaCategoryInputSchema = z.object({
   descriptionUrdu: z.string().trim().optional(),
   section: z.enum(["male", "female"]).default("male"),
   active: z.boolean().optional(),
+  formVariantKeys: z.array(z.string().trim().min(1)).default([]),
 });
 
 export const madrassaCategoryUpdateSchema = madrassaCategoryInputSchema.partial().refine(hasAnyKey, {
@@ -305,6 +306,14 @@ export async function listMadrassaSubcategories(request: Request) {
   return db.select().from(madrassaSubcategories).orderBy(asc(madrassaSubcategories.displayOrder), asc(madrassaSubcategories.name));
 }
 
+export async function getMadrassaCategory(request: Request, id: string) {
+  await requirePermission(request, "madrassa_categories", "view");
+
+  const [category] = await db.select().from(madrassaCategories).where(eq(madrassaCategories.id, id));
+  if (!category) throw new HttpError("Madrassa category not found", 404);
+  return category;
+}
+
 export async function createMadrassaCategory(request: Request, input: z.infer<typeof madrassaCategoryInputSchema>) {
   await requirePermission(request, "madrassa_categories", "create");
   await ensureAcademicSeeded();
@@ -320,6 +329,7 @@ export async function createMadrassaCategory(request: Request, input: z.infer<ty
       displayOrder: await nextMadrassaCategoryOrder(),
       section: input.section ?? "male",
       active: input.active ?? true,
+      formVariantKeys: input.formVariantKeys ?? [],
     })
     .returning();
 
@@ -342,6 +352,7 @@ export async function updateMadrassaCategory(
     .set({
       ...input,
       section: input.section ?? undefined,
+      formVariantKeys: input.formVariantKeys ?? undefined,
       updatedAt: new Date(),
     })
     .where(eq(madrassaCategories.id, id))

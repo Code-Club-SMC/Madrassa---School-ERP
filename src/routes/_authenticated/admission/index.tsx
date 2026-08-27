@@ -1,13 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
 import { UserPlus, Inbox, ChevronLeft, CalendarClock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/shared/page-header";
 import { applications } from "@/mock";
-import { AdmissionFormSelectorDialog } from "@/components/admission/form-selector-dialog";
 import { useLanguage } from "@/components/language-context";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/admission/")({
   component: AdmissionHub,
@@ -15,8 +14,13 @@ export const Route = createFileRoute("/_authenticated/admission/")({
 
 function AdmissionHub() {
   const { lang } = useLanguage();
-  const [selectorOpen, setSelectorOpen] = useState(false);
+  const navigate = useNavigate();
   const pendingCount = applications.filter((a) => a.status === "pending").length;
+
+  const startAdmission = () => {
+    navigate({ to: "/admission/new" });
+  };
+
   return (
     <div>
       <PageHeader
@@ -38,7 +42,7 @@ function AdmissionHub() {
           <p className={`text-sm text-muted-foreground leading-relaxed mb-6 ${lang === "ur" ? "font-urdu" : ""}`}>
             {lang === "ur" ? "وائل ان ادمن۔ Suitable for walk-in admissions and admin-led intake." : "Manually enroll a new student through the five-step admission flow. Suitable for walk-in admissions and admin-led intake."}
           </p>
-          <Button className="w-full" onClick={() => setSelectorOpen(true)}>
+          <Button className="w-full" onClick={startAdmission}>
             {lang === "ur" && <span className="font-urdu">داخلہ شروع کریں</span>}
             {lang === "en" && "Start Admission"}
             <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
@@ -57,7 +61,7 @@ function AdmissionHub() {
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="font-heading text-xl font-semibold">{lang === "ur" ? "آن لائن درخواستیں" : "Application Queue"}</h2>
-              <p className={`text-base text-muted-foreground ${lang === "ur" ? "font-urdu" : ""}`}>{lang === "ur" ? "آن لائن درخواستیں" : "Review online admission applications"}</p>
+              <p className={`text-base text-muted-foreground ${lang === "ur" ? "font-urdu" : ""}`}>{lang === "ur" ? "آن لائن داخلہ درخواستیں" : "Review online admission applications"}</p>
             </div>
           </div>
           <p className={`text-sm text-muted-foreground leading-relaxed mb-6 ${lang === "ur" ? "font-urdu" : ""}`}>
@@ -92,7 +96,6 @@ function AdmissionHub() {
           </Button>
         </Card>
       </div>
-      <AdmissionFormSelectorDialog open={selectorOpen} onOpenChange={setSelectorOpen} />
     </div>
   );
 }
