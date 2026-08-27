@@ -12,6 +12,7 @@ import {
   students,
 } from "@/db/schema/students";
 import { user as authUser } from "@/db/schema/auth";
+import { feeCharges } from "@/db/schema/finance";
 import type { AcademicYearSystem } from "@/db/schema/academic-years";
 import { auth } from "@/lib/auth";
 import { generateSecurePassword } from "@/lib/generate-password";
@@ -427,6 +428,39 @@ export async function acceptAdmissionApplication(
         admissionNo,
         rollNo,
       });
+
+      if (target.madrassaSubcategoryId) {
+        const [subcategory] = await tx
+          .select({ fee: madrassaSubcategories.fee })
+          .from(madrassaSubcategories)
+          .where(eq(madrassaSubcategories.id, target.madrassaSubcategoryId))
+          .limit(1);
+
+        if (subcategory?.fee && subcategory.fee > 0) {
+          const admissionFeeChargeId = randomUUID();
+          await tx.insert(feeCharges).values({
+            id: admissionFeeChargeId,
+            studentId,
+            enrollmentId,
+            institutionId: target.institutionId,
+            programId: target.programId,
+            madrassaSubcategoryId: target.madrassaSubcategoryId,
+            type: "admission",
+            label: "Admission Fee",
+            period: activeAcademicYear.name,
+            amountPaisa: subcategory.fee,
+            dueDate: new Date(),
+            status: "open",
+            notes: "Auto-generated from admission",
+            metadata: {
+              source: "admission",
+              applicationId: id,
+              enrollmentId,
+              rollNo,
+            },
+          });
+        }
+      }
 
       const resolvedGuardianId = await upsertGuardianForStudent(tx, {
         existingGuardianId: guardianId,

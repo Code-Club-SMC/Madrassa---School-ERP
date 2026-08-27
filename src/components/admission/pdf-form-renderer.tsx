@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState, type ChangeEvent, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/components/language-context";
@@ -275,12 +275,87 @@ export function PdfFormRenderer({
     }
   };
 
+  const usedSampleIndices = useRef<{ male: Set<number>; female: Set<number> }>({ male: new Set(), female: new Set() });
+
+  const samplePools = {
+    male: [
+      { name: "احمد رضا", father: "محمد رضا", dob: "2015-03-10", dobWords: "دس مارچ دو ہزار پندرہ", guardian: "محمد رضا", guardianFather: "عبدالرحمن", phone: "0313-4567890", officePhone: "0925-412345", email: "ahmed.parent@example.com", cnic: "35202-1000002-3", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "248" },
+      { name: "علی حسن", father: "حسن علی", dob: "2014-07-22", dobWords: "بائیس جولائی دو ہزار چودہ", guardian: "حسن علی", guardianFather: "علی محمود", phone: "0314-5678901", officePhone: "0925-423456", email: "ali.parent@example.com", cnic: "35202-1000003-5", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "249" },
+      { name: "بلال احمد", father: "احمد خان", dob: "2016-01-15", dobWords: "پندرہ جنوری دو ہزار سولہ", guardian: "احمد خان", guardianFather: "خان محمود", phone: "0315-6789012", officePhone: "0925-434567", email: "bilal.parent@example.com", cnic: "35202-1000004-7", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "250" },
+      { name: "حمزہ ملک", father: "ملک اقبال", dob: "2015-11-08", dobWords: "اٹھ نومبر دو ہزار پندرہ", guardian: "ملک اقبال", guardianFather: "اقبال حسین", phone: "0316-7890123", officePhone: "0925-445678", email: "hamza.parent@example.com", cnic: "35202-1000005-9", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "251" },
+      { name: "عثمان طارق", father: "طارق محمود", dob: "2014-05-19", dobWords: "انیس مئی دو ہزار چودہ", guardian: "طارق محمود", guardianFather: "محمود علی", phone: "0317-8901234", officePhone: "0925-456789", email: "usman.parent@example.com", cnic: "35202-1000006-1", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "252" },
+      { name: " zain العابدین", father: "عابدین شاہ", dob: "2016-09-30", dobWords: "تیرتیں ستمبر دو ہزار سولہ", guardian: "عابدین شاہ", guardianFather: "شاہ محمود", phone: "0318-9012345", officePhone: "0925-467890", email: "zain.parent@example.com", cnic: "35202-1000007-3", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "253" },
+      { name: "عبداللہ صدique", father: "صدique احمد", dob: "2013-12-05", dobWords: "پانچ دسمبر دو ہزار تیرہ", guardian: "صدique احمد", guardianFather: "احمد حسین", phone: "0319-0123456", officePhone: "0925-478901", email: "abdullah.parent@example.com", cnic: "35202-2000001-1", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "254" },
+      { name: "فہد نواز", father: "نواز شریف", dob: "2012-08-14", dobWords: "چودہ اگست دو ہزار بارہ", guardian: "نواز شریف", guardianFather: "شریف علی", phone: "0320-1234567", officePhone: "0925-489012", email: "fahad.parent@example.com", cnic: "35202-2000002-3", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "255" },
+      { name: "عمران خلیل", father: "خلیل الرحمٰن", dob: "2013-04-21", dobWords: "اکتیس اپریل دو ہزار تیرہ", guardian: "خلیل الرحمٰن", guardianFather: "الرحمٰن غلام", phone: "0321-2345678", officePhone: "0925-490123", email: "imran.parent@example.com", cnic: "35202-2000003-5", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "256" },
+      { name: "سعد الرحمٰن", father: "رحمٰن غلام", dob: "2012-06-17", dobWords: "سترھ جون دو ہزار بارہ", guardian: "رحمٰن غلام", guardianFather: "غلام حسین", phone: "0322-3456789", officePhone: "0925-501234", email: "saad.parent@example.com", cnic: "35202-2000004-7", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "257" },
+    ],
+    female: [
+      { name: "فاطمہ زہرا", father: "حسین علی", dob: "2014-02-14", dobWords: "چودہ فروری دو ہزار چودہ", guardian: "حسین علی", guardianFather: "علی رضا", phone: "0322-3456789", officePhone: "0925-512345", email: "fatima.parent@example.com", cnic: "35202-3000001-1", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "258" },
+      { name: "عائشہ بکر", father: "بکر احمد", dob: "2015-06-20", dobWords: "بیس جون دو ہزار پندرہ", guardian: "بکر احمد", guardianFather: "احمد علی", phone: "0323-4567890", officePhone: "0925-523456", email: "aisha.parent@example.com", cnic: "35202-3000002-3", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "259" },
+      { name: "مریم اقبال", father: "اقبال حسین", dob: "2013-09-05", dobWords: "پانچ ستمبر دو ہزار تیرہ", guardian: "اقبال حسین", guardianFather: "حسین احمد", phone: "0324-5678901", officePhone: "0925-534567", email: "maryam.parent@example.com", cnic: "35202-3000003-5", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "260" },
+      { name: "خدیجہ فاطمہ", father: "فاروق احمد", dob: "2016-12-01", dobWords: "پہلا دسمبر دو ہزار چودہ", guardian: "فاروق احمد", guardianFather: "احمد خان", phone: "0325-6789012", officePhone: "0925-545678", email: "khadija.parent@example.com", cnic: "35202-3000004-7", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "261" },
+      { name: "زینب اقبال", father: "اقبال محمود", dob: "2014-08-15", dobWords: "پندرہ اگست دو ہزار چودہ", guardian: "اقبال محمود", guardianFather: "محمود علی", phone: "0326-7890123", officePhone: "0925-556789", email: "zainab.parent@example.com", cnic: "35202-3000005-9", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "262" },
+      { name: "حواء محمد", father: "محمد عمر", dob: "2015-04-10", dobWords: "دس اپریل دو ہزار پندرہ", guardian: "محمد عمر", guardianFather: "عمر فاروق", phone: "0327-8901234", officePhone: "0925-567890", email: "hawwa.parent@example.com", cnic: "35202-3000006-1", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "263" },
+      { name: "سارہ خان", father: "خان محمد", dob: "2013-11-25", dobWords: "پچیس نومبر دو ہزار تیرہ", guardian: "خان محمد", guardianFather: "محammad Akram", phone: "0328-9012345", officePhone: "0925-578901", email: "sarah.parent@example.com", cnic: "35202-4000001-3", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "264" },
+      { name: "عمرہ فاطمہ", father: "فاطمہ بی بی", dob: "2016-07-08", dobWords: "آٹھ جولائی دو ہزار چودہ", guardian: "فاطمہ بی بی", guardianFather: "بی بی محبوبہ", phone: "0329-0123456", officePhone: "0925-589012", email: "ummu.parent@example.com", cnic: "35202-4000002-5", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "265" },
+      { name: "رقیمہ بلال", father: "بلال ثاقب", dob: "2014-01-30", dobWords: "تیرتیں جنوری دو ہزار چودہ", guardian: "بلال ثاقب", guardianFather: "ثاقب احمد", phone: "0330-1234567", officePhone: "0925-590123", email: "raqeema.parent@example.com", cnic: "35202-4000003-7", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "266" },
+      { name: "نرگس بانو", father: "بانو بی بی", dob: "2015-10-12", dobWords: "بارہ اکتوبر دو ہزار پندرہ", guardian: "بانو بی بی", guardianFather: "بی بی فاطمہ", phone: "0331-2345678", officePhone: "0925-601234", email: "nargis.parent@example.com", cnic: "35202-4000004-9", village: "لاہور", postOffice: "لاہور", tehsil: "لاہور", district: "لاہور", fullAddress: "لاہور، پاکستان", prevMadrassa: "مدرسہ تعلیم القرآن، لاہور", prevClass: "ناظرہ", prevMarks: "410/500", prevGrade: "ممتاز", prevRoll: "267" },
+    ],
+  };
+
   const fillSampleData = () => {
+    const isFemale = variant.key.startsWith("madrassa-girls") || variant.key.startsWith("school-girls");
+    const poolKey = isFemale ? "female" : "male";
+    const pool = samplePools[poolKey];
+    const used = usedSampleIndices.current[poolKey];
+
+    let index: number;
+    if (used.size >= pool.length) {
+      used.clear();
+      index = Math.floor(Math.random() * pool.length);
+    } else {
+      const available = pool.map((_, i) => i).filter((i) => !used.has(i));
+      index = available[Math.floor(Math.random() * available.length)];
+    }
+    used.add(index);
+    const person = pool[index];
+
     const sample = buildAdmissionSampleData(variant);
-    const emptyEntries = Object.entries(sample).filter(([key]) => !form[key]?.trim());
+    const randomSample: Record<string, string> = {
+      ...sample,
+      name: person.name,
+      father: person.father,
+      guardian_name: person.guardian,
+      guardian_father: person.guardianFather,
+      guardian_phone_home: person.phone,
+      guardian_phone_office: person.officePhone,
+      guardian_email: person.email,
+      cnic: person.cnic,
+      curr_address: person.fullAddress,
+      perm_address: person.fullAddress,
+      dob: person.dob,
+      dob_digits: person.dob,
+      dob_words: person.dobWords,
+      curr_village: person.village,
+      curr_po: person.postOffice,
+      curr_tehsil: person.tehsil,
+      curr_district: person.district,
+      perm_village: person.village,
+      perm_po: person.postOffice,
+      perm_tehsil: person.tehsil,
+      perm_district: person.district,
+      prev_madrassa: person.prevMadrassa,
+      prev_class: person.prevClass,
+      prev_marks: person.prevMarks,
+      prev_grade: person.prevGrade,
+      prev_roll: person.prevRoll,
+    };
+
+    const emptyEntries = Object.entries(randomSample).filter(([key]) => !form[key]?.trim());
 
     if (emptyEntries.length === 0) {
-      toast.info("تمام خانے پہلے سے بھرے ہوئے ہیں");
+      toast.info("تمام خانوے پہلے سے بھرے ہوئے ہیں");
       return;
     }
 

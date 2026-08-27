@@ -19,8 +19,14 @@ export type FeeStudent = {
   rollNo: string;
   admissionNo: string;
   system: FeeSystem;
+  institutionId: string;
   institutionName: string;
   institutionNameUrdu: string;
+  programId: string;
+  classId?: string;
+  subcategoryId?: string;
+  categoryId?: string;
+  categoryName?: string;
   groupLabel: string | null;
   guardianName: string | null;
   guardianPhone: string | null;

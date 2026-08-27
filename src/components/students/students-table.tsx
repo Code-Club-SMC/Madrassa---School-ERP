@@ -7,6 +7,7 @@ import {
   LogOut,
   MoreHorizontal,
   Search,
+  Trash2,
   UserCog,
   Users2,
 } from "lucide-react";
@@ -75,6 +76,8 @@ export function StudentsTable({ system, section }: Props) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<StudentListItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<StudentListItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [schoolClasses, setSchoolClasses] = useState<SchoolClassOption[]>([]);
   const [madrassaCategories, setMadrassaCategories] = useState<MadrassaCategoryOption[]>([]);
 
@@ -137,6 +140,26 @@ export function StudentsTable({ system, section }: Props) {
   useEffect(() => {
     void loadStudents();
   }, [loadStudents]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/students/${deleteTarget.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not delete student");
+      toast.success(`${deleteTarget.name} deleted successfully`);
+      setDeleteTarget(null);
+      await loadStudents();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete student");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const groupOptions = useMemo(() => {
@@ -242,16 +265,17 @@ export function StudentsTable({ system, section }: Props) {
 
 <div className="rounded-lg border bg-card overflow-hidden">
   <Table className="table-fixed w-full">
-    <TableHeader>
-      <TableRow className="bg-muted/40 hover:bg-muted/40">
-        <TableHead className="w-[15%] min-w-[110px]">Roll #</TableHead>
-        <TableHead className="w-[40%]">Student — طالبِ علم</TableHead>
-        <TableHead className="hidden md:table-cell w-[25%]">Father — والد</TableHead>
-        <TableHead className="hidden md:table-cell w-[20%]">
-          {system === "madrassa" ? "Darja" : "Class"}
-        </TableHead>
-      </TableRow>
-    </TableHeader>
+  <TableHeader>
+    <TableRow className="bg-muted/40 hover:bg-muted/40">
+      <TableHead className="w-[15%] min-w-[110px]">Roll #</TableHead>
+      <TableHead className="w-[40%]">Student — طالبِ علم</TableHead>
+      <TableHead className="hidden md:table-cell w-[25%]">Father — والد</TableHead>
+      <TableHead className="hidden md:table-cell w-[20%]">
+        {system === "madrassa" ? "Darja" : "Class"}
+      </TableHead>
+      <TableHead className="w-[50px]">Actions</TableHead>
+    </TableRow>
+  </TableHeader>
     <TableBody>
       {loading ? (
         <TableRow>
@@ -324,6 +348,29 @@ export function StudentsTable({ system, section }: Props) {
                   {student.section ? ` · ${student.section}` : ""}
                 </span>
               </div>
+            </TableCell>
+            <TableCell className="text-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setSelected(student)}>
+                    <Eye className="h-4 w-4 me-2" />
+                    View Details
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setDeleteTarget(student)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 me-2" />
+                    Delete Student
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </TableCell>
           </TableRow>
         ))

@@ -56,7 +56,8 @@ export function StudentDetailsSheet({ student, onClose }: Props) {
           <Section title="Academic" titleUrdu="تعلیمی">
             <Row
               icon={IdCard}
-              label={student.system === "madrassa" ? "Darja" : "Class"}
+              label={student.system === "madrassa" ? "Class" : "Class"}
+              labelUrdu={student.system === "madrassa" ? "درجہ" : undefined}
               value={
                 <>
                   <span className="font-urdu">{student.groupLabel}</span>
@@ -150,17 +151,22 @@ function Section({
 function Row({
   icon: Icon,
   label,
+  labelUrdu,
   value,
 }: {
   icon: typeof Phone;
   label: string;
+  labelUrdu?: string;
   value: React.ReactNode;
 }) {
   return (
     <div className="flex items-start gap-3 text-sm">
       <Icon className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
       <div className="flex-1 min-w-0 flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-xs text-muted-foreground">{label}</span>
+        <span className="text-xs text-muted-foreground">
+          {label}
+          {labelUrdu && <span className="ms-2 font-urdu">{labelUrdu}</span>}
+        </span>
         <span className="text-sm text-foreground text-end break-words">{value}</span>
       </div>
     </div>

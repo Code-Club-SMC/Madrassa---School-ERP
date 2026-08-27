@@ -20,9 +20,22 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return payload as T;
 }
 
-export function listFeeStudents(system: FeeSystem, q: string) {
+export function listFeeStudents(system: FeeSystem, q: string, filters?: {
+  institutionId?: string;
+  programId?: string;
+  classId?: string;
+  subcategoryId?: string;
+  categoryId?: string;
+  status?: string;
+}) {
   const params = new URLSearchParams({ system });
   if (q.trim()) params.set("q", q.trim());
+  if (filters?.institutionId) params.set("institutionId", filters.institutionId);
+  if (filters?.programId) params.set("programId", filters.programId);
+  if (filters?.classId) params.set("classId", filters.classId);
+  if (filters?.subcategoryId) params.set("subcategoryId", filters.subcategoryId);
+  if (filters?.categoryId) params.set("categoryId", filters.categoryId);
+  if (filters?.status) params.set("status", filters.status);
   return requestJson<{ students: FeeStudent[] }>(`/api/fees/students?${params.toString()}`);
 }
 

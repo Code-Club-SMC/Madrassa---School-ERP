@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLanguage } from "@/components/language-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -165,22 +165,80 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
 
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
+  const usedSampleIndices = useRef<{ male: Set<number>; female: Set<number> }>({ male: new Set(), female: new Set() });
+
+  const resolveGenderFromContext = (): "male" | "female" => {
+    const category = madrassaCategories.find((c) => c.id === form.categoryId);
+    const section = (category as any)?.section?.toLowerCase();
+    if (section === "female" || section === "banat") return "female";
+    if (section === "male" || section === "baneen") return "male";
+    if (form.gender === "female") return "female";
+    return "male";
+  };
+
+  const samplePools = {
+    male: [
+      { nameUrdu: "احمد رضا", nameEng: "Ahmed Raza", dob: "2015-03-10", guardianName: "محمد رضا", guardianCnic: "35202-1000002-3", guardianPhone: "0313-4567890", address: "لاہور، پاکستان" },
+      { nameUrdu: "علی حسن", nameEng: "Ali Hassan", dob: "2014-07-22", guardianName: "حسن علی", guardianCnic: "35202-1000003-5", guardianPhone: "0314-5678901", address: "لاہور، پاکستان" },
+      { nameUrdu: "بلال احمد", nameEng: "Bilal Ahmed", dob: "2016-01-15", guardianName: "احمد خان", guardianCnic: "35202-1000004-7", guardianPhone: "0315-6789012", address: "لاہور، پاکستان" },
+      { nameUrdu: "حمزہ ملک", nameEng: "Hamza Malik", dob: "2015-11-08", guardianName: "ملک اقبال", guardianCnic: "35202-1000005-9", guardianPhone: "0316-7890123", address: "لاہور، پاکستان" },
+      { nameUrdu: "عثمان طارق", nameEng: "Usman Tariq", dob: "2014-05-19", guardianName: "طارق محمود", guardianCnic: "35202-1000006-1", guardianPhone: "0317-8901234", address: "لاہور، پاکستان" },
+      { nameUrdu: " zain العابدین", nameEng: "Zain ul Abideen", dob: "2016-09-30", guardianName: "عابدین شاہ", guardianCnic: "35202-1000007-3", guardianPhone: "0318-9012345", address: "لاہور، پاکستان" },
+      { nameUrdu: "عبداللہ صدique", nameEng: "Abdullah Siddiqui", dob: "2013-12-05", guardianName: "صدique احمد", guardianCnic: "35202-2000001-1", guardianPhone: "0319-0123456", address: "لاہور، پاکستان" },
+      { nameUrdu: "فہد نواز", nameEng: "Fahad Nawaz", dob: "2012-08-14", guardianName: "نواز شریف", guardianCnic: "35202-2000002-3", guardianPhone: "0320-1234567", address: "لاہور، پاکستان" },
+      { nameUrdu: "عمران خلیل", nameEng: "Imran Khalil", dob: "2013-04-21", guardianName: "خلیل الرحمٰن", guardianCnic: "35202-2000003-5", guardianPhone: "0321-2345678", address: "لاہور، پاکستان" },
+      { nameUrdu: "سعد الرحمٰن", nameEng: "Saad Ur Rehman", dob: "2012-06-17", guardianName: "رحمٰن غلام", guardianCnic: "35202-2000004-7", guardianPhone: "0322-3456789", address: "لاہور، پاکستان" },
+    ],
+    female: [
+      { nameUrdu: "فاطمہ زہرا", nameEng: "Fatima Zahra", dob: "2014-02-14", guardianName: "حسین علی", guardianCnic: "35202-3000001-1", guardianPhone: "0322-3456789", address: "لاہور، پاکستان" },
+      { nameUrdu: "عائشہ بکر", nameEng: "Aisha Bakar", dob: "2015-06-20", guardianName: "بکر احمد", guardianCnic: "35202-3000002-3", guardianPhone: "0323-4567890", address: "لاہور، پاکستان" },
+      { nameUrdu: "مریم اقبال", nameEng: "Maryam Iqbal", dob: "2013-09-05", guardianName: "اقبال حسین", guardianCnic: "35202-3000003-5", guardianPhone: "0324-5678901", address: "لاہور، پاکستان" },
+      { nameUrdu: "خدیجہ فاطمہ", nameEng: "Khadija Fatima", dob: "2016-12-01", guardianName: "فاروق احمد", guardianCnic: "35202-3000004-7", guardianPhone: "0325-6789012", address: "لاہور، پاکستان" },
+      { nameUrdu: "زینب اقبال", nameEng: "Zainab Iqbal", dob: "2014-08-15", guardianName: "اقبال محمود", guardianCnic: "35202-3000005-9", guardianPhone: "0326-7890123", address: "لاہور، پاکستان" },
+      { nameUrdu: "حواء محمد", nameEng: "Hawwa Muhammad", dob: "2015-04-10", guardianName: "محمد عمر", guardianCnic: "35202-3000006-1", guardianPhone: "0327-8901234", address: "لاہور، پاکستان" },
+      { nameUrdu: "سارہ خان", nameEng: "Sarah Khan", dob: "2013-11-25", guardianName: "خان محمد", guardianCnic: "35202-4000001-3", guardianPhone: "0328-9012345", address: "لاہور، پاکستان" },
+      { nameUrdu: "عمرہ فاطمہ", nameEng: "Ummul Fatima", dob: "2016-07-08", guardianName: "فاطمہ بی بی", guardianCnic: "35202-4000002-5", guardianPhone: "0329-0123456", address: "لاہور، پاکستان" },
+      { nameUrdu: "رقیمہ بلال", nameEng: "Raqeema Bilal", dob: "2014-01-30", guardianName: "بلال ثاقب", guardianCnic: "35202-4000003-7", guardianPhone: "0330-1234567", address: "لاہور، پاکستان" },
+      { nameUrdu: "نرگس بانو", nameEng: "Nargis Bano", dob: "2015-10-12", guardianName: "بانو بی بی", guardianCnic: "35202-4000004-9", guardianPhone: "0331-2345678", address: "لاہور، پاکستان" },
+    ],
+  };
+
   const fillSimpleData = () => {
+    const currentGender = resolveGenderFromContext();
+    const pool = samplePools[currentGender];
+    const used = usedSampleIndices.current[currentGender];
+
+    let index: number;
+    if (used.size >= pool.length) {
+      used.clear();
+      index = Math.floor(Math.random() * pool.length);
+    } else {
+      const available = pool.map((_, i) => i).filter((i) => !used.has(i));
+      index = available[Math.floor(Math.random() * available.length)];
+    }
+    used.add(index);
+
+    const pick = pool[index];
+    const qasmiaMale = madrassaCategories.find(c => c.nameUrdu.includes("قاسمی") || c.name.includes("Qasim"));
+    const zainabFemale = madrassaCategories.find(c => c.nameUrdu.includes("زینب") || c.name.includes("Zainab"));
+    const category = currentGender === "male" ? qasmiaMale : zainabFemale;
+
     setForm({
-      nameUrdu: "محمد عبداللہ",
-      nameEng: "Muhammad Abdullah",
-      dob: "2015-03-10",
-      gender: "male",
-      address: "لاہور، پاکستان",
+      ...form,
+      nameUrdu: pick.nameUrdu,
+      nameEng: pick.nameEng,
+      dob: pick.dob,
+      gender: currentGender,
+      address: pick.address,
       photo: null,
       system: "madrassa",
-      categoryId: madrassaCategories[0]?.id ?? "",
-      subcategoryId: madrassaCategories[0]?.subcategories[0]?.id ?? "",
+      categoryId: category?.id ?? "",
+      subcategoryId: category?.subcategories?.[0]?.id ?? "",
       classId: "",
       section: "",
-      guardianName: "محمد یوسف",
-      guardianCnic: "35202-1000001-1",
-      guardianPhone: "0312-3456789",
+      guardianName: pick.guardianName,
+      guardianCnic: pick.guardianCnic,
+      guardianPhone: pick.guardianPhone,
       siblings: [],
       declaration: true,
     });
@@ -298,7 +356,7 @@ function StepPersonal({ form, update, lang }: { form: FormState; update: <K exte
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <BilingualLabel urdu={t.studentNameUrdu} english={t.studentNameUrdu} required lang={lang}>
-          <Input className={`${lang === "ur" ? "font-urdu" : ""}`} placeholder={lang === "ur" ? "محمد عبداللہ" : "Muhammad Abdullah"} value={form.nameUrdu} onChange={(e) => update("nameUrdu", e.target.value)} />
+          <Input className={`${lang === "ur" ? "font-urdu" : ""}`} placeholder={lang === "ur" ? "نام درج کریں" : "Enter name"} value={form.nameUrdu} onChange={(e) => update("nameUrdu", e.target.value)} />
         </BilingualLabel>
         <BilingualLabel urdu={t.studentNameEng} english={t.studentNameEng} lang={lang}>
           <Input placeholder={lang === "ur" ? "Muhammad Abdullah" : "Muhammad Abdullah"} value={form.nameEng} onChange={(e) => update("nameEng", e.target.value)} />

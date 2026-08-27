@@ -65,6 +65,7 @@ type StudentListRow = {
   madrassaSubcategoryId: string | null;
   madrassaSubcategoryName: string | null;
   madrassaSubcategoryNameUrdu: string | null;
+  madrassaSubcategoryFee: number | null;
   darja: string | null;
   startedAt: Date;
   guardianId: string | null;
@@ -425,6 +426,42 @@ export async function updateStudentStatus(
   });
 
   return updated;
+}
+
+export async function deleteStudent(request: Request, studentId: string) {
+  const context = await getStudentPermissionContext(request, studentId, "delete");
+
+  const [student] = await db
+    .select()
+    .from(students)
+    .where(eq(students.id, studentId))
+    .limit(1);
+  if (!student) throw new HttpError("Student not found", 404);
+
+  await db
+    .update(students)
+    .set({ status: "inactive", updatedAt: new Date() })
+    .where(eq(students.id, studentId));
+
+  await db
+    .update(studentEnrollments)
+    .set({ status: "inactive", endedAt: new Date(), updatedAt: new Date() })
+    .where(eq(studentEnrollments.studentId, studentId))
+    .where(isNull(studentEnrollments.endedAt));
+
+  await insertStudentEvent(db, {
+    studentId,
+    enrollmentId: context.enrollmentId,
+    type: "student_deleted",
+    message: `Student record deleted (soft delete)`,
+    metadata: {
+      previousStatus: student.status,
+      action: "soft_delete",
+    },
+    actorUserId: context.actor.id,
+  });
+
+  return { success: true };
 }
 
 export async function upsertStudentGuardian(
@@ -834,6 +871,7 @@ function studentListSelection() {
     madrassaSubcategoryId: madrassaSubcategories.id,
     madrassaSubcategoryName: madrassaSubcategories.name,
     madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
+    madrassaSubcategoryFee: madrassaSubcategories.fee ?? null,
     darja: studentEnrollments.darja,
     startedAt: studentEnrollments.startedAt,
     guardianId: guardians.id,
@@ -885,6 +923,8 @@ function toStudentListItem(row: StudentListRow) {
     groupLabel: row.schoolClassNameUrdu ?? row.madrassaSubcategoryNameUrdu ?? row.programNameUrdu,
     groupEnglish: row.schoolClassName ?? row.madrassaSubcategoryName ?? row.programName,
     admissionDate: row.startedAt.toISOString(),
+    monthlyFee: row.madrassaSubcategoryFee ?? 0,
+    monthlyFeePaisa: (row.madrassaSubcategoryFee ?? 0) * 100,
     guardianId: row.guardianId,
     guardianName: row.guardianName ?? "—",
     guardianNameUrdu: row.guardianNameUrdu ?? row.guardianName ?? "—",
@@ -892,8 +932,6 @@ function toStudentListItem(row: StudentListRow) {
     guardianCnic: row.guardianCnic ?? "",
     guardianEmail: row.guardianEmail,
     guardianAddress: row.guardianAddress ?? "",
-    monthlyFee: 0,
-    monthlyFeePaisa: 0,
   };
 }
 

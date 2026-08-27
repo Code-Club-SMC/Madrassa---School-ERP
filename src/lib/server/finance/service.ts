@@ -46,6 +46,7 @@ export const feeStudentListQuerySchema = z.object({
   programId: z.string().trim().optional(),
   classId: z.string().trim().optional(),
   subcategoryId: z.string().trim().optional(),
+  categoryId: z.string().trim().optional(),
 });
 
 export const studentLedgerQuerySchema = z.object({
@@ -592,6 +593,9 @@ export async function listFeeStudents(
     query.subcategoryId
       ? eq(studentEnrollments.madrassaSubcategoryId, query.subcategoryId)
       : undefined,
+    query.categoryId
+      ? eq(madrassaCategories.id, query.categoryId)
+      : undefined,
     query.q
       ? or(
           ilike(students.name, `%${query.q}%`),
@@ -637,8 +641,14 @@ export async function listFeeStudents(
       rollNo: row.rollNo,
       admissionNo: row.admissionNo,
       system: row.programSystem === "madrassa" ? "madrassa" : "school",
+      institutionId: row.institutionId,
       institutionName: row.institutionName,
       institutionNameUrdu: row.institutionNameUrdu,
+      programId: row.programId,
+      classId: row.schoolClassId ?? undefined,
+      subcategoryId: row.madrassaSubcategoryId ?? undefined,
+      categoryId: row.madrassaCategoryId ?? undefined,
+      categoryName: row.madrassaCategoryName ?? undefined,
       groupLabel: groupLabelForRow(row),
       guardianName: row.guardianName,
       guardianPhone: row.guardianPhone,
@@ -1223,11 +1233,14 @@ function studentSearchSelection() {
     programName: programs.name,
     programNameUrdu: programs.nameUrdu,
     programSystem: programs.system,
+    schoolClassId: schoolClasses.id,
     schoolClassName: schoolClasses.name,
     schoolClassNameUrdu: schoolClasses.nameUrdu,
     schoolSectionName: schoolClassSections.name,
+    madrassaSubcategoryId: madrassaSubcategories.id,
     madrassaSubcategoryName: madrassaSubcategories.name,
     madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
+    madrassaCategoryId: madrassaCategories.id,
     madrassaCategoryName: madrassaCategories.name,
     guardianName: guardians.name,
     guardianPhone: guardians.phone,
