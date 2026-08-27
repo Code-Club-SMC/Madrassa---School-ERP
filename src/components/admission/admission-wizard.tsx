@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ImagePlus, Pencil, CheckCircle2, ArrowLeft, ArrowRight, Loader2, Search, Plus, X } from "lucide-react";
+import { ImagePlus, Pencil, CheckCircle2, ArrowLeft, ArrowRight, Loader2, Search, Plus, X, Wand2 } from "lucide-react";
 import { AdmissionStepper } from "./admission-stepper";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { cn } from "@/lib/utils";
@@ -165,6 +165,29 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
 
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
+  const fillSimpleData = () => {
+    setForm({
+      nameUrdu: "محمد عبداللہ",
+      nameEng: "Muhammad Abdullah",
+      dob: "2015-03-10",
+      gender: "male",
+      address: "لاہور، پاکستان",
+      photo: null,
+      system: "madrassa",
+      categoryId: madrassaCategories[0]?.id ?? "",
+      subcategoryId: madrassaCategories[0]?.subcategories[0]?.id ?? "",
+      classId: "",
+      section: "",
+      guardianName: "محمد یوسف",
+      guardianCnic: "35202-1000001-1",
+      guardianPhone: "0312-3456789",
+      siblings: [],
+      declaration: true,
+    });
+    setStep(1);
+    toast.success(lang === "ur" ? "سادہ ڈیٹا شامل ہو گیا" : "Simple data filled");
+  };
+
   const canNext = () => {
     if (step === 1) return form.nameUrdu && form.dob && form.gender && form.address;
     if (step === 2) return form.system !== "";
@@ -216,6 +239,14 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
   return (
     <div>
       <AdmissionStepper current={step} lang={lang} />
+      {!isPublic && (
+        <div className="mt-4 flex justify-end">
+          <Button variant="outline" size="sm" onClick={fillSimpleData} className="gap-2">
+            <Wand2 className="h-4 w-4" />
+            {lang === "ur" ? "سادہ ڈیٹا بھریں" : "Fill with simple data"}
+          </Button>
+        </div>
+      )}
       <div className="mt-6 space-y-6">
         {step === 1 && <StepPersonal form={form} update={update} lang={lang} />}
         {step === 2 && <StepSystem form={form} update={update} lang={lang} />}

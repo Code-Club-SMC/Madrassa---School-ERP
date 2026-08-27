@@ -342,12 +342,15 @@ export function PdfFormRenderer({
           method: "POST",
           headers: { "content-type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({
-            variantKey: variant.key,
-            form,
-            declaration,
-            photoDataUrl: photo?.dataUrl,
-          }),
+      body: JSON.stringify({
+        variantKey: variant.key,
+        form,
+        declaration,
+        photoDataUrl: photo?.dataUrl,
+        target: {
+          madrassaSubcategoryId: form.shoba || undefined,
+        },
+      }),
         },
       );
       const payload: AdmissionSaveResponse = await response.json().catch(() => ({}));
