@@ -446,8 +446,7 @@ export async function deleteStudent(request: Request, studentId: string) {
   await db
     .update(studentEnrollments)
     .set({ status: "inactive", endedAt: new Date(), updatedAt: new Date() })
-    .where(eq(studentEnrollments.studentId, studentId))
-    .where(isNull(studentEnrollments.endedAt));
+    .where(and(eq(studentEnrollments.studentId, studentId), isNull(studentEnrollments.endedAt)));
 
   await insertStudentEvent(db, {
     studentId,

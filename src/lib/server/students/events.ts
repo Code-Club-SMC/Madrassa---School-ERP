@@ -9,6 +9,7 @@ export const studentEventTypes = [
   "parent_account_failed",
   "student_updated",
   "status_changed",
+  "student_deleted",
   "guardian_linked",
   "guardian_updated",
   "sibling_linked",

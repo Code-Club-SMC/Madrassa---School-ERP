@@ -264,28 +264,29 @@ export function StudentsTable({ system, section }: Props) {
       </div>
 
 <div className="rounded-lg border bg-card overflow-hidden">
-  <Table className="table-fixed w-full">
-  <TableHeader>
-    <TableRow className="bg-muted/40 hover:bg-muted/40">
-      <TableHead className="w-[15%] min-w-[110px]">Roll #</TableHead>
-      <TableHead className="w-[40%]">Student — طالبِ علم</TableHead>
-      <TableHead className="hidden md:table-cell w-[25%]">Father — والد</TableHead>
-      <TableHead className="hidden md:table-cell w-[20%]">
-        {system === "madrassa" ? "Darja" : "Class"}
-      </TableHead>
-      <TableHead className="w-[50px]">Actions</TableHead>
-    </TableRow>
-  </TableHeader>
+  <div className="overflow-x-auto">
+    <Table className="w-full">
+      <TableHeader>
+        <TableRow className="bg-muted/40 hover:bg-muted/40">
+          <TableHead className="min-w-[100px]">Roll #</TableHead>
+          <TableHead className="min-w-[200px]">Student — طالبِ علم</TableHead>
+          <TableHead className="hidden md:table-cell min-w-[150px]">Father — والد</TableHead>
+          <TableHead className="hidden md:table-cell min-w-[150px]">
+            {system === "madrassa" ? "Darja" : "Class"}
+          </TableHead>
+          <TableHead className="w-[50px]">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
     <TableBody>
       {loading ? (
         <TableRow>
-          <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
+          <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
             Loading students...
           </TableCell>
         </TableRow>
       ) : students.length === 0 ? (
         <TableRow>
-          <TableCell colSpan={4} className="py-12">
+          <TableCell colSpan={5} className="py-12">
             <EmptyState
               icon={Users2}
               heading="No students found"
@@ -406,7 +407,35 @@ export function StudentsTable({ system, section }: Props) {
       )}
 
       <StudentDetailsSheet student={selected} onClose={() => setSelected(null)} />
+
+      <ResponsiveDialog
+        title="Delete Student"
+        description={`Are you sure you want to delete ${deleteTarget?.nameUrdu || deleteTarget?.name}? This will mark the student as inactive and end their current enrollment.`}
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        icon={Trash2}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            This action will:
+          </p>
+          <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+            <li>Mark the student as inactive</li>
+            <li>End the current enrollment</li>
+            <li>Record this action in the event log</li>
+          </ul>
+        </div>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+            {deleting ? "Deleting..." : "Delete Student"}
+          </Button>
+        </div>
+      </ResponsiveDialog>
     </div>
+  </div>
   );
 }
 
