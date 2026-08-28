@@ -302,13 +302,11 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    institutionId: "",
-    programId: "",
     classId: "",
     sectionId: "",
     categoryId: "",
     subcategoryId: "",
-    academicYear: "2026-2027",
+    subjectId: "",
     type: system === "school" ? "quarterly" : "salanah",
     name: "",
     nameUrdu: "",
@@ -316,7 +314,6 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     endDate: "",
   });
   const [availableSubjects, setAvailableSubjects] = useState<ExamSubject[]>([]);
-  const [subjectIds, setSubjectIds] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -340,7 +337,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     const scopeId = system === "school" ? form.classId : form.subcategoryId;
     if (!scopeId) {
       setAvailableSubjects([]);
-      setSubjectIds([]);
+      setForm((current) => ({ ...current, subjectId: "" }));
       return;
     }
     let cancelled = false;
@@ -353,7 +350,10 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
       .then((payload) => {
         if (cancelled) return;
         setAvailableSubjects(payload.subjects);
-        setSubjectIds(payload.subjects.map((subject) => subject.id));
+        setForm((current) => ({
+          ...current,
+          subjectId: payload.subjects.find((subject) => subject.id !== current.subjectId)?.id ?? payload.subjects[0]?.id ?? "",
+        }));
       })
       .catch((error) => {
         if (!cancelled) toast.error(error instanceof Error ? error.message : "Could not load subjects");
@@ -364,26 +364,24 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   }, [form.classId, form.subcategoryId, system]);
 
   async function handleCreate() {
-    if (!form.institutionId || !form.programId || !form.name || !form.nameUrdu || !form.startDate || !form.endDate) {
-      toast.error("Exam name, institution, program, and dates are required");
+    const scopeId = system === "school" ? form.classId : form.subcategoryId;
+    if (!scopeId || !form.subjectId || !form.name || !form.nameUrdu || !form.startDate || !form.endDate) {
+      toast.error("Exam name, class/darja, subject, and dates are required");
       return;
     }
     try {
       await createExamSession({
         system,
-        institutionId: form.institutionId,
-        programId: form.programId,
         schoolClassId: system === "school" ? form.classId : undefined,
         schoolSectionId: system === "school" ? form.sectionId : undefined,
         madrassaCategoryId: system === "madrassa" ? form.categoryId : undefined,
         madrassaSubcategoryId: system === "madrassa" ? form.subcategoryId : undefined,
-        academicYear: form.academicYear,
+        subjectIds: [form.subjectId],
         type: form.type,
         name: form.name,
         nameUrdu: form.nameUrdu,
         startDate: form.startDate,
         endDate: form.endDate,
-        subjectIds,
       });
       toast.success("Exam created");
       setOpen(false);
@@ -429,33 +427,10 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
         className="sm:max-w-3xl"
       >
         <div className="grid gap-4 p-1">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Institution">
-              <Select value={form.institutionId} onValueChange={(value) => setForm(seedProgram({ ...form, institutionId: value }, options, system))}>
-                <SelectTrigger><SelectValue placeholder="Select institution" /></SelectTrigger>
-                <SelectContent>
-                  {options.institutions.filter((item) => item.system === system && item.active).map((item) => (
-                    <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Program">
-              <Select value={form.programId} onValueChange={(value) => setForm({ ...form, programId: value })}>
-                <SelectTrigger><SelectValue placeholder="Select program" /></SelectTrigger>
-                <SelectContent>
-                  {options.programs.filter((item) => item.system === system && item.institutionId === form.institutionId && item.active).map((item) => (
-                    <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-
           {system === "school" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Class">
-                <Select value={form.classId} onValueChange={(value) => setForm(seedSection({ ...form, classId: value }, options))}>
+                <Select value={form.classId} onValueChange={(value) => setForm({ ...form, classId: value })}>
                   <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
                   <SelectContent>
                     {options.classes.filter((item) => item.active).map((item) => (
@@ -478,7 +453,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Category">
-                <Select value={form.categoryId} onValueChange={(value) => setForm(seedSubcategory({ ...form, categoryId: value }, options))}>
+                <Select value={form.categoryId} onValueChange={(value) => setForm({ ...form, categoryId: value, subcategoryId: "", subjectId: "" })}>
                   <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     {options.categories.filter((item) => item.active).map((item) => (
@@ -488,7 +463,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
                 </Select>
               </Field>
               <Field label="Darja / Subcategory">
-                <Select value={form.subcategoryId} onValueChange={(value) => setForm({ ...form, subcategoryId: value })}>
+                <Select value={form.subcategoryId} onValueChange={(value) => setForm({ ...form, subcategoryId: value, subjectId: "" })}>
                   <SelectTrigger><SelectValue placeholder="Select darja" /></SelectTrigger>
                   <SelectContent>
                     {options.categories.find((item) => item.id === form.categoryId)?.subcategories.filter((item) => item.active).map((item) => (
@@ -508,10 +483,23 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
               <Input dir="rtl" className="font-urdu" value={form.nameUrdu} onChange={(event) => setForm({ ...form, nameUrdu: event.target.value })} />
             </Field>
           </div>
-          <div className="grid gap-3 sm:grid-cols-4">
-            <Field label="Academic Year">
-              <Input value={form.academicYear} onChange={(event) => setForm({ ...form, academicYear: event.target.value })} />
+
+          {(system === "school" ? form.classId : form.subcategoryId) && (
+            <Field label="Subject">
+              <Select value={form.subjectId} onValueChange={(value) => setForm({ ...form, subjectId: value })}>
+                <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                <SelectContent>
+                  {availableSubjects.map((subject) => (
+                    <SelectItem key={subject.id} value={subject.id}>
+                      {subject.code} · {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Type">
               <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -522,40 +510,13 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Start">
-              <Input type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
-            </Field>
-            <Field label="End">
-              <Input type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} />
-            </Field>
-          </div>
-
-          <div className="rounded-md border border-border p-3">
-            <p className="text-xs font-medium text-muted-foreground">Subjects included</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {availableSubjects.length === 0 ? (
-                <span className="text-sm text-muted-foreground">No active subjects found for this scope.</span>
-              ) : (
-                availableSubjects.map((subject) => (
-                  <button
-                    key={subject.id}
-                    type="button"
-                    className={cn(
-                      "rounded-md border px-2 py-1 text-xs",
-                      subjectIds.includes(subject.id) ? "border-primary bg-primary/10 text-primary" : "border-border",
-                    )}
-                    onClick={() =>
-                      setSubjectIds((current) =>
-                        current.includes(subject.id)
-                          ? current.filter((id) => id !== subject.id)
-                          : [...current, subject.id],
-                      )
-                    }
-                  >
-                    {subject.code} · {subject.name}
-                  </button>
-                ))
-              )}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Start">
+                <Input type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
+              </Field>
+              <Field label="End">
+                <Input type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} />
+              </Field>
             </div>
           </div>
 
@@ -884,18 +845,11 @@ async function requestJson<T>(url: string): Promise<T> {
 }
 
 function seedExamForm<T extends {
-  institutionId: string;
-  programId: string;
   classId: string;
   sectionId: string;
   categoryId: string;
   subcategoryId: string;
 }>(form: T, options: AcademicOptions, system: ExamSystem): T {
-  const institutionId = form.institutionId || options.institutions.find((item) => item.system === system && item.active)?.id || "";
-  const programId =
-    form.programId ||
-    options.programs.find((item) => item.system === system && item.institutionId === institutionId && item.active)?.id ||
-    "";
   const classId = form.classId || options.classes.find((item) => item.active)?.id || "";
   const sectionId =
     form.sectionId || options.classes.find((item) => item.id === classId)?.sections.find((item) => item.active)?.id || "";
@@ -904,28 +858,5 @@ function seedExamForm<T extends {
     form.subcategoryId ||
     options.categories.find((item) => item.id === categoryId)?.subcategories.find((item) => item.active)?.id ||
     "";
-  return { ...form, institutionId, programId, classId, sectionId, categoryId, subcategoryId };
-}
-
-function seedProgram<T extends { institutionId: string; programId: string }>(form: T, options: AcademicOptions, system: ExamSystem): T {
-  return {
-    ...form,
-    programId:
-      options.programs.find((item) => item.system === system && item.institutionId === form.institutionId && item.active)?.id || "",
-  };
-}
-
-function seedSection<T extends { classId: string; sectionId: string }>(form: T, options: AcademicOptions): T {
-  return {
-    ...form,
-    sectionId: options.classes.find((item) => item.id === form.classId)?.sections.find((item) => item.active)?.id || "",
-  };
-}
-
-function seedSubcategory<T extends { categoryId: string; subcategoryId: string }>(form: T, options: AcademicOptions): T {
-  return {
-    ...form,
-    subcategoryId:
-      options.categories.find((item) => item.id === form.categoryId)?.subcategories.find((item) => item.active)?.id || "",
-  };
+  return { ...form, classId, sectionId, categoryId, subcategoryId };
 }

@@ -86,13 +86,13 @@ export function listExamSessions(system: ExamSystem) {
 
 export function createExamSession(input: {
   system: ExamSystem;
-  institutionId: string;
-  programId: string;
+  institutionId?: string;
+  programId?: string;
   schoolClassId?: string;
   schoolSectionId?: string;
   madrassaCategoryId?: string;
   madrassaSubcategoryId?: string;
-  academicYear: string;
+  academicYear?: string;
   type: string;
   name: string;
   nameUrdu: string;

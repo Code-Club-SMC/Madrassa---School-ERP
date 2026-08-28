@@ -3,6 +3,9 @@ import { and, asc, desc, eq, gte, inArray, isNull, lte, max, or, type SQL } from
 import { z } from "zod";
 import { db } from "@/db";
 import {
+  getActiveAcademicYear,
+} from "@/lib/server/academic-years/service";
+import {
   institutions,
   madrassaCategories,
   madrassaSubcategories,
@@ -61,13 +64,13 @@ export const subjectListQuerySchema = z.object({
 
 export const examInputSchema = z.object({
   system: z.enum(systems),
-  institutionId: z.string().trim().min(1),
-  programId: z.string().trim().min(1),
+  institutionId: z.string().trim().min(1).optional(),
+  programId: z.string().trim().min(1).optional(),
   schoolClassId: z.string().trim().optional(),
   schoolSectionId: z.string().trim().optional(),
   madrassaCategoryId: z.string().trim().optional(),
   madrassaSubcategoryId: z.string().trim().optional(),
-  academicYear: z.string().trim().min(1),
+  academicYear: z.string().trim().min(1).optional(),
   type: z.enum(examTypes),
   name: z.string().trim().min(1),
   nameUrdu: z.string().trim().min(1),
@@ -332,7 +335,49 @@ export async function createExamSession(request: Request, input: z.infer<typeof 
   const startDate = parseDateOnly(input.startDate, "startDate");
   const endDate = parseDateOnly(input.endDate, "endDate");
   if (startDate > endDate) throw new HttpError("Start date cannot be after end date", 400);
-  await assertProgramScope(input.system, input.institutionId, input.programId);
+
+  let institutionId = input.institutionId;
+  let programId = input.programId;
+  let academicYear = input.academicYear;
+
+  if (input.system === "madrassa") {
+    if (!institutionId || !programId) {
+      const scopeId = input.madrassaSubcategoryId || input.madrassaCategoryId;
+      if (scopeId) {
+        const [scope] = await db
+          .select({
+            categorySection: madrassaCategories.section,
+            categoryId: madrassaCategories.id,
+          })
+          .from(madrassaSubcategories)
+          .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+          .where(eq(madrassaSubcategories.id, scopeId))
+          .limit(1);
+
+        if (scope) {
+          const targetSection = scope.categorySection === "female" ? "banat" : "baneen";
+          const [matchedProgram] = await db
+            .select({ programId: programs.id, institutionId: programs.institutionId })
+            .from(programs)
+            .where(and(eq(programs.system, "madrassa"), eq(programs.active, true)))
+            .limit(1);
+
+          if (matchedProgram) {
+            institutionId ??= matchedProgram.institutionId;
+            programId ??= matchedProgram.programId;
+          }
+        }
+      }
+    }
+
+    academicYear ??= (await getActiveAcademicYear("madrassa")).name;
+  }
+
+  if (!institutionId || !programId) {
+    throw new HttpError("Institution and program are required", 400);
+  }
+
+  await assertProgramScope(input.system, institutionId, programId);
   const subjects = await loadSubjectsForExam(input.system, input.subjectIds);
   assertSubjectsMatchExamScope(input, subjects);
 
@@ -341,13 +386,13 @@ export async function createExamSession(request: Request, input: z.infer<typeof 
     await tx.insert(examSessions).values({
       id: examId,
       system: input.system,
-      institutionId: input.institutionId,
-      programId: input.programId,
+      institutionId,
+      programId,
       schoolClassId: input.schoolClassId ?? null,
       schoolSectionId: input.schoolSectionId ?? null,
       madrassaCategoryId: input.madrassaCategoryId ?? null,
       madrassaSubcategoryId: input.madrassaSubcategoryId ?? null,
-      academicYear: input.academicYear,
+      academicYear: academicYear ?? (await getActiveAcademicYear(input.system)).name,
       type: input.type,
       name: input.name,
       nameUrdu: input.nameUrdu,
@@ -387,8 +432,44 @@ export async function updateExamSession(
     madrassaSubcategoryId: input.madrassaSubcategoryId ?? current.madrassaSubcategoryId ?? undefined,
   });
 
-  if (input.institutionId || input.programId || input.system) {
-    await assertProgramScope(nextSystem, input.institutionId ?? current.institutionId, input.programId ?? current.programId);
+  let nextInstitutionId = input.institutionId ?? current.institutionId;
+  let nextProgramId = input.programId ?? current.programId;
+  let nextAcademicYear = input.academicYear ?? current.academicYear;
+
+  if (nextSystem === "madrassa") {
+    if (!nextInstitutionId || !nextProgramId) {
+      const scopeId = input.madrassaSubcategoryId ?? current.madrassaSubcategoryId ?? input.madrassaCategoryId ?? current.madrassaCategoryId;
+      if (scopeId) {
+        const [scope] = await db
+          .select({
+            categorySection: madrassaCategories.section,
+            categoryId: madrassaCategories.id,
+          })
+          .from(madrassaSubcategories)
+          .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+          .where(eq(madrassaSubcategories.id, scopeId))
+          .limit(1);
+
+        if (scope) {
+          const [matchedProgram] = await db
+            .select({ programId: programs.id, institutionId: programs.institutionId })
+            .from(programs)
+            .where(and(eq(programs.system, "madrassa"), eq(programs.active, true)))
+            .limit(1);
+
+          if (matchedProgram) {
+            nextInstitutionId ??= matchedProgram.institutionId;
+            nextProgramId ??= matchedProgram.programId;
+          }
+        }
+      }
+    }
+
+    nextAcademicYear ??= (await getActiveAcademicYear("madrassa")).name;
+  }
+
+  if (nextInstitutionId && nextProgramId) {
+    await assertProgramScope(nextSystem, nextInstitutionId, nextProgramId);
   }
 
   const subjects = input.subjectIds ? await loadSubjectsForExam(nextSystem, input.subjectIds) : null;
@@ -409,15 +490,15 @@ export async function updateExamSession(
     await tx
       .update(examSessions)
       .set({
-        system: input.system,
-        institutionId: input.institutionId,
-        programId: input.programId,
+        system: nextSystem,
+        institutionId: nextInstitutionId,
+        programId: nextProgramId,
         schoolClassId: nextSystem === "school" ? input.schoolClassId ?? current.schoolClassId : null,
         schoolSectionId: nextSystem === "school" ? input.schoolSectionId ?? current.schoolSectionId : null,
         madrassaCategoryId: nextSystem === "madrassa" ? input.madrassaCategoryId ?? current.madrassaCategoryId : null,
         madrassaSubcategoryId:
           nextSystem === "madrassa" ? input.madrassaSubcategoryId ?? current.madrassaSubcategoryId : null,
-        academicYear: input.academicYear,
+        academicYear: nextAcademicYear,
         type: input.type,
         name: input.name,
         nameUrdu: input.nameUrdu,
