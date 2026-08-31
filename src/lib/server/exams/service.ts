@@ -34,7 +34,7 @@ import { assignPositions, buildTranscript, calculateExamResult } from "./result-
 
 const systems = ["school", "madrassa"] as const;
 const examStatuses = ["draft", "active", "locked", "published"] as const;
-const examTypes = ["monthly", "quarterly", "halfyearly", "annual", "sahmahi", "nisfussana", "salanah"] as const;
+const examTypes = ["monthly", "quarterly", "halfyearly", "annual", "sahmahi", "salanah"] as const;
 const attendanceStatuses = ["present", "absent", "leave"] as const;
 
 export const subjectInputSchema = z.object({
@@ -93,6 +93,7 @@ export const examListQuerySchema = z.object({
   institutionId: z.string().trim().optional(),
   schoolClassId: z.string().trim().optional(),
   madrassaSubcategoryId: z.string().trim().optional(),
+  section: z.enum(["male", "female"]).optional(),
 });
 
 export const marksQuerySchema = z.object({
@@ -317,6 +318,7 @@ export async function listExamSessions(request: Request, query: z.infer<typeof e
     query.institutionId ? eq(examSessions.institutionId, query.institutionId) : undefined,
     query.schoolClassId ? eq(examSessions.schoolClassId, query.schoolClassId) : undefined,
     query.madrassaSubcategoryId ? eq(examSessions.madrassaSubcategoryId, query.madrassaSubcategoryId) : undefined,
+    query.section ? eq(institutions.section, query.section) : undefined,
   ]);
 
   const exams = await fetchExamDetails(clauses);
@@ -513,6 +515,15 @@ export async function updateExamSession(
   });
 
   return getExamSession(request, id);
+}
+
+export async function deleteExamSession(request: Request, id: string) {
+  const exam = await loadExamDetail(id);
+  await requireExamPermission(request, exam.system, "delete");
+
+  await db.delete(examSessions).where(eq(examSessions.id, id));
+
+  return { success: true };
 }
 
 export async function getMarksEntry(request: Request, examId: string, examSubjectId: string) {

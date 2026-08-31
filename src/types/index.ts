@@ -233,7 +233,7 @@ export type Concession = {
 
 // ---------- Exams ----------
 export type SchoolExamType = "monthly" | "quarterly" | "midterm" | "annual" | "board";
-export type MadrassaExamType = "sah_mahi" | "nisfus_sana" | "salanah" | "wifaqi_salanah" | "zimni";
+export type MadrassaExamType = "sah_mahi" | "salanah" | "wifaqi_salanah" | "zimni";
 export type ExamStatus = "upcoming" | "active" | "completed";
 
 export type ExamSubjectRef = {

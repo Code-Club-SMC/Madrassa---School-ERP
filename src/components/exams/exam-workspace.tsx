@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BarChart3, Calendar, ClipboardList, FileText, Grid3x3, Plus, Printer, Users } from "lucide-react";
+import { ArrowLeft, BarChart3, Calendar, ClipboardList, FileText, Grid3x3, Plus, Printer, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   createExamSession,
   createExamSubject,
+  deleteExamSession,
   getExamReport,
   getExamSession,
   listExamSessions,
@@ -12,6 +13,16 @@ import {
 } from "@/components/exams/exam-api";
 import type { ExamReportPayload, ExamSession, ExamSubject, ExamSystem } from "@/components/exams/exam-types";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useSystem } from "@/components/system-context";
 
 type InstitutionOption = {
   id: string;
@@ -297,10 +309,13 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
 }
 
 export function ExamWorkspace({ system }: { system: ExamSystem }) {
+  const { gender } = useSystem();
   const [exams, setExams] = useState<ExamSession[]>([]);
   const [options, setOptions] = useState<AcademicOptions>(emptyOptions);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ExamSession | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({
     classId: "",
     sectionId: "",
@@ -318,7 +333,10 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [examPayload, academicPayload] = await Promise.all([listExamSessions(system), loadAcademicOptions()]);
+      const [examPayload, academicPayload] = await Promise.all([
+        listExamSessions(system, system === "madrassa" ? gender : undefined),
+        loadAcademicOptions(system === "madrassa" ? gender : undefined),
+      ]);
       setExams(examPayload.exams);
       setOptions(academicPayload);
       setForm((current) => seedExamForm(current, academicPayload, system));
@@ -327,7 +345,22 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     } finally {
       setLoading(false);
     }
-  }, [system]);
+  }, [system, gender]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteExamSession(deleteTarget.id);
+      toast.success("Exam deleted");
+      setDeleteTarget(null);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete exam");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     void load();
@@ -414,7 +447,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
         ) : exams.length === 0 ? (
           <Card className="p-5 text-sm text-muted-foreground">No exams have been created yet.</Card>
         ) : (
-          exams.map((exam) => <ExamCard key={exam.id} exam={exam} />)
+          exams.map((exam) => <ExamCard key={exam.id} exam={exam} onDelete={setDeleteTarget} />)
         )}
       </div>
 
@@ -504,7 +537,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
               <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(system === "school" ? ["monthly", "quarterly", "halfyearly", "annual"] : ["sahmahi", "nisfussana", "salanah"]).map((type) => (
+                  {(system === "school" ? ["monthly", "quarterly", "halfyearly", "annual"] : ["sahmahi", "salanah"]).map((type) => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
@@ -526,6 +559,23 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
           </div>
         </div>
       </ResponsiveDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Exam</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteTarget?.name}"? This action cannot be undone and will remove all associated marks, results, and seating data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -710,7 +760,7 @@ export function ExamReportWorkspace() {
   );
 }
 
-function ExamCard({ exam }: { exam: ExamSession }) {
+function ExamCard({ exam, onDelete }: { exam: ExamSession; onDelete?: (exam: ExamSession) => void }) {
   return (
     <Card className="flex flex-col p-5">
       <div className="flex items-start justify-between gap-3">
@@ -718,7 +768,14 @@ function ExamCard({ exam }: { exam: ExamSession }) {
           <p className="truncate font-semibold">{exam.name}</p>
           <p className="font-urdu text-sm text-muted-foreground">{exam.nameUrdu}</p>
         </div>
-        <Badge variant="outline" className={cn("capitalize", statusTone[exam.status])}>{exam.status}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={cn("capitalize", statusTone[exam.status])}>{exam.status}</Badge>
+          {onDelete && (
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => onDelete(exam)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
       <div className="mt-4 flex-1 space-y-2 text-sm">
         <Row label="Group" value={exam.groupLabel} />
@@ -822,12 +879,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-async function loadAcademicOptions(): Promise<AcademicOptions> {
+async function loadAcademicOptions(section?: string): Promise<AcademicOptions> {
+  const categoriesUrl = section
+    ? `/api/academic/madrassa/categories?section=${section}`
+    : "/api/academic/madrassa/categories";
   const [institutionsPayload, programsPayload, classesPayload, categoriesPayload] = await Promise.all([
     requestJson<{ institutions: InstitutionOption[] }>("/api/academic/institutions"),
     requestJson<{ programs: ProgramOption[] }>("/api/academic/programs"),
     requestJson<{ classes: SchoolClassOption[] }>("/api/academic/school/classes"),
-    requestJson<{ categories: MadrassaCategoryOption[] }>("/api/academic/madrassa/categories"),
+    requestJson<{ categories: MadrassaCategoryOption[] }>(categoriesUrl),
   ]);
   return {
     institutions: institutionsPayload.institutions,

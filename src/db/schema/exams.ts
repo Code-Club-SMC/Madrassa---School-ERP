@@ -29,7 +29,6 @@ export type ExamType =
   | "halfyearly"
   | "annual"
   | "sahmahi"
-  | "nisfussana"
   | "salanah";
 export type ExamMarkStatus = "draft" | "locked";
 export type ExamAttendanceStatus = "present" | "absent" | "leave";

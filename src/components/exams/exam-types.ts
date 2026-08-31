@@ -1,6 +1,6 @@
 export type ExamSystem = "school" | "madrassa";
 export type ExamStatus = "draft" | "active" | "locked" | "published";
-export type ExamType = "monthly" | "quarterly" | "halfyearly" | "annual" | "sahmahi" | "nisfussana" | "salanah";
+export type ExamType = "monthly" | "quarterly" | "halfyearly" | "annual" | "sahmahi" | "salanah";
 export type ExamAttendanceStatus = "present" | "absent" | "leave";
 
 export type ExamSubject = {

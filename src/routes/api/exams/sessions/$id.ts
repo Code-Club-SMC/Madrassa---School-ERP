@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { examUpdateSchema, getExamSession, updateExamSession } from "@/lib/server/exams/service";
+import { deleteExamSession, examUpdateSchema, getExamSession, updateExamSession } from "@/lib/server/exams/service";
 import { errorResponse } from "@/lib/server/http";
 import { json, parseJsonBody } from "@/lib/server/super-admin";
 
@@ -21,6 +21,13 @@ export const Route = createFileRoute("/api/exams/sessions/$id")({
           return json(await updateExamSession(request, params.id, body.data));
         } catch (error) {
           return errorResponse(error, "Could not update exam");
+        }
+      },
+      DELETE: async ({ request, params }) => {
+        try {
+          return json(await deleteExamSession(request, params.id));
+        } catch (error) {
+          return errorResponse(error, "Could not delete exam");
         }
       },
     },

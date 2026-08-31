@@ -80,8 +80,16 @@ export function deleteExamSubject(id: string) {
   });
 }
 
-export function listExamSessions(system: ExamSystem) {
-  return requestJson<{ exams: ExamSession[] }>(`/api/exams/sessions?system=${system}`);
+export function deleteExamSession(id: string) {
+  return requestJson<{ success: true }>(`/api/exams/sessions/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function listExamSessions(system: ExamSystem, section?: string) {
+  const params = new URLSearchParams({ system });
+  if (section) params.set("section", section);
+  return requestJson<{ exams: ExamSession[] }>(`/api/exams/sessions?${params.toString()}`);
 }
 
 export function createExamSession(input: {

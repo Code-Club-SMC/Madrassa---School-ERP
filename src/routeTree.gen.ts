@@ -18,6 +18,7 @@ import { Route as WebsiteRouteImport } from './routes/website'
 import { Route as AuthenticatedAdmissionRouteImport } from './routes/_authenticated/admission'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedExamsRouteImport } from './routes/_authenticated/exams'
 import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
 import { Route as AuthenticatedHolidaysRouteImport } from './routes/_authenticated/holidays'
 import { Route as AuthenticatedHrRouteImport } from './routes/_authenticated/hr'
@@ -39,6 +40,7 @@ import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdmissionInterviewsRouteImport } from './routes/_authenticated/admission/interviews'
 import { Route as AuthenticatedAdmissionNewRouteImport } from './routes/_authenticated/admission/new'
 import { Route as AuthenticatedAdmissionQueueRouteImport } from './routes/_authenticated/admission/queue'
+import { Route as AuthenticatedExamsIndexRouteImport } from './routes/_authenticated/exams/index'
 import { Route as AuthenticatedFinanceIndexRouteImport } from './routes/_authenticated/finance/index'
 import { Route as AuthenticatedFinanceDonationsRouteImport } from './routes/_authenticated/finance/donations'
 import { Route as AuthenticatedFinanceReportsRouteImport } from './routes/_authenticated/finance/reports'
@@ -224,6 +226,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedExamsRoute = AuthenticatedExamsRouteImport.update({
+  id: '/exams',
+  path: '/exams',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -334,6 +341,11 @@ const AuthenticatedAdmissionQueueRoute =
     path: '/queue',
     getParentRoute: () => AuthenticatedAdmissionRoute,
   } as any)
+const AuthenticatedExamsIndexRoute = AuthenticatedExamsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedExamsRoute,
+} as any)
 const AuthenticatedFinanceIndexRoute =
   AuthenticatedFinanceIndexRouteImport.update({
     id: '/',
@@ -1137,6 +1149,7 @@ export interface FileRoutesByFullPath {
   '/admission': typeof AuthenticatedAdmissionRouteWithChildren
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/exams': typeof AuthenticatedExamsRouteWithChildren
   '/finance': typeof AuthenticatedFinanceRouteWithChildren
   '/holidays': typeof AuthenticatedHolidaysRoute
   '/hr': typeof AuthenticatedHrRouteWithChildren
@@ -1212,6 +1225,7 @@ export interface FileRoutesByFullPath {
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
   '/api/users/$id': typeof ApiUsersIdRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
+  '/exams/': typeof AuthenticatedExamsIndexRoute
   '/finance/': typeof AuthenticatedFinanceIndexRoute
   '/hr/': typeof AuthenticatedHrIndexRoute
   '/reports/': typeof AuthenticatedReportsIndexRoute
@@ -1374,6 +1388,7 @@ export interface FileRoutesByTo {
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
   '/api/users/$id': typeof ApiUsersIdRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
+  '/exams': typeof AuthenticatedExamsIndexRoute
   '/finance': typeof AuthenticatedFinanceIndexRoute
   '/hr': typeof AuthenticatedHrIndexRoute
   '/reports': typeof AuthenticatedReportsIndexRoute
@@ -1472,6 +1487,7 @@ export interface FileRoutesById {
   '/_authenticated/admission': typeof AuthenticatedAdmissionRouteWithChildren
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/exams': typeof AuthenticatedExamsRouteWithChildren
   '/_authenticated/finance': typeof AuthenticatedFinanceRouteWithChildren
   '/_authenticated/holidays': typeof AuthenticatedHolidaysRoute
   '/_authenticated/hr': typeof AuthenticatedHrRouteWithChildren
@@ -1547,6 +1563,7 @@ export interface FileRoutesById {
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
   '/api/users/$id': typeof ApiUsersIdRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
+  '/_authenticated/exams/': typeof AuthenticatedExamsIndexRoute
   '/_authenticated/finance/': typeof AuthenticatedFinanceIndexRoute
   '/_authenticated/hr/': typeof AuthenticatedHrIndexRoute
   '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
@@ -1645,6 +1662,7 @@ export interface FileRouteTypes {
     | '/admission'
     | '/audit'
     | '/dashboard'
+    | '/exams'
     | '/finance'
     | '/holidays'
     | '/hr'
@@ -1720,6 +1738,7 @@ export interface FileRouteTypes {
     | '/api/teachers/$id'
     | '/api/users/$id'
     | '/admission/'
+    | '/exams/'
     | '/finance/'
     | '/hr/'
     | '/reports/'
@@ -1882,6 +1901,7 @@ export interface FileRouteTypes {
     | '/api/teachers/$id'
     | '/api/users/$id'
     | '/admission'
+    | '/exams'
     | '/finance'
     | '/hr'
     | '/reports'
@@ -1979,6 +1999,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admission'
     | '/_authenticated/audit'
     | '/_authenticated/dashboard'
+    | '/_authenticated/exams'
     | '/_authenticated/finance'
     | '/_authenticated/holidays'
     | '/_authenticated/hr'
@@ -2054,6 +2075,7 @@ export interface FileRouteTypes {
     | '/api/teachers/$id'
     | '/api/users/$id'
     | '/_authenticated/admission/'
+    | '/_authenticated/exams/'
     | '/_authenticated/finance/'
     | '/_authenticated/hr/'
     | '/_authenticated/reports/'
@@ -2263,6 +2285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/exams': {
+      id: '/_authenticated/exams'
+      path: '/exams'
+      fullPath: '/exams'
+      preLoaderRoute: typeof AuthenticatedExamsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/finance': {
       id: '/_authenticated/finance'
       path: '/finance'
@@ -2409,6 +2438,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admission/queue'
       preLoaderRoute: typeof AuthenticatedAdmissionQueueRouteImport
       parentRoute: typeof AuthenticatedAdmissionRoute
+    }
+    '/_authenticated/exams/': {
+      id: '/_authenticated/exams/'
+      path: '/'
+      fullPath: '/exams/'
+      preLoaderRoute: typeof AuthenticatedExamsIndexRouteImport
+      parentRoute: typeof AuthenticatedExamsRoute
     }
     '/_authenticated/finance/': {
       id: '/_authenticated/finance/'
@@ -3414,6 +3450,17 @@ const AuthenticatedAdmissionRouteWithChildren =
     AuthenticatedAdmissionRouteChildren,
   )
 
+interface AuthenticatedExamsRouteChildren {
+  AuthenticatedExamsIndexRoute: typeof AuthenticatedExamsIndexRoute
+}
+
+const AuthenticatedExamsRouteChildren: AuthenticatedExamsRouteChildren = {
+  AuthenticatedExamsIndexRoute: AuthenticatedExamsIndexRoute,
+}
+
+const AuthenticatedExamsRouteWithChildren =
+  AuthenticatedExamsRoute._addFileChildren(AuthenticatedExamsRouteChildren)
+
 interface AuthenticatedFinanceRouteChildren {
   AuthenticatedFinanceDonationsRoute: typeof AuthenticatedFinanceDonationsRoute
   AuthenticatedFinanceReportsRoute: typeof AuthenticatedFinanceReportsRoute
@@ -3624,6 +3671,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdmissionRoute: typeof AuthenticatedAdmissionRouteWithChildren
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedExamsRoute: typeof AuthenticatedExamsRouteWithChildren
   AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRouteWithChildren
   AuthenticatedHolidaysRoute: typeof AuthenticatedHolidaysRoute
   AuthenticatedHrRoute: typeof AuthenticatedHrRouteWithChildren
@@ -3644,6 +3692,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdmissionRoute: AuthenticatedAdmissionRouteWithChildren,
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedExamsRoute: AuthenticatedExamsRouteWithChildren,
   AuthenticatedFinanceRoute: AuthenticatedFinanceRouteWithChildren,
   AuthenticatedHolidaysRoute: AuthenticatedHolidaysRoute,
   AuthenticatedHrRoute: AuthenticatedHrRouteWithChildren,
