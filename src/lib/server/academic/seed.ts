@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import {
   institutions,
+  madrassaCategories,
   programs,
   schoolClasses,
   schoolClassSections,
@@ -198,5 +199,83 @@ export async function seedAcademicCatalog() {
           },
         });
     }
+  }
+
+  const STATIC_CATEGORIES = [
+    {
+      id: "nazara_male",
+      name: "Nazara",
+      nameUrdu: "ناظرہ",
+      description: "Nazara / Qaida category",
+      descriptionUrdu: "ناظرہ / قاعدہ زمرہ",
+      displayOrder: 1,
+      active: true,
+      section: "male",
+      formVariantKeys: [],
+    },
+    {
+      id: "hifiz_male",
+      name: "Hifiz",
+      nameUrdu: "حفاظ",
+      description: "Hifiz / Memorization category",
+      descriptionUrdu: "حفظ زمرہ",
+      displayOrder: 2,
+      active: true,
+      section: "male",
+      formVariantKeys: [],
+    },
+    {
+      id: "alam_male",
+      name: "Alam",
+      nameUrdu: "علم",
+      description: "Alam / Dars-e-Nizami category",
+      descriptionUrdu: "علم / درس نظامی زمرہ",
+      displayOrder: 3,
+      active: true,
+      section: "male",
+      formVariantKeys: [],
+    },
+    {
+      id: "nazara_female",
+      name: "Nazara",
+      nameUrdu: "ناظرہ",
+      description: "Nazara / Qaida category",
+      descriptionUrdu: "ناظرہ / قاعدہ زمرہ",
+      displayOrder: 1,
+      active: true,
+      section: "female",
+      formVariantKeys: [],
+    },
+    {
+      id: "alam_female",
+      name: "Alam",
+      nameUrdu: "علم",
+      description: "Alam / Dars-e-Nizami category",
+      descriptionUrdu: "علم / درس نظامی زمرہ",
+      displayOrder: 2,
+      active: true,
+      section: "female",
+      formVariantKeys: [],
+    },
+  ];
+
+  for (const category of STATIC_CATEGORIES) {
+    await db
+      .insert(madrassaCategories)
+      .values(category)
+      .onConflictDoUpdate({
+        target: madrassaCategories.id,
+        set: {
+          name: category.name,
+          nameUrdu: category.nameUrdu,
+          description: category.description,
+          descriptionUrdu: category.descriptionUrdu,
+          displayOrder: category.displayOrder,
+          active: category.active,
+          section: category.section,
+          formVariantKeys: category.formVariantKeys,
+          updatedAt: new Date(),
+        },
+      });
   }
 }

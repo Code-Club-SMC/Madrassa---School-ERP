@@ -32,6 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/format";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { useSystem } from "@/components/system-context";
 
@@ -317,35 +318,35 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   const [deleteTarget, setDeleteTarget] = useState<ExamSession | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({
+    examSystem: system,
     classId: "",
     sectionId: "",
     categoryId: "",
     subcategoryId: "",
-    subjectId: "",
     type: system === "school" ? "quarterly" : "salanah",
     name: "",
     nameUrdu: "",
     startDate: "",
     endDate: "",
   });
-  const [availableSubjects, setAvailableSubjects] = useState<ExamSubject[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const currentSystem = form.examSystem;
       const [examPayload, academicPayload] = await Promise.all([
-        listExamSessions(system, system === "madrassa" ? gender : undefined),
-        loadAcademicOptions(system === "madrassa" ? gender : undefined),
+        listExamSessions(currentSystem, currentSystem === "madrassa" ? gender : undefined),
+        loadAcademicOptions(currentSystem === "madrassa" ? gender : undefined),
       ]);
       setExams(examPayload.exams);
       setOptions(academicPayload);
-      setForm((current) => seedExamForm(current, academicPayload, system));
+      setForm((current) => seedExamForm({ ...current, examSystem: currentSystem }, academicPayload, currentSystem));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not load exams");
     } finally {
       setLoading(false);
     }
-  }, [system, gender]);
+  }, [form.examSystem, gender]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -367,7 +368,8 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   }, [load]);
 
   useEffect(() => {
-    const scopeId = system === "school" ? form.classId : form.subcategoryId;
+    const currentSystem = form.examSystem;
+    const scopeId = currentSystem === "school" ? form.classId : form.subcategoryId;
     if (!scopeId) {
       setAvailableSubjects([]);
       setForm((current) => ({ ...current, subjectId: "" }));
@@ -375,9 +377,9 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     }
     let cancelled = false;
     listExamSubjects({
-      system,
-      schoolClassId: system === "school" ? scopeId : undefined,
-      madrassaSubcategoryId: system === "madrassa" ? scopeId : undefined,
+      system: currentSystem,
+      schoolClassId: currentSystem === "school" ? scopeId : undefined,
+      madrassaSubcategoryId: currentSystem === "madrassa" ? scopeId : undefined,
       active: true,
     })
       .then((payload) => {
@@ -394,22 +396,33 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     return () => {
       cancelled = true;
     };
-  }, [form.classId, form.subcategoryId, system]);
+  }, [form.examSystem, form.classId, form.subcategoryId]);
 
   async function handleCreate() {
-    const scopeId = system === "school" ? form.classId : form.subcategoryId;
-    if (!scopeId || !form.subjectId || !form.name || !form.nameUrdu || !form.startDate || !form.endDate) {
-      toast.error("Exam name, class/darja, subject, and dates are required");
+    const currentSystem = form.examSystem;
+    const scopeId = currentSystem === "school" ? form.classId : form.subcategoryId;
+    if (!scopeId || !form.name || !form.nameUrdu || !form.startDate || !form.endDate) {
+      toast.error("Exam name, class/darja, and dates are required");
       return;
     }
+
+    let subjectIds = [form.subjectId].filter(Boolean);
+    if (subjectIds.length === 0 && availableSubjects.length > 0) {
+      subjectIds = [availableSubjects[0].id];
+    }
+    if (subjectIds.length === 0) {
+      toast.error("At least one subject is required");
+      return;
+    }
+
     try {
       await createExamSession({
-        system,
-        schoolClassId: system === "school" ? form.classId : undefined,
-        schoolSectionId: system === "school" ? form.sectionId : undefined,
-        madrassaCategoryId: system === "madrassa" ? form.categoryId : undefined,
-        madrassaSubcategoryId: system === "madrassa" ? form.subcategoryId : undefined,
-        subjectIds: [form.subjectId],
+        system: currentSystem,
+        schoolClassId: currentSystem === "school" ? form.classId : undefined,
+        schoolSectionId: currentSystem === "school" ? form.sectionId : undefined,
+        madrassaCategoryId: currentSystem === "madrassa" ? form.categoryId : undefined,
+        madrassaSubcategoryId: currentSystem === "madrassa" ? form.subcategoryId : undefined,
+        subjectIds,
         type: form.type,
         name: form.name,
         nameUrdu: form.nameUrdu,
@@ -460,7 +473,24 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
         className="sm:max-w-3xl"
       >
         <div className="grid gap-4 p-1">
-          {system === "school" ? (
+          <Field label="System">
+            <RadioGroup
+              value={form.examSystem}
+              onValueChange={(value) => setForm({ ...form, examSystem: value as ExamSystem, classId: "", sectionId: "", categoryId: "", subcategoryId: "", subjectId: "" })}
+              className="flex flex-wrap gap-4"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="school" id="system-school" />
+                <Label htmlFor="system-school" className="text-sm cursor-pointer">School</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="madrassa" id="system-madrassa" />
+                <Label htmlFor="system-madrassa" className="text-sm cursor-pointer">Madrassa</Label>
+              </div>
+            </RadioGroup>
+          </Field>
+
+          {form.examSystem === "school" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Class">
                 <Select value={form.classId} onValueChange={(value) => setForm({ ...form, classId: value })}>
@@ -484,28 +514,25 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
               </Field>
             </div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Category">
-                <Select value={form.categoryId} onValueChange={(value) => setForm({ ...form, categoryId: value, subcategoryId: "", subjectId: "" })}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent>
-                    {options.categories.filter((item) => item.active).map((item) => (
-                      <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <RadioGroup
+                  value={form.categoryId}
+                  onValueChange={(value) => {
+                    const firstSubcategory = options.categories.find((item) => item.id === value)?.subcategories.find((item) => item.active)?.id || "";
+                    setForm({ ...form, categoryId: value, subcategoryId: firstSubcategory, subjectId: "" });
+                  }}
+                  className="flex flex-wrap gap-4"
+                >
+                  {options.categories.filter((item) => item.active).map((item) => (
+                    <div key={item.id} className="flex items-center gap-2">
+                      <RadioGroupItem value={item.id} id={`category-${item.id}`} />
+                      <Label htmlFor={`category-${item.id}`} className="text-sm cursor-pointer">
+                        {item.name}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
               </Field>
-              <Field label="Darja / Subcategory">
-                <Select value={form.subcategoryId} onValueChange={(value) => setForm({ ...form, subcategoryId: value, subjectId: "" })}>
-                  <SelectTrigger><SelectValue placeholder="Select darja" /></SelectTrigger>
-                  <SelectContent>
-                    {options.categories.find((item) => item.id === form.categoryId)?.subcategories.filter((item) => item.active).map((item) => (
-                      <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
           )}
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -517,27 +544,12 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
             </Field>
           </div>
 
-          {(system === "school" ? form.classId : form.subcategoryId) && (
-            <Field label="Subject">
-              <Select value={form.subjectId} onValueChange={(value) => setForm({ ...form, subjectId: value })}>
-                <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
-                <SelectContent>
-                  {availableSubjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
-                      {subject.code} · {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          )}
-
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Type">
               <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(system === "school" ? ["monthly", "quarterly", "halfyearly", "annual"] : ["sahmahi", "salanah"]).map((type) => (
+                  {(form.examSystem === "school" ? ["monthly", "quarterly", "halfyearly", "annual"] : ["sahmahi", "salanah"]).map((type) => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
