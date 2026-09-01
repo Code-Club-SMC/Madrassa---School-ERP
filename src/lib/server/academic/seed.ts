@@ -211,7 +211,7 @@ export async function seedAcademicCatalog() {
       displayOrder: 1,
       active: true,
       section: "male",
-      formVariantKeys: [],
+      formVariantKeys: ["madrassa-boys-nazira"],
     },
     {
       id: "hifiz_male",
@@ -222,7 +222,7 @@ export async function seedAcademicCatalog() {
       displayOrder: 2,
       active: true,
       section: "male",
-      formVariantKeys: [],
+      formVariantKeys: ["madrassa-boys-hifz"],
     },
     {
       id: "alam_male",
@@ -233,7 +233,7 @@ export async function seedAcademicCatalog() {
       displayOrder: 3,
       active: true,
       section: "male",
-      formVariantKeys: [],
+      formVariantKeys: ["madrassa-boys-general"],
     },
     {
       id: "nazara_female",
@@ -244,7 +244,7 @@ export async function seedAcademicCatalog() {
       displayOrder: 1,
       active: true,
       section: "female",
-      formVariantKeys: [],
+      formVariantKeys: ["madrassa-girls-nazira"],
     },
     {
       id: "alam_female",
@@ -255,7 +255,7 @@ export async function seedAcademicCatalog() {
       displayOrder: 2,
       active: true,
       section: "female",
-      formVariantKeys: [],
+      formVariantKeys: ["madrassa-girls-general"],
     },
   ];
 

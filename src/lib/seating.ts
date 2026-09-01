@@ -4,6 +4,8 @@ export type SeatingStudent = {
   rollNo: string;
   gradeId: number;
   gradeLabel: string;
+  classId: string;
+  className: string;
 };
 
 export type SeatGrid = (SeatingStudent | null)[][];
@@ -28,6 +30,8 @@ export type SeatingConfig = {
   aisleEveryCol: number;
   cellSizePx: number;
 };
+
+export type SeatingMode = "alam" | "mixed";
 
 export function gcd(a: number, b: number): number {
   while (b) {
@@ -54,26 +58,37 @@ export function canPlaceGreedy(
   grid: SeatGrid,
   r: number,
   c: number,
-  gradeId: number,
+  student: SeatingStudent,
   gap: number,
+  sameClass: (a: SeatingStudent, b: SeatingStudent) => boolean,
 ): boolean {
-  for (let dc = 1; dc <= gap; dc++)
-    if (c - dc >= 0 && grid[r][c - dc]?.gradeId === gradeId) return false;
-  for (let dr = 1; dr <= gap; dr++)
-    if (r - dr >= 0 && grid[r - dr][c]?.gradeId === gradeId) return false;
+  for (let dc = 1; dc <= gap; dc++) {
+    if (c - dc >= 0 && grid[r][c - dc] && sameClass(student, grid[r][c - dc]!)) return false;
+  }
+  for (let dr = 1; dr <= gap; dr++) {
+    if (r - dr >= 0 && grid[r - dr][c] && sameClass(student, grid[r - dr][c]!)) return false;
+  }
   return true;
 }
 
-export function countViolations(grid: SeatGrid, rows: number, cols: number, gap: number): number {
+export function countViolations(
+  grid: SeatGrid,
+  rows: number,
+  cols: number,
+  gap: number,
+  sameClass: (a: SeatingStudent, b: SeatingStudent) => boolean,
+): number {
   let count = 0;
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++) {
       const s = grid[r][c];
       if (!s) continue;
-      for (let dc = 1; dc <= gap; dc++)
-        if (c + dc < cols && grid[r][c + dc]?.gradeId === s.gradeId) count++;
-      for (let dr = 1; dr <= gap; dr++)
-        if (r + dr < rows && grid[r + dr][c]?.gradeId === s.gradeId) count++;
+      for (let dc = 1; dc <= gap; dc++) {
+        if (c + dc < cols && grid[r][c + dc] && sameClass(s, grid[r][c + dc]!)) count++;
+      }
+      for (let dr = 1; dr <= gap; dr++) {
+        if (r + dr < rows && grid[r + dr][c] && sameClass(s, grid[r + dr][c]!)) count++;
+      }
     }
   return count;
 }
@@ -106,21 +121,24 @@ export function shuffle<T>(arr: T[], seed?: string | number): T[] {
   return a;
 }
 
-export function isViolation(grid: SeatGrid, r: number, c: number, gap: number): boolean {
+export function isViolation(grid: SeatGrid, r: number, c: number, gap: number, sameClass: (a: SeatingStudent, b: SeatingStudent) => boolean): boolean {
   const s = grid[r][c];
   if (!s) return false;
   const rows = grid.length;
   const cols = grid[0].length;
   for (let dc = 1; dc <= gap; dc++) {
-    if (c - dc >= 0 && grid[r][c - dc]?.gradeId === s.gradeId) return true;
-    if (c + dc < cols && grid[r][c + dc]?.gradeId === s.gradeId) return true;
+    if (c - dc >= 0 && grid[r][c - dc] && sameClass(s, grid[r][c - dc]!)) return true;
+    if (c + dc < cols && grid[r][c + dc] && sameClass(s, grid[r][c + dc]!)) return true;
   }
   for (let dr = 1; dr <= gap; dr++) {
-    if (r - dr >= 0 && grid[r - dr][c]?.gradeId === s.gradeId) return true;
-    if (r + dr < rows && grid[r + dr][c]?.gradeId === s.gradeId) return true;
+    if (r - dr >= 0 && grid[r - dr][c] && sameClass(s, grid[r - dr][c]!)) return true;
+    if (r + dr < rows && grid[r + dr][c] && sameClass(s, grid[r + dr][c]!)) return true;
   }
   return false;
 }
+
+const sameGradeId = (a: SeatingStudent, b: SeatingStudent) => a.gradeId === b.gradeId;
+const sameClassId = (a: SeatingStudent, b: SeatingStudent) => a.classId === b.classId;
 
 export function buildHallSeating(
   hallId: string,
@@ -131,57 +149,104 @@ export function buildHallSeating(
   gap: number,
   seed?: string | number,
 ): HallSeating {
+  return buildHallSeatingMode(hallId, hallName, rows, cols, students, gap, seed, "alam", sameGradeId);
+}
+
+export function buildHallSeatingMode(
+  hallId: string,
+  hallName: string,
+  rows: number,
+  cols: number,
+  students: SeatingStudent[],
+  gap: number,
+  seed: string | number | undefined,
+  mode: SeatingMode,
+  sameClass: (a: SeatingStudent, b: SeatingStudent) => boolean,
+): HallSeating {
   const grades = Array.from(new Set(students.map((s) => s.gradeId))).sort((a, b) => a - b);
   const numGrades = grades.length || 1;
   const { step: rowStep, period: colPeriod } = findRowStep(numGrades, gap);
   const feasible = gap < numGrades;
 
-  // bucket and shuffle students per grade
   const buckets: Record<number, SeatingStudent[]> = {};
   for (const g of grades) buckets[g] = [];
   for (const s of students) buckets[s.gradeId].push(s);
   for (const g of grades)
     buckets[g] = shuffle(buckets[g], seed === undefined ? undefined : `${seed}:${g}`);
 
-  // create grid
   const grid: SeatGrid = Array.from({ length: rows }, () =>
     Array<SeatingStudent | null>(cols).fill(null),
   );
 
-  // overflow holder: cells we want to fill later
   const overflowCells: { r: number; c: number; preferredGradeIdx: number }[] = [];
 
-  // 1) try to place by designated slot
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const slotIdx = (r * rowStep + c) % numGrades;
       const gid = grades[slotIdx];
       const bucket = buckets[gid];
       if (bucket && bucket.length > 0) {
-        grid[r][c] = bucket.shift()!;
+        const student = bucket.shift()!;
+        if (canPlaceGreedy(grid, r, c, student, gap, sameClass)) {
+          grid[r][c] = student;
+        } else {
+          overflowCells.push({ r, c, preferredGradeIdx: slotIdx });
+        }
       } else {
         overflowCells.push({ r, c, preferredGradeIdx: slotIdx });
       }
     }
   }
 
-  // 2) greedy fill remaining cells from leftover students
   const leftover: SeatingStudent[] = [];
   for (const g of grades) leftover.push(...buckets[g]);
 
   for (const cell of overflowCells) {
     if (leftover.length === 0) break;
-    // try to find a student whose placement does not violate
     let pickIdx = -1;
     for (let i = 0; i < leftover.length; i++) {
-      if (canPlaceGreedy(grid, cell.r, cell.c, leftover[i].gradeId, gap)) {
+      if (canPlaceGreedy(grid, cell.r, cell.c, leftover[i], gap, sameClass)) {
         pickIdx = i;
         break;
       }
     }
-    if (pickIdx === -1) pickIdx = 0; // forced placement
+    if (pickIdx === -1) pickIdx = 0;
     grid[cell.r][cell.c] = leftover.splice(pickIdx, 1)[0];
   }
 
   return { hallId, hallName, rows, cols, students, grid, rowStep, colPeriod, feasible };
+}
+
+export function buildMixedHallSeating(
+  hallId: string,
+  hallName: string,
+  rows: number,
+  cols: number,
+  students: SeatingStudent[],
+  gap: number,
+  seed: string | number | undefined,
+): HallSeating {
+  const shuffled = shuffle(students, seed);
+  const grid: SeatGrid = Array.from({ length: rows }, () =>
+    Array<SeatingStudent | null>(cols).fill(null),
+  );
+
+  const remaining = [...shuffled];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (remaining.length === 0) break;
+      let pickIdx = -1;
+      for (let i = 0; i < remaining.length; i++) {
+        if (canPlaceGreedy(grid, r, c, remaining[i], gap, sameClassId)) {
+          pickIdx = i;
+          break;
+        }
+      }
+      if (pickIdx === -1) pickIdx = 0;
+      grid[r][c] = remaining.splice(pickIdx, 1)[0];
+    }
+  }
+
+  const violationCount = countViolations(grid, rows, cols, gap, sameClassId);
+  return { hallId, hallName, rows, cols, students: shuffled, grid, rowStep: 0, colPeriod: 0, feasible: true };
 }

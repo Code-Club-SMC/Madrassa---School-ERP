@@ -1,16 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { useMemo } from "react";
-import { ChevronLeft } from "lucide-react";
+import { BookOpen, School } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { PdfFormRenderer } from "@/components/admission/pdf-form-renderer";
 import { ADMISSION_CATEGORIES, ADMISSION_VARIANTS, getVariant } from "@/lib/admission-variants";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/components/language-context";
 import { useQuery } from "@tanstack/react-query";
 import { BookLoader } from "@/components/shared/book-loader";
-import { useSystem } from "@/components/system-context";
 
 const searchSchema = z.object({ variant: z.string().optional(), categoryId: z.string().optional() });
 
@@ -22,7 +20,6 @@ export const Route = createFileRoute("/_authenticated/admission/new")({
 function NewAdmissionRoute() {
   const { variant: variantKey, categoryId } = Route.useSearch();
   const { lang } = useLanguage();
-  const { gender } = useSystem();
   const navigate = useNavigate();
 
   const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
@@ -49,12 +46,23 @@ function NewAdmissionRoute() {
     return dbSection === "female";
   }), [categoriesData]);
 
-  const resolveVariantForCategory = (category: { section: string; formVariantKeys?: string[] }) => {
+  const resolveVariantForCategory = (category: { id: string; name: string; nameUrdu: string; section: string; formVariantKeys?: string[] }) => {
     const sectionKey = category.section === "baneen" || category.section === "male" ? "male" : "female";
     const assigned = category.formVariantKeys ?? [];
     const pool = ADMISSION_VARIANTS.filter((v) => v.category === sectionKey && v.section === "madrassa");
     const matches = assigned.length > 0 ? pool.filter((v) => assigned.includes(v.key)) : pool;
-    return matches[0] ?? null;
+    if (matches.length > 0) return matches[0];
+    const normalized = (category.nameUrdu || category.name || category.id).toLowerCase();
+    if (normalized.includes("nazara") || normalized.includes("ناظرہ") || normalized.includes("nazira") || normalized.includes("qaida") || normalized.includes("قاعدہ")) {
+      return pool.find((v) => v.key.includes("nazira")) ?? null;
+    }
+    if (normalized.includes("hifiz") || normalized.includes("حفاظ") || normalized.includes("hifz")) {
+      return pool.find((v) => v.key.includes("hifz")) ?? null;
+    }
+    if (normalized.includes("alam") || normalized.includes("علم") || normalized.includes("nizami") || normalized.includes("نظامی")) {
+      return pool.find((v) => v.key.includes("general")) ?? null;
+    }
+    return null;
   };
 
   const variant = getVariant(variantKey);
@@ -64,9 +72,9 @@ function NewAdmissionRoute() {
     return (
       <>
         <PageHeader
-          title="New Admission"
+          title={lang === "ur" ? "نیا داخلہ" : "New Admission"}
           titleUrdu="نیا داخلہ"
-          description={lang === "ur" ? (category?.descriptionUrdu ?? variant.titleUrdu) : variant.titleEnglish}
+          description={lang === "ur" ? (category?.descriptionUrdu ?? variant.titleUrdu) : (category?.descriptionEnglish ?? variant.titleEnglish)}
         />
         <PdfFormRenderer variant={variant} categoryId={categoryId ?? undefined} />
       </>
@@ -74,59 +82,120 @@ function NewAdmissionRoute() {
   }
 
   if (categoriesLoading) {
-    return <BookLoader text="Loading..." className="h-96" />;
+    return <BookLoader text={lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading..."} className="h-96" />;
   }
 
-  const openCategoryForm = (category: { id: string; section: string; formVariantKeys?: string[] }) => {
+  const openCategoryForm = (category: { id: string; name: string; nameUrdu: string; section: string; formVariantKeys?: string[] }) => {
     const resolved = resolveVariantForCategory(category);
     if (resolved) {
       navigate({ to: "/admission/new", search: { variant: resolved.key, categoryId: category.id } });
     }
   };
 
-  const renderCategorySection = (title: string, categories: { id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; formVariantKeys?: string[] }[]) => (
-    <div>
-      <h3 className="text-lg font-semibold mb-3 font-urdu">{title}</h3>
-      {categories.length === 0 ? (
-        <Card className="p-5 text-sm text-muted-foreground">
-          {lang === "ur" ? "کوئی زمرہ نہیں ملا" : "No categories found"}
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {categories.map((c) => {
-            const resolved = resolveVariantForCategory(c);
-            return (
-              <Card
-                key={c.id}
-                className="p-5 hover:border-primary/40 transition-colors cursor-pointer h-full"
-                onClick={() => resolved && openCategoryForm(c)}
-              >
-                <div className="mb-3">
-                  <p className="font-urdu text-xl font-semibold">{c.nameUrdu || c.name}</p>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">{c.name || c.nameUrdu}</p>
-                </div>
-                {c.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{c.descriptionUrdu || c.description}</p>
-                )}
-              </Card>
-            );
-          })}
+  const renderMadrassaCard = (category: { id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; formVariantKeys?: string[] }) => {
+    const resolved = resolveVariantForCategory(category);
+    if (!resolved) return null;
+    const displayTitle = lang === "ur" ? (category.nameUrdu || category.name) : (category.name || category.nameUrdu);
+    const displaySubtitle = lang === "ur" ? (category.descriptionUrdu || category.description) : (category.description || category.descriptionUrdu);
+    return (
+      <Card
+        className="p-6 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full group"
+        onClick={() => openCategoryForm(category)}
+      >
+        <div className="flex items-start gap-4">
+          <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <BookOpen className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-base mb-1 truncate">{displayTitle}</h4>
+            <p className="text-xs text-muted-foreground line-clamp-2">{displaySubtitle}</p>
+          </div>
         </div>
-      )}
-    </div>
-  );
+      </Card>
+    );
+  };
+
+  const renderSchoolCard = (variantKey: string) => {
+    const variant = getVariant(variantKey);
+    if (!variant) return null;
+    const displayTitle = lang === "ur" ? variant.institutionUrdu : variant.institutionEnglish;
+    const displaySubtitle = lang === "ur" ? (variant.subtitleUrdu || variant.titleUrdu) : (variant.subtitleEnglish || variant.titleEnglish);
+    return (
+      <Card
+        className="p-6 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full group"
+        onClick={() => navigate({ to: "/admission/new", search: { variant: variant.key } })}
+      >
+        <div className="flex items-start gap-4">
+          <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <School className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-base mb-1 truncate">{displayTitle}</h4>
+            <p className="text-xs text-muted-foreground line-clamp-2">{displaySubtitle}</p>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  const maleMadrassaCards = qasimiaCategories.map((c) => ({ ...c, group: "madrassa" }));
+  const femaleMadrassaCards = zainabCategories.map((c) => ({ ...c, group: "madrassa" }));
 
   return (
-    <>
+    <div className="space-y-8">
       <PageHeader
         title={lang === "ur" ? "زمرہ منتخب کریں" : "Select Category"}
         titleUrdu="زمرہ منتخب کریں"
         description={lang === "ur" ? "داخلہ کے لیے زمرہ منتخب کریں" : "Select a category for admission"}
       />
-      <div className="space-y-6">
-        {renderCategorySection("جامعہ قاسمیہ للبنین", qasimiaCategories)}
-        {renderCategorySection("جامعہ زینب للبنات", zainabCategories)}
-      </div>
-    </>
+
+      {maleMadrassaCards.length > 0 && (
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <BookOpen className="h-5 w-5 text-primary" />
+          </div>
+            <div>
+              <h3 className="text-lg font-semibold">
+                {lang === "ur" ? "جامعہ قاسمیہ للبنین" : "Jamia Qasimia lilBanin"}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {lang === "ur" ? "مذہبی تعلیم" : "Religious Education"}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {maleMadrassaCards.map((c) => (
+              <div key={c.id}>{renderMadrassaCard(c)}</div>
+            ))}
+            {renderSchoolCard("school-boys-main")}
+          </div>
+        </section>
+      )}
+
+      {femaleMadrassaCards.length > 0 && (
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <BookOpen className="h-5 w-5 text-primary" />
+          </div>
+            <div>
+              <h3 className="text-lg font-semibold">
+                {lang === "ur" ? "جامعہ زینب للبنات" : "Jamyah Zainab lilbanat"}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {lang === "ur" ? "مذہبی تعلیم" : "Religious Education"}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {femaleMadrassaCards.map((c) => (
+              <div key={c.id}>{renderMadrassaCard(c)}</div>
+            ))}
+            {renderSchoolCard("school-girls-main")}
+          </div>
+        </section>
+      )}
+    </div>
   );
 }

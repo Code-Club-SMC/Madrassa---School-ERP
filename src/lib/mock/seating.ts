@@ -23,12 +23,15 @@ const LAST_NAMES = ["Khan", "Ahmed", "Raza", "Hussain", "Iqbal", "Malik", "Sheik
 function makeStudent(idx: number, gradeId: number, gradeLabel: string): SeatingStudent {
   const fn = FIRST_NAMES[idx % FIRST_NAMES.length];
   const ln = LAST_NAMES[(idx * 3) % LAST_NAMES.length];
+  const classId = `class-${gradeId}`;
   return {
     id: `stu-${gradeId}-${idx}`,
     name: `${fn} ${ln}`,
     rollNo: `R-${gradeId}${String(idx + 1).padStart(3, "0")}`,
     gradeId,
     gradeLabel,
+    classId,
+    className: gradeLabel,
   };
 }
 

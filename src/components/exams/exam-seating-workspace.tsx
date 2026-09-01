@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +44,7 @@ export function ExamSeatingWorkspace({ examId, system }: Props) {
   const [confirmGenerate, setConfirmGenerate] = useState(false);
   const [confirmLock, setConfirmLock] = useState(false);
   const [hallOpen, setHallOpen] = useState(false);
-  const [config, setConfig] = useState({ gap: 1, seed: "", allowUnseated: false });
+  const [config, setConfig] = useState({ gap: 1, seed: "", allowUnseated: false, mode: "alam" as "alam" | "mixed" });
   const [hallForm, setHallForm] = useState({ name: "", nameUrdu: "", rows: 5, cols: 6 });
 
   const load = useCallback(async () => {
@@ -73,6 +74,7 @@ export function ExamSeatingWorkspace({ examId, system }: Props) {
     setGenerating(true);
     try {
       const next = await generateSeatingPlan(examId, {
+        mode: config.mode,
         gap: config.gap,
         seed: config.seed || undefined,
         allowUnseated: config.allowUnseated,
@@ -179,6 +181,19 @@ export function ExamSeatingWorkspace({ examId, system }: Props) {
             />
             Allow unseated
           </label>
+        </div>
+        <div className="mt-3">
+          <Label className="mb-1.5 block text-xs text-muted-foreground">Seating Mode</Label>
+          <RadioGroup value={config.mode} onValueChange={(value) => setConfig({ ...config, mode: value as "alam" | "mixed" })} className="flex gap-4">
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="alam" id="mode-alam" />
+              <Label htmlFor="mode-alam" className="text-sm font-normal">Alam</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <RadioGroupItem value="mixed" id="mode-mixed" />
+              <Label htmlFor="mode-mixed" className="text-sm font-normal">Mixed</Label>
+            </div>
+          </RadioGroup>
         </div>
       </Card>
 

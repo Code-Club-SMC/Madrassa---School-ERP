@@ -70,7 +70,8 @@ export function ExamSeating({ examId, module }: Props) {
 
   const active = halls.find((h) => h.hallId === activeHallId) ?? halls[0];
   const activeDef = hallDefs.find((h) => h.id === (active?.hallId ?? "")) ?? hallDefs[0];
-  const totalViolations = halls.reduce((sum, h) => sum + countViolations(h.grid, h.rows, h.cols, config.gap), 0);
+  const sameClass = (a: { gradeId: number }, b: { gradeId: number }) => a.gradeId === b.gradeId;
+  const totalViolations = halls.reduce((sum, h) => sum + countViolations(h.grid, h.rows, h.cols, config.gap, sameClass), 0);
   const numGrades = mockGrades.length;
   const feasible = config.gap < numGrades;
 
@@ -201,6 +202,7 @@ export function ExamSeating({ examId, module }: Props) {
               }}
               showViolations={showViolations}
               onTip={setTip}
+              sameClass={sameClass}
             />
           )}
         </Card>
@@ -234,7 +236,7 @@ export function ExamSeating({ examId, module }: Props) {
               <li className="flex justify-between"><span className="text-muted-foreground">Gap</span><span className="font-mono">{config.gap}</span></li>
               <li className="flex justify-between"><span className="text-muted-foreground">Row step</span><span className="font-mono">{active?.rowStep}</span></li>
               <li className="flex justify-between"><span className="text-muted-foreground">Col period</span><span className="font-mono">{active?.colPeriod}</span></li>
-              <li className="flex justify-between"><span className="text-muted-foreground">Hall violations</span><span className={`font-mono ${active && countViolations(active.grid, active.rows, active.cols, config.gap) === 0 ? "text-emerald-600" : "text-destructive"}`}>{active ? countViolations(active.grid, active.rows, active.cols, config.gap) : 0}</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Hall violations</span><span className={`font-mono ${active && countViolations(active.grid, active.rows, active.cols, config.gap, sameClass) === 0 ? "text-emerald-600" : "text-destructive"}`}>{active ? countViolations(active.grid, active.rows, active.cols, config.gap, sameClass) : 0}</span></li>
               <li className="flex justify-between"><span className="text-muted-foreground">Total violations</span><span className={`font-mono ${totalViolations === 0 ? "text-emerald-600" : "text-destructive"}`}>{totalViolations}</span></li>
             </ul>
             <p className="mt-3 text-[10px] text-muted-foreground leading-snug">Algorithm: slot = (row × rowStep + col) % numGrades. Row step chosen so colPeriod &gt; gap, guaranteeing horizontal &amp; vertical separation.</p>
@@ -277,11 +279,13 @@ function SeatingGrid({
   config,
   showViolations,
   onTip,
+  sameClass,
 }: {
   hall: HallSeating;
-  config: SeatingConfig;
+  config: SeatingConfig & { rows: number; cols: number; aisleEveryRow: number; aisleEveryCol: number };
   showViolations: boolean;
   onTip: (t: { x: number; y: number; text: string; gradeId: number } | null) => void;
+  sameClass: (a: { gradeId: number }, b: { gradeId: number }) => boolean;
 }) {
   const { rows, cols, grid } = hall;
   return (
@@ -303,7 +307,7 @@ function SeatingGrid({
               <div className="flex gap-1.5">
                 {Array.from({ length: cols }).map((_, c) => {
                   const s = grid[r][c];
-                  const violation = showViolations && isViolation(grid, r, c, config.gap);
+                  const violation = showViolations && isViolation(grid, r, c, config.gap, sameClass);
                   const tone = s ? toneFor(s.gradeId) : null;
                   return (
                     <div key={c} className="flex">

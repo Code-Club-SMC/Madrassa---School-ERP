@@ -323,6 +323,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     sectionId: "",
     categoryId: "",
     subcategoryId: "",
+    subjectId: "",
     type: system === "school" ? "quarterly" : "salanah",
     name: "",
     nameUrdu: "",
@@ -367,37 +368,6 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     void load();
   }, [load]);
 
-  useEffect(() => {
-    const currentSystem = form.examSystem;
-    const scopeId = currentSystem === "school" ? form.classId : form.subcategoryId;
-    if (!scopeId) {
-      setAvailableSubjects([]);
-      setForm((current) => ({ ...current, subjectId: "" }));
-      return;
-    }
-    let cancelled = false;
-    listExamSubjects({
-      system: currentSystem,
-      schoolClassId: currentSystem === "school" ? scopeId : undefined,
-      madrassaSubcategoryId: currentSystem === "madrassa" ? scopeId : undefined,
-      active: true,
-    })
-      .then((payload) => {
-        if (cancelled) return;
-        setAvailableSubjects(payload.subjects);
-        setForm((current) => ({
-          ...current,
-          subjectId: payload.subjects.find((subject) => subject.id !== current.subjectId)?.id ?? payload.subjects[0]?.id ?? "",
-        }));
-      })
-      .catch((error) => {
-        if (!cancelled) toast.error(error instanceof Error ? error.message : "Could not load subjects");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [form.examSystem, form.classId, form.subcategoryId]);
-
   async function handleCreate() {
     const currentSystem = form.examSystem;
     const scopeId = currentSystem === "school" ? form.classId : form.subcategoryId;
@@ -407,12 +377,19 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     }
 
     let subjectIds = [form.subjectId].filter(Boolean);
-    if (subjectIds.length === 0 && availableSubjects.length > 0) {
-      subjectIds = [availableSubjects[0].id];
-    }
     if (subjectIds.length === 0) {
-      toast.error("At least one subject is required");
-      return;
+      try {
+        const payload = await listExamSubjects({
+          system: currentSystem,
+          schoolClassId: currentSystem === "school" ? scopeId : undefined,
+          madrassaSubcategoryId: currentSystem === "madrassa" ? scopeId : undefined,
+          active: true,
+        });
+        subjectIds = payload.subjects.map((subject) => subject.id);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not load subjects for exam");
+        return;
+      }
     }
 
     try {

@@ -11,12 +11,15 @@ const { describe, expect, test } = await import(bunTestModule);
 
 const students: SeatingStudent[] = Array.from({ length: 12 }, (_, index) => {
   const gradeId = (index % 3) + 1;
+  const classId = `class-${gradeId}`;
   return {
     id: `s${index + 1}`,
     name: `Student ${index + 1}`,
     rollNo: `R-${index + 1}`,
     gradeId,
     gradeLabel: `Grade ${gradeId}`,
+    classId,
+    className: `Grade ${gradeId}`,
   };
 });
 
@@ -40,11 +43,12 @@ describe("exam seating", () => {
   });
 
   test("buildHallSeating preserves existing unseeded call compatibility", () => {
+    const sameClass = (a: { gradeId: number }, b: { gradeId: number }) => a.gradeId === b.gradeId;
     const hall = buildHallSeating("h1", "Hall 1", 3, 4, students, 1);
 
     expect(hall.grid.flat().filter(Boolean)).toHaveLength(12);
     expect(hall.feasible).toBe(true);
-    expect(countViolations(hall.grid, hall.rows, hall.cols, 1)).toBe(0);
+    expect(countViolations(hall.grid, hall.rows, hall.cols, 1, sameClass)).toBe(0);
   });
 
   test("buildHallSeating produces repeatable seeded layouts", () => {

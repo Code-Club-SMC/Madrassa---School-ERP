@@ -29,7 +29,7 @@ import type { ModuleKey, PermissionAction } from "@/lib/permissions/module-regis
 import { requirePermission } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
 import { insertStudentEvent } from "@/lib/server/students/events";
-import { buildHallSeating, countViolations, type SeatingStudent } from "@/lib/seating";
+import { buildHallSeating, buildMixedHallSeating, countViolations, type SeatingStudent } from "@/lib/seating";
 import { assignPositions, buildTranscript, calculateExamResult } from "./result-calculations";
 
 const systems = ["school", "madrassa"] as const;
@@ -136,6 +136,7 @@ export const hallListQuerySchema = z.object({
 });
 
 export const seatingGenerateSchema = z.object({
+  mode: z.enum(["alam", "mixed"]).default("alam"),
   gap: z.number().int().min(1).default(1),
   seed: z.string().trim().optional(),
   allowUnseated: z.boolean().default(false),
@@ -311,6 +312,7 @@ export async function deleteExamSubject(request: Request, id: string) {
 
 export async function listExamSessions(request: Request, query: z.infer<typeof examListQuerySchema>) {
   await requireExamPermission(request, query.system, "view");
+  const institutionSection = query.section === "male" ? "baneen" : query.section === "female" ? "banat" : query.section;
   const clauses = compactSql([
     eq(examSessions.system, query.system),
     query.status ? eq(examSessions.status, query.status) : undefined,
@@ -318,7 +320,7 @@ export async function listExamSessions(request: Request, query: z.infer<typeof e
     query.institutionId ? eq(examSessions.institutionId, query.institutionId) : undefined,
     query.schoolClassId ? eq(examSessions.schoolClassId, query.schoolClassId) : undefined,
     query.madrassaSubcategoryId ? eq(examSessions.madrassaSubcategoryId, query.madrassaSubcategoryId) : undefined,
-    query.section ? eq(institutions.section, query.section) : undefined,
+    institutionSection ? eq(institutions.section, institutionSection) : undefined,
   ]);
 
   const exams = await fetchExamDetails(clauses);
@@ -1033,14 +1035,18 @@ export async function generateExamSeatingPlan(
   const placementIds = new Map<string, number>();
   const seatingStudents = roster.map((row) => {
     const key = placementKey(row);
-    const gradeId = placementIds.get(key) ?? placementIds.size + 1;
-    placementIds.set(key, gradeId);
+    const gradeId = input.mode === "mixed" ? placementIds.size + 1 : placementIds.get(key) ?? placementIds.size + 1;
+    if (input.mode !== "mixed") placementIds.set(key, gradeId);
+    const classId = placementKey(row);
+    const classLabel = groupLabelForRow(row);
     return {
       id: row.studentId,
       name: row.name,
       rollNo: row.rollNo,
       gradeId,
-      gradeLabel: groupLabelForRow(row),
+      gradeLabel: classLabel,
+      classId,
+      className: classLabel,
     } satisfies SeatingStudent;
   });
   const rosterByStudentId = new Map(roster.map((row) => [row.studentId, row]));
@@ -1076,20 +1082,18 @@ export async function generateExamSeatingPlan(
 
     let cursor = 0;
     let violationCount = 0;
+    const sameClass = input.mode === "mixed"
+      ? (a: SeatingStudent, b: SeatingStudent) => a.classId === b.classId
+      : (a: SeatingStudent, b: SeatingStudent) => a.gradeId === b.gradeId;
+
     for (const hall of halls) {
       const capacity = hall.rows * hall.cols;
       const hallStudents = seated.slice(cursor, cursor + capacity);
       cursor += capacity;
-      const layout = buildHallSeating(
-        hall.id,
-        hall.name,
-        hall.rows,
-        hall.cols,
-        hallStudents,
-        input.gap,
-        `${seed}:${hall.id}`,
-      );
-      violationCount += countViolations(layout.grid, layout.rows, layout.cols, input.gap);
+      const layout = input.mode === "mixed"
+        ? buildMixedHallSeating(hall.id, hall.name, hall.rows, hall.cols, hallStudents, input.gap, `${seed}:${hall.id}`)
+        : buildHallSeating(hall.id, hall.name, hall.rows, hall.cols, hallStudents, input.gap, `${seed}:${hall.id}`);
+      violationCount += countViolations(layout.grid, layout.rows, layout.cols, input.gap, sameClass);
 
       for (let rowIndex = 0; rowIndex < layout.rows; rowIndex += 1) {
         for (let colIndex = 0; colIndex < layout.cols; colIndex += 1) {

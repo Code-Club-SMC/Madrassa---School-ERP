@@ -179,7 +179,7 @@ export function getSeatingPlan(examId: string) {
   return requestJson<SeatingPlanPayload>(`/api/exams/sessions/${examId}/seating`);
 }
 
-export function generateSeatingPlan(examId: string, input: { gap: number; seed?: string; allowUnseated: boolean }) {
+export function generateSeatingPlan(examId: string, input: { mode?: "alam" | "mixed"; gap: number; seed?: string; allowUnseated: boolean }) {
   return requestJson<SeatingPlanPayload>(`/api/exams/sessions/${examId}/seating`, {
     method: "POST",
     body: JSON.stringify(input),
