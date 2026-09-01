@@ -57,8 +57,30 @@ function initials(name: string) {
 }
 
 function systemLabel(systemScope: TeacherSystemScope) {
-  if (systemScope === "both") return "Both systems";
-  return systemScope === "madrassa" ? "Madrassa" : "School";
+  switch (systemScope) {
+    case "all":
+      return "All";
+    case "both":
+      return "Both systems";
+    case "school":
+      return "School";
+    case "madrassa":
+      return "Madrassa";
+    case "qasmia-both":
+      return "All Qasim (Both)";
+    case "qasmia-madrassa":
+      return "Qasim Madrassa";
+    case "qasmia-school":
+      return "Qasim School";
+    case "zainab-both":
+      return "All Zainab (Both)";
+    case "zainab-madrassa":
+      return "Zainab Madrassa";
+    case "zainab-school":
+      return "Zainab School";
+    default:
+      return systemScope;
+  }
 }
 
 export function TeacherWorkspace() {
@@ -161,10 +183,16 @@ export function TeacherWorkspace() {
                 <SelectValue placeholder="System" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All systems</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="both">Both systems</SelectItem>
-                <SelectItem value="madrassa">Madrassa</SelectItem>
                 <SelectItem value="school">School</SelectItem>
+                <SelectItem value="madrassa">Madrassa</SelectItem>
+                <SelectItem value="qasmia-both">All Qasim (Both)</SelectItem>
+                <SelectItem value="qasmia-madrassa">Qasim Madrassa</SelectItem>
+                <SelectItem value="qasmia-school">Qasim School</SelectItem>
+                <SelectItem value="zainab-both">All Zainab (Both)</SelectItem>
+                <SelectItem value="zainab-madrassa">Zainab Madrassa</SelectItem>
+                <SelectItem value="zainab-school">Zainab School</SelectItem>
               </SelectContent>
             </Select>
             <Select value={status} onValueChange={(value) => setStatus(value as StatusFilter)}>

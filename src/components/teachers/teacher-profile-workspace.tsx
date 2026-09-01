@@ -423,8 +423,14 @@ function TeacherEditSheet({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="both">Both systems</SelectItem>
-                <SelectItem value="madrassa">Madrassa</SelectItem>
                 <SelectItem value="school">School</SelectItem>
+                <SelectItem value="madrassa">Madrassa</SelectItem>
+                <SelectItem value="qasmia-both">All Qasim (Both)</SelectItem>
+                <SelectItem value="qasmia-madrassa">Qasim Madrassa</SelectItem>
+                <SelectItem value="qasmia-school">Qasim School</SelectItem>
+                <SelectItem value="zainab-both">All Zainab (Both)</SelectItem>
+                <SelectItem value="zainab-madrassa">Zainab Madrassa</SelectItem>
+                <SelectItem value="zainab-school">Zainab School</SelectItem>
               </SelectContent>
             </Select>
           </Field>

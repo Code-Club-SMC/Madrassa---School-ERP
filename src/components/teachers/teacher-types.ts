@@ -1,4 +1,4 @@
-export type TeacherSystemScope = "school" | "madrassa" | "both";
+export type TeacherSystemScope = "school" | "madrassa" | "both" | "all" | "qasmia-both" | "qasmia-madrassa" | "qasmia-school" | "zainab-both" | "zainab-madrassa" | "zainab-school";
 export type TeacherSystem = "school" | "madrassa";
 export type TeacherEmploymentStatus = "active" | "inactive";
 export type TeacherPaymentMethod = "cash" | "bank";

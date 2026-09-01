@@ -12,7 +12,7 @@ import { user } from "@/db/schema/auth";
 import { examSubjects } from "@/db/schema/exams";
 
 export type TeacherSystem = "school" | "madrassa";
-export type TeacherSystemScope = TeacherSystem | "both";
+export type TeacherSystemScope = TeacherSystem | "both" | "all" | "qasmia-both" | "qasmia-madrassa" | "qasmia-school" | "zainab-both" | "zainab-madrassa" | "zainab-school";
 export type TeacherEmploymentStatus = "active" | "inactive";
 export type TeacherPaymentMethod = "cash" | "bank";
 

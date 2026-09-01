@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { BookOpen, CalendarDays, ChevronRight, GraduationCap, LineChart, Users } from "lucide-react";
+import { BookOpen, CalendarDays, ChevronRight, GraduationCap, LineChart, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
-import { getExamReport, listExamSessions } from "@/components/exams/exam-api";
-import type { ExamReportPayload, ExamSession, ExamSystem } from "@/components/exams/exam-types";
+import { listExamSessions } from "@/components/exams/exam-api";
+import type { ExamSession, ExamSystem } from "@/components/exams/exam-types";
 import { useLanguage } from "@/components/language-context";
 import { useSystem } from "@/components/system-context";
 import { Badge } from "@/components/ui/badge";
@@ -13,13 +13,13 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookLoader } from "@/components/shared/book-loader";
 import { cn } from "@/lib/utils";
+import { ExamResults } from "@/components/exams/exam-results";
 
-type Tab = "exams" | "seating";
+type Tab = "exams" | "seating" | "results";
 
 type ExamMeta = {
   exam: ExamSession;
   dateStatus: "upcoming" | "started" | "passed";
-  canViewReport: boolean;
 };
 
 type Props = {
@@ -32,11 +32,8 @@ export function ExamDashboard({ system }: Props) {
   const [tab, setTab] = useState<Tab>("exams");
   const [exams, setExams] = useState<ExamSession[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reportExamId, setReportExamId] = useState<string | null>(null);
-  const [report, setReport] = useState<ExamReportPayload | null>(null);
-  const [reportLoading, setReportLoading] = useState(false);
 
-  const section = system === "madrassa" ? (gender === "male" ? "baneen" : gender === "female" ? "banat" : undefined) : undefined;
+  const section = system === "madrassa" ? gender : undefined;
 
   const examMeta = useMemo<ExamMeta[]>(() => {
     const today = new Date();
@@ -50,8 +47,7 @@ export function ExamDashboard({ system }: Props) {
         let dateStatus: ExamMeta["dateStatus"] = "upcoming";
         if (todayStart >= startDate && todayStart <= endDate) dateStatus = "started";
         else if (todayStart > endDate) dateStatus = "passed";
-        const canViewReport = exam.status === "published" && dateStatus === "passed";
-        return { exam, dateStatus, canViewReport };
+        return { exam, dateStatus };
       })
       .sort((a, b) => new Date(b.exam.startDate).getTime() - new Date(a.exam.startDate).getTime());
   }, [exams]);
@@ -71,19 +67,6 @@ export function ExamDashboard({ system }: Props) {
   useEffect(() => {
     void load();
   }, [system, section]);
-
-  const handleViewReport = async (examId: string) => {
-    setReportExamId(examId);
-    setReportLoading(true);
-    try {
-      const data = await getExamReport({ system, examId });
-      setReport(data);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load report");
-    } finally {
-      setReportLoading(false);
-    }
-  };
 
   const statusTone: Record<string, string> = {
     draft: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
@@ -114,13 +97,37 @@ export function ExamDashboard({ system }: Props) {
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
+  const tabTitle = tab === "exams" ? (lang === "ur" ? "امتحانات" : "Exams") : tab === "seating" ? (lang === "ur" ? "نشست بندی" : "Seating") : (lang === "ur" ? "نتائج" : "Results");
+  const tabSubtitle = tab === "exams" ? (lang === "ur" ? "امتحانات کا نظم و انتظام" : "Manage exams") : tab === "seating" ? (lang === "ur" ? "نشست بندی کا انتظام" : "Manage seating") : (lang === "ur" ? "امتحانی نتائج اور رتبے" : "Results, ranks, and class-wise performance");
+
   return (
     <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">
+            {tab === "results" ? (lang === "ur" ? (system === "madrassa" ? "نتائج — مدرسہ" : "نتائج — اسکول") : (system === "madrassa" ? "Results — Madrassa" : "Results — School")) : (lang === "ur" ? (system === "madrassa" ? "امتحانات — مدرسہ" : "امتحانات — اسکول") : (system === "madrassa" ? "Exams — Madrassa" : "Exams — School"))}
+          </h2>
+          <p className="text-xs text-muted-foreground">{tabSubtitle}</p>
+        </div>
+        {tab !== "results" && (
+          <Button asChild size="sm" className="gap-1.5">
+            <Link to={system === "school" ? "/school/exams" : "/madrassa/exams"}>
+              <Plus className="h-4 w-4" />
+              {lang === "ur" ? "نیا امتحان" : "New Exam"}
+            </Link>
+          </Button>
+        )}
+      </div>
+
       <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
         <TabsList className="mb-4">
           <TabsTrigger value="exams" className="gap-2">
             <BookOpen className="h-4 w-4" />
             {lang === "ur" ? "امتحانات" : "Exams"}
+          </TabsTrigger>
+          <TabsTrigger value="results" className="gap-2">
+            <LineChart className="h-4 w-4" />
+            {lang === "ur" ? "نتائج" : "Results"}
           </TabsTrigger>
           <TabsTrigger value="seating" className="gap-2">
             <GraduationCap className="h-4 w-4" />
@@ -137,7 +144,7 @@ export function ExamDashboard({ system }: Props) {
             </Card>
           ) : (
             <div className="grid gap-3">
-              {examMeta.map(({ exam, dateStatus, canViewReport }) => (
+              {examMeta.map(({ exam, dateStatus }) => (
                 <Card key={exam.id} className="p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex-1 min-w-0">
@@ -169,12 +176,6 @@ export function ExamDashboard({ system }: Props) {
                           {lang === "ur" ? "تفصیل" : "Detail"}
                         </Link>
                       </Button>
-                      {canViewReport && (
-                        <Button size="sm" onClick={() => handleViewReport(exam.id)}>
-                          <LineChart className="h-3.5 w-3.5 mr-1.5" />
-                          {lang === "ur" ? "رپورٹ" : "Report"}
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </Card>
@@ -232,86 +233,11 @@ export function ExamDashboard({ system }: Props) {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="results" className="space-y-4">
+          <ExamResults system={system} />
+        </TabsContent>
       </Tabs>
-
-      {reportExamId && (
-        <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold">
-              {lang === "ur" ? "امتحانی رپورٹ" : "Exam Report"}
-            </h3>
-            <Button variant="ghost" size="sm" onClick={() => { setReportExamId(null); setReport(null); }}>
-              {lang === "ur" ? "بند کریں" : "Close"}
-            </Button>
-          </div>
-          {reportLoading ? (
-            <BookLoader text={lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading report..."} className="h-48" />
-          ) : report ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">{lang === "ur" ? "کل طلباء" : "Total"}</p>
-                  <p className="text-xl font-bold">{report.summary.total}</p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">{lang === "ur" ? "پاس" : "Pass"}</p>
-                  <p className="text-xl font-bold text-emerald-600">{report.summary.pass}</p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">{lang === "ur" ? "فیل" : "Fail"}</p>
-                  <p className="text-xl font-bold text-destructive">{report.summary.fail}</p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">{lang === "ur" ? "پاس شرح" : "Pass Rate"}</p>
-                  <p className="text-xl font-bold">{report.summary.passRate}%</p>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="mb-2 font-semibold">{lang === "ur" ? "جماعت کے لحاظ سے" : "By Class"}</h4>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {Object.entries(
-                    report.rows.reduce<Record<string, { label: string; total: number; pass: number; fail: number; avg: number }>>((acc, row) => {
-                      const label = row.groupLabel || (lang === "ur" ? "نامعلوم" : "Unknown");
-                      if (!acc[label]) acc[label] = { label, total: 0, pass: 0, fail: 0, avg: 0 };
-                      acc[label].total += 1;
-                      if (row.status === "pass") acc[label].pass += 1;
-                      else acc[label].fail += 1;
-                      acc[label].avg += row.percentageTimes100;
-                      return acc;
-                    }, {})
-                  ).map(([label, data]) => (
-                    <Card key={label} className="p-4">
-                      <p className="mb-2 font-medium truncate">{label}</p>
-                      <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                        <span>{lang === "ur" ? "کل" : "Total"}: {data.total}</span>
-                        <span>{lang === "ur" ? "پاس" : "Pass"}: {data.pass}</span>
-                        <span>{lang === "ur" ? "فیل" : "Fail"}: {data.fail}</span>
-                        <span>{lang === "ur" ? "اوسط" : "Avg"}: {Math.round(data.avg / data.total)}%</span>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-
-              {report.gradeDistribution.length > 0 && (
-                <div>
-                  <h4 className="mb-2 font-semibold">{lang === "ur" ? "گریڈ کی تقسیم" : "Grade Distribution"}</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {report.gradeDistribution.map((item) => (
-                      <Badge key={item.grade} variant="secondary">
-                        {item.grade}: {item.count}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">{lang === "ur" ? "رپورٹ موجود نہیں" : "No report data"}</p>
-          )}
-        </Card>
-      )}
     </div>
   );
 }

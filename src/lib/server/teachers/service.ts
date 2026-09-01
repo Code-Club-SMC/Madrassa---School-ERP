@@ -16,7 +16,7 @@ import {
   validateTimeRange,
 } from "@/lib/server/teachers/domain";
 
-const systemScopeSchema = z.enum(["school", "madrassa", "both"]);
+const systemScopeSchema = z.enum(["school", "madrassa", "both", "all", "qasmia-both", "qasmia-madrassa", "qasmia-school", "zainab-both", "zainab-madrassa", "zainab-school"]);
 const paymentMethodSchema = z.enum(["cash", "bank"]);
 const systemSchema = z.enum(["school", "madrassa"]);
 const dateStringSchema = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must use YYYY-MM-DD format");
@@ -68,7 +68,7 @@ export const createTeacherSchema = z.object({
 
 export const teacherListQuerySchema = z.object({
   q: optionalText,
-  systemScope: z.enum(["all", "school", "madrassa", "both"]).default("all"),
+  systemScope: z.enum(["all", "school", "madrassa", "both", "qasmia-both", "qasmia-madrassa", "qasmia-school", "zainab-both", "zainab-madrassa", "zainab-school"]).default("all"),
   status: z.enum(["all", "active", "inactive"]).default("all"),
 });
 

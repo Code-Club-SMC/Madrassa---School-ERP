@@ -197,6 +197,7 @@ export function getExamReport(input: { system?: ExamSystem | "both"; examId?: st
   if (input.system) params.set("system", input.system);
   if (input.examId) params.set("examId", input.examId);
   if (input.academicYear) params.set("academicYear", input.academicYear);
+
   return requestJson<ExamReportPayload>(`/api/exams/reports/summary?${params.toString()}`);
 }
 
