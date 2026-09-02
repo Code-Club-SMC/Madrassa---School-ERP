@@ -1,0 +1,3 @@
+ALTER TABLE "madrassa_categories" ADD COLUMN "form_variant_keys" text[] DEFAULT '{}' NOT NULL;--> statement-breakpoint
+ALTER TABLE "exam_subjects" ADD COLUMN "teacher_id" text;--> statement-breakpoint
+ALTER TABLE "exam_subjects" ADD CONSTRAINT "exam_subjects_teacher_id_teacher_profiles_id_fk" FOREIGN KEY ("teacher_id") REFERENCES "public"."teacher_profiles"("id") ON DELETE set null ON UPDATE no action;

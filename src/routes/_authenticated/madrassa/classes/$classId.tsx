@@ -21,6 +21,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -75,6 +82,7 @@ function ClassDetailPage() {
   const [classData, setClassData] = useState<MadrassaSubcategory | null>(null);
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [subjects, setSubjects] = useState<ExamSubject[]>([]);
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -86,6 +94,7 @@ function ClassDetailPage() {
     group: "general",
     totalMarks: 100,
     passingMarks: 33,
+    teacherId: "",
   });
   const [editId, setEditId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -97,6 +106,7 @@ function ClassDetailPage() {
     totalMarks: 100,
     passingMarks: 33,
     active: true,
+    teacherId: "",
   });
   const [deleteTarget, setDeleteTarget] = useState<ExamSubject | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -108,9 +118,10 @@ function ClassDetailPage() {
   const loadClass = useCallback(async () => {
     setLoading(true);
     try {
-      const [categoriesRes, yearsRes] = await Promise.all([
+      const [categoriesRes, yearsRes, teachersRes] = await Promise.all([
         fetch("/api/academic/madrassa/categories", { credentials: "include" }),
         fetch("/api/academic-years", { credentials: "include" }),
+        fetch("/api/teachers", { credentials: "include" }),
       ]);
 
       const categoriesPayload = await categoriesRes.json().catch(() => ({}));
@@ -118,6 +129,16 @@ function ClassDetailPage() {
 
       const yearsPayload = await yearsRes.json().catch(() => ({}));
       if (!yearsRes.ok) throw new Error(yearsPayload.error || "Could not load academic years");
+
+      const teachersPayload = await teachersRes.json().catch(() => ({}));
+      if (teachersRes.ok) {
+        const list = (teachersPayload.teachers ?? []).map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }));
+        setTeachers(list);
+        console.log("[class-detail] teachers loaded", list.length, list);
+      } else {
+        console.error("[class-detail] teachers fetch failed", teachersRes.status, teachersPayload);
+        setTeachers([]);
+      }
 
       const categories = categoriesPayload.categories ?? [];
       const allSubcategories = categories.flatMap((c: any) => c.subcategories ?? []);
@@ -163,6 +184,7 @@ function ClassDetailPage() {
       totalMarks: subject.totalMarks,
       passingMarks: subject.passingMarks,
       active: subject.active,
+      teacherId: subject.teacherId ?? "",
     });
     setEditOpen(true);
   };
@@ -184,6 +206,7 @@ function ClassDetailPage() {
         totalMarks: editForm.totalMarks,
         passingMarks: editForm.passingMarks,
         active: editForm.active,
+        teacherId: editForm.teacherId || undefined,
       });
       toast.success(t("Subject updated", "مضمون اپ ڈیٹ ہو گیا"));
       setEditOpen(false);
@@ -255,10 +278,11 @@ function ClassDetailPage() {
         totalMarks: form.totalMarks,
         passingMarks: form.passingMarks,
         displayOrder: subjects.length + 1,
+        teacherId: form.teacherId || undefined,
       });
       toast.success(t("Subject added", "مضمون شامل کر دیا گیا"));
       setOpen(false);
-      setForm({ code: "", name: "", nameUrdu: "", group: "general", totalMarks: 100, passingMarks: 33 });
+      setForm({ code: "", name: "", nameUrdu: "", group: "general", totalMarks: 100, passingMarks: 33, teacherId: "" });
       await loadSubjects();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not add subject");
@@ -313,16 +337,7 @@ function ClassDetailPage() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">{t("Class Name", "کلاس کا نام")}</p>
-          <p className="font-heading text-lg font-bold mt-1">{isUrdu ? classData.nameUrdu : classData.name}</p>
-          <p className="font-urdu text-sm text-muted-foreground">{isUrdu ? classData.name : classData.nameUrdu}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">{t("Roll Prefix", "رول سابقہ")}</p>
-          <p className="font-heading text-2xl font-bold mt-1">{classData.rollPrefix}</p>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">{t("Fee", "فیس")}</p>
           <p className="font-heading text-2xl font-bold mt-1">{classData.fee ?? 0}</p>
@@ -332,20 +347,9 @@ function ClassDetailPage() {
           <p className="font-heading text-2xl font-bold mt-1">{classData.darja ?? classData.govtEquivalent ?? "-"}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{t("Duration", "مدت")} · {classData.durationYears ?? 0} {t("years", "سال")}</p>
         </Card>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">{t("Total Enrollment", "کل داخلہ")}</p>
           <p className="font-heading text-2xl font-bold mt-1">{classData.enrollmentCount}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">{t("Qasmia Students", "قاسمیہ طلبہ")}</p>
-          <p className="font-heading text-2xl font-bold mt-1">{classData.qasmiaCount}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">{t("Zainab Students", "زینب طلبہ")}</p>
-          <p className="font-heading text-2xl font-bold mt-1">{classData.zainabCount}</p>
         </Card>
       </div>
 
@@ -356,6 +360,7 @@ function ClassDetailPage() {
               <TableHead>{t("Subject", "مضمون")}</TableHead>
               <TableHead>{t("Code", "کوڈ")}</TableHead>
               <TableHead>{t("Group", "گروپ")}</TableHead>
+              <TableHead>{t("Teacher", "استاد")}</TableHead>
               <TableHead className="text-end">{t("Marks", "نمارات")}</TableHead>
               <TableHead className="text-end">{t("Status", "حالت")}</TableHead>
               <TableHead className="text-end">{t("Actions", "کارروائیاں")}</TableHead>
@@ -364,28 +369,31 @@ function ClassDetailPage() {
           <TableBody>
             {subjectsLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground">{t("Loading subjects...", "مضامین لوڈ ہو رہے ہیں...")}</TableCell>
+                <TableCell colSpan={7} className="text-muted-foreground">{t("Loading subjects...", "مضامین لوڈ ہو رہے ہیں...")}</TableCell>
               </TableRow>
             ) : subjects.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground">{t("No subjects found for this class.", "اس کلاس کے لیے کوئی مضمون نہیں ملا۔")}</TableCell>
+                <TableCell colSpan={7} className="text-muted-foreground">{t("No subjects found for this class.", "اس کلاس کے لیے کوئی مضمون نہیں ملا۔")}</TableCell>
               </TableRow>
             ) : (
-              subjects.map((subject) => (
-                <TableRow key={subject.id}>
-                  <TableCell>
-                    <p className="font-medium">{subject.name}</p>
-                    <p className="font-urdu text-sm text-muted-foreground">{subject.nameUrdu}</p>
-                  </TableCell>
-                  <TableCell className="font-mono">{subject.code}</TableCell>
-                  <TableCell>{subject.group}</TableCell>
-                  <TableCell className="text-end font-mono">
-                    {subject.totalMarks} / {subject.passingMarks}
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Badge variant={subject.active ? "secondary" : "outline"}>{subject.active ? t("Active", "فعال") : t("Inactive", "غیر فعال")}</Badge>
-                  </TableCell>
-                  <TableCell className="text-end">
+              subjects.map((subject) => {
+                const teacher = subject.teacherId ? teachers.find((t) => t.id === subject.teacherId) : null;
+                return (
+                  <TableRow key={subject.id}>
+                    <TableCell>
+                      <p className="font-medium">{subject.name}</p>
+                      <p className="font-urdu text-sm text-muted-foreground">{subject.nameUrdu}</p>
+                    </TableCell>
+                    <TableCell className="font-mono">{subject.code}</TableCell>
+                    <TableCell>{subject.group}</TableCell>
+                    <TableCell>{teacher ? teacher.name : "-"}</TableCell>
+                    <TableCell className="text-end font-mono">
+                      {subject.totalMarks} / {subject.passingMarks}
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <Badge variant={subject.active ? "secondary" : "outline"}>{subject.active ? t("Active", "فعال") : t("Inactive", "غیر فعال")}</Badge>
+                    </TableCell>
+                    <TableCell className="text-end">
                     <div className="flex items-center justify-end gap-1">
                       <Button
                         variant="ghost"
@@ -417,7 +425,8 @@ function ClassDetailPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+              );
+            })
             )}
           </TableBody>
         </Table>
@@ -475,16 +484,33 @@ function ClassDetailPage() {
                 onChange={(e) => setForm({ ...form, totalMarks: Number(e.target.value) })}
               />
             </BilingualLabel>
-            <BilingualLabel urdu="پاس نمبرات" english="Passing Marks">
-              <Input
-                type="number"
-                min={0}
-                value={form.passingMarks}
-                onChange={(e) => setForm({ ...form, passingMarks: Number(e.target.value) })}
-              />
-            </BilingualLabel>
-          </div>
-          <div className="flex justify-end gap-2">
+             <BilingualLabel urdu="پاس نمبرات" english="Passing Marks">
+               <Input
+                 type="number"
+                 min={0}
+                 value={form.passingMarks}
+                 onChange={(e) => setForm({ ...form, passingMarks: Number(e.target.value) })}
+               />
+             </BilingualLabel>
+           </div>
+           <div className="grid gap-3 sm:grid-cols-2">
+             <BilingualLabel urdu="استاد" english="Teacher">
+               <Select value={form.teacherId} onValueChange={(value) => setForm({ ...form, teacherId: value })}>
+                 <SelectTrigger>
+                   <SelectValue placeholder={t("Select teacher", "استاد منتخب کریں")} />
+                 </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{t("No teacher", "کوئی استاد نہیں")}</SelectItem>
+                    {teachers.map((teacher) => (
+                      <SelectItem key={teacher.id} value={teacher.id}>
+                        {teacher.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+               </Select>
+             </BilingualLabel>
+           </div>
+           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpen(false)}>
               {t("Cancel", "منسوخ کریں")}
             </Button>
@@ -554,6 +580,23 @@ function ClassDetailPage() {
                 value={editForm.passingMarks}
                 onChange={(e) => setEditForm({ ...editForm, passingMarks: Number(e.target.value) })}
               />
+            </BilingualLabel>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <BilingualLabel urdu="استاد" english="Teacher">
+              <Select value={editForm.teacherId} onValueChange={(value) => setEditForm({ ...editForm, teacherId: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("Select teacher", "استاد منتخب کریں")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{t("No teacher", "کوئی استاد نہیں")}</SelectItem>
+                  {teachers.map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id}>
+                      {teacher.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </BilingualLabel>
           </div>
           <div className="flex justify-end gap-2">

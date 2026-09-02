@@ -20,6 +20,7 @@ import {
 } from "@/db/schema/academic";
 import { user } from "@/db/schema/auth";
 import { studentEnrollments, students } from "@/db/schema/students";
+import { teacherProfiles } from "@/db/schema/teachers";
 
 export type ExamSystem = "school" | "madrassa";
 export type ExamStatus = "draft" | "active" | "locked" | "published";
@@ -52,6 +53,7 @@ export const examSubjects = pgTable(
     passingMarks: integer("passing_marks").notNull(),
     displayOrder: integer("display_order").default(0).notNull(),
     active: boolean("active").default(true).notNull(),
+    teacherId: text("teacher_id").references(() => teacherProfiles.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

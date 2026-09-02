@@ -89,6 +89,7 @@ const statusTone: Record<string, string> = {
 export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
   const [options, setOptions] = useState<AcademicOptions>(emptyOptions);
   const [subjects, setSubjects] = useState<ExamSubject[]>([]);
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -99,12 +100,31 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
     totalMarks: 100,
     passingMarks: 33,
     scopeId: "",
+    teacherId: "",
   });
 
   const loadOptions = useCallback(async () => {
     const next = await loadAcademicOptions();
     setOptions(next);
   }, [system]);
+
+  const loadTeachers = useCallback(async () => {
+    try {
+      const response = await fetch("/api/teachers", { credentials: "include" });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        console.error("[exam-workspace] teachers fetch failed", response.status, payload);
+        setTeachers([]);
+        return;
+      }
+      const data = await response.json();
+      const list = (data.teachers ?? []).map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }));
+      setTeachers(list);
+      console.log("[exam-workspace] teachers loaded", list.length, list);
+    } catch {
+      // ignore teacher load errors
+    }
+  }, []);
 
   const loadSubjects = useCallback(async () => {
     setLoading(true);
@@ -125,6 +145,10 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
   useEffect(() => {
     void loadOptions().catch((error) => toast.error(error instanceof Error ? error.message : "Could not load options"));
   }, [loadOptions]);
+
+  useEffect(() => {
+    void loadTeachers();
+  }, [loadTeachers]);
 
   useEffect(() => {
     void loadSubjects();
@@ -153,10 +177,11 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
         totalMarks: form.totalMarks,
         passingMarks: form.passingMarks,
         displayOrder: subjects.length + 1,
+        teacherId: form.teacherId || undefined,
       });
       toast.success("Subject created");
       setOpen(false);
-      setForm({ code: "", name: "", nameUrdu: "", group: "general", totalMarks: 100, passingMarks: 33, scopeId: targetScopeId });
+      setForm({ code: "", name: "", nameUrdu: "", group: "general", totalMarks: 100, passingMarks: 33, scopeId: targetScopeId, teacherId: "" });
       await loadSubjects();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not create subject");
@@ -208,6 +233,7 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
               <TableHead>Subject</TableHead>
               <TableHead>Code</TableHead>
               <TableHead>Group</TableHead>
+              <TableHead>Teacher</TableHead>
               <TableHead className="text-end">Marks</TableHead>
               <TableHead className="text-end">Status</TableHead>
             </TableRow>
@@ -215,29 +241,33 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">Loading subjects...</TableCell>
+                <TableCell colSpan={6} className="text-muted-foreground">Loading subjects...</TableCell>
               </TableRow>
             ) : subjects.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground">No subjects configured for this scope.</TableCell>
+                <TableCell colSpan={6} className="text-muted-foreground">No subjects configured for this scope.</TableCell>
               </TableRow>
             ) : (
-              subjects.map((subject) => (
-                <TableRow key={subject.id}>
-                  <TableCell>
-                    <p className="font-medium">{subject.name}</p>
-                    <p className="font-urdu text-sm text-muted-foreground">{subject.nameUrdu}</p>
-                  </TableCell>
-                  <TableCell className="font-mono">{subject.code}</TableCell>
-                  <TableCell>{subject.group}</TableCell>
-                  <TableCell className="text-end font-mono">
-                    {subject.totalMarks} / {subject.passingMarks}
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Badge variant={subject.active ? "secondary" : "outline"}>{subject.active ? "Active" : "Inactive"}</Badge>
-                  </TableCell>
-                </TableRow>
-              ))
+              subjects.map((subject) => {
+                const teacher = subject.teacherId ? teachers.find((t) => t.id === subject.teacherId) : null;
+                return (
+                  <TableRow key={subject.id}>
+                    <TableCell>
+                      <p className="font-medium">{subject.name}</p>
+                      <p className="font-urdu text-sm text-muted-foreground">{subject.nameUrdu}</p>
+                    </TableCell>
+                    <TableCell className="font-mono">{subject.code}</TableCell>
+                    <TableCell>{subject.group}</TableCell>
+                    <TableCell>{teacher ? teacher.name : "-"}</TableCell>
+                    <TableCell className="text-end font-mono">
+                      {subject.totalMarks} / {subject.passingMarks}
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <Badge variant={subject.active ? "secondary" : "outline"}>{subject.active ? "Active" : "Inactive"}</Badge>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -295,6 +325,21 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
                           </SelectItem>
                         )),
                       )}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Assigned Teacher">
+              <Select value={form.teacherId} onValueChange={(value) => setForm({ ...form, teacherId: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select teacher" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No teacher</SelectItem>
+                  {teachers.map((teacher) => (
+                    <SelectItem key={teacher.id} value={teacher.id}>
+                      {teacher.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </Field>

@@ -83,6 +83,12 @@ export function setTeacherActive(id: string, active: boolean) {
   }).then(withIdentityFields);
 }
 
+export function deleteTeacher(id: string) {
+  return requestJson<{ success: true; deletedTeacherId: string }>(`/api/teachers/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export function createTeacherAssignment(teacherId: string, payload: Record<string, unknown>) {
   return requestJson<TeacherDetail>(`/api/teachers/${teacherId}/assignments`, {
     method: "POST",

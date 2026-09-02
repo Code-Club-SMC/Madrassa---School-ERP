@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  deleteTeacher,
   getTeacher,
   updateTeacherProfile,
   updateTeacherProfileSchema,
@@ -25,6 +26,13 @@ export const Route = createFileRoute("/api/teachers/$id")({
           return json(await updateTeacherProfile(request, params.id, body.data));
         } catch (error) {
           return errorResponse(error, "Could not update teacher");
+        }
+      },
+      DELETE: async ({ request, params }) => {
+        try {
+          return json(await deleteTeacher(request, params.id), 200);
+        } catch (error) {
+          return errorResponse(error, "Could not delete teacher");
         }
       },
     },

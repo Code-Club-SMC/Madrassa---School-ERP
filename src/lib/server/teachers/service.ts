@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { user as authUser } from "@/db/schema/auth";
@@ -729,6 +729,24 @@ async function cleanupAuthUser(userId: string) {
   }
 }
 
+export async function deleteTeacher(request: Request, teacherId: string) {
+  const actor = await requirePermission(request, "teachers", "delete");
+  const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.id, teacherId)).limit(1);
+  if (!profile) throw new HttpError("Teacher not found", 404);
+
+  await db.transaction(async (tx) => {
+    await tx.delete(teacherTimetablePeriods).where(eq(teacherTimetablePeriods.teacherProfileId, teacherId));
+    await tx.delete(teacherAssignments).where(eq(teacherAssignments.teacherProfileId, teacherId));
+    await tx.delete(teacherProfiles).where(eq(teacherProfiles.id, teacherId));
+  });
+
+  if (profile.userId) {
+    await cleanupAuthUser(profile.userId);
+  }
+
+  return { success: true, deletedTeacherId: teacherId };
+}
+
 function validateAssignmentDates(
   input: { effectiveFrom?: string | null; effectiveTo?: string | null },
   ctx: z.RefinementCtx,
@@ -746,6 +764,10 @@ function validateAssignmentDatePair(effectiveFrom?: string | null, effectiveTo?:
   if (effectiveFrom && effectiveTo && effectiveFrom > effectiveTo) {
     throw new HttpError("Effective end date must be after effective start date", 400);
   }
+}
+
+function compactSql<T extends SQL | undefined>(clauses: T[]) {
+  return clauses.filter(Boolean) as SQL[];
 }
 
 function hasAnyKey(value: object) {
@@ -883,6 +905,14 @@ export async function getMyTeacherExams(request: Request) {
     .filter((a) => a.system === "madrassa" && a.madrassaSubcategoryId)
     .map((a) => a.madrassaSubcategoryId);
 
+  const sessionClauses: (SQL | undefined)[] = [inArray(examSessions.system, ["school", "madrassa"])];
+  if (classKeys.length > 0) {
+    sessionClauses.push(and(eq(examSessions.system, "school"), inArray(examSessions.schoolClassId, uniqueStrings(classKeys.map((k) => k.split("::")[0])))));
+  }
+  if (madrassaKeys.length > 0) {
+    sessionClauses.push(and(eq(examSessions.system, "madrassa"), inArray(examSessions.madrassaSubcategoryId, madrassaKeys as string[])));
+  }
+
   const sessions = await db
     .select({
       id: examSessions.id,
@@ -895,21 +925,7 @@ export async function getMyTeacherExams(request: Request) {
       publishedAt: examSessions.publishedAt,
     })
     .from(examSessions)
-    .where(
-      and(
-        inArray(examSessions.system, ["school", "madrassa"]),
-        or(
-          and(
-            eq(examSessions.system, "school"),
-            inArray(examSessions.schoolClassId, uniqueStrings(classKeys.map((k) => k.split("::")[0]))),
-          ),
-          and(
-            eq(examSessions.system, "madrassa"),
-            inArray(examSessions.madrassaSubcategoryId, madrassaKeys),
-          ),
-        ),
-      ),
-    )
+    .where(and(...compactSql(sessionClauses)))
     .orderBy(desc(examSessions.startDate));
 
   return { assignments, sessions };

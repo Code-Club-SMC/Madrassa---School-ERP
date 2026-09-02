@@ -8,6 +8,7 @@ import {
   Loader2,
   Plus,
   Search,
+  Trash2,
   UserCheck,
   UserX,
 } from "lucide-react";
@@ -40,7 +41,7 @@ import {
 import { CredentialsOverlay } from "@/features/users/credentials-display";
 import { formatDate, formatPKR } from "@/lib/formatters";
 import { AddTeacherDialog } from "./add-teacher-dialog";
-import { listTeachers, setTeacherActive } from "./teacher-api";
+import { deleteTeacher, listTeachers, setTeacherActive } from "./teacher-api";
 import type { TeacherCredentials, TeacherListItem, TeacherSystemScope } from "./teacher-types";
 
 type StatusFilter = "all" | "active" | "inactive";
@@ -94,6 +95,8 @@ export function TeacherWorkspace() {
   const [credentials, setCredentials] = useState<TeacherCredentials | null>(null);
   const [actionTeacher, setActionTeacher] = useState<TeacherListItem | null>(null);
   const [submittingStatus, setSubmittingStatus] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<TeacherListItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadTeachers = useCallback(async () => {
     setLoading(true);
@@ -149,6 +152,21 @@ export function TeacherWorkspace() {
       toast.error(statusError instanceof Error ? statusError.message : "Could not update teacher");
     } finally {
       setSubmittingStatus(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteTeacher(deleteTarget.id);
+      setTeachers((current) => current.filter((teacher) => teacher.id !== deleteTarget.id));
+      toast.success("Teacher deleted");
+      setDeleteTarget(null);
+    } catch (deleteError) {
+      toast.error(deleteError instanceof Error ? deleteError.message : "Could not delete teacher");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -290,19 +308,30 @@ export function TeacherWorkspace() {
                     </Link>
                   </Button>
                 </div>
-                <Button
-                  size="sm"
-                  variant={teacher.employmentStatus === "active" ? "outline" : "secondary"}
-                  className="gap-1.5"
-                  onClick={() => setActionTeacher(teacher)}
-                >
-                  {teacher.employmentStatus === "active" ? (
-                    <UserX className="h-3.5 w-3.5" />
-                  ) : (
-                    <UserCheck className="h-3.5 w-3.5" />
-                  )}
-                  {teacher.employmentStatus === "active" ? "Deactivate" : "Activate"}
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-destructive"
+                    aria-label="Delete teacher"
+                    onClick={() => setDeleteTarget(teacher)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={teacher.employmentStatus === "active" ? "outline" : "secondary"}
+                    className="gap-1.5"
+                    onClick={() => setActionTeacher(teacher)}
+                  >
+                    {teacher.employmentStatus === "active" ? (
+                      <UserX className="h-3.5 w-3.5" />
+                    ) : (
+                      <UserCheck className="h-3.5 w-3.5" />
+                    )}
+                    {teacher.employmentStatus === "active" ? "Deactivate" : "Activate"}
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}
@@ -328,6 +357,23 @@ export function TeacherWorkspace() {
             <AlertDialogCancel disabled={submittingStatus}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => void confirmStatusChange()} disabled={submittingStatus}>
               {submittingStatus ? "Saving..." : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete teacher?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the teacher profile, assignments, timetable, and linked login account. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void confirmDelete()} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

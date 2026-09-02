@@ -16,6 +16,7 @@ export type ExamSubject = {
   passingMarks: number;
   displayOrder: number;
   active: boolean;
+  teacherId: string | null;
 };
 
 export type ExamSessionSubject = {

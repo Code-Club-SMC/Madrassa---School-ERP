@@ -49,6 +49,7 @@ export const subjectInputSchema = z.object({
   passingMarks: z.number().int().nonnegative(),
   displayOrder: z.number().int().default(0),
   active: z.boolean().optional(),
+  teacherId: z.string().trim().optional(),
 });
 
 export const subjectUpdateSchema = subjectInputSchema.partial().refine((value) => Object.keys(value).length > 0, {
@@ -262,6 +263,7 @@ export async function createExamSubject(request: Request, input: z.infer<typeof 
       passingMarks: input.passingMarks,
       displayOrder: input.displayOrder,
       active: input.active ?? true,
+      teacherId: input.teacherId ?? null,
     })
     .returning();
 
@@ -292,6 +294,7 @@ export async function updateExamSubject(
       code: input.code ? input.code.toUpperCase() : undefined,
       schoolClassId: nextSystem === "school" ? nextSchoolClassId : null,
       madrassaSubcategoryId: nextSystem === "madrassa" ? nextMadrassaSubcategoryId : null,
+      teacherId: input.teacherId ?? undefined,
       updatedAt: new Date(),
     })
     .where(eq(examSubjects.id, id))
@@ -1194,6 +1197,7 @@ function serializeSubject(row: ExamSubjectRow) {
     passingMarks: row.passingMarks,
     displayOrder: row.displayOrder,
     active: row.active,
+    teacherId: row.teacherId,
   };
 }
 

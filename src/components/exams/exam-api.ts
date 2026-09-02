@@ -48,6 +48,7 @@ export function createExamSubject(input: {
   totalMarks: number;
   passingMarks: number;
   displayOrder: number;
+  teacherId?: string;
 }) {
   return requestJson<{ subject: ExamSubject }>("/api/exams/subjects", {
     method: "POST",
@@ -67,6 +68,7 @@ export function updateExamSubject(id: string, input: {
   passingMarks?: number;
   displayOrder?: number;
   active?: boolean;
+  teacherId?: string;
 }) {
   return requestJson<{ subject: ExamSubject }>(`/api/exams/subjects/${id}`, {
     method: "PATCH",
