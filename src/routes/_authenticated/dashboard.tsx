@@ -1,4 +1,4 @@
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import {
   Users,
@@ -27,8 +27,6 @@ import {
   Legend,
 } from "recharts";
 import { PageHeader } from "@/components/shared/page-header";
-import { TeacherDashboard } from "@/components/teachers/teacher-dashboard";
-import { ParentPortal } from "@/components/parents/parent-portal";
 import { KpiCard } from "@/components/shared/kpi-card";
 import { BookLoader } from "@/components/shared/book-loader";
 import { Card } from "@/components/ui/card";
@@ -82,12 +80,6 @@ function DashboardPage() {
   if (!user) {
     return null;
   }
-  if (user?.role === "teacher") {
-    return <TeacherDashboard />;
-  }
-  if (user?.role === "parent") {
-    return <ParentPortal />;
-  }
 
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
@@ -128,7 +120,7 @@ function DashboardPage() {
         titleUrdu="ڈیش بورڈ"
         description={
           lang === "ur"
-            ? "مدرسہ اور اسکول دونو systems کا ملudin جائزہ"
+            ? "مدرسہ اور اسکول دونوں systems کا ملudin جائزہ"
             : "Combined overview across the Madrassa and School systems."
         }
         descriptionUrdu="مدرسہ اور اسکول دونوں نظاموں کا مل Yu جائزہ"
@@ -424,3 +416,4 @@ function DashboardPage() {
 // Quiet unused import in some builds
 void AreaChart;
 void Area;
+

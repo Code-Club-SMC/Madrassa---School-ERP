@@ -174,18 +174,20 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup className="px-1.5 pt-3">
-          {!collapsed && (
-            <SidebarGroupLabel className="flex flex-col items-start gap-0 h-auto py-1 mb-1 text-sidebar-foreground/70">
-              {sectionLabel("Global", "عمومی")}
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-0">{globalNav.map(renderItem)}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {role !== "teacher" && (
+          <SidebarGroup className="px-1.5 pt-3">
+            {!collapsed && (
+              <SidebarGroupLabel className="flex flex-col items-start gap-0 h-auto py-1 mb-1 text-sidebar-foreground/70">
+                {sectionLabel("Global", "عمومی")}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0">{globalNav.map(renderItem)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
-        {!isParent && !collapsed && (
+        {role !== "teacher" && !isParent && (
           <div className="px-3 pt-3 pb-1">
             <div className="grid grid-cols-2 bg-sidebar-accent/40 rounded-lg p-1 gap-1">
               <button
@@ -214,7 +216,7 @@ export function AppSidebar() {
           </div>
         )}
 
-        {!isParent && module === "madrassa" && madrassaNav.length > 0 && (
+        {role !== "teacher" && !isParent && module === "madrassa" && madrassaNav.length > 0 && (
           renderAccordionSection(
             "madrassa",
             gender === "male" ? "Jamia Qasimia" : "Jamyah Zainab",
@@ -222,7 +224,7 @@ export function AppSidebar() {
             madrassaNav,
           )
         )}
-        {!isParent && module === "school" && schoolNav.length > 0 && (
+        {role !== "teacher" && !isParent && module === "school" && schoolNav.length > 0 && (
           renderAccordionSection(
             "school",
             gender === "male" ? "Jamia Qasimia" : "Jamyah Zainab",
@@ -231,8 +233,8 @@ export function AppSidebar() {
           )
         )}
 
-        {renderAccordionSection("shared", "Shared", "مشترکہ", sharedNav)}
-        {renderAccordionSection("admin", "Admin", "انتظامیہ", adminNav)}
+        {role !== "teacher" && renderAccordionSection("shared", "Shared", "مشترکہ", sharedNav)}
+        {role !== "teacher" && renderAccordionSection("admin", "Admin", "انتظامیہ", adminNav)}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border py-3">

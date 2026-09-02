@@ -1,9 +1,26 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { user as authUser } from "@/db/schema/auth";
-import { teacherAssignments, teacherProfiles, teacherTimetablePeriods } from "@/db/schema/teachers";
+import {
+  institutions,
+  madrassaCategories,
+  madrassaSubcategories,
+  programs,
+  schoolClasses,
+  schoolClassSections,
+} from "@/db/schema/academic";
+import {
+  examSessions,
+  examSessionSubjects,
+  examSubjects,
+} from "@/db/schema/exams";
+import {
+  teacherAssignments,
+  teacherProfiles,
+  teacherTimetablePeriods,
+} from "@/db/schema/teachers";
 import { auth } from "@/lib/auth";
 import { generateSecurePassword } from "@/lib/generate-password";
 import { ROLE_DEFAULTS } from "@/lib/permissions/role-defaults";
@@ -141,7 +158,7 @@ export async function createTeacher(request: Request, input: z.infer<typeof crea
         phone: input.phone,
         cnic: input.cnic,
         status: "active",
-        systemAccess: input.systemScope,
+        systemAccess: input.systemScope === "all" ? "both" : ["school", "madrassa", "both"].includes(input.systemScope) ? input.systemScope : "both",
         mustChangePassword: true,
         linkedTeacherId: profileId,
         permissions: ROLE_DEFAULTS.teacher,
@@ -180,22 +197,22 @@ export async function createTeacher(request: Request, input: z.infer<typeof crea
         .set({ linkedTeacherId: profileId, updatedAt: new Date() })
         .where(eq(authUser.id, result.user.id));
     });
-
-    return {
-      teacher: await loadTeacherDetail(profileId),
-      credentials: {
-        nameUrdu: input.nameUrdu ?? input.name,
-        nameEnglish: input.name,
-        email: input.email,
-        role: "teacher" as const,
-        password,
-      },
-      actorUserId: actor.id,
-    };
   } catch (error) {
     await cleanupAuthUser(result.user.id);
     throw error;
   }
+
+  return {
+    teacher: await loadTeacherDetail(profileId),
+    credentials: {
+      nameUrdu: input.nameUrdu ?? input.name,
+      nameEnglish: input.name,
+      email: input.email,
+      role: "teacher" as const,
+      password,
+    },
+    actorUserId: actor.id,
+  };
 }
 
 export async function listTeachers(request: Request, query: z.infer<typeof teacherListQuerySchema>) {
@@ -289,7 +306,14 @@ export async function updateTeacherProfile(request: Request, id: string, input: 
           nameUrdu,
           phone,
           cnic,
-          systemAccess: profileInput.systemScope,
+          systemAccess:
+            profileInput.systemScope === undefined
+              ? undefined
+              : profileInput.systemScope === "all"
+                ? "both"
+                : ["school", "madrassa", "both"].includes(profileInput.systemScope)
+                  ? profileInput.systemScope
+                  : "both",
           department: profileInput.designation === undefined ? undefined : "Teaching",
           designation: profileInput.designation,
           updatedAt: new Date(),
@@ -761,4 +785,158 @@ function publicAccount(account: { id: string; name: string; email: string; role:
     role: account.role,
     status: account.status,
   };
+}
+
+export async function getMyTeacherClasses(request: Request) {
+  const actor = await requirePermission(request, "dashboard", "view");
+  if (actor.role !== "teacher") throw new HttpError("Teacher portal is only available to teacher accounts", 403);
+
+  const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  if (!profile) throw new HttpError("Teacher profile not found", 404);
+
+  const assignments = await db
+    .select({
+      id: teacherAssignments.id,
+      system: teacherAssignments.system,
+      institutionId: teacherAssignments.institutionId,
+      programId: teacherAssignments.programId,
+      schoolClassId: teacherAssignments.schoolClassId,
+      schoolSectionId: teacherAssignments.schoolSectionId,
+      madrassaCategoryId: teacherAssignments.madrassaCategoryId,
+      madrassaSubcategoryId: teacherAssignments.madrassaSubcategoryId,
+      subjectId: teacherAssignments.subjectId,
+      academicYear: teacherAssignments.academicYear,
+      effectiveFrom: teacherAssignments.effectiveFrom,
+      effectiveTo: teacherAssignments.effectiveTo,
+      active: teacherAssignments.active,
+      institutionName: institutions.name,
+      institutionNameUrdu: institutions.nameUrdu,
+      programName: programs.name,
+      programNameUrdu: programs.nameUrdu,
+      schoolClassName: schoolClasses.name,
+      schoolClassNameUrdu: schoolClasses.nameUrdu,
+      schoolSectionName: schoolClassSections.name,
+      madrassaCategoryName: madrassaCategories.name,
+      madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
+      madrassaSubcategoryName: madrassaSubcategories.name,
+      madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
+      subjectName: examSubjects.name,
+      subjectNameUrdu: examSubjects.nameUrdu,
+      subjectCode: examSubjects.code,
+    })
+    .from(teacherAssignments)
+    .innerJoin(institutions, eq(institutions.id, teacherAssignments.institutionId))
+    .innerJoin(programs, eq(programs.id, teacherAssignments.programId))
+    .leftJoin(schoolClasses, eq(schoolClasses.id, teacherAssignments.schoolClassId))
+    .leftJoin(schoolClassSections, eq(schoolClassSections.id, teacherAssignments.schoolSectionId))
+    .leftJoin(madrassaCategories, eq(madrassaCategories.id, teacherAssignments.madrassaCategoryId))
+    .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, teacherAssignments.madrassaSubcategoryId))
+    .leftJoin(examSubjects, eq(examSubjects.id, teacherAssignments.subjectId))
+    .where(and(eq(teacherAssignments.teacherProfileId, profile.id), eq(teacherAssignments.active, true)))
+    .orderBy(asc(teacherAssignments.system), asc(teacherAssignments.academicYear));
+
+  return assignments;
+}
+
+export async function getMyTeacherExams(request: Request) {
+  const actor = await requirePermission(request, "dashboard", "view");
+  if (actor.role !== "teacher") throw new HttpError("Teacher portal is only available to teacher accounts", 403);
+
+  const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  if (!profile) throw new HttpError("Teacher profile not found", 404);
+
+  const assignments = await db
+    .select({
+      id: teacherAssignments.id,
+      system: teacherAssignments.system,
+      subjectId: teacherAssignments.subjectId,
+      schoolClassId: teacherAssignments.schoolClassId,
+      schoolSectionId: teacherAssignments.schoolSectionId,
+      madrassaCategoryId: teacherAssignments.madrassaCategoryId,
+      madrassaSubcategoryId: teacherAssignments.madrassaSubcategoryId,
+      academicYear: teacherAssignments.academicYear,
+      subjectName: examSubjects.name,
+      subjectNameUrdu: examSubjects.nameUrdu,
+      subjectCode: examSubjects.code,
+      schoolClassName: schoolClasses.name,
+      schoolClassNameUrdu: schoolClasses.nameUrdu,
+      schoolSectionName: schoolClassSections.name,
+      madrassaCategoryName: madrassaCategories.name,
+      madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
+      madrassaSubcategoryName: madrassaSubcategories.name,
+      madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
+    })
+    .from(teacherAssignments)
+    .leftJoin(examSubjects, eq(examSubjects.id, teacherAssignments.subjectId))
+    .leftJoin(schoolClasses, eq(schoolClasses.id, teacherAssignments.schoolClassId))
+    .leftJoin(schoolClassSections, eq(schoolClassSections.id, teacherAssignments.schoolSectionId))
+    .leftJoin(madrassaCategories, eq(madrassaCategories.id, teacherAssignments.madrassaCategoryId))
+    .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, teacherAssignments.madrassaSubcategoryId))
+    .where(and(eq(teacherAssignments.teacherProfileId, profile.id), eq(teacherAssignments.active, true)))
+    .orderBy(asc(teacherAssignments.system), asc(teacherAssignments.academicYear));
+
+  const subjectIds = uniqueStrings(assignments.map((a) => a.subjectId).filter(Boolean) as string[]);
+  const classKeys = assignments
+    .filter((a) => a.system === "school" && a.schoolClassId && a.schoolSectionId)
+    .map((a) => `${a.schoolClassId}::${a.schoolSectionId}`);
+  const madrassaKeys = assignments
+    .filter((a) => a.system === "madrassa" && a.madrassaSubcategoryId)
+    .map((a) => a.madrassaSubcategoryId);
+
+  const sessions = await db
+    .select({
+      id: examSessions.id,
+      name: examSessions.name,
+      system: examSessions.system,
+      status: examSessions.status,
+      academicYear: examSessions.academicYear,
+      startDate: examSessions.startDate,
+      endDate: examSessions.endDate,
+      publishedAt: examSessions.publishedAt,
+    })
+    .from(examSessions)
+    .where(
+      and(
+        inArray(examSessions.system, ["school", "madrassa"]),
+        or(
+          and(
+            eq(examSessions.system, "school"),
+            inArray(examSessions.schoolClassId, uniqueStrings(classKeys.map((k) => k.split("::")[0]))),
+          ),
+          and(
+            eq(examSessions.system, "madrassa"),
+            inArray(examSessions.madrassaSubcategoryId, madrassaKeys),
+          ),
+        ),
+      ),
+    )
+    .orderBy(desc(examSessions.startDate));
+
+  return { assignments, sessions };
+}
+
+export async function getMyTeacherReports(request: Request) {
+  const actor = await requirePermission(request, "dashboard", "view");
+  if (actor.role !== "teacher") throw new HttpError("Teacher portal is only available to teacher accounts", 403);
+
+  const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  if (!profile) throw new HttpError("Teacher profile not found", 404);
+
+  const assignments = await db
+    .select()
+    .from(teacherAssignments)
+    .where(and(eq(teacherAssignments.teacherProfileId, profile.id), eq(teacherAssignments.active, true)))
+    .orderBy(asc(teacherAssignments.system), asc(teacherAssignments.academicYear));
+
+  return {
+    profile,
+    assignments,
+    totalClasses: assignments.length,
+    totalSchool: assignments.filter((a) => a.system === "school").length,
+    totalMadrassa: assignments.filter((a) => a.system === "madrassa").length,
+  };
+}
+
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values));
 }

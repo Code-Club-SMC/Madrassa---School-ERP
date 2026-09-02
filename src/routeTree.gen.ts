@@ -144,7 +144,10 @@ import { Route as ApiStudentsIdStatusRouteImport } from './routes/api/students/$
 import { Route as ApiTeachersIdActiveRouteImport } from './routes/api/teachers/$id/active'
 import { Route as ApiTeachersIdAssignmentsRouteImport } from './routes/api/teachers/$id/assignments'
 import { Route as ApiTeachersIdTimetableRouteImport } from './routes/api/teachers/$id/timetable'
+import { Route as ApiTeachersMeClassesRouteImport } from './routes/api/teachers/me/classes'
 import { Route as ApiTeachersMeDashboardRouteImport } from './routes/api/teachers/me/dashboard'
+import { Route as ApiTeachersMeExamsRouteImport } from './routes/api/teachers/me/exams'
+import { Route as ApiTeachersMeReportsRouteImport } from './routes/api/teachers/me/reports'
 import { Route as AuthenticatedMadrassaExamsIdIndexRouteImport } from './routes/_authenticated/madrassa/exams/$id/index'
 import { Route as AuthenticatedMadrassaExamsIdMarksRouteImport } from './routes/_authenticated/madrassa/exams/$id/marks'
 import { Route as AuthenticatedMadrassaExamsIdResultsRouteImport } from './routes/_authenticated/madrassa/exams/$id/results'
@@ -922,9 +925,24 @@ const ApiTeachersIdTimetableRoute = ApiTeachersIdTimetableRouteImport.update({
   path: '/timetable',
   getParentRoute: () => ApiTeachersIdRoute,
 } as any)
+const ApiTeachersMeClassesRoute = ApiTeachersMeClassesRouteImport.update({
+  id: '/api/teachers/me/classes',
+  path: '/api/teachers/me/classes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTeachersMeDashboardRoute = ApiTeachersMeDashboardRouteImport.update({
   id: '/api/teachers/me/dashboard',
   path: '/api/teachers/me/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTeachersMeExamsRoute = ApiTeachersMeExamsRouteImport.update({
+  id: '/api/teachers/me/exams',
+  path: '/api/teachers/me/exams',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTeachersMeReportsRoute = ApiTeachersMeReportsRouteImport.update({
+  id: '/api/teachers/me/reports',
+  path: '/api/teachers/me/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedMadrassaExamsIdIndexRoute =
@@ -1271,7 +1289,10 @@ export interface FileRoutesByFullPath {
   '/api/teachers/$id/active': typeof ApiTeachersIdActiveRoute
   '/api/teachers/$id/assignments': typeof ApiTeachersIdAssignmentsRouteWithChildren
   '/api/teachers/$id/timetable': typeof ApiTeachersIdTimetableRouteWithChildren
+  '/api/teachers/me/classes': typeof ApiTeachersMeClassesRoute
   '/api/teachers/me/dashboard': typeof ApiTeachersMeDashboardRoute
+  '/api/teachers/me/exams': typeof ApiTeachersMeExamsRoute
+  '/api/teachers/me/reports': typeof ApiTeachersMeReportsRoute
   '/madrassa/categories/': typeof AuthenticatedMadrassaCategoriesIndexRoute
   '/madrassa/classes/': typeof AuthenticatedMadrassaClassesIndexRoute
   '/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
@@ -1434,7 +1455,10 @@ export interface FileRoutesByTo {
   '/api/teachers/$id/active': typeof ApiTeachersIdActiveRoute
   '/api/teachers/$id/assignments': typeof ApiTeachersIdAssignmentsRouteWithChildren
   '/api/teachers/$id/timetable': typeof ApiTeachersIdTimetableRouteWithChildren
+  '/api/teachers/me/classes': typeof ApiTeachersMeClassesRoute
   '/api/teachers/me/dashboard': typeof ApiTeachersMeDashboardRoute
+  '/api/teachers/me/exams': typeof ApiTeachersMeExamsRoute
+  '/api/teachers/me/reports': typeof ApiTeachersMeReportsRoute
   '/madrassa/categories': typeof AuthenticatedMadrassaCategoriesIndexRoute
   '/madrassa/classes': typeof AuthenticatedMadrassaClassesIndexRoute
   '/madrassa/exams': typeof AuthenticatedMadrassaExamsIndexRoute
@@ -1609,7 +1633,10 @@ export interface FileRoutesById {
   '/api/teachers/$id/active': typeof ApiTeachersIdActiveRoute
   '/api/teachers/$id/assignments': typeof ApiTeachersIdAssignmentsRouteWithChildren
   '/api/teachers/$id/timetable': typeof ApiTeachersIdTimetableRouteWithChildren
+  '/api/teachers/me/classes': typeof ApiTeachersMeClassesRoute
   '/api/teachers/me/dashboard': typeof ApiTeachersMeDashboardRoute
+  '/api/teachers/me/exams': typeof ApiTeachersMeExamsRoute
+  '/api/teachers/me/reports': typeof ApiTeachersMeReportsRoute
   '/_authenticated/madrassa/categories/': typeof AuthenticatedMadrassaCategoriesIndexRoute
   '/_authenticated/madrassa/classes/': typeof AuthenticatedMadrassaClassesIndexRoute
   '/_authenticated/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
@@ -1784,7 +1811,10 @@ export interface FileRouteTypes {
     | '/api/teachers/$id/active'
     | '/api/teachers/$id/assignments'
     | '/api/teachers/$id/timetable'
+    | '/api/teachers/me/classes'
     | '/api/teachers/me/dashboard'
+    | '/api/teachers/me/exams'
+    | '/api/teachers/me/reports'
     | '/madrassa/categories/'
     | '/madrassa/classes/'
     | '/madrassa/exams/'
@@ -1947,7 +1977,10 @@ export interface FileRouteTypes {
     | '/api/teachers/$id/active'
     | '/api/teachers/$id/assignments'
     | '/api/teachers/$id/timetable'
+    | '/api/teachers/me/classes'
     | '/api/teachers/me/dashboard'
+    | '/api/teachers/me/exams'
+    | '/api/teachers/me/reports'
     | '/madrassa/categories'
     | '/madrassa/classes'
     | '/madrassa/exams'
@@ -2121,7 +2154,10 @@ export interface FileRouteTypes {
     | '/api/teachers/$id/active'
     | '/api/teachers/$id/assignments'
     | '/api/teachers/$id/timetable'
+    | '/api/teachers/me/classes'
     | '/api/teachers/me/dashboard'
+    | '/api/teachers/me/exams'
+    | '/api/teachers/me/reports'
     | '/_authenticated/madrassa/categories/'
     | '/_authenticated/madrassa/classes/'
     | '/_authenticated/madrassa/exams/'
@@ -2216,7 +2252,10 @@ export interface RootRouteChildren {
   ApiParentsAdminGuardianAccountsRoute: typeof ApiParentsAdminGuardianAccountsRoute
   ApiParentsMeDashboardRoute: typeof ApiParentsMeDashboardRoute
   ApiPromotionsRunsIdRoute: typeof ApiPromotionsRunsIdRouteWithChildren
+  ApiTeachersMeClassesRoute: typeof ApiTeachersMeClassesRoute
   ApiTeachersMeDashboardRoute: typeof ApiTeachersMeDashboardRoute
+  ApiTeachersMeExamsRoute: typeof ApiTeachersMeExamsRoute
+  ApiTeachersMeReportsRoute: typeof ApiTeachersMeReportsRoute
   ApiExamsStudentsStudentIdTranscriptRoute: typeof ApiExamsStudentsStudentIdTranscriptRoute
 }
 
@@ -3167,11 +3206,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTeachersIdTimetableRouteImport
       parentRoute: typeof ApiTeachersIdRoute
     }
+    '/api/teachers/me/classes': {
+      id: '/api/teachers/me/classes'
+      path: '/api/teachers/me/classes'
+      fullPath: '/api/teachers/me/classes'
+      preLoaderRoute: typeof ApiTeachersMeClassesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/teachers/me/dashboard': {
       id: '/api/teachers/me/dashboard'
       path: '/api/teachers/me/dashboard'
       fullPath: '/api/teachers/me/dashboard'
       preLoaderRoute: typeof ApiTeachersMeDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/teachers/me/exams': {
+      id: '/api/teachers/me/exams'
+      path: '/api/teachers/me/exams'
+      fullPath: '/api/teachers/me/exams'
+      preLoaderRoute: typeof ApiTeachersMeExamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/teachers/me/reports': {
+      id: '/api/teachers/me/reports'
+      path: '/api/teachers/me/reports'
+      fullPath: '/api/teachers/me/reports'
+      preLoaderRoute: typeof ApiTeachersMeReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/madrassa/exams/$id/': {
@@ -4187,7 +4247,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiParentsAdminGuardianAccountsRoute: ApiParentsAdminGuardianAccountsRoute,
   ApiParentsMeDashboardRoute: ApiParentsMeDashboardRoute,
   ApiPromotionsRunsIdRoute: ApiPromotionsRunsIdRouteWithChildren,
+  ApiTeachersMeClassesRoute: ApiTeachersMeClassesRoute,
   ApiTeachersMeDashboardRoute: ApiTeachersMeDashboardRoute,
+  ApiTeachersMeExamsRoute: ApiTeachersMeExamsRoute,
+  ApiTeachersMeReportsRoute: ApiTeachersMeReportsRoute,
   ApiExamsStudentsStudentIdTranscriptRoute:
     ApiExamsStudentsStudentIdTranscriptRoute,
 }

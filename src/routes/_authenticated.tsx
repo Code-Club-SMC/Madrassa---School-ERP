@@ -10,6 +10,7 @@ import { useSystem } from "@/components/system-context";
 import { HRProvider } from "@/stores/hr-store";
 import { useAuth } from "@/hooks/use-auth";
 import { BookLoader } from "@/components/shared/book-loader";
+import { TeacherPortal } from "@/components/teachers/teacher-portal";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
@@ -39,6 +40,28 @@ function AuthenticatedLayout() {
 
   if (!user) {
     return null;
+  }
+
+  const isTeacher = user?.role === "teacher";
+
+  if (isTeacher) {
+    return (
+      <HRProvider>
+        <SidebarProvider
+          style={
+            { "--sidebar-width": "17.5rem", "--sidebar-width-icon": "3.25rem" } as React.CSSProperties
+          }
+        >
+          <div className="min-h-dvh flex w-full bg-background">
+            <SidebarInset className="flex-1 min-w-0">
+              <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto">
+                <TeacherPortal />
+              </main>
+            </SidebarInset>
+          </div>
+        </SidebarProvider>
+      </HRProvider>
+    );
   }
 
   return (

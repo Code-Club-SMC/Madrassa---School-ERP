@@ -134,3 +134,28 @@ export type ExamSubjectOption = {
   madrassaSubcategoryId: string | null;
   active: boolean;
 };
+
+export type MadrassaCategoryOption = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  active?: boolean;
+  subcategories?: Array<{ id: string; name: string; nameUrdu: string; active?: boolean }>;
+};
+
+export type TeacherClassAssignment = TeacherAssignment & {
+  institutionName?: string;
+  institutionNameUrdu?: string;
+  programName?: string;
+  programNameUrdu?: string;
+  schoolClassName?: string;
+  schoolClassNameUrdu?: string;
+  schoolSectionName?: string;
+  madrassaCategoryName?: string;
+  madrassaCategoryNameUrdu?: string;
+  madrassaSubcategoryName?: string;
+  madrassaSubcategoryNameUrdu?: string;
+  subjectName?: string;
+  subjectNameUrdu?: string;
+  subjectCode?: string;
+};

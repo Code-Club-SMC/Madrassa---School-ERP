@@ -7,7 +7,9 @@ import type {
   TeacherDetail,
   TeacherListItem,
   TeacherAssignment,
+  TeacherClassAssignment,
   TeacherTimetablePeriod,
+  MadrassaCategoryOption,
 } from "./teacher-types";
 
 type TeacherCreateResponse = {
@@ -155,4 +157,34 @@ export function getMyTeacherDashboard() {
     assignments: TeacherAssignment[];
     timetable: TeacherTimetablePeriod[];
   }>("/api/teachers/me/dashboard");
+}
+
+export function getMyTeacherClasses() {
+  return requestJson<TeacherClassAssignment[]>("/api/teachers/me/classes");
+}
+
+export function getMyTeacherExams() {
+  return requestJson<{
+    assignments: TeacherClassAssignment[];
+    sessions: Array<{
+      id: string;
+      name: string;
+      system: "school" | "madrassa";
+      status: string;
+      academicYear: string;
+      startDate: string;
+      endDate: string;
+      publishedAt: string | null;
+    }>;
+  }>("/api/teachers/me/exams");
+}
+
+export function getMyTeacherReports() {
+  return requestJson<{
+    profile: TeacherDetail["profile"];
+    assignments: TeacherAssignment[];
+    totalClasses: number;
+    totalSchool: number;
+    totalMadrassa: number;
+  }>("/api/teachers/me/reports");
 }

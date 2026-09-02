@@ -482,7 +482,7 @@ function placementLabel(assignment: TeacherAssignment, options: AcademicOptions 
   }
 
   const category = options?.madrassaCategories.find((item) => item.id === assignment.madrassaCategoryId);
-  const subcategory = category?.subcategories.find((item) => item.id === assignment.madrassaSubcategoryId);
+  const subcategory = category?.subcategories?.find((item) => item.id === assignment.madrassaSubcategoryId);
   return [institution?.name, program?.name, category?.name, subcategory?.name].filter(Boolean).join(" · ");
 }
 
