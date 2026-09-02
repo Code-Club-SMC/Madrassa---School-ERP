@@ -87,6 +87,7 @@ export const teacherListQuerySchema = z.object({
   q: optionalText,
   systemScope: z.enum(["all", "school", "madrassa", "both", "qasmia-both", "qasmia-madrassa", "qasmia-school", "zainab-both", "zainab-madrassa", "zainab-school"]).default("all"),
   status: z.enum(["all", "active", "inactive"]).default("all"),
+  all: z.boolean().default(false),
 });
 
 export const updateTeacherProfileSchema = createTeacherSchema
