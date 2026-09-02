@@ -110,7 +110,7 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
 
   const loadTeachers = useCallback(async () => {
     try {
-      const response = await fetch("/api/teachers", { credentials: "include" });
+      const response = await fetch("/api/teachers?all=true", { credentials: "include" });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         console.error("[exam-workspace] teachers fetch failed", response.status, payload);
@@ -118,7 +118,9 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
         return;
       }
       const data = await response.json();
-      const list = (data.teachers ?? []).map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }));
+      const list = Array.isArray(data)
+        ? data.map((t: any) => ({ id: t.id, name: t.name }))
+        : (data.teachers ?? []).map((t: any) => ({ id: t.id, name: t.name }));
       setTeachers(list);
       console.log("[exam-workspace] teachers loaded", list.length, list);
     } catch {

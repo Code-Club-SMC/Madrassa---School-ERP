@@ -75,7 +75,7 @@ export function TeacherPortal() {
     <div className="flex gap-6">
       <TeacherSidebar active={tab} onChange={setTab} />
       <div className="flex-1 min-w-0 space-y-5">
-        {tab === "dashboard" && <DashboardView dashboard={dashboard} todayPeriods={todayPeriods} today={today} />}
+        {tab === "dashboard" && <DashboardView dashboard={dashboard} todayPeriods={todayPeriods} today={today} classAssignments={classes ?? []} />}
         {tab === "classes" && <ClassesTab assignments={classes ?? []} />}
         {tab === "timetable" && <TimetableTab periods={dashboard.timetable} />}
         {tab === "exams" && <ExamsTab data={exams} />}
@@ -91,10 +91,12 @@ function DashboardView({
   dashboard,
   todayPeriods,
   today,
+  classAssignments,
 }: {
   dashboard: Awaited<ReturnType<typeof getMyTeacherDashboard>>;
   todayPeriods: TeacherTimetablePeriod[];
   today: number;
+  classAssignments: Awaited<ReturnType<typeof getMyTeacherClasses>>;
 }) {
   return (
     <div className="space-y-5">
@@ -138,20 +140,20 @@ function DashboardView({
             <h2 className="text-base font-semibold">Assigned Groups</h2>
             <p className="text-sm text-muted-foreground">Student attendance access is limited to these groups.</p>
           </div>
-          {dashboard.assignments.length === 0 ? (
+          {classAssignments.length === 0 ? (
             <p className="rounded-md bg-muted/40 p-4 text-sm text-muted-foreground">No active assignments yet.</p>
           ) : (
             <div className="space-y-2">
-              {dashboard.assignments.map((assignment) => (
+              {classAssignments.map((assignment) => (
                 <div key={assignment.id} className="rounded-md border p-3">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge variant="secondary">{assignment.system}</Badge>
                     <span className="text-xs text-muted-foreground">{assignment.academicYear}</span>
                   </div>
                   <p className="text-sm font-medium">{placementLabel(assignment)}</p>
-                  <div className="mt-3">
-                    <ShortcutButtons assignment={assignment} />
-                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {assignment.subjectName ?? assignment.subjectCode ?? ""}
+                  </p>
                 </div>
               ))}
             </div>

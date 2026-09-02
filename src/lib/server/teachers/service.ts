@@ -87,7 +87,7 @@ export const teacherListQuerySchema = z.object({
   q: optionalText,
   systemScope: z.enum(["all", "school", "madrassa", "both", "qasmia-both", "qasmia-madrassa", "qasmia-school", "zainab-both", "zainab-madrassa", "zainab-school"]).default("all"),
   status: z.enum(["all", "active", "inactive"]).default("all"),
-  all: z.boolean().default(false),
+  all: z.preprocess((value) => value === "true", z.boolean().default(false)),
 });
 
 export const updateTeacherProfileSchema = createTeacherSchema
@@ -218,9 +218,10 @@ export async function createTeacher(request: Request, input: z.infer<typeof crea
 
 export async function listTeachers(request: Request, query: z.infer<typeof teacherListQuerySchema>) {
   const actor = await requirePermission(request, "teachers", "view");
+  console.log("[teachers] listTeachers called", { actorRole: actor.role, actorId: actor.id, query });
   const clauses = [
     eq(authUser.role, "teacher"),
-    actor.role === "teacher" ? eq(teacherProfiles.userId, actor.id) : undefined,
+    actor.role === "teacher" && !query.all ? eq(teacherProfiles.userId, actor.id) : undefined,
     query.status === "all" ? undefined : eq(teacherProfiles.employmentStatus, query.status),
     query.systemScope === "all" ? undefined : eq(teacherProfiles.systemScope, query.systemScope),
     query.q
@@ -232,7 +233,7 @@ export async function listTeachers(request: Request, query: z.infer<typeof teach
       : undefined,
   ].filter(Boolean);
 
-  return db
+  const rows = await db
     .select({
       id: teacherProfiles.id,
       userId: teacherProfiles.userId,
@@ -254,6 +255,9 @@ export async function listTeachers(request: Request, query: z.infer<typeof teach
     .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
     .where(and(...clauses))
     .orderBy(asc(authUser.name));
+
+  console.log("[teachers] listTeachers result", rows.length, rows.map((r) => ({ id: r.id, name: r.name, email: r.email })));
+  return rows;
 }
 
 export async function getTeacher(request: Request, id: string) {
@@ -600,6 +604,7 @@ export async function getMyTeacherDashboard(request: Request) {
   if (actor.role !== "teacher") throw new HttpError("Teacher dashboard is only available to teacher accounts", 403);
 
   const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  console.log("[teachers] getMyTeacherDashboard profile", { actorId: actor.id, profileId: profile?.id, hasProfile: Boolean(profile) });
   if (!profile) throw new HttpError("Teacher profile not found", 404);
 
   const [assignments, timetable] = await Promise.all([
@@ -615,6 +620,7 @@ export async function getMyTeacherDashboard(request: Request) {
       .orderBy(asc(teacherTimetablePeriods.weekday), asc(teacherTimetablePeriods.startTime)),
   ]);
 
+  console.log("[teachers] getMyTeacherDashboard result", { assignments: assignments.length, timetable: timetable.length });
   return { profile, account: publicAccount(actor), assignments, timetable };
 }
 
@@ -815,6 +821,7 @@ export async function getMyTeacherClasses(request: Request) {
   if (actor.role !== "teacher") throw new HttpError("Teacher portal is only available to teacher accounts", 403);
 
   const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  console.log("[teachers] getMyTeacherClasses profile", { actorId: actor.id, profileId: profile?.id, hasProfile: Boolean(profile) });
   if (!profile) throw new HttpError("Teacher profile not found", 404);
 
   const assignments = await db
@@ -858,6 +865,7 @@ export async function getMyTeacherClasses(request: Request) {
     .where(and(eq(teacherAssignments.teacherProfileId, profile.id), eq(teacherAssignments.active, true)))
     .orderBy(asc(teacherAssignments.system), asc(teacherAssignments.academicYear));
 
+  console.log("[teachers] getMyTeacherClasses result", assignments.length, assignments.map((a) => ({ id: a.id, system: a.system, subjectId: a.subjectId })));
   return assignments;
 }
 

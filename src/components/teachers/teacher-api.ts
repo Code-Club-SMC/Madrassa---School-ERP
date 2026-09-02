@@ -162,11 +162,17 @@ export function getMyTeacherDashboard() {
     account: TeacherDetail["account"];
     assignments: TeacherAssignment[];
     timetable: TeacherTimetablePeriod[];
-  }>("/api/teachers/me/dashboard");
+  }>("/api/teachers/me/dashboard").then((payload) => {
+    console.log("[teacher-api] getMyTeacherDashboard payload", { assignments: payload.assignments.length, timetable: payload.timetable.length });
+    return payload;
+  });
 }
 
 export function getMyTeacherClasses() {
-  return requestJson<TeacherClassAssignment[]>("/api/teachers/me/classes");
+  return requestJson<TeacherClassAssignment[]>("/api/teachers/me/classes").then((payload) => {
+    console.log("[teacher-api] getMyTeacherClasses payload", Array.isArray(payload) ? payload.length : "object", payload);
+    return payload;
+  });
 }
 
 export function getMyTeacherExams() {

@@ -121,7 +121,7 @@ function ClassDetailPage() {
       const [categoriesRes, yearsRes, teachersRes] = await Promise.all([
         fetch("/api/academic/madrassa/categories", { credentials: "include" }),
         fetch("/api/academic-years", { credentials: "include" }),
-        fetch("/api/teachers", { credentials: "include" }),
+        fetch("/api/teachers?all=true", { credentials: "include" }),
       ]);
 
       const categoriesPayload = await categoriesRes.json().catch(() => ({}));
@@ -132,7 +132,9 @@ function ClassDetailPage() {
 
       const teachersPayload = await teachersRes.json().catch(() => ({}));
       if (teachersRes.ok) {
-        const list = (teachersPayload.teachers ?? []).map((t: { id: string; name: string }) => ({ id: t.id, name: t.name }));
+        const list = Array.isArray(teachersPayload)
+          ? teachersPayload.map((t: any) => ({ id: t.id, name: t.name }))
+          : (teachersPayload.teachers ?? []).map((t: any) => ({ id: t.id, name: t.name }));
         setTeachers(list);
         console.log("[class-detail] teachers loaded", list.length, list);
       } else {
