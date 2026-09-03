@@ -77,7 +77,7 @@ export function TeacherPortal() {
       <div className="flex-1 min-w-0 space-y-5">
         {tab === "dashboard" && <DashboardView dashboard={dashboard} todayPeriods={todayPeriods} today={today} classAssignments={classes ?? []} />}
         {tab === "classes" && <ClassesTab assignments={classes ?? []} />}
-        {tab === "timetable" && <TimetableTab periods={dashboard.timetable} />}
+         {tab === "timetable" && <TimetableTab periods={dashboard.timetable} assignments={classes ?? []} />}
         {tab === "exams" && <ExamsTab data={exams} />}
         {tab === "attendance" && <AttendanceTab assignments={dashboard.assignments} />}
         {tab === "reports" && <ReportsTab data={reports} />}
@@ -150,10 +150,10 @@ function DashboardView({
                     <Badge variant="secondary">{assignment.system}</Badge>
                     <span className="text-xs text-muted-foreground">{assignment.academicYear}</span>
                   </div>
-                  <p className="text-sm font-medium">{placementLabel(assignment)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {assignment.subjectName ?? assignment.subjectCode ?? ""}
-                  </p>
+                   <p className="text-sm font-medium">{placementLabelForClasses(assignment)}</p>
+                   <p className="text-xs text-muted-foreground">
+                     {assignment.subjectName ?? assignment.subjectCode ?? ""}
+                   </p>
                 </div>
               ))}
             </div>
@@ -186,7 +186,7 @@ function ClassesTab({ assignments }: { assignments: TeacherClassAssignment[] }) 
             <Badge variant="secondary">{assignment.system}</Badge>
             <span className="text-xs text-muted-foreground">{assignment.academicYear}</span>
           </div>
-          <p className="text-sm font-medium">{placementLabel(assignment)}</p>
+          <p className="text-sm font-medium">{placementLabelForClasses(assignment)}</p>
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
             <Info label="Subject" value={assignment.subjectName ?? assignment.subjectCode ?? "-"} />
             <Info label="Institution" value={assignment.institutionName ?? "-"} />
@@ -197,7 +197,7 @@ function ClassesTab({ assignments }: { assignments: TeacherClassAssignment[] }) 
   );
 }
 
-function TimetableTab({ periods }: { periods: TeacherTimetablePeriod[] }) {
+function TimetableTab({ periods, assignments }: { periods: TeacherTimetablePeriod[]; assignments: TeacherClassAssignment[] }) {
   const grouped = useMemo(() => {
     const map = new Map<number, TeacherTimetablePeriod[]>();
     for (const period of periods) {
@@ -208,34 +208,73 @@ function TimetableTab({ periods }: { periods: TeacherTimetablePeriod[] }) {
     return map;
   }, [periods]);
 
+  console.log("[timetable] periods", periods);
+  console.log("[timetable] grouped", Object.fromEntries(Array.from(grouped.entries()).map(([k, v]) => [k, v.length])));
+
+  const today = new Date().getDay();
+  const [selectedDay, setSelectedDay] = useState<number>(today);
+  const selectedPeriods = grouped.get(selectedDay) ?? [];
+
+  if (periods.length === 0 && assignments.length === 0) {
+    return (
+      <Card>
+        <EmptyState
+          icon={CalendarClock}
+          heading="No timetable yet"
+          headingUrdu="کوئی ٹائم ٹیبل نہیں"
+          description="You don't have any class assignments or timetable periods yet. Contact an administrator to assign classes to you."
+        />
+      </Card>
+    );
+  }
+
   return (
-    <div className="grid gap-4">
-      {weekdays.map((day, index) => {
-        const dayPeriods = grouped.get(index) ?? [];
-        return (
-          <Card key={day} className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{day}</h3>
-              <Badge variant="outline">{dayPeriods.length}</Badge>
-            </div>
-            {dayPeriods.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No periods</p>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {dayPeriods.map((period) => (
-                  <div key={period.id} className="rounded-md border p-3">
-                    <p className="font-mono text-sm font-semibold">
-                      {period.startTime} - {period.endTime}
-                    </p>
-                    <p className="text-sm">{placementLabel(period)}</p>
-                    <p className="text-xs text-muted-foreground">{period.room ? `Room ${period.room}` : "No room"}</p>
-                  </div>
-                ))}
+    <div className="space-y-4">
+      <div className="grid grid-cols-7 gap-2">
+        {weekdays.map((day, index) => {
+          const count = (grouped.get(index) ?? []).length;
+          const isSelected = selectedDay === index;
+          const isToday = index === today;
+
+          return (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setSelectedDay(index)}
+              className={`rounded-md border p-2 text-center transition-colors ${
+                isSelected
+                  ? "border-primary bg-primary/10"
+                  : isToday
+                    ? "border-primary/40"
+                    : "hover:bg-muted/40"
+              }`}
+            >
+              <p className={`text-[11px] font-medium ${isSelected || isToday ? "text-primary" : ""}`}>{day}</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">{count} {count === 1 ? "class" : "classes"}</p>
+            </button>
+          );
+        })}
+      </div>
+
+      <Card className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">{weekdays[selectedDay]}</h3>
+          <Badge variant="outline" className="text-[10px]">{selectedPeriods.length} periods</Badge>
+        </div>
+        {selectedPeriods.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No classes scheduled</p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {selectedPeriods.map((period) => (
+              <div key={period.id} className="rounded-md border p-3">
+                <p className="font-mono text-xs font-semibold">{period.startTime} - {period.endTime}</p>
+                <p className="mt-1 text-xs">{placementLabel(period)}</p>
+                <p className="text-[11px] text-muted-foreground">{period.room ? `Room ${period.room}` : "No room"}</p>
               </div>
-            )}
-          </Card>
-        );
-      })}
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
@@ -266,10 +305,10 @@ function ExamsTab({ data }: { data: Awaited<ReturnType<typeof getMyTeacherExams>
                 <Badge variant="secondary">{assignment.system}</Badge>
                 <span className="text-xs text-muted-foreground">{assignment.academicYear}</span>
               </div>
-              <p className="mt-2 text-sm font-medium">{placementLabel(assignment)}</p>
-              <p className="text-xs text-muted-foreground">
-                {assignment.subjectName ?? assignment.subjectCode ?? "No subject"}
-              </p>
+               <p className="mt-2 text-sm font-medium">{placementLabelForClasses(assignment)}</p>
+               <p className="text-xs text-muted-foreground">
+                 {assignment.subjectName ?? assignment.subjectCode ?? "No subject"}
+               </p>
             </div>
           ))}
         </div>
@@ -414,6 +453,17 @@ function ShortcutButtons({ assignment }: { assignment: TeacherAssignment | Teach
       </Button>
     </div>
   );
+}
+
+function placementLabelForClasses(assignment: TeacherClassAssignment) {
+  if (assignment.system === "school") {
+    const className = assignment.schoolClassName ?? assignment.schoolClassId ?? "Class";
+    const sectionName = assignment.schoolSectionName ?? assignment.schoolSectionId ?? "Section";
+    return `${className} · ${sectionName}`;
+  }
+  const categoryName = assignment.madrassaCategoryName ?? assignment.madrassaCategoryId ?? "Category";
+  const subcategoryName = assignment.madrassaSubcategoryName ?? assignment.madrassaSubcategoryId ?? "Darja";
+  return `${categoryName} · ${subcategoryName}`;
 }
 
 function placementLabel(assignment: TeacherAssignment | TeacherTimetablePeriod) {

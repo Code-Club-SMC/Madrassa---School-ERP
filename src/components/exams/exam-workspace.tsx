@@ -87,9 +87,10 @@ const statusTone: Record<string, string> = {
 };
 
 export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
+  const { gender } = useSystem();
   const [options, setOptions] = useState<AcademicOptions>(emptyOptions);
   const [subjects, setSubjects] = useState<ExamSubject[]>([]);
-  const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([]);
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string; systemScope: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -102,6 +103,24 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
     scopeId: "",
     teacherId: "",
   });
+
+  const allowedTeacherSystemScopes = useMemo(() => {
+    if (system === "madrassa") {
+      if (gender === "male") {
+        return new Set(["madrassa", "both", "all", "qasmia-madrassa", "qasmia-both", "qasmia-school", "school"]);
+      }
+      return new Set(["madrassa", "both", "all", "zainab-madrassa", "zainab-both", "zainab-school", "school"]);
+    }
+    if (gender === "male") {
+      return new Set(["school", "both", "all", "qasmia-school", "qasmia-both", "qasmia-madrassa", "madrassa"]);
+    }
+    return new Set(["school", "both", "all", "zainab-school", "zainab-both", "zainab-madrassa", "madrassa"]);
+  }, [system, gender]);
+
+  const visibleTeachers = useMemo(() => {
+    const filtered = teachers.filter((teacher) => allowedTeacherSystemScopes.has(teacher.systemScope));
+    return filtered.length > 0 ? filtered : teachers;
+  }, [teachers, allowedTeacherSystemScopes]);
 
   const loadOptions = useCallback(async () => {
     const next = await loadAcademicOptions();
@@ -119,10 +138,9 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
       }
       const data = await response.json();
       const list = Array.isArray(data)
-        ? data.map((t: any) => ({ id: t.id, name: t.name }))
-        : (data.teachers ?? []).map((t: any) => ({ id: t.id, name: t.name }));
+        ? data.map((t: any) => ({ id: t.id, name: t.name, systemScope: t.systemScope }))
+        : (data.teachers ?? []).map((t: any) => ({ id: t.id, name: t.name, systemScope: t.systemScope }));
       setTeachers(list);
-      console.log("[exam-workspace] teachers loaded", list.length, list);
     } catch {
       // ignore teacher load errors
     }
@@ -337,7 +355,7 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">No teacher</SelectItem>
-                  {teachers.map((teacher) => (
+                  {visibleTeachers.map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       {teacher.name}
                     </SelectItem>

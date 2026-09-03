@@ -66,11 +66,13 @@ export function TeacherTimetableManager({ teacher, onChange }: Props) {
       weekdays.map((day) => ({
         ...day,
         periods: teacher.timetable
-          .filter((period) => period.weekday === day.value)
+          .filter((period) => period.weekday === day.value && period.active)
           .sort((a, b) => a.startTime.localeCompare(b.startTime)),
       })),
     [teacher.timetable],
   );
+
+  const hasAnyPeriod = teacher.timetable.length > 0;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,61 +154,27 @@ export function TeacherTimetableManager({ teacher, onChange }: Props) {
         </Button>
       </div>
 
-      {teacher.timetable.length === 0 ? (
-        <Card>
-          <EmptyState
-            icon={CalendarClock}
-            heading="No timetable periods"
-            headingUrdu="کوئی پیریڈ نہیں"
-            description="Add an assignment first, then create timetable periods from it."
-          />
+      {!hasAnyPeriod && activeAssignments.length > 0 ? (
+        <Card className="p-5">
+          <h3 className="text-base font-semibold">Assigned Classes</h3>
+          <p className="text-sm text-muted-foreground">No timetable periods yet. Add periods from your assigned classes:</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {activeAssignments.map((assignment) => (
+              <div key={assignment.id} className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <Badge variant="secondary">{assignment.system}</Badge>
+                  <span className="text-xs text-muted-foreground">{assignment.academicYear}</span>
+                </div>
+                <p className="text-sm font-medium">{assignmentLabel(assignment)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {assignment.subjectId ? "Has subject" : "No subject"}
+                </p>
+              </div>
+            ))}
+          </div>
         </Card>
       ) : (
-        <div className="grid gap-3 xl:grid-cols-2">
-          {periodsByDay.map((day) => (
-            <Card key={day.value} className="p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">{day.label}</h3>
-                <Badge variant="outline">{day.periods.length}</Badge>
-              </div>
-              {day.periods.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No periods</p>
-              ) : (
-                <div className="space-y-2">
-                  {day.periods.map((period) => (
-                    <div key={period.id} className="rounded-md border p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-sm font-semibold">
-                              {period.startTime} - {period.endTime}
-                            </span>
-                            <StatusBadge status={period.active ? "active" : "inactive"} showUrdu={false} />
-                          </div>
-                          <p className="mt-1 truncate text-sm">{periodLabel(period)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {period.room ? `Room ${period.room}` : "No room"} · {period.academicYear}
-                          </p>
-                        </div>
-                        {period.active && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => setDisablePeriod(period)}
-                            aria-label="Disable period"
-                          >
-                            <PowerOff className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          ))}
-        </div>
+        <TimetableGrid periodsByDay={periodsByDay} />
       )}
 
       <ResponsiveDialog
@@ -285,6 +253,62 @@ export function TeacherTimetableManager({ teacher, onChange }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function TimetableGrid({ periodsByDay }: { periodsByDay: Array<{ value: number; label: string; periods: TeacherTimetablePeriod[] }> }) {
+  const today = new Date().getDay();
+  const [selectedDay, setSelectedDay] = useState<number>(today);
+  const selectedPeriods = periodsByDay.find((day) => day.value === selectedDay)?.periods ?? [];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-7 gap-2">
+        {periodsByDay.map((day) => {
+          const count = day.periods.length;
+          const isSelected = selectedDay === day.value;
+          const isToday = day.value === today;
+
+          return (
+            <button
+              key={day.value}
+              type="button"
+              onClick={() => setSelectedDay(day.value)}
+              className={`rounded-md border p-2 text-center transition-colors ${
+                isSelected
+                  ? "border-primary bg-primary/10"
+                  : isToday
+                    ? "border-primary/40"
+                    : "hover:bg-muted/40"
+              }`}
+            >
+              <p className={`text-[11px] font-medium ${isSelected || isToday ? "text-primary" : ""}`}>{day.label}</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">{count} {count === 1 ? "class" : "classes"}</p>
+            </button>
+          );
+        })}
+      </div>
+
+      <Card className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">{periodsByDay.find((day) => day.value === selectedDay)?.label ?? "Day"}</h3>
+          <Badge variant="outline" className="text-[10px]">{selectedPeriods.length} periods</Badge>
+        </div>
+        {selectedPeriods.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No classes scheduled</p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {selectedPeriods.map((period) => (
+              <div key={period.id} className="rounded-md border p-3">
+                <p className="font-mono text-xs font-semibold">{period.startTime} - {period.endTime}</p>
+                <p className="mt-1 text-xs">{periodLabel(period)}</p>
+                {period.room && <p className="text-[11px] text-muted-foreground">Room {period.room}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

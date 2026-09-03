@@ -82,7 +82,7 @@ function ClassDetailPage() {
   const [classData, setClassData] = useState<MadrassaSubcategory | null>(null);
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [subjects, setSubjects] = useState<ExamSubject[]>([]);
-  const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([]);
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string; systemScope: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -112,6 +112,18 @@ function ClassDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
+  const allowedTeacherSystemScopes = useMemo(() => {
+    if (gender === "male") {
+      return new Set(["madrassa", "both", "all", "qasmia-both", "qasmia-madrassa", "qasmia-school", "school"]);
+    }
+    return new Set(["madrassa", "both", "all", "zainab-both", "zainab-madrassa", "zainab-school", "school"]);
+  }, [gender]);
+
+  const visibleTeachers = useMemo(() => {
+    const filtered = teachers.filter((teacher) => allowedTeacherSystemScopes.has(teacher.systemScope));
+    return filtered.length > 0 ? filtered : teachers;
+  }, [teachers, allowedTeacherSystemScopes]);
+
   const tRef = useRef<((en: string, ur: string) => string)>((en: string, ur: string) => ur);
   tRef.current = t;
 
@@ -133,10 +145,9 @@ function ClassDetailPage() {
       const teachersPayload = await teachersRes.json().catch(() => ({}));
       if (teachersRes.ok) {
         const list = Array.isArray(teachersPayload)
-          ? teachersPayload.map((t: any) => ({ id: t.id, name: t.name }))
-          : (teachersPayload.teachers ?? []).map((t: any) => ({ id: t.id, name: t.name }));
+          ? teachersPayload.map((t: any) => ({ id: t.id, name: t.name, systemScope: t.systemScope }))
+          : (teachersPayload.teachers ?? []).map((t: any) => ({ id: t.id, name: t.name, systemScope: t.systemScope }));
         setTeachers(list);
-        console.log("[class-detail] teachers loaded", list.length, list);
       } else {
         console.error("[class-detail] teachers fetch failed", teachersRes.status, teachersPayload);
         setTeachers([]);
@@ -503,7 +514,7 @@ function ClassDetailPage() {
                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">{t("No teacher", "کوئی استاد نہیں")}</SelectItem>
-                    {teachers.map((teacher) => (
+                    {visibleTeachers.map((teacher) => (
                       <SelectItem key={teacher.id} value={teacher.id}>
                         {teacher.name}
                       </SelectItem>
@@ -592,7 +603,7 @@ function ClassDetailPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">{t("No teacher", "کوئی استاد نہیں")}</SelectItem>
-                  {teachers.map((teacher) => (
+                  {visibleTeachers.map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       {teacher.name}
                     </SelectItem>

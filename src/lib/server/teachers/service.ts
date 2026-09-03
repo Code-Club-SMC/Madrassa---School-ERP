@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { user as authUser } from "@/db/schema/auth";
@@ -607,6 +607,12 @@ export async function getMyTeacherDashboard(request: Request) {
   console.log("[teachers] getMyTeacherDashboard profile", { actorId: actor.id, profileId: profile?.id, hasProfile: Boolean(profile) });
   if (!profile) throw new HttpError("Teacher profile not found", 404);
 
+  const allTimetable = await db
+    .select()
+    .from(teacherTimetablePeriods)
+    .where(eq(teacherTimetablePeriods.teacherProfileId, profile.id));
+  console.log("[teachers] getMyTeacherDashboard all timetable (any active)", allTimetable.length, allTimetable.map((t) => ({ id: t.id, weekday: t.weekday, startTime: t.startTime, endTime: t.endTime, active: t.active })));
+
   const [assignments, timetable] = await Promise.all([
     db
       .select()
@@ -620,6 +626,7 @@ export async function getMyTeacherDashboard(request: Request) {
       .orderBy(asc(teacherTimetablePeriods.weekday), asc(teacherTimetablePeriods.startTime)),
   ]);
 
+  console.log("[teachers] getMyTeacherDashboard raw timetable", timetable);
   console.log("[teachers] getMyTeacherDashboard result", { assignments: assignments.length, timetable: timetable.length });
   return { profile, account: publicAccount(actor), assignments, timetable };
 }
@@ -865,8 +872,55 @@ export async function getMyTeacherClasses(request: Request) {
     .where(and(eq(teacherAssignments.teacherProfileId, profile.id), eq(teacherAssignments.active, true)))
     .orderBy(asc(teacherAssignments.system), asc(teacherAssignments.academicYear));
 
-  console.log("[teachers] getMyTeacherClasses result", assignments.length, assignments.map((a) => ({ id: a.id, system: a.system, subjectId: a.subjectId })));
-  return assignments;
+  const assignedSubjectIds = new Set(assignments.map((a) => a.subjectId).filter(Boolean));
+
+  const directSubjects = await db
+    .select({
+      id: examSubjects.id,
+      system: examSubjects.system,
+      institutionId: sql<string>`null`.as("institutionId"),
+      institutionName: sql<string>`null`.as("institutionName"),
+      institutionNameUrdu: sql<string>`null`.as("institutionNameUrdu"),
+      programId: sql<string>`null`.as("programId"),
+      programName: sql<string>`null`.as("programName"),
+      programNameUrdu: sql<string>`null`.as("programNameUrdu"),
+      schoolClassId: examSubjects.schoolClassId,
+      schoolSectionId: schoolClassSections.id,
+      schoolClassName: schoolClasses.name,
+      schoolClassNameUrdu: schoolClasses.nameUrdu,
+      schoolSectionName: schoolClassSections.name,
+      madrassaCategoryId: madrassaCategories.id,
+      madrassaCategoryName: madrassaCategories.name,
+      madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
+      madrassaSubcategoryId: examSubjects.madrassaSubcategoryId,
+      madrassaSubcategoryName: madrassaSubcategories.name,
+      madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
+      subjectId: examSubjects.id,
+      academicYear: sql<string>`null`.as("academicYear"),
+      effectiveFrom: sql<string>`null`.as("effectiveFrom"),
+      effectiveTo: sql<string>`null`.as("effectiveTo"),
+      active: examSubjects.active,
+      subjectName: examSubjects.name,
+      subjectNameUrdu: examSubjects.nameUrdu,
+      subjectCode: examSubjects.code,
+    })
+    .from(examSubjects)
+    .leftJoin(schoolClasses, eq(schoolClasses.id, examSubjects.schoolClassId))
+    .leftJoin(schoolClassSections, eq(schoolClassSections.id, schoolClasses.id))
+    .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, examSubjects.madrassaSubcategoryId))
+    .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+    .where(and(eq(examSubjects.teacherId, profile.id), eq(examSubjects.active, true)))
+    .orderBy(asc(examSubjects.system));
+
+  const merged = [
+    ...assignments,
+    ...directSubjects.filter((subject) => !assignedSubjectIds.has(subject.subjectId)),
+  ];
+
+  console.log("[teachers] getMyTeacherClasses raw assignments", assignments.map((a) => ({ id: a.id, system: a.system, subjectId: a.subjectId, academicYear: a.academicYear, schoolClassId: a.schoolClassId, madrassaCategoryId: a.madrassaCategoryId, madrassaSubcategoryId: a.madrassaSubcategoryId })));
+  console.log("[teachers] getMyTeacherClasses raw directSubjects", directSubjects.map((a) => ({ id: a.id, system: a.system, subjectId: a.subjectId })));
+  console.log("[teachers] getMyTeacherClasses result", merged.length, merged.map((a) => ({ id: a.id, system: a.system, subjectId: a.subjectId })));
+  return merged;
 }
 
 export async function getMyTeacherExams(request: Request) {
