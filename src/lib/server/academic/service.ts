@@ -239,10 +239,8 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
   await requirePermission(request, "madrassa_categories", "view");
   await ensureAcademicSeeded();
 
-  const STATIC_CATEGORY_IDS = ["nazara_male", "hifiz_male", "alam_male", "nazara_female", "alam_female"];
-
   const [categories, subcategories, countsBySubcategory] = await Promise.all([
-    db.select().from(madrassaCategories).where(inArray(madrassaCategories.id, STATIC_CATEGORY_IDS)).orderBy(asc(madrassaCategories.displayOrder), asc(madrassaCategories.name)),
+    db.select().from(madrassaCategories).orderBy(asc(madrassaCategories.displayOrder), asc(madrassaCategories.name)),
     db.select().from(madrassaSubcategories).orderBy(asc(madrassaSubcategories.displayOrder), asc(madrassaSubcategories.name)),
     db
       .select({

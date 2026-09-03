@@ -147,6 +147,10 @@ export function AddTeacherDialog({ open, onOpenChange, onCreated }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="both">Both systems</SelectItem>
+                <SelectItem value="school">School</SelectItem>
+                <SelectItem value="madrassa">Madrassa</SelectItem>
                 <SelectItem value="qasmia-both">All Qasim (Both)</SelectItem>
                 <SelectItem value="qasmia-madrassa">Qasim Madrassa</SelectItem>
                 <SelectItem value="qasmia-school">Qasim School</SelectItem>

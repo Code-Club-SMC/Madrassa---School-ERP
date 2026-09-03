@@ -62,7 +62,6 @@ export const navItems: NavItem[] = [
   { group: "madrassa", url: "/madrassa/students", icon: Users2, en: "Students", ur: "طلبہ", roles: ANY_STAFF },
   { group: "madrassa", url: "/madrassa/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
   { group: "madrassa", url: "/madrassa/categories", icon: BookOpen, en: "Categories", ur: "زمرے", roles: ADMINS },
-  { group: "madrassa", url: "/madrassa/classes", icon: BookOpen, en: "Classes", ur: "جماعتیں", roles: ADMINS },
   { group: "madrassa", url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
   { group: "madrassa", url: "/madrassa/hifz", icon: Sparkles, en: "Hifz Tracker", ur: "حفظ ٹریکر", roles: ANY_STAFF },
 

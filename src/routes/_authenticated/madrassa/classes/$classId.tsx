@@ -320,8 +320,8 @@ function ClassDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-96 gap-3">
         <p className="text-sm text-muted-foreground">{t("Class not found.", "کلاس نہیں ملی۔")}</p>
-        <Button variant="outline" size="sm" onClick={() => navigate({ to: "/madrassa/classes" })}>
-          {t("Back to classes", "کلاسز میں واپس")}
+        <Button variant="outline" size="sm" onClick={() => navigate({ to: "/madrassa/categories" })}>
+          {t("Back to categories", "زمروں میں واپس")}
         </Button>
       </div>
     );
@@ -339,7 +339,7 @@ function ClassDetailPage() {
         }
         actions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/madrassa/classes" })}>
+            <Button variant="outline" size="sm" onClick={() => navigate({ to: "/madrassa/categories" })}>
               {t("Back", "پیچھے")}
             </Button>
             <Button size="sm" className="gap-1.5" onClick={() => setOpen(true)}>

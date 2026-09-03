@@ -23,8 +23,8 @@ export function useAuth() {
     }
   }, []);
 
-  const login = useCallback(async ({ email, password }: { email: string; password: string }) => {
-    const response = await loginServer({ data: { email, password } });
+  const login = useCallback(async ({ identifier, password }: { identifier: string; password: string }) => {
+    const response = await loginServer({ data: { identifier, password } });
     const data = await response.json();
     if (!response.ok || data.error) {
       throw new Error(data.error ?? "Login failed");

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@/db";
 import { user, account } from "@/db/schema/auth";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { verifyPassword } from "@better-auth/utils/password";
 import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
@@ -59,14 +59,15 @@ function userResponse(foundUser: typeof user.$inferSelect) {
 export const loginServer = createServerFn({ method: "POST" })
   .validator(
     z.object({
-      email: z.string().email(),
+      identifier: z.string().min(1),
       password: z.string().min(1),
     }),
   )
   .handler(async ({ data }) => {
-    const [foundUser] = await db.select().from(user).where(eq(user.email, data.email)).limit(1);
+    const trimmed = data.identifier.trim();
+    const [foundUser] = await db.select().from(user).where(or(eq(user.email, trimmed), eq(user.username, trimmed))).limit(1);
     if (!foundUser) {
-      return new Response(JSON.stringify({ error: "Invalid email or password" }), {
+      return new Response(JSON.stringify({ error: "Invalid credentials" }), {
         status: 401,
         headers: { "content-type": "application/json" },
       });
@@ -81,7 +82,7 @@ export const loginServer = createServerFn({ method: "POST" })
     const storedPassword = foundAccount?.password ?? "";
     const valid = await verifyPassword(storedPassword, data.password);
     if (!valid) {
-      return new Response(JSON.stringify({ error: "Invalid email or password" }), {
+      return new Response(JSON.stringify({ error: "Invalid credentials" }), {
         status: 401,
         headers: { "content-type": "application/json" },
       });

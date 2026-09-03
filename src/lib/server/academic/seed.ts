@@ -110,7 +110,10 @@ export const ACADEMIC_PROGRAMS = [
 
 let seedPromise: Promise<void> | null = null;
 
-export function ensureAcademicSeeded() {
+export function ensureAcademicSeeded(force = false) {
+  if (force && seedPromise) {
+    seedPromise = null;
+  }
   seedPromise ??= seedAcademicCatalog();
   return seedPromise;
 }

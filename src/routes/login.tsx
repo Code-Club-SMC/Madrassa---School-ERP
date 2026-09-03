@@ -55,7 +55,7 @@ function LoginPage() {
     setSubmitting(true);
     try {
       const user = await auth.login({
-        email: identifier.toLowerCase(),
+        identifier: identifier,
         password,
       });
 
