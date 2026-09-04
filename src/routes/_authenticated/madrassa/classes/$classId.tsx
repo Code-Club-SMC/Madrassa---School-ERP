@@ -58,6 +58,7 @@ type MadrassaSubcategory = {
   enrollmentCount: number;
   qasmiaCount: number;
   zainabCount: number;
+  section: string;
 };
 
 type AcademicYear = {
