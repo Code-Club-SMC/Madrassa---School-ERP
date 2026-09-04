@@ -3,17 +3,20 @@ import { Link } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { BookOpen, CalendarDays, ChevronRight, GraduationCap, LineChart, Plus, Users } from "lucide-react";
 import { toast } from "sonner";
-import { listExamSessions } from "@/components/exams/exam-api";
+import { createExamSession, listExamSessions } from "@/components/exams/exam-api";
 import type { ExamSession, ExamSystem } from "@/components/exams/exam-types";
 import { useLanguage } from "@/components/language-context";
 import { useSystem } from "@/components/system-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookLoader } from "@/components/shared/book-loader";
 import { cn } from "@/lib/utils";
 import { ExamResults } from "@/components/exams/exam-results";
+import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 
 type Tab = "exams" | "seating" | "results";
 
@@ -32,6 +35,16 @@ export function ExamDashboard({ system }: Props) {
   const [tab, setTab] = useState<Tab>("exams");
   const [exams, setExams] = useState<ExamSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    nameUrdu: "",
+    type: "general",
+    startDate: "",
+    endDate: "",
+    academicYear: "",
+  });
 
   const section = system === "madrassa" ? gender : undefined;
 
@@ -67,6 +80,39 @@ export function ExamDashboard({ system }: Props) {
   useEffect(() => {
     void load();
   }, [system, section]);
+
+  const resetForm = () => {
+    setForm({ name: "", nameUrdu: "", type: "general", startDate: "", endDate: "", academicYear: "" });
+  };
+
+  const handleCreate = async () => {
+    if (!form.name.trim() || !form.nameUrdu.trim() || !form.startDate || !form.endDate) {
+      toast.error(lang === "ur" ? "نام اور تاریخیں درکار ہیں" : "Name and dates are required");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      await createExamSession({
+        system,
+        type: form.type,
+        name: form.name.trim(),
+        nameUrdu: form.nameUrdu.trim(),
+        startDate: form.startDate,
+        endDate: form.endDate,
+        academicYear: form.academicYear.trim() || undefined,
+        subjectIds: [],
+      });
+      toast.success(lang === "ur" ? "امتحان بن گیا" : "Exam created");
+      resetForm();
+      setCreateOpen(false);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not create exam");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const statusTone: Record<string, string> = {
     draft: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
@@ -109,14 +155,6 @@ export function ExamDashboard({ system }: Props) {
           </h2>
           <p className="text-xs text-muted-foreground">{tabSubtitle}</p>
         </div>
-        {tab !== "results" && (
-          <Button asChild size="sm" className="gap-1.5">
-            <Link to={system === "school" ? "/school/exams" : "/madrassa/exams"}>
-              <Plus className="h-4 w-4" />
-              {lang === "ur" ? "نیا امتحان" : "New Exam"}
-            </Link>
-          </Button>
-        )}
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
@@ -136,6 +174,12 @@ export function ExamDashboard({ system }: Props) {
         </TabsList>
 
         <TabsContent value="exams" className="space-y-4">
+          <div className="flex justify-end">
+            <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              {lang === "ur" ? "نیا امتحان" : "New Exam"}
+            </Button>
+          </div>
           {loading ? (
             <BookLoader text={lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading..."} className="h-64" />
           ) : examMeta.length === 0 ? (
@@ -238,6 +282,49 @@ export function ExamDashboard({ system }: Props) {
           <ExamResults system={system} />
         </TabsContent>
       </Tabs>
+
+      <ResponsiveDialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) resetForm();
+        }}
+        title={lang === "ur" ? "نیا امتحان" : "New Exam"}
+        description={lang === "ur" ? "امتحان کی تفصیلات داخل کریں" : "Enter exam details"}
+        icon={Plus}
+        className="max-w-lg"
+      >
+        <div className="grid gap-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Label className="text-xs text-muted-foreground">{lang === "ur" ? "نام" : "Name"}</Label>
+            <Input dir="ltr" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder={lang === "ur" ? "امتحان کا نام" : "Exam name"} />
+            <Label className="text-xs text-muted-foreground">{lang === "ur" ? "اردو نام" : "Urdu Name"}</Label>
+            <Input dir="rtl" lang="ur" value={form.nameUrdu} onChange={(e) => setForm({ ...form, nameUrdu: e.target.value })} placeholder={lang === "ur" ? "امتحان کا اردو نام" : "Exam Urdu name"} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">{lang === "ur" ? "شروعات کی تاریخ" : "Start Date"}</Label>
+              <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">{lang === "ur" ? "اختتام کی تاریخ" : "End Date"}</Label>
+              <Input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1 block">{lang === "ur" ? "تعلیمی سال" : "Academic Year"}</Label>
+            <Input value={form.academicYear} onChange={(e) => setForm({ ...form, academicYear: e.target.value })} placeholder={lang === "ur" ? "2025" : "2025"} />
+          </div>
+        </div>
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>
+            {lang === "ur" ? "منسوخ" : "Cancel"}
+          </Button>
+          <Button onClick={handleCreate} disabled={creating}>
+            {creating ? (lang === "ur" ? "بند ہو رہا ہے..." : "Creating...") : (lang === "ur" ? "شامل کریں" : "Create")}
+          </Button>
+        </div>
+      </ResponsiveDialog>
     </div>
   );
 }

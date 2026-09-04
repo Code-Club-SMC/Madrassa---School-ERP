@@ -140,7 +140,7 @@ export type MadrassaCategoryOption = {
   name: string;
   nameUrdu: string;
   active?: boolean;
-  subcategories?: Array<{ id: string; name: string; nameUrdu: string; active?: boolean }>;
+  subcategories?: Array<{ id: string; name: string; nameUrdu: string; active?: boolean; section?: string }>;
 };
 
 export type TeacherClassAssignment = TeacherAssignment & {

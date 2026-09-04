@@ -61,6 +61,19 @@ type MadrassaSubcategory = {
   section: string;
 };
 
+type MadrassaCategory = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  description: string;
+  descriptionUrdu: string;
+  displayOrder: number;
+  active: boolean;
+  section: string;
+  formVariantKeys: string[];
+  subcategories: MadrassaSubcategory[];
+};
+
 type AcademicYear = {
   id: string;
   name: string;
@@ -81,6 +94,7 @@ function ClassDetailPage() {
   const t = useMemo(() => (en: string, ur: string) => (isUrdu ? ur : en), [isUrdu]);
 
   const [classData, setClassData] = useState<MadrassaSubcategory | null>(null);
+  const [classSection, setClassSection] = useState<string>("male");
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [subjects, setSubjects] = useState<ExamSubject[]>([]);
   const [teachers, setTeachers] = useState<Array<{ id: string; name: string; systemScope: string }>>([]);
@@ -114,15 +128,15 @@ function ClassDetailPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const allowedTeacherSystemScopes = useMemo(() => {
-    if (gender === "male") {
+    const section = classSection;
+    if (section === "male") {
       return new Set(["madrassa", "both", "all", "qasmia-both", "qasmia-madrassa", "qasmia-school", "school"]);
     }
     return new Set(["madrassa", "both", "all", "zainab-both", "zainab-madrassa", "zainab-school", "school"]);
-  }, [gender]);
+  }, [classSection]);
 
   const visibleTeachers = useMemo(() => {
-    const filtered = teachers.filter((teacher) => allowedTeacherSystemScopes.has(teacher.systemScope));
-    return filtered.length > 0 ? filtered : teachers;
+    return teachers.filter((teacher) => allowedTeacherSystemScopes.has(teacher.systemScope));
   }, [teachers, allowedTeacherSystemScopes]);
 
   const tRef = useRef<((en: string, ur: string) => string)>((en: string, ur: string) => ur);
@@ -160,6 +174,10 @@ function ClassDetailPage() {
 
       if (found) {
         setClassData(found);
+        const parentCategory = categories.find((c: any) => c.id === found.categoryId);
+        const rawSection = parentCategory?.section ?? found.section ?? "male";
+        const normalized = rawSection === "baneen" ? "male" : rawSection === "banat" ? "female" : rawSection;
+        setClassSection(normalized);
       } else {
         toast.error(tRef.current("Class not found", "کلاس نہیں ملی"));
       }

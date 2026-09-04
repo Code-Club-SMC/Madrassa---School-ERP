@@ -66,7 +66,7 @@ type MadrassaCategoryOption = {
   name: string;
   nameUrdu: string;
   active: boolean;
-  subcategories: Array<{ id: string; name: string; nameUrdu: string; active: boolean }>;
+  subcategories: Array<{ id: string; name: string; nameUrdu: string; active: boolean; section?: string }>;
 };
 
 type AcademicOptions = {
@@ -104,22 +104,31 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
     teacherId: "",
   });
 
+  const scopeSection = useMemo(() => {
+    if (system !== "madrassa" || !form.scopeId) return null;
+    for (const category of options.categories) {
+      const subcategory = category.subcategories.find((s) => s.id === form.scopeId);
+      if (subcategory) return subcategory.section ?? null;
+    }
+    return null;
+  }, [system, form.scopeId, options.categories]);
+
   const allowedTeacherSystemScopes = useMemo(() => {
-    if (system === "madrassa") {
-      if (gender === "male") {
+    const section = scopeSection ?? gender;
+    if (section === "male") {
+      if (system === "madrassa") {
         return new Set(["madrassa", "both", "all", "qasmia-madrassa", "qasmia-both", "qasmia-school", "school"]);
       }
-      return new Set(["madrassa", "both", "all", "zainab-madrassa", "zainab-both", "zainab-school", "school"]);
-    }
-    if (gender === "male") {
       return new Set(["school", "both", "all", "qasmia-school", "qasmia-both", "qasmia-madrassa", "madrassa"]);
     }
+    if (system === "madrassa") {
+      return new Set(["madrassa", "both", "all", "zainab-madrassa", "zainab-both", "zainab-school", "school"]);
+    }
     return new Set(["school", "both", "all", "zainab-school", "zainab-both", "zainab-madrassa", "madrassa"]);
-  }, [system, gender]);
+  }, [system, gender, scopeSection]);
 
   const visibleTeachers = useMemo(() => {
-    const filtered = teachers.filter((teacher) => allowedTeacherSystemScopes.has(teacher.systemScope));
-    return filtered.length > 0 ? filtered : teachers;
+    return teachers.filter((teacher) => allowedTeacherSystemScopes.has(teacher.systemScope));
   }, [teachers, allowedTeacherSystemScopes]);
 
   const loadOptions = useCallback(async () => {
