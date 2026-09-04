@@ -174,8 +174,7 @@ function ClassDetailPage() {
 
       if (found) {
         setClassData(found);
-        const parentCategory = categories.find((c: any) => c.id === found.categoryId);
-        const rawSection = parentCategory?.section ?? found.section ?? "male";
+        const rawSection = found.section ?? "male";
         const normalized = rawSection === "baneen" ? "male" : rawSection === "banat" ? "female" : rawSection;
         setClassSection(normalized);
       } else {

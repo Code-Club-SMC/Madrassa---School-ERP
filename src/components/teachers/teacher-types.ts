@@ -37,6 +37,8 @@ export type TeacherAssignment = {
   madrassaCategoryId: string | null;
   madrassaSubcategoryId: string | null;
   subjectId: string | null;
+  subjectName: string | null;
+  subjectNameUrdu: string | null;
   academicYear: string;
   effectiveFrom: string | null;
   effectiveTo: string | null;

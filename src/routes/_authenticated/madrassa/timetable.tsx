@@ -95,6 +95,7 @@ function TimetablePage() {
   const [periods, setPeriods] = useState<TimetablePeriod[]>([]);
   const [allTimetables, setAllTimetables] = useState<Record<string, TimetablePeriod[]>>({});
   const [subjects, setSubjects] = useState<ExamSubject[]>([]);
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([]);
 
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingTimetable, setLoadingTimetable] = useState(false);
@@ -167,6 +168,20 @@ function TimetablePage() {
       // non-critical
     }
   }, [allSubcategoryIds]);
+
+  const loadTeachers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/teachers?all=true", { credentials: "include" });
+      if (!res.ok) return;
+      const payload = await res.json().catch(() => ({}));
+      const list = Array.isArray(payload)
+        ? payload.map((t: any) => ({ id: t.id, name: t.name }))
+        : (payload.teachers ?? []).map((t: any) => ({ id: t.id, name: t.name }));
+      setTeachers(list);
+    } catch {
+      // non-critical
+    }
+  }, []);
 
    const loadTimetable = useCallback(async () => {
     if (!selectedSubcategoryId || selectedSubcategoryId === "__all__") {
@@ -243,6 +258,10 @@ function TimetablePage() {
    useEffect(() => {
     void loadCategories();
   }, [loadCategories]);
+
+  useEffect(() => {
+    void loadTeachers();
+  }, [loadTeachers]);
 
   useEffect(() => {
     void loadTimetableStatus();
@@ -428,6 +447,14 @@ function TimetablePage() {
     return slot?.subject ?? null;
   };
 
+  const teacherNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const teacher of teachers) {
+      map.set(teacher.id, teacher.name);
+    }
+    return map;
+  }, [teachers]);
+
   const getPeriodClassId = (period: TimetablePeriod): string => {
     return period.madrassaSubcategoryId;
   };
@@ -555,17 +582,17 @@ function TimetablePage() {
                           <TableHead className="text-start p-3 w-[170px] font-medium">
                             {t("Period", "پیریڈ")}
                           </TableHead>
-                          {isUrdu
-                            ? DAYS_URDU.map((d, i) => (
-                                <TableHead key={d} className="text-center p-3 font-medium">
-                                  <p className="font-urdu text-base leading-tight">{d}</p>
-                                </TableHead>
-                              ))
-                            : DAYS_EN.map((d, i) => (
-                                <TableHead key={d} className="text-center p-3 font-medium">
-                                  <p className="text-[10px] text-muted-foreground uppercase">{d}</p>
-                                </TableHead>
-                              ))}
+                           {isUrdu
+                             ? DAYS_URDU.map((d, i) => (
+                                 <TableHead key={d} className="text-center p-3 w-[140px] font-medium">
+                                   <p className="font-urdu text-base leading-tight">{d}</p>
+                                 </TableHead>
+                               ))
+                             : DAYS_EN.map((d, i) => (
+                                 <TableHead key={d} className="text-center p-3 w-[140px] font-medium">
+                                   <p className="text-[10px] text-muted-foreground uppercase">{d}</p>
+                                 </TableHead>
+                               ))}
                           <TableHead className="text-end p-3 w-[80px] font-medium">{t("Actions", "کارروائیاں")}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -594,27 +621,38 @@ function TimetablePage() {
                                   )}
                                 </button>
                               </td>
-                              {DAYS_EN.map((_, dayIndex) => {
-                                const subject = getSlotSubject(period, dayIndex);
-                                const isBreak = period.isBreak || (subject === null && period.isBreak);
-                                return (
-                                  <td key={dayIndex} className="p-2 text-center">
-                                <button
-                                  type="button"
-                                  disabled={isBreak}
-                                  onClick={() => openSlotEdit(period.id, dayIndex, subject?.id ?? null, period.madrassaSubcategoryId)}
-                                  className={cn(
-                                    "w-full rounded-md px-2 py-1.5 text-xs transition-colors",
-                                    isBreak
-                                      ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
-                                      : "bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer",
-                                  )}
-                                >
-                                  {subject ? (isUrdu ? subject.nameUrdu : subject.name) : "—"}
-                                </button>
-                                  </td>
-                                );
-                              })}
+                               {DAYS_EN.map((_, dayIndex) => {
+                                 const subject = getSlotSubject(period, dayIndex);
+                                 const isBreak = period.isBreak || (subject === null && period.isBreak);
+                                 return (
+                                   <td key={dayIndex} className="p-2 text-center align-middle w-[140px]">
+                                  <button
+                                    type="button"
+                                    disabled={isBreak}
+                                    onClick={() => openSlotEdit(period.id, dayIndex, subject?.id ?? null, period.madrassaSubcategoryId)}
+                                    className={cn(
+                                      "w-full rounded-md px-2 py-2 text-xs transition-colors flex flex-col items-center justify-center",
+                                      isBreak
+                                        ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
+                                        : "bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer",
+                                    )}
+                                  >
+                                    {subject ? (
+                                      <span className="text-center">
+                                        <span className="block">{isUrdu ? subject.nameUrdu : subject.name}</span>
+                                        {subject.teacherId && (
+                                          <span className="block text-[10px] text-muted-foreground mt-0.5">
+                                            {teacherNameMap.get(subject.teacherId) ?? ""}
+                                          </span>
+                                        )}
+                                      </span>
+                                    ) : (
+                                      "—"
+                                    )}
+                                  </button>
+                                   </td>
+                                 );
+                               })}
                               <TableCell className="text-end">
                                 <Button
                                   variant="ghost"
@@ -649,12 +687,12 @@ function TimetablePage() {
                 </TableHead>
                 {isUrdu
                   ? DAYS_URDU.map((d, i) => (
-                      <TableHead key={d} className="text-center p-3 font-medium">
+                      <TableHead key={d} className="text-center p-3 w-[140px] font-medium">
                         <p className="font-urdu text-base leading-tight">{d}</p>
                       </TableHead>
                     ))
                   : DAYS_EN.map((d, i) => (
-                      <TableHead key={d} className="text-center p-3 font-medium">
+                      <TableHead key={d} className="text-center p-3 w-[140px] font-medium">
                         <p className="text-[10px] text-muted-foreground uppercase">{d}</p>
                       </TableHead>
                     ))}
@@ -696,20 +734,31 @@ function TimetablePage() {
                       const subject = getSlotSubject(period, dayIndex);
                       const isBreak = period.isBreak || (subject === null && period.isBreak);
                       return (
-                        <td key={dayIndex} className="p-2 text-center">
-                          <button
-                            type="button"
-                            disabled={isBreak}
-                            onClick={() => openSlotEdit(period.id, dayIndex, subject?.id ?? null, selectedSubcategoryId)}
-                            className={cn(
-                              "w-full rounded-md px-2 py-1.5 text-xs transition-colors",
-                              isBreak
-                                ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
-                                : "bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer",
-                            )}
-                          >
-                            {subject ? (isUrdu ? subject.nameUrdu : subject.name) : "—"}
-                          </button>
+                        <td key={dayIndex} className="p-2 text-center align-middle w-[140px]">
+                           <button
+                             type="button"
+                             disabled={isBreak}
+                             onClick={() => openSlotEdit(period.id, dayIndex, subject?.id ?? null, selectedSubcategoryId)}
+                             className={cn(
+                               "w-full rounded-md px-2 py-2 text-xs transition-colors flex flex-col items-center justify-center",
+                               isBreak
+                                 ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
+                                 : "bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer",
+                             )}
+                           >
+                             {subject ? (
+                               <span className="text-center">
+                                 <span className="block">{isUrdu ? subject.nameUrdu : subject.name}</span>
+                                 {subject.teacherId && (
+                                   <span className="block text-[10px] text-muted-foreground mt-0.5">
+                                     {teacherNameMap.get(subject.teacherId) ?? ""}
+                                   </span>
+                                 )}
+                               </span>
+                             ) : (
+                               "—"
+                             )}
+                           </button>
                         </td>
                       );
                     })}

@@ -21,6 +21,7 @@ import {
   teacherProfiles,
   teacherTimetablePeriods,
 } from "@/db/schema/teachers";
+import { madrassaTimetablePeriods, madrassaTimetableSlots } from "@/db/schema/timetable";
 import { auth } from "@/lib/auth";
 import { generateSecurePassword } from "@/lib/generate-password";
 import { ROLE_DEFAULTS } from "@/lib/permissions/role-defaults";
@@ -258,6 +259,69 @@ export async function listTeachers(request: Request, query: z.infer<typeof teach
 
   console.log("[teachers] listTeachers result", rows.length, rows.map((r) => ({ id: r.id, name: r.name, email: r.email })));
   return rows;
+}
+
+export async function listTeachersWithTimetables(request: Request) {
+  await requirePermission(request, "teachers", "view");
+
+  const teachers = await db
+    .select({
+      id: teacherProfiles.id,
+      userId: teacherProfiles.userId,
+      name: authUser.name,
+      email: authUser.email,
+      nameUrdu: authUser.nameUrdu,
+      phone: authUser.phone,
+      cnic: authUser.cnic,
+      status: authUser.status,
+      banned: authUser.banned,
+      systemScope: teacherProfiles.systemScope,
+      designation: teacherProfiles.designation,
+      qualification: teacherProfiles.qualification,
+      joinedAt: teacherProfiles.joinedAt,
+      employmentStatus: teacherProfiles.employmentStatus,
+      baseMonthlySalaryPaisa: teacherProfiles.baseMonthlySalaryPaisa,
+    })
+    .from(teacherProfiles)
+    .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
+    .where(eq(teacherProfiles.employmentStatus, "active"))
+    .orderBy(asc(authUser.name));
+
+  const teacherIds = teachers.map((t) => t.id);
+
+  const [assignments, timetable] = await Promise.all([
+    db
+      .select()
+      .from(teacherAssignments)
+      .where(and(inArray(teacherAssignments.teacherProfileId, teacherIds), eq(teacherAssignments.active, true)))
+      .orderBy(asc(teacherAssignments.system), asc(teacherAssignments.academicYear)),
+    db
+      .select()
+      .from(teacherTimetablePeriods)
+      .where(and(inArray(teacherTimetablePeriods.teacherProfileId, teacherIds), eq(teacherTimetablePeriods.active, true)))
+      .orderBy(asc(teacherTimetablePeriods.weekday), asc(teacherTimetablePeriods.startTime)),
+  ]);
+
+  const assignmentsByTeacher = new Map<string, typeof assignments>();
+  const timetableByTeacher = new Map<string, typeof timetable>();
+
+  for (const assignment of assignments) {
+    const list = assignmentsByTeacher.get(assignment.teacherProfileId) ?? [];
+    list.push(assignment);
+    assignmentsByTeacher.set(assignment.teacherProfileId, list);
+  }
+
+  for (const period of timetable) {
+    const list = timetableByTeacher.get(period.teacherProfileId) ?? [];
+    list.push(period);
+    timetableByTeacher.set(period.teacherProfileId, list);
+  }
+
+  return teachers.map((teacher) => ({
+    ...teacher,
+    assignments: assignmentsByTeacher.get(teacher.id) ?? [],
+    timetable: timetableByTeacher.get(teacher.id) ?? [],
+  }));
 }
 
 export async function getTeacher(request: Request, id: string) {
@@ -607,12 +671,6 @@ export async function getMyTeacherDashboard(request: Request) {
   console.log("[teachers] getMyTeacherDashboard profile", { actorId: actor.id, profileId: profile?.id, hasProfile: Boolean(profile) });
   if (!profile) throw new HttpError("Teacher profile not found", 404);
 
-  const allTimetable = await db
-    .select()
-    .from(teacherTimetablePeriods)
-    .where(eq(teacherTimetablePeriods.teacherProfileId, profile.id));
-  console.log("[teachers] getMyTeacherDashboard all timetable (any active)", allTimetable.length, allTimetable.map((t) => ({ id: t.id, weekday: t.weekday, startTime: t.startTime, endTime: t.endTime, active: t.active })));
-
   const [assignments, timetable] = await Promise.all([
     db
       .select()
@@ -626,9 +684,65 @@ export async function getMyTeacherDashboard(request: Request) {
       .orderBy(asc(teacherTimetablePeriods.weekday), asc(teacherTimetablePeriods.startTime)),
   ]);
 
+  const madrassaSubcategoryIds = assignments
+    .filter((a) => a.system === "madrassa" && a.madrassaSubcategoryId)
+    .map((a) => a.madrassaSubcategoryId as string);
+
+  const classTimetable = madrassaSubcategoryIds.length > 0
+    ? await db
+        .select({
+          id: madrassaTimetablePeriods.id,
+          madrassaSubcategoryId: madrassaTimetablePeriods.madrassaSubcategoryId,
+          timeStart: madrassaTimetablePeriods.timeStart,
+          timeEnd: madrassaTimetablePeriods.timeEnd,
+          label: madrassaTimetablePeriods.label,
+          labelUrdu: madrassaTimetablePeriods.labelUrdu,
+          isBreak: madrassaTimetablePeriods.isBreak,
+          dayOfWeek: madrassaTimetableSlots.dayOfWeek,
+          subjectId: madrassaTimetableSlots.subjectId,
+          subjectName: examSubjects.name,
+          subjectNameUrdu: examSubjects.nameUrdu,
+        })
+        .from(madrassaTimetablePeriods)
+        .innerJoin(madrassaTimetableSlots, eq(madrassaTimetableSlots.periodId, madrassaTimetablePeriods.id))
+        .leftJoin(examSubjects, eq(examSubjects.id, madrassaTimetableSlots.subjectId))
+        .where(
+          inArray(madrassaTimetablePeriods.madrassaSubcategoryId, madrassaSubcategoryIds),
+        )
+        .orderBy(asc(madrassaTimetableSlots.dayOfWeek), asc(madrassaTimetablePeriods.timeStart))
+    : [];
+
+  const classTimetablePeriods = classTimetable.map((row) => {
+    const assignment = assignments.find((a) => a.madrassaSubcategoryId === row.madrassaSubcategoryId);
+    const adminDayToTeacherWeekday = (adminDay: number) => (adminDay === 0 ? 6 : adminDay - 1);
+    return {
+      id: row.id,
+      assignmentId: assignment?.id ?? null,
+      system: assignment?.system ?? "madrassa",
+      institutionId: assignment?.institutionId ?? "",
+      programId: assignment?.programId ?? "",
+      schoolClassId: null,
+      schoolSectionId: null,
+      madrassaCategoryId: assignment?.madrassaCategoryId ?? null,
+      madrassaSubcategoryId: row.madrassaSubcategoryId,
+      subjectId: row.subjectId,
+      subjectName: row.subjectName ?? null,
+      subjectNameUrdu: row.subjectNameUrdu ?? null,
+      academicYear: assignment?.academicYear ?? "",
+      effectiveFrom: null,
+      effectiveTo: null,
+      active: !row.isBreak,
+      weekday: adminDayToTeacherWeekday(row.dayOfWeek),
+      startTime: row.timeStart,
+      endTime: row.timeEnd,
+      room: null,
+    };
+  });
+
   console.log("[teachers] getMyTeacherDashboard raw timetable", timetable);
-  console.log("[teachers] getMyTeacherDashboard result", { assignments: assignments.length, timetable: timetable.length });
-  return { profile, account: publicAccount(actor), assignments, timetable };
+  console.log("[teachers] getMyTeacherDashboard class timetable", classTimetablePeriods.length);
+  console.log("[teachers] getMyTeacherDashboard result", { assignments: assignments.length, timetable: timetable.length, classTimetable: classTimetablePeriods.length });
+  return { profile, account: publicAccount(actor), assignments, timetable: [...timetable, ...classTimetablePeriods] };
 }
 
 export async function assertTeacherCanAccessAttendancePlacement(
@@ -665,13 +779,50 @@ async function loadTeacherDetail(id: string) {
 
   const [assignments, timetable] = await Promise.all([
     db
-      .select()
+      .select({
+        id: teacherAssignments.id,
+        system: teacherAssignments.system,
+        institutionId: teacherAssignments.institutionId,
+        programId: teacherAssignments.programId,
+        schoolClassId: teacherAssignments.schoolClassId,
+        schoolSectionId: teacherAssignments.schoolSectionId,
+        madrassaCategoryId: teacherAssignments.madrassaCategoryId,
+        madrassaSubcategoryId: teacherAssignments.madrassaSubcategoryId,
+        subjectId: teacherAssignments.subjectId,
+        subjectName: examSubjects.name,
+        subjectNameUrdu: examSubjects.nameUrdu,
+        academicYear: teacherAssignments.academicYear,
+        effectiveFrom: teacherAssignments.effectiveFrom,
+        effectiveTo: teacherAssignments.effectiveTo,
+        active: teacherAssignments.active,
+      })
       .from(teacherAssignments)
+      .leftJoin(examSubjects, eq(examSubjects.id, teacherAssignments.subjectId))
       .where(eq(teacherAssignments.teacherProfileId, id))
       .orderBy(asc(teacherAssignments.system), asc(teacherAssignments.academicYear)),
     db
-      .select()
+      .select({
+        id: teacherTimetablePeriods.id,
+        assignmentId: teacherTimetablePeriods.assignmentId,
+        system: teacherTimetablePeriods.system,
+        institutionId: teacherTimetablePeriods.institutionId,
+        programId: teacherTimetablePeriods.programId,
+        schoolClassId: teacherTimetablePeriods.schoolClassId,
+        schoolSectionId: teacherTimetablePeriods.schoolSectionId,
+        madrassaCategoryId: teacherTimetablePeriods.madrassaCategoryId,
+        madrassaSubcategoryId: teacherTimetablePeriods.madrassaSubcategoryId,
+        subjectId: teacherTimetablePeriods.subjectId,
+        subjectName: examSubjects.name,
+        subjectNameUrdu: examSubjects.nameUrdu,
+        weekday: teacherTimetablePeriods.weekday,
+        startTime: teacherTimetablePeriods.startTime,
+        endTime: teacherTimetablePeriods.endTime,
+        room: teacherTimetablePeriods.room,
+        academicYear: teacherTimetablePeriods.academicYear,
+        active: teacherTimetablePeriods.active,
+      })
       .from(teacherTimetablePeriods)
+      .leftJoin(examSubjects, eq(examSubjects.id, teacherTimetablePeriods.subjectId))
       .where(eq(teacherTimetablePeriods.teacherProfileId, id))
       .orderBy(asc(teacherTimetablePeriods.weekday), asc(teacherTimetablePeriods.startTime)),
   ]);

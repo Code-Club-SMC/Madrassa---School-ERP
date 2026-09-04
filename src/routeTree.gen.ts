@@ -102,6 +102,7 @@ import { Route as ApiSetupSuperAdminRouteImport } from './routes/api/setup/super
 import { Route as ApiStudentsIdRouteImport } from './routes/api/students/$id'
 import { Route as ApiTeachersIndexRouteImport } from './routes/api/teachers/index'
 import { Route as ApiTeachersIdRouteImport } from './routes/api/teachers/$id'
+import { Route as ApiTeachersDashboardRouteImport } from './routes/api/teachers/dashboard'
 import { Route as ApiUsersIndexRouteImport } from './routes/api/users/index'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
 import { Route as AuthenticatedMadrassaCategoriesIndexRouteImport } from './routes/_authenticated/madrassa/categories/index'
@@ -688,6 +689,11 @@ const ApiTeachersIdRoute = ApiTeachersIdRouteImport.update({
   path: '/api/teachers/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTeachersDashboardRoute = ApiTeachersDashboardRouteImport.update({
+  id: '/api/teachers/dashboard',
+  path: '/api/teachers/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiUsersIndexRoute = ApiUsersIndexRouteImport.update({
   id: '/api/users/',
   path: '/api/users/',
@@ -1234,6 +1240,7 @@ export interface FileRoutesByFullPath {
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
   '/api/students/$id': typeof ApiStudentsIdRouteWithChildren
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
+  '/api/teachers/dashboard': typeof ApiTeachersDashboardRoute
   '/api/users/$id': typeof ApiUsersIdRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/exams/': typeof AuthenticatedExamsIndexRoute
@@ -1399,6 +1406,7 @@ export interface FileRoutesByTo {
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
   '/api/students/$id': typeof ApiStudentsIdRouteWithChildren
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
+  '/api/teachers/dashboard': typeof ApiTeachersDashboardRoute
   '/api/users/$id': typeof ApiUsersIdRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
   '/exams': typeof AuthenticatedExamsIndexRoute
@@ -1576,6 +1584,7 @@ export interface FileRoutesById {
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
   '/api/students/$id': typeof ApiStudentsIdRouteWithChildren
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
+  '/api/teachers/dashboard': typeof ApiTeachersDashboardRoute
   '/api/users/$id': typeof ApiUsersIdRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/_authenticated/exams/': typeof AuthenticatedExamsIndexRoute
@@ -1753,6 +1762,7 @@ export interface FileRouteTypes {
     | '/api/setup/super-admin'
     | '/api/students/$id'
     | '/api/teachers/$id'
+    | '/api/teachers/dashboard'
     | '/api/users/$id'
     | '/admission/'
     | '/exams/'
@@ -1918,6 +1928,7 @@ export interface FileRouteTypes {
     | '/api/setup/super-admin'
     | '/api/students/$id'
     | '/api/teachers/$id'
+    | '/api/teachers/dashboard'
     | '/api/users/$id'
     | '/admission'
     | '/exams'
@@ -2094,6 +2105,7 @@ export interface FileRouteTypes {
     | '/api/setup/super-admin'
     | '/api/students/$id'
     | '/api/teachers/$id'
+    | '/api/teachers/dashboard'
     | '/api/users/$id'
     | '/_authenticated/admission/'
     | '/_authenticated/exams/'
@@ -2214,6 +2226,7 @@ export interface RootRouteChildren {
   ApiPromotionsRulesRoute: typeof ApiPromotionsRulesRoute
   ApiSetupSuperAdminRoute: typeof ApiSetupSuperAdminRouteWithChildren
   ApiTeachersIdRoute: typeof ApiTeachersIdRouteWithChildren
+  ApiTeachersDashboardRoute: typeof ApiTeachersDashboardRoute
   ApiUsersIdRoute: typeof ApiUsersIdRoute
   ApiAcademicYearsIndexRoute: typeof ApiAcademicYearsIndexRoute
   ApiNotificationsIndexRoute: typeof ApiNotificationsIndexRoute
@@ -2897,6 +2910,13 @@ declare module '@tanstack/react-router' {
       path: '/api/teachers/$id'
       fullPath: '/api/teachers/$id'
       preLoaderRoute: typeof ApiTeachersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/teachers/dashboard': {
+      id: '/api/teachers/dashboard'
+      path: '/api/teachers/dashboard'
+      fullPath: '/api/teachers/dashboard'
+      preLoaderRoute: typeof ApiTeachersDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/users/': {
@@ -4195,6 +4215,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPromotionsRulesRoute: ApiPromotionsRulesRoute,
   ApiSetupSuperAdminRoute: ApiSetupSuperAdminRouteWithChildren,
   ApiTeachersIdRoute: ApiTeachersIdRouteWithChildren,
+  ApiTeachersDashboardRoute: ApiTeachersDashboardRoute,
   ApiUsersIdRoute: ApiUsersIdRoute,
   ApiAcademicYearsIndexRoute: ApiAcademicYearsIndexRoute,
   ApiNotificationsIndexRoute: ApiNotificationsIndexRoute,

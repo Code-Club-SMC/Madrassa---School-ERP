@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Users,
   CalendarCheck2,
@@ -10,6 +10,7 @@ import {
   ClipboardEdit,
   ChevronLeft,
   BookOpen,
+  CalendarClock,
 } from "lucide-react";
 import {
   Area,
@@ -31,6 +32,15 @@ import { KpiCard } from "@/components/shared/kpi-card";
 import { BookLoader } from "@/components/shared/book-loader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   attendanceLast7,
   categoryDistribution,
@@ -43,6 +53,39 @@ import { formatPKR, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/components/language-context";
+
+type TeacherDashboardRow = {
+  id: string;
+  name: string;
+  email: string;
+  designation: string;
+  systemScope: string;
+  employmentStatus: string;
+  assignments: Array<{
+    id: string;
+    system: string;
+    madrassaCategoryId: string | null;
+    madrassaSubcategoryId: string | null;
+    schoolClassId: string | null;
+    schoolSectionId: string | null;
+    academicYear: string;
+    subjectId: string | null;
+    subjectName: string | null;
+    subjectNameUrdu: string | null;
+  }>;
+  timetable: Array<{
+    id: string;
+    weekday: number;
+    startTime: string;
+    endTime: string;
+    madrassaSubcategoryId: string | null;
+    schoolClassId: string | null;
+    subjectId: string | null;
+    subjectName: string | null;
+    subjectNameUrdu: string | null;
+    active: boolean;
+  }>;
+};
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -66,12 +109,33 @@ function DashboardPage() {
   const { user, isLoading } = useAuth();
   const { lang } = useLanguage();
   const navigate = useNavigate();
+  const [teachers, setTeachers] = useState<TeacherDashboardRow[]>([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !user) {
       navigate({ to: "/login", search: { redirect: undefined } });
     }
   }, [user, isLoading, navigate]);
+
+  useEffect(() => {
+    let active = true;
+    setLoadingTeachers(true);
+    fetch("/api/teachers/dashboard", { credentials: "include" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (active) setTeachers(data);
+      })
+      .catch(() => {
+        if (active) setTeachers([]);
+      })
+      .finally(() => {
+        if (active) setLoadingTeachers(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (isLoading) {
     return <BookLoader text="Loading..." className="h-96" />;
@@ -408,6 +472,79 @@ function DashboardPage() {
             <span className="ms-2 text-muted-foreground">View all activity</span>
           </Button>
         </div>
+      </Card>
+
+      {/* Teacher Timetable */}
+      <Card className="p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="font-heading font-semibold text-base">
+              {lang === "ur" ? "اساتذہ کا نظامِ اوقات" : "Teacher Timetable"}
+            </h3>
+            <p className="font-urdu text-sm text-muted-foreground">
+              {lang === "ur" ? "اساتذہ کی کلاسوں کا نظام" : "Teacher class schedule overview"}
+            </p>
+          </div>
+          <Badge variant="secondary">{teachers.length} {lang === "ur" ? "اساتذہ" : "teachers"}</Badge>
+        </div>
+        {loadingTeachers ? (
+          <BookLoader text={lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading..."} className="h-48" />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {teachers.map((teacher) => {
+              const activeTimetable = teacher.timetable.filter((period) => period.active);
+              const today = new Date().getDay();
+              const todayPeriods = activeTimetable.filter((period) => period.weekday === today);
+              const totalClasses = new Set(teacher.assignments.map((a) => a.madrassaSubcategoryId ?? a.schoolClassId ?? a.id)).size;
+
+              return (
+                <Card key={teacher.id} className="p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">{teacher.name}</p>
+                      <p className="text-xs text-muted-foreground">{teacher.designation}</p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px]">{teacher.systemScope}</Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="rounded-md bg-muted/40 p-2 text-center">
+                      <p className="font-heading text-lg font-bold">{totalClasses}</p>
+                      <p className="text-[10px] text-muted-foreground">{lang === "ur" ? "کلاسز" : "Classes"}</p>
+                    </div>
+                    <div className="rounded-md bg-muted/40 p-2 text-center">
+                      <p className="font-heading text-lg font-bold">{activeTimetable.length}</p>
+                      <p className="text-[10px] text-muted-foreground">{lang === "ur" ? "پیریڈز" : "Periods"}</p>
+                    </div>
+                    <div className="rounded-md bg-muted/40 p-2 text-center">
+                      <p className="font-heading text-lg font-bold">{todayPeriods.length}</p>
+                      <p className="text-[10px] text-muted-foreground">{lang === "ur" ? "آج" : "Today"}</p>
+                    </div>
+                  </div>
+                  {activeTimetable.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      {activeTimetable.slice(0, 3).map((period) => (
+                        <div key={period.id} className="flex items-center justify-between text-xs">
+                          <span className="font-mono">{period.startTime} - {period.endTime}</span>
+                          <span className="text-muted-foreground truncate ms-2">
+                            {period.subjectName ?? period.subjectNameUrdu ?? lang === "ur" ? "کوئی مضمون نہیں" : "No subject"}
+                          </span>
+                        </div>
+                      ))}
+                      {activeTimetable.length > 3 && (
+                        <p className="text-[10px] text-muted-foreground">+{activeTimetable.length - 3} more</p>
+                      )}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+            {teachers.length === 0 && (
+              <div className="col-span-full text-center text-sm text-muted-foreground py-8">
+                {lang === "ur" ? "کوئی استاد نہیں ملا" : "No teachers found"}
+              </div>
+            )}
+          </div>
+        )}
       </Card>
     </div>
   );

@@ -174,7 +174,7 @@ export function TeacherTimetableManager({ teacher, onChange }: Props) {
           </div>
         </Card>
       ) : (
-        <TimetableGrid periodsByDay={periodsByDay} />
+        <TimetableGrid periodsByDay={periodsByDay} teacherName={teacher.account.name} />
       )}
 
       <ResponsiveDialog
@@ -257,7 +257,7 @@ export function TeacherTimetableManager({ teacher, onChange }: Props) {
   );
 }
 
-function TimetableGrid({ periodsByDay }: { periodsByDay: Array<{ value: number; label: string; periods: TeacherTimetablePeriod[] }> }) {
+function TimetableGrid({ periodsByDay, teacherName }: { periodsByDay: Array<{ value: number; label: string; periods: TeacherTimetablePeriod[] }>; teacherName: string }) {
   const today = new Date().getDay();
   const [selectedDay, setSelectedDay] = useState<number>(today);
   const selectedPeriods = periodsByDay.find((day) => day.value === selectedDay)?.periods ?? [];
@@ -302,7 +302,7 @@ function TimetableGrid({ periodsByDay }: { periodsByDay: Array<{ value: number; 
             {selectedPeriods.map((period) => (
               <div key={period.id} className="rounded-md border p-3">
                 <p className="font-mono text-xs font-semibold">{period.startTime} - {period.endTime}</p>
-                <p className="mt-1 text-xs">{periodLabel(period)}</p>
+                <p className="mt-1 text-xs">{periodLabel(period, teacherName)}</p>
                 {period.room && <p className="text-[11px] text-muted-foreground">Room {period.room}</p>}
               </div>
             ))}
@@ -332,13 +332,15 @@ function assignmentLabel(assignment: TeacherAssignment) {
     assignment.system === "school"
       ? `${assignment.schoolClassId ?? "class"} / ${assignment.schoolSectionId ?? "section"}`
       : `${assignment.madrassaCategoryId ?? "category"} / ${assignment.madrassaSubcategoryId ?? "darja"}`;
-  return `${assignment.system} · ${placement} · ${assignment.academicYear}`;
+  const subject = assignment.subjectName || assignment.subjectNameUrdu || "No subject";
+  return `${subject} · ${assignment.system} · ${placement} · ${assignment.academicYear}`;
 }
 
-function periodLabel(period: TeacherTimetablePeriod) {
+function periodLabel(period: TeacherTimetablePeriod, teacherName: string) {
   const placement =
     period.system === "school"
       ? `${period.schoolClassId ?? "class"} / ${period.schoolSectionId ?? "section"}`
       : `${period.madrassaCategoryId ?? "category"} / ${period.madrassaSubcategoryId ?? "darja"}`;
-  return `${period.system} · ${placement}`;
+  const subject = period.subjectName || period.subjectNameUrdu || "No subject";
+  return `${subject} · ${teacherName} · ${placement}`;
 }
