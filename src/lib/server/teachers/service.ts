@@ -688,7 +688,23 @@ export async function getMyTeacherDashboard(request: Request) {
     .filter((a) => a.system === "madrassa" && a.madrassaSubcategoryId)
     .map((a) => a.madrassaSubcategoryId as string);
 
-  const classTimetable = madrassaSubcategoryIds.length > 0
+  const subjectAssignments = await db
+    .select({ madrassaSubcategoryId: examSubjects.madrassaSubcategoryId })
+    .from(examSubjects)
+    .where(
+      and(
+        eq(examSubjects.teacherId, profile.id),
+        eq(examSubjects.system, "madrassa"),
+      ),
+    );
+
+  const subjectSubcategoryIds = subjectAssignments
+    .map((row) => row.madrassaSubcategoryId)
+    .filter((id): id is string => Boolean(id));
+
+  const combinedSubcategoryIds = Array.from(new Set([...madrassaSubcategoryIds, ...subjectSubcategoryIds]));
+
+  const classTimetable = combinedSubcategoryIds.length > 0
     ? await db
         .select({
           id: madrassaTimetablePeriods.id,
@@ -707,12 +723,14 @@ export async function getMyTeacherDashboard(request: Request) {
         .innerJoin(madrassaTimetableSlots, eq(madrassaTimetableSlots.periodId, madrassaTimetablePeriods.id))
         .leftJoin(examSubjects, eq(examSubjects.id, madrassaTimetableSlots.subjectId))
         .where(
-          inArray(madrassaTimetablePeriods.madrassaSubcategoryId, madrassaSubcategoryIds),
+          inArray(madrassaTimetablePeriods.madrassaSubcategoryId, combinedSubcategoryIds),
         )
         .orderBy(asc(madrassaTimetableSlots.dayOfWeek), asc(madrassaTimetablePeriods.timeStart))
     : [];
 
-  const classTimetablePeriods = classTimetable.map((row) => {
+  const activeClassTimetable = classTimetable.filter((row) => row.subjectId !== null && row.subjectId !== undefined);
+
+  const classTimetablePeriods = activeClassTimetable.map((row) => {
     const assignment = assignments.find((a) => a.madrassaSubcategoryId === row.madrassaSubcategoryId);
     const adminDayToTeacherWeekday = (adminDay: number) => (adminDay === 0 ? 6 : adminDay - 1);
     return {
