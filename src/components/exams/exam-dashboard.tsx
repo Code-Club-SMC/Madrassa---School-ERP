@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { BookOpen, CalendarDays, ChevronRight, GraduationCap, LineChart, Plus, Users } from "lucide-react";
@@ -45,6 +47,12 @@ export function ExamDashboard({ system }: Props) {
     endDate: "",
     academicYear: "",
   });
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; nameUrdu: string; section: string; subcategories: Array<{ id: string; name: string; nameUrdu: string }> }>>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [schoolClasses, setSchoolClasses] = useState<Array<{ id: string; name: string; nameUrdu: string }>>([]);
+  const [selectedSchoolClassIds, setSelectedSchoolClassIds] = useState<string[]>([]);
+  const [loadingSchoolClasses, setLoadingSchoolClasses] = useState(false);
 
   const section = system === "madrassa" ? gender : undefined;
 
@@ -81,8 +89,54 @@ export function ExamDashboard({ system }: Props) {
     void load();
   }, [system, section]);
 
+  useEffect(() => {
+    if (createOpen) {
+      void loadCategories();
+      void loadSchoolClasses();
+    }
+  }, [createOpen]);
+
   const resetForm = () => {
     setForm({ name: "", nameUrdu: "", type: "general", startDate: "", endDate: "", academicYear: "" });
+    setSelectedCategoryIds([]);
+    setCategories([]);
+    setSelectedSchoolClassIds([]);
+    setSchoolClasses([]);
+  };
+
+  const loadCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const payload = await fetch("/api/academic/madrassa/categories", { credentials: "include" }).then((r) => r.json());
+      setCategories(payload.categories ?? []);
+    } catch {
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const loadSchoolClasses = async () => {
+    setLoadingSchoolClasses(true);
+    try {
+      const payload = await fetch("/api/academic/school/classes", { credentials: "include" }).then((r) => r.json());
+      setSchoolClasses(payload.classes ?? []);
+    } catch {
+      setSchoolClasses([]);
+    } finally {
+      setLoadingSchoolClasses(false);
+    }
+  };
+
+  const qasimCategories = useMemo(() => categories.filter((c) => c.section === "male" || c.section === "baneen"), [categories]);
+  const zainabCategories = useMemo(() => categories.filter((c) => c.section === "female" || c.section === "banat"), [categories]);
+
+  const toggleCategory = (id: string) => {
+    setSelectedCategoryIds((prev) => (prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]));
+  };
+
+  const toggleSchoolClass = (id: string) => {
+    setSelectedSchoolClassIds((prev) => (prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]));
   };
 
   const handleCreate = async () => {
@@ -91,18 +145,41 @@ export function ExamDashboard({ system }: Props) {
       return;
     }
 
+    const madrassaTargets = selectedCategoryIds;
+    const schoolTargets = selectedSchoolClassIds;
+    if (madrassaTargets.length === 0 && schoolTargets.length === 0) {
+      toast.error(lang === "ur" ? "کم از کم ایک زمرہ یا کلاس منتخب کریں" : "Select at least one category or class");
+      return;
+    }
+
     setCreating(true);
     try {
-      await createExamSession({
-        system,
-        type: form.type,
-        name: form.name.trim(),
-        nameUrdu: form.nameUrdu.trim(),
-        startDate: form.startDate,
-        endDate: form.endDate,
-        academicYear: form.academicYear.trim() || undefined,
-        subjectIds: [],
-      });
+      const createOne = async (scopeId: string, categoryId?: string, schoolClassId?: string) => {
+        await createExamSession({
+          system: schoolClassId ? "school" : "madrassa",
+          type: form.type,
+          name: form.name.trim(),
+          nameUrdu: form.nameUrdu.trim(),
+          startDate: form.startDate,
+          endDate: form.endDate,
+          academicYear: form.academicYear.trim() || undefined,
+          subjectIds: [],
+          ...(schoolClassId ? { schoolClassId } : { madrassaSubcategoryId: scopeId, madrassaCategoryId: categoryId }),
+        });
+      };
+
+      for (const categoryId of madrassaTargets) {
+        const category = categories.find((c) => c.id === categoryId);
+        const subcategoryIds = category?.subcategories.map((s) => s.id) || [];
+        if (subcategoryIds.length === 0) {
+          await createOne(categoryId, categoryId);
+        } else {
+          await Promise.all(subcategoryIds.map((subId) => createOne(subId, categoryId)));
+        }
+      }
+
+      await Promise.all(schoolTargets.map((classId) => createOne(classId, undefined, classId)));
+
       toast.success(lang === "ur" ? "امتحان بن گیا" : "Exam created");
       resetForm();
       setCreateOpen(false);
@@ -314,6 +391,95 @@ export function ExamDashboard({ system }: Props) {
           <div>
             <Label className="text-xs text-muted-foreground mb-1 block">{lang === "ur" ? "تعلیمی سال" : "Academic Year"}</Label>
             <Input value={form.academicYear} onChange={(e) => setForm({ ...form, academicYear: e.target.value })} placeholder={lang === "ur" ? "2025" : "2025"} />
+          </div>
+
+          {system === "madrassa" && (
+            <div className="space-y-4">
+              <Label className="text-xs text-muted-foreground">{lang === "ur" ? "زمرے منتخب کریں" : "Select Categories"}</Label>
+              {loadingCategories ? (
+                <p className="text-xs text-muted-foreground">{lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading categories..."}</p>
+              ) : categories.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{lang === "ur" ? "کوئی زمرہ نہیں ملا" : "No categories found"}</p>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {qasimCategories.length > 0 && (
+                    <div className="rounded-lg border p-4 space-y-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ur" ? "جمیہ قاسمیہ لبنان" : "Jamia Qasimia lilBanin"}</p>
+                        <p className="text-[11px] text-muted-foreground">{lang === "ur" ? "قاسمیہ مردوں کا نظام" : "Qasim Section"}</p>
+                      </div>
+                      <div className="grid gap-2">
+                        {qasimCategories.map((category) => {
+                          const checked = selectedCategoryIds.includes(category.id);
+                          return (
+                            <label key={category.id} className="flex items-center gap-2 rounded-md border p-2.5 text-xs cursor-pointer hover:bg-muted/30 transition-colors">
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(value) => {
+                                  toggleCategory(category.id);
+                                }}
+                              />
+                              <span>{category.nameUrdu || category.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {zainabCategories.length > 0 && (
+                    <div className="rounded-lg border p-4 space-y-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{lang === "ur" ? "جمیہ زینب لبنات" : "Jamyah Zainab lilbanat"}</p>
+                        <p className="text-[11px] text-muted-foreground">{lang === "ur" ? "زینب خواتین کا نظام" : "Zainab Section"}</p>
+                      </div>
+                      <div className="grid gap-2">
+                        {zainabCategories.map((category) => {
+                          const checked = selectedCategoryIds.includes(category.id);
+                          return (
+                            <label key={category.id} className="flex items-center gap-2 rounded-md border p-2.5 text-xs cursor-pointer hover:bg-muted/30 transition-colors">
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(value) => {
+                                  toggleCategory(category.id);
+                                }}
+                              />
+                              <span>{category.nameUrdu || category.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <Label className="text-xs text-muted-foreground">{lang === "ur" ? "اسکول کلاسز" : "School Classes"}</Label>
+            {loadingSchoolClasses ? (
+              <p className="text-xs text-muted-foreground">{lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading classes..."}</p>
+            ) : schoolClasses.length === 0 ? (
+              <p className="text-xs text-muted-foreground">{lang === "ur" ? "کوئی کلاس نہیں ملی" : "No classes found"}</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {schoolClasses.map((schoolClass) => {
+                  const checked = selectedSchoolClassIds.includes(schoolClass.id);
+                  return (
+                    <label key={schoolClass.id} className="flex items-center gap-2 rounded-md border p-2.5 text-xs cursor-pointer hover:bg-muted/30 transition-colors">
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(value) => {
+                          toggleSchoolClass(schoolClass.id);
+                        }}
+                      />
+                      <span>{schoolClass.nameUrdu || schoolClass.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
