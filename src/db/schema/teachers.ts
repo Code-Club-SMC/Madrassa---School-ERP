@@ -12,7 +12,7 @@ import { user } from "@/db/schema/auth";
 import { examSubjects } from "@/db/schema/exams";
 
 export type TeacherSystem = "school" | "madrassa";
-export type TeacherSystemScope = TeacherSystem | "both" | "all" | "qasmia-both" | "qasmia-madrassa" | "qasmia-school" | "zainab-both" | "zainab-madrassa" | "zainab-school";
+export type TeacherSystemScope = TeacherSystem | "all" | "qasmia-both" | "qasmia-madrassa" | "qasmia-school" | "zainab-both" | "zainab-madrassa" | "zainab-school";
 export type TeacherEmploymentStatus = "active" | "inactive";
 export type TeacherPaymentMethod = "cash" | "bank";
 
@@ -23,7 +23,7 @@ export const teacherProfiles = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    systemScope: text("system_scope").$type<TeacherSystemScope>().default("both").notNull(),
+    systemScope: text("system_scope").$type<TeacherSystemScope>().default("school").notNull(),
     gender: text("gender"),
     designation: text("designation").notNull(),
     qualification: text("qualification"),

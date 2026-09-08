@@ -61,8 +61,6 @@ function systemLabel(systemScope: TeacherSystemScope) {
   switch (systemScope) {
     case "all":
       return "All";
-    case "both":
-      return "Both systems";
     case "school":
       return "School";
     case "madrassa":
@@ -202,7 +200,6 @@ export function TeacherWorkspace() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
-                <SelectItem value="both">Both systems</SelectItem>
                 <SelectItem value="school">School</SelectItem>
                 <SelectItem value="madrassa">Madrassa</SelectItem>
                 <SelectItem value="qasmia-both">All Qasim (Both)</SelectItem>

@@ -3,9 +3,9 @@ import { useMemo } from "react";
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { BookOpen, CalendarDays, ChevronRight, GraduationCap, LineChart, Plus, Users } from "lucide-react";
+import { BookOpen, CalendarDays, ChevronRight, GraduationCap, LineChart, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
-import { createExamSession, listExamSessions } from "@/components/exams/exam-api";
+import { createExamSession, deleteExamSession, listExamSessions } from "@/components/exams/exam-api";
 import type { ExamSession, ExamSystem } from "@/components/exams/exam-types";
 import { useLanguage } from "@/components/language-context";
 import { useSystem } from "@/components/system-context";
@@ -15,6 +15,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -66,6 +67,8 @@ export function ExamDashboard({ system }: Props) {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [qasimSchool, setQasimSchool] = useState(false);
   const [zainabSchool, setZainabSchool] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ExamSession | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const section = system === "madrassa" ? gender : undefined;
 
@@ -109,11 +112,26 @@ export function ExamDashboard({ system }: Props) {
   }, [createOpen]);
 
   const resetForm = () => {
-    setForm({ name: "", nameUrdu: "", type: "general", startDate: "", endDate: "", academicYear: "" });
+    setForm({ name: "", nameUrdu: "", type: "monthly", startDate: "", endDate: "", academicYear: "" });
     setSelectedCategoryIds([]);
     setCategories([]);
     setQasimSchool(false);
     setZainabSchool(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteExamSession(deleteTarget.id);
+      toast.success(lang === "ur" ? "امتحان حذف ہو گیا" : "Exam deleted");
+      setDeleteTarget(null);
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete exam");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const loadCategories = async () => {
@@ -310,6 +328,9 @@ export function ExamDashboard({ system }: Props) {
                                 <Link to={system === "school" ? "/school/exams/$id" : "/madrassa/exams/$id"} params={{ id: exam.id }}>
                                   {lang === "ur" ? "تفصیل" : "Detail"}
                                 </Link>
+                              </Button>
+                              <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(exam)}>
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </div>
@@ -513,6 +534,25 @@ export function ExamDashboard({ system }: Props) {
           </Button>
         </div>
       </ResponsiveDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{lang === "ur" ? "امتحان حذف کریں" : "Delete exam"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {lang === "ur"
+                ? `کیا آپ "${deleteTarget?.nameUrdu || deleteTarget?.name}" امتحان کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔`
+                : `Delete "${deleteTarget?.nameUrdu || deleteTarget?.name}"? This action cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{lang === "ur" ? "منسوخ" : "Cancel"}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting}>
+              {deleting ? (lang === "ur" ? "حذف ہو رہا ہے..." : "Deleting...") : (lang === "ur" ? "حذف کریں" : "Delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

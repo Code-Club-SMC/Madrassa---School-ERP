@@ -34,7 +34,7 @@ import {
   validateTimeRange,
 } from "@/lib/server/teachers/domain";
 
-const systemScopeSchema = z.enum(["school", "madrassa", "both", "all", "qasmia-both", "qasmia-madrassa", "qasmia-school", "zainab-both", "zainab-madrassa", "zainab-school"]);
+const systemScopeSchema = z.enum(["school", "madrassa", "all", "qasmia-both", "qasmia-madrassa", "qasmia-school", "zainab-both", "zainab-madrassa", "zainab-school"]);
 const paymentMethodSchema = z.enum(["cash", "bank"]);
 const systemSchema = z.enum(["school", "madrassa"]);
 const dateStringSchema = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must use YYYY-MM-DD format");
@@ -68,7 +68,7 @@ export const createTeacherSchema = z.object({
   phone: optionalText,
   cnic: optionalText,
   gender: z.enum(["male", "female"]).optional(),
-  systemScope: systemScopeSchema.default("both"),
+  systemScope: systemScopeSchema.default("school"),
   designation: z.string().trim().min(1),
   qualification: optionalText,
   qualificationUrdu: optionalText,
@@ -86,7 +86,7 @@ export const createTeacherSchema = z.object({
 
 export const teacherListQuerySchema = z.object({
   q: optionalText,
-  systemScope: z.enum(["all", "school", "madrassa", "both", "qasmia-both", "qasmia-madrassa", "qasmia-school", "zainab-both", "zainab-madrassa", "zainab-school"]).default("all"),
+  systemScope: z.enum(["all", "school", "madrassa", "qasmia-both", "qasmia-madrassa", "qasmia-school", "zainab-both", "zainab-madrassa", "zainab-school"]).default("all"),
   status: z.enum(["all", "active", "inactive"]).default("all"),
   all: z.preprocess((value) => value === "true", z.boolean().default(false)),
 });
@@ -160,7 +160,7 @@ export async function createTeacher(request: Request, input: z.infer<typeof crea
         phone: input.phone,
         cnic: input.cnic,
         status: "active",
-        systemAccess: input.systemScope === "all" ? "both" : ["school", "madrassa", "both"].includes(input.systemScope) ? input.systemScope : "both",
+        systemAccess: input.systemScope === "all" ? "both" : ["school", "madrassa"].includes(input.systemScope) ? input.systemScope : "both",
         mustChangePassword: true,
         linkedTeacherId: profileId,
         permissions: ROLE_DEFAULTS.teacher,
@@ -380,7 +380,7 @@ export async function updateTeacherProfile(request: Request, id: string, input: 
               ? undefined
               : profileInput.systemScope === "all"
                 ? "both"
-                : ["school", "madrassa", "both"].includes(profileInput.systemScope)
+                : ["school", "madrassa"].includes(profileInput.systemScope)
                   ? profileInput.systemScope
                   : "both",
           department: profileInput.designation === undefined ? undefined : "Teaching",
