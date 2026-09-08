@@ -9,11 +9,25 @@ import { createExamSession, listExamSessions } from "@/components/exams/exam-api
 import type { ExamSession, ExamSystem } from "@/components/exams/exam-types";
 import { useLanguage } from "@/components/language-context";
 import { useSystem } from "@/components/system-context";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookLoader } from "@/components/shared/book-loader";
 import { cn } from "@/lib/utils";
@@ -42,7 +56,7 @@ export function ExamDashboard({ system }: Props) {
   const [form, setForm] = useState({
     name: "",
     nameUrdu: "",
-    type: "general",
+    type: "monthly",
     startDate: "",
     endDate: "",
     academicYear: "",
@@ -50,9 +64,8 @@ export function ExamDashboard({ system }: Props) {
   const [categories, setCategories] = useState<Array<{ id: string; name: string; nameUrdu: string; section: string; subcategories: Array<{ id: string; name: string; nameUrdu: string }> }>>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
-  const [schoolClasses, setSchoolClasses] = useState<Array<{ id: string; name: string; nameUrdu: string }>>([]);
-  const [selectedSchoolClassIds, setSelectedSchoolClassIds] = useState<string[]>([]);
-  const [loadingSchoolClasses, setLoadingSchoolClasses] = useState(false);
+  const [qasimSchool, setQasimSchool] = useState(false);
+  const [zainabSchool, setZainabSchool] = useState(false);
 
   const section = system === "madrassa" ? gender : undefined;
 
@@ -92,7 +105,6 @@ export function ExamDashboard({ system }: Props) {
   useEffect(() => {
     if (createOpen) {
       void loadCategories();
-      void loadSchoolClasses();
     }
   }, [createOpen]);
 
@@ -100,8 +112,8 @@ export function ExamDashboard({ system }: Props) {
     setForm({ name: "", nameUrdu: "", type: "general", startDate: "", endDate: "", academicYear: "" });
     setSelectedCategoryIds([]);
     setCategories([]);
-    setSelectedSchoolClassIds([]);
-    setSchoolClasses([]);
+    setQasimSchool(false);
+    setZainabSchool(false);
   };
 
   const loadCategories = async () => {
@@ -116,27 +128,11 @@ export function ExamDashboard({ system }: Props) {
     }
   };
 
-  const loadSchoolClasses = async () => {
-    setLoadingSchoolClasses(true);
-    try {
-      const payload = await fetch("/api/academic/school/classes", { credentials: "include" }).then((r) => r.json());
-      setSchoolClasses(payload.classes ?? []);
-    } catch {
-      setSchoolClasses([]);
-    } finally {
-      setLoadingSchoolClasses(false);
-    }
-  };
-
   const qasimCategories = useMemo(() => categories.filter((c) => c.section === "male" || c.section === "baneen"), [categories]);
   const zainabCategories = useMemo(() => categories.filter((c) => c.section === "female" || c.section === "banat"), [categories]);
 
   const toggleCategory = (id: string) => {
     setSelectedCategoryIds((prev) => (prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]));
-  };
-
-  const toggleSchoolClass = (id: string) => {
-    setSelectedSchoolClassIds((prev) => (prev.includes(id) ? prev.filter((entry) => entry !== id) : [...prev, id]));
   };
 
   const handleCreate = async () => {
@@ -146,17 +142,16 @@ export function ExamDashboard({ system }: Props) {
     }
 
     const madrassaTargets = selectedCategoryIds;
-    const schoolTargets = selectedSchoolClassIds;
-    if (madrassaTargets.length === 0 && schoolTargets.length === 0) {
-      toast.error(lang === "ur" ? "کم از کم ایک زمرہ یا کلاس منتخب کریں" : "Select at least one category or class");
+    if (madrassaTargets.length === 0 && !qasimSchool && !zainabSchool) {
+      toast.error(lang === "ur" ? "کم از کم ایک زمرہ یا اسکول منتخب کریں" : "Select at least one category or school");
       return;
     }
 
     setCreating(true);
     try {
-      const createOne = async (scopeId: string, categoryId?: string, schoolClassId?: string) => {
+      const createMadrassa = async (scopeId: string, categoryId?: string) => {
         await createExamSession({
-          system: schoolClassId ? "school" : "madrassa",
+          system: "madrassa",
           type: form.type,
           name: form.name.trim(),
           nameUrdu: form.nameUrdu.trim(),
@@ -164,7 +159,8 @@ export function ExamDashboard({ system }: Props) {
           endDate: form.endDate,
           academicYear: form.academicYear.trim() || undefined,
           subjectIds: [],
-          ...(schoolClassId ? { schoolClassId } : { madrassaSubcategoryId: scopeId, madrassaCategoryId: categoryId }),
+          madrassaSubcategoryId: scopeId,
+          madrassaCategoryId: categoryId,
         });
       };
 
@@ -172,13 +168,11 @@ export function ExamDashboard({ system }: Props) {
         const category = categories.find((c) => c.id === categoryId);
         const subcategoryIds = category?.subcategories.map((s) => s.id) || [];
         if (subcategoryIds.length === 0) {
-          await createOne(categoryId, categoryId);
+          await createMadrassa(categoryId, categoryId);
         } else {
-          await Promise.all(subcategoryIds.map((subId) => createOne(subId, categoryId)));
+          await Promise.all(subcategoryIds.map((subId) => createMadrassa(subId, categoryId)));
         }
       }
-
-      await Promise.all(schoolTargets.map((classId) => createOne(classId, undefined, classId)));
 
       toast.success(lang === "ur" ? "امتحان بن گیا" : "Exam created");
       resetForm();
@@ -264,44 +258,68 @@ export function ExamDashboard({ system }: Props) {
               {lang === "ur" ? "کوئی امتحان نہیں ملا" : "No exams found"}
             </Card>
           ) : (
-            <div className="grid gap-3">
-              {examMeta.map(({ exam, dateStatus }) => (
-                <Card key={exam.id} className="p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h4 className="font-semibold truncate">{exam.name}</h4>
-                        <Badge variant="outline" className={cn("capitalize text-xs", statusTone[exam.status])}>
-                          {exam.status}
-                        </Badge>
-                        <Badge variant="outline" className={cn("text-xs", dateStatusTone[dateStatus])}>
-                          {dateStatusLabel(dateStatus)}
-                        </Badge>
-                      </div>
-                      <p className="font-urdu text-sm text-muted-foreground mb-2">{exam.nameUrdu}</p>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <CalendarDays className="h-3 w-3" />
-                          {format(new Date(exam.startDate), "dd MMM yyyy")} - {format(new Date(exam.endDate), "dd MMM yyyy")}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          {exam.studentCount} {lang === "ur" ? "طلباء" : "students"}
-                        </span>
-                        <span>{exam.groupLabel}</span>
-                      </div>
+            <Accordion type="multiple" className="space-y-3">
+              {Object.entries(
+                examMeta.reduce<Record<string, typeof examMeta>>((groups, { exam, dateStatus }) => {
+                  const raw = exam.groupLabel || exam.name;
+                  const group = raw.includes("·") ? raw.split("·")[0].trim() : raw;
+                  if (!groups[group]) groups[group] = [];
+                  groups[group].push({ exam, dateStatus });
+                  return groups;
+                }, {})
+              ).map(([group, items]) => (
+                <AccordionItem key={group} value={group} className="rounded-lg border">
+                  <AccordionTrigger className="px-4 py-3">
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="text-sm font-semibold">{group}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {items.length} {lang === "ur" ? "امتحانات" : "exams"}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button asChild variant="outline" size="sm">
-                        <Link to={system === "school" ? "/school/exams/$id" : "/madrassa/exams/$id"} params={{ id: exam.id }}>
-                          {lang === "ur" ? "تفصیل" : "Detail"}
-                        </Link>
-                      </Button>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid gap-3 px-4 pb-4">
+                      {items.map(({ exam, dateStatus }) => (
+                        <Card key={exam.id} className="p-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <h4 className="font-semibold truncate">{exam.name}</h4>
+                                <Badge variant="outline" className={cn("capitalize text-xs", statusTone[exam.status])}>
+                                  {exam.status}
+                                </Badge>
+                                <Badge variant="outline" className={cn("text-xs", dateStatusTone[dateStatus])}>
+                                  {dateStatusLabel(dateStatus)}
+                                </Badge>
+                              </div>
+                              <p className="font-urdu text-sm text-muted-foreground mb-2">{exam.nameUrdu}</p>
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <CalendarDays className="h-3 w-3" />
+                                  {format(new Date(exam.startDate), "dd MMM yyyy")} - {format(new Date(exam.endDate), "dd MMM yyyy")}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  {exam.studentCount} {lang === "ur" ? "طلباء" : "students"}
+                                </span>
+                                <span>{exam.groupLabel}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button asChild variant="outline" size="sm">
+                                <Link to={system === "school" ? "/school/exams/$id" : "/madrassa/exams/$id"} params={{ id: exam.id }}>
+                                  {lang === "ur" ? "تفصیل" : "Detail"}
+                                </Link>
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
                     </div>
-                  </div>
-                </Card>
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           )}
         </TabsContent>
 
@@ -369,7 +387,7 @@ export function ExamDashboard({ system }: Props) {
         title={lang === "ur" ? "نیا امتحان" : "New Exam"}
         description={lang === "ur" ? "امتحان کی تفصیلات داخل کریں" : "Enter exam details"}
         icon={Plus}
-        className="max-w-lg"
+        className="max-w-4xl"
       >
         <div className="grid gap-4">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -391,6 +409,22 @@ export function ExamDashboard({ system }: Props) {
           <div>
             <Label className="text-xs text-muted-foreground mb-1 block">{lang === "ur" ? "تعلیمی سال" : "Academic Year"}</Label>
             <Input value={form.academicYear} onChange={(e) => setForm({ ...form, academicYear: e.target.value })} placeholder={lang === "ur" ? "2025" : "2025"} />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1 block">{lang === "ur" ? "امتحان کی قسم" : "Exam Type"}</Label>
+            <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly">{lang === "ur" ? "ماہانہ" : "Monthly"}</SelectItem>
+                <SelectItem value="quarterly">{lang === "ur" ? "سہ ماہی" : "Quarterly"}</SelectItem>
+                <SelectItem value="halfyearly">{lang === "ur" ? "نیم سالانہ" : "Half Yearly"}</SelectItem>
+                <SelectItem value="annual">{lang === "ur" ? "سالانہ" : "Annual"}</SelectItem>
+                <SelectItem value="sahmahi">{lang === "ur" ? "سہ ماہی" : "Sahmahi"}</SelectItem>
+                <SelectItem value="salanah">{lang === "ur" ? "سالانہ" : "Salanah"}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {system === "madrassa" && (
@@ -423,6 +457,13 @@ export function ExamDashboard({ system }: Props) {
                             </label>
                           );
                         })}
+                        <label className="flex items-center gap-2 rounded-md border p-2.5 text-xs cursor-pointer hover:bg-muted/30 transition-colors">
+                          <Checkbox
+                            checked={qasimSchool}
+                            onCheckedChange={(value) => setQasimSchool(Boolean(value))}
+                          />
+                          <span>{lang === "ur" ? "اسکول" : "School"}</span>
+                        </label>
                       </div>
                     </div>
                   )}
@@ -448,6 +489,13 @@ export function ExamDashboard({ system }: Props) {
                             </label>
                           );
                         })}
+                        <label className="flex items-center gap-2 rounded-md border p-2.5 text-xs cursor-pointer hover:bg-muted/30 transition-colors">
+                          <Checkbox
+                            checked={zainabSchool}
+                            onCheckedChange={(value) => setZainabSchool(Boolean(value))}
+                          />
+                          <span>{lang === "ur" ? "اسکول" : "School"}</span>
+                        </label>
                       </div>
                     </div>
                   )}
@@ -455,32 +503,6 @@ export function ExamDashboard({ system }: Props) {
               )}
             </div>
           )}
-
-          <div className="space-y-4">
-            <Label className="text-xs text-muted-foreground">{lang === "ur" ? "اسکول کلاسز" : "School Classes"}</Label>
-            {loadingSchoolClasses ? (
-              <p className="text-xs text-muted-foreground">{lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading classes..."}</p>
-            ) : schoolClasses.length === 0 ? (
-              <p className="text-xs text-muted-foreground">{lang === "ur" ? "کوئی کلاس نہیں ملی" : "No classes found"}</p>
-            ) : (
-              <div className="grid gap-2 sm:grid-cols-2">
-                {schoolClasses.map((schoolClass) => {
-                  const checked = selectedSchoolClassIds.includes(schoolClass.id);
-                  return (
-                    <label key={schoolClass.id} className="flex items-center gap-2 rounded-md border p-2.5 text-xs cursor-pointer hover:bg-muted/30 transition-colors">
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(value) => {
-                          toggleSchoolClass(schoolClass.id);
-                        }}
-                      />
-                      <span>{schoolClass.nameUrdu || schoolClass.name}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         </div>
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>

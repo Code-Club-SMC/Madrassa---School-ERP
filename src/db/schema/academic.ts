@@ -148,6 +148,7 @@ export const madrassaSubcategories = pgTable(
     index("madrassa_subcategories_darja_idx").on(table.darja),
     index("madrassa_subcategories_active_idx").on(table.active),
     index("madrassa_subcategories_section_idx").on(table.section),
+    uniqueIndex("madrassa_subcategories_category_roll_prefix_idx").on(table.categoryId, table.rollPrefix),
   ],
 );
 

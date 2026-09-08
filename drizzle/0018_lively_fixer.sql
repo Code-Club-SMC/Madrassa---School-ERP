@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "madrassa_subcategories_category_roll_prefix_idx" ON "madrassa_subcategories" USING btree ("category_id","roll_prefix");

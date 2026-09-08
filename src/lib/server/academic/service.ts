@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, count, eq, inArray, max, or } from "drizzle-orm";
+import { and, asc, count, eq, inArray, max, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -381,6 +381,9 @@ export async function createMadrassaSubcategory(
   const [category] = await db.select({ id: madrassaCategories.id, section: madrassaCategories.section }).from(madrassaCategories).where(eq(madrassaCategories.id, categoryId)).limit(1);
   if (!category) throw new HttpError("Madrassa category not found", 404);
 
+  const rollPrefix = input.rollPrefix ?? input.name.slice(0, 3).toUpperCase();
+  await assertUniqueMadrassaRollPrefix(categoryId, rollPrefix);
+
   const [created] = await db
     .insert(madrassaSubcategories)
     .values({
@@ -388,7 +391,7 @@ export async function createMadrassaSubcategory(
       categoryId,
       name: input.name,
       nameUrdu: input.nameUrdu,
-      rollPrefix: input.rollPrefix ?? input.name.slice(0, 3).toUpperCase(),
+      rollPrefix,
       darja: input.darja ?? null,
       govtEquivalent: input.govtEquivalent ?? null,
       durationYears: input.durationYears ?? null,
@@ -412,6 +415,10 @@ export async function updateMadrassaSubcategory(
 
   if (input.active === false) {
     await assertNoActiveMadrassaSubcategoryEnrollments(subcategoryId);
+  }
+
+  if (input.rollPrefix) {
+    await assertUniqueMadrassaRollPrefix(categoryId, input.rollPrefix, subcategoryId);
   }
 
   const updateData: Record<string, unknown> = {
@@ -519,6 +526,24 @@ async function assertNoActiveMadrassaCategoryEnrollments(categoryId: string) {
     .from(madrassaSubcategories)
     .where(eq(madrassaSubcategories.categoryId, categoryId));
   for (const row of subcategoryRows) await assertNoActiveMadrassaSubcategoryEnrollments(row.id);
+}
+
+async function assertUniqueMadrassaRollPrefix(categoryId: string, rollPrefix: string, excludeSubcategoryId?: string) {
+  const [existing] = await db
+    .select({ id: madrassaSubcategories.id })
+    .from(madrassaSubcategories)
+    .where(
+      and(
+        eq(madrassaSubcategories.categoryId, categoryId),
+        eq(madrassaSubcategories.rollPrefix, rollPrefix),
+        excludeSubcategoryId ? ne(madrassaSubcategories.id, excludeSubcategoryId) : undefined,
+      ),
+    )
+    .limit(1);
+
+  if (existing) {
+    throw new HttpError(`Roll prefix "${rollPrefix}" is already used in this category`, 409);
+  }
 }
 
 async function assertNoActiveMadrassaSubcategoryEnrollments(subcategoryId: string) {

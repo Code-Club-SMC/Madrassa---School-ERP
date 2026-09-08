@@ -127,6 +127,13 @@
       "when": 1788329371436,
       "tag": "0017_bouncy_dakota_north",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788844276067,
+      "tag": "0018_lively_fixer",
+      "breakpoints": true
     }
   ]
 }
