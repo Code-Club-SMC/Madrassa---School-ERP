@@ -7,7 +7,6 @@ import {
   Plus,
   Power,
   PowerOff,
-  Users2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
@@ -42,15 +41,6 @@ export const Route = createFileRoute("/_authenticated/school/classes")({
 
 type ClassLevel = "pre_primary" | "primary" | "middle" | "secondary" | "higher_secondary";
 
-type SchoolSection = {
-  id: string;
-  classId: string;
-  name: string;
-  group: "science" | "arts" | "commerce" | null;
-  active: boolean;
-  enrollmentCount: number;
-};
-
 type Klass = {
   id: string;
   name: string;
@@ -59,7 +49,6 @@ type Klass = {
   govtEquivalent: string | null;
   active: boolean;
   enrollmentCount: number;
-  sections: SchoolSection[];
 };
 
 const LEVEL_TONE: Record<ClassLevel, string> = {
@@ -77,14 +66,11 @@ const emptyClassForm = {
   level: "primary" as ClassLevel,
   govtEquivalent: "",
 };
-const emptySectionForm = { name: "", group: "" as "" | "science" | "arts" | "commerce" };
 
 type ClassForm = typeof emptyClassForm;
-type SectionForm = typeof emptySectionForm;
 
 type SchoolConfirmAction =
-  | { kind: "class"; item: Klass; nextActive: boolean }
-  | { kind: "section"; classItem: Klass; item: SchoolSection; nextActive: boolean };
+  | { kind: "class"; item: Klass; nextActive: boolean };
 
 const toClassForm = (item: Klass): ClassForm => ({
   name: item.name,
@@ -93,24 +79,15 @@ const toClassForm = (item: Klass): ClassForm => ({
   govtEquivalent: item.govtEquivalent ?? "",
 });
 
-const toSectionForm = (item: SchoolSection): SectionForm => ({
-  name: item.name,
-  group: item.group ?? "",
-});
-
 function ClassesPage() {
   const [classes, setClasses] = useState<Klass[]>([]);
   const [selected, setSelected] = useState<Klass | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [classOpen, setClassOpen] = useState(false);
-  const [sectionOpen, setSectionOpen] = useState(false);
   const [cf, setCf] = useState(emptyClassForm);
-  const [sf, setSf] = useState(emptySectionForm);
   const [editingClass, setEditingClass] = useState<Klass | null>(null);
-  const [editingSection, setEditingSection] = useState<SchoolSection | null>(null);
   const [editClassForm, setEditClassForm] = useState(emptyClassForm);
-  const [editSectionForm, setEditSectionForm] = useState(emptySectionForm);
   const [confirmAction, setConfirmAction] = useState<SchoolConfirmAction | null>(null);
 
   const loadClasses = useCallback(async () => {
@@ -136,7 +113,6 @@ function ClassesPage() {
   const totals = useMemo(
     () => ({
       classes: classes.length,
-      sections: classes.reduce((sum, item) => sum + item.sections.length, 0),
       students: classes.reduce((sum, item) => sum + item.enrollmentCount, 0),
     }),
     [classes],
@@ -175,37 +151,6 @@ function ClassesPage() {
     }
   };
 
-  const addSection = async () => {
-    if (!selected) return;
-    if (!sf.name.trim()) {
-      toast.error("Section name required");
-      return;
-    }
-
-    setPending(true);
-    try {
-      const response = await fetch(`/api/academic/school/classes/${selected.id}/sections`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          name: sf.name.trim(),
-          group: sf.group || null,
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Could not add section");
-      await loadClasses();
-      toast.success("Section added");
-      setSf(emptySectionForm);
-      setSectionOpen(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not add section");
-    } finally {
-      setPending(false);
-    }
-  };
-
   const updateClass = async () => {
     if (!editingClass) return;
     if (!editClassForm.name.trim() && !editClassForm.nameUrdu.trim()) {
@@ -238,48 +183,12 @@ function ClassesPage() {
     }
   };
 
-  const updateSection = async () => {
-    if (!editingSection) return;
-    if (!editSectionForm.name.trim()) {
-      toast.error("Section name required");
-      return;
-    }
-
-    setPending(true);
-    try {
-      const response = await fetch(
-        `/api/academic/school/classes/${editingSection.classId}/sections/${editingSection.id}`,
-        {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            name: editSectionForm.name.trim(),
-            group: editSectionForm.group || null,
-          }),
-        },
-      );
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Could not update section");
-      await loadClasses();
-      toast.success("Section updated");
-      setEditingSection(null);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not update section");
-    } finally {
-      setPending(false);
-    }
-  };
-
   const applyActiveChange = async () => {
     if (!confirmAction) return;
 
     setPending(true);
     try {
-      const endpoint =
-        confirmAction.kind === "class"
-          ? `/api/academic/school/classes/${confirmAction.item.id}`
-          : `/api/academic/school/classes/${confirmAction.classItem.id}/sections/${confirmAction.item.id}`;
+      const endpoint = `/api/academic/school/classes/${confirmAction.item.id}`;
       const response = await fetch(endpoint, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
@@ -304,16 +213,13 @@ function ClassesPage() {
   const confirmDescription = confirmAction?.nextActive
     ? "This record will become available again for new admissions and enrollment moves."
     : "This record will stop being used for new admissions or enrollment moves. Existing student history will remain unchanged.";
-  const editingSectionClass = editingSection
-    ? (classes.find((item) => item.id === editingSection.classId) ?? selected)
-    : null;
 
   return (
     <div>
       <PageHeader
-        title="Class & Section Manager"
-        titleUrdu="جماعتیں و سیکشن"
-        description="Al-Qasim Academy class structure. Student counts come from accepted admissions and active enrollments."
+        title="Class Manager"
+        titleUrdu="جماعتیں"
+        description="Al-Qasim Academy and Jamia Zainab class structures. Student counts come from accepted admissions and active enrollments."
         actions={
           <Button size="sm" className="gap-1.5" onClick={() => setClassOpen(true)}>
             <Plus className="h-4 w-4" />
@@ -322,14 +228,10 @@ function ClassesPage() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Classes · جماعتیں</p>
           <p className="font-heading text-2xl font-bold mt-1">{totals.classes}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs text-muted-foreground">Sections · سیکشن</p>
-          <p className="font-heading text-2xl font-bold mt-1">{totals.sections}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Active Students · طلبہ</p>
@@ -428,13 +330,7 @@ function ClassesPage() {
               </div>
               <div className="grid grid-cols-3 gap-3 text-center">
                 <div className="rounded-lg bg-muted/40 p-3">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Sections</p>
-                  <p className="text-2xl font-bold font-mono mt-1">{selected.sections.length}</p>
-                </div>
-                <div className="rounded-lg bg-muted/40 p-3">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                    Equivalent
-                  </p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Equivalent</p>
                   <p className="text-lg font-bold font-mono mt-1 truncate">
                     {selected.govtEquivalent ?? classPrefix(selected)}
                   </p>
@@ -443,85 +339,10 @@ function ClassesPage() {
                   <p className="text-xs text-muted-foreground uppercase tracking-wide">Students</p>
                   <p className="text-2xl font-bold font-mono mt-1">{selected.enrollmentCount}</p>
                 </div>
-              </div>
-            </Card>
-
-            <Card className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Users2 className="h-4 w-4 text-primary" />
-                  Sections
-                </h3>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5"
-                  onClick={() => setSectionOpen(true)}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Section
-                </Button>
-              </div>
-              <div className="space-y-2">
-                {selected.sections.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex flex-col gap-3 rounded-lg border border-border p-3 hover:bg-muted/40 sm:flex-row sm:items-center"
-                  >
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <div className="h-10 w-10 shrink-0 rounded-md bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
-                        {s.name}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium">Section {s.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          <span className="font-mono">{s.enrollmentCount}</span> active students
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {s.group && <Badge variant="outline">{groupLabel(s.group)}</Badge>}
-                      {!s.active && <Badge variant="secondary">Inactive</Badge>}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5"
-                        onClick={() => {
-                          setEditingSection(s);
-                          setEditSectionForm(toSectionForm(s));
-                        }}
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant={s.active ? "destructive" : "outline"}
-                        className="gap-1.5"
-                        onClick={() =>
-                          setConfirmAction({
-                            kind: "section",
-                            classItem: selected,
-                            item: s,
-                            nextActive: !s.active,
-                          })
-                        }
-                      >
-                        {s.active ? (
-                          <PowerOff className="h-3.5 w-3.5" />
-                        ) : (
-                          <Power className="h-3.5 w-3.5" />
-                        )}
-                        {s.active ? "Deactivate" : "Reactivate"}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {selected.sections.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No sections configured for this class.
-                  </p>
-                )}
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Status</p>
+                  <p className="text-2xl font-bold font-mono mt-1">{selected.active ? "Active" : "Inactive"}</p>
+                </div>
               </div>
             </Card>
 
@@ -556,7 +377,7 @@ function ClassesPage() {
           </div>
         ) : (
           <Card className="p-8 text-center text-sm text-muted-foreground">
-            Select a class to manage its sections.
+            Select a class to view details.
           </Card>
         )}
       </div>
@@ -620,56 +441,6 @@ function ClassesPage() {
             Cancel
           </Button>
           <Button onClick={addClass} disabled={pending}>
-            {pending ? "Adding..." : "Add"}
-          </Button>
-        </div>
-      </ResponsiveDialog>
-
-      <ResponsiveDialog
-        title={`نیا سیکشن${selected ? ` — ${selected.nameUrdu}` : ""}`}
-        description="Add Section"
-        open={sectionOpen}
-        onOpenChange={setSectionOpen}
-        icon={Users2}
-        className="max-w-md"
-      >
-        <div className="grid gap-4">
-          <BilingualLabel urdu="سیکشن کا نام" english="Section Name" required>
-            <Input
-              value={sf.name}
-              onChange={(e) => setSf({ ...sf, name: e.target.value })}
-              placeholder="C"
-            />
-          </BilingualLabel>
-          {selected && ["secondary", "higher_secondary"].includes(selected.level) && (
-            <BilingualLabel urdu="گروپ" english="Group">
-              <Select
-                value={sf.group || "none"}
-                onValueChange={(v) =>
-                  setSf({
-                    ...sf,
-                    group: v === "none" ? "" : (v as "science" | "arts" | "commerce"),
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None · کوئی نہیں</SelectItem>
-                  <SelectItem value="science">Science · سائنس</SelectItem>
-                  <SelectItem value="arts">Arts · آرٹس</SelectItem>
-                  <SelectItem value="commerce">Commerce · کامرس</SelectItem>
-                </SelectContent>
-              </Select>
-            </BilingualLabel>
-          )}
-        </div>
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => setSectionOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={addSection} disabled={pending}>
             {pending ? "Adding..." : "Add"}
           </Button>
         </div>
@@ -745,58 +516,6 @@ function ClassesPage() {
         </div>
       </ResponsiveDialog>
 
-      <ResponsiveDialog
-        title={`سیکشن میں ترمیم${editingSectionClass ? ` — ${editingSectionClass.nameUrdu}` : ""}`}
-        description="Edit Section"
-        open={editingSection !== null}
-        onOpenChange={(open) => !open && setEditingSection(null)}
-        icon={Users2}
-        className="max-w-md"
-      >
-        <div className="grid gap-4">
-          <BilingualLabel urdu="سیکشن کا نام" english="Section Name" required>
-            <Input
-              value={editSectionForm.name}
-              onChange={(e) =>
-                setEditSectionForm({ ...editSectionForm, name: e.target.value })
-              }
-              placeholder="C"
-            />
-          </BilingualLabel>
-          {editingSectionClass && ["secondary", "higher_secondary"].includes(editingSectionClass.level) && (
-            <BilingualLabel urdu="گروپ" english="Group">
-              <Select
-                value={editSectionForm.group || "none"}
-                onValueChange={(v) =>
-                  setEditSectionForm({
-                    ...editSectionForm,
-                    group: v === "none" ? "" : (v as "science" | "arts" | "commerce"),
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None · کوئی نہیں</SelectItem>
-                  <SelectItem value="science">Science · سائنس</SelectItem>
-                  <SelectItem value="arts">Arts · آرٹس</SelectItem>
-                  <SelectItem value="commerce">Commerce · کامرس</SelectItem>
-                </SelectContent>
-              </Select>
-            </BilingualLabel>
-          )}
-        </div>
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => setEditingSection(null)}>
-            Cancel
-          </Button>
-          <Button onClick={updateSection} disabled={pending}>
-            {pending ? "Saving..." : "Save"}
-          </Button>
-        </div>
-      </ResponsiveDialog>
-
       <AlertDialog open={!!confirmAction} onOpenChange={(open) => !open && setConfirmAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -824,12 +543,6 @@ function classPrefix(item: Klass) {
     .join("")
     .slice(0, 3)
     .toUpperCase();
-}
-
-function groupLabel(group: NonNullable<SchoolSection["group"]>) {
-  if (group === "science") return "Science · سائنس";
-  if (group === "commerce") return "Commerce · کامرس";
-  return "Arts · آرٹس";
 }
 
 function subjectsForLevel(level: ClassLevel) {
