@@ -16,7 +16,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import { user } from "@/db/schema/auth";
 import { studentEnrollments, students } from "@/db/schema/students";
@@ -86,7 +85,6 @@ export const examSessions = pgTable(
       .notNull()
       .references(() => programs.id, { onDelete: "restrict" }),
     schoolClassId: text("school_class_id").references(() => schoolClasses.id, { onDelete: "restrict" }),
-    schoolSectionId: text("school_section_id").references(() => schoolClassSections.id, { onDelete: "restrict" }),
     madrassaCategoryId: text("madrassa_category_id").references(() => madrassaCategories.id, {
       onDelete: "restrict",
     }),
@@ -115,7 +113,6 @@ export const examSessions = pgTable(
     index("exam_sessions_institution_idx").on(table.institutionId),
     index("exam_sessions_program_idx").on(table.programId),
     index("exam_sessions_school_class_idx").on(table.schoolClassId),
-    index("exam_sessions_school_section_idx").on(table.schoolSectionId),
     index("exam_sessions_madrassa_category_idx").on(table.madrassaCategoryId),
     index("exam_sessions_madrassa_subcategory_idx").on(table.madrassaSubcategoryId),
     index("exam_sessions_academic_year_idx").on(table.academicYear),
@@ -180,7 +177,6 @@ export const examMarks = pgTable(
       .notNull()
       .references(() => programs.id, { onDelete: "restrict" }),
     schoolClassId: text("school_class_id").references(() => schoolClasses.id, { onDelete: "restrict" }),
-    schoolSectionId: text("school_section_id").references(() => schoolClassSections.id, { onDelete: "restrict" }),
     madrassaCategoryId: text("madrassa_category_id").references(() => madrassaCategories.id, {
       onDelete: "restrict",
     }),
@@ -227,7 +223,6 @@ export const examResults = pgTable(
       .notNull()
       .references(() => programs.id, { onDelete: "restrict" }),
     schoolClassId: text("school_class_id").references(() => schoolClasses.id, { onDelete: "restrict" }),
-    schoolSectionId: text("school_section_id").references(() => schoolClassSections.id, { onDelete: "restrict" }),
     madrassaCategoryId: text("madrassa_category_id").references(() => madrassaCategories.id, {
       onDelete: "restrict",
     }),
@@ -371,10 +366,6 @@ export const examSessionRelations = relations(examSessions, ({ one, many }) => (
   institution: one(institutions, { fields: [examSessions.institutionId], references: [institutions.id] }),
   program: one(programs, { fields: [examSessions.programId], references: [programs.id] }),
   schoolClass: one(schoolClasses, { fields: [examSessions.schoolClassId], references: [schoolClasses.id] }),
-  schoolSection: one(schoolClassSections, {
-    fields: [examSessions.schoolSectionId],
-    references: [schoolClassSections.id],
-  }),
   madrassaCategory: one(madrassaCategories, {
     fields: [examSessions.madrassaCategoryId],
     references: [madrassaCategories.id],
@@ -408,10 +399,6 @@ export const examMarkRelations = relations(examMarks, ({ one }) => ({
   institution: one(institutions, { fields: [examMarks.institutionId], references: [institutions.id] }),
   program: one(programs, { fields: [examMarks.programId], references: [programs.id] }),
   schoolClass: one(schoolClasses, { fields: [examMarks.schoolClassId], references: [schoolClasses.id] }),
-  schoolSection: one(schoolClassSections, {
-    fields: [examMarks.schoolSectionId],
-    references: [schoolClassSections.id],
-  }),
   madrassaCategory: one(madrassaCategories, {
     fields: [examMarks.madrassaCategoryId],
     references: [madrassaCategories.id],
@@ -430,10 +417,6 @@ export const examResultRelations = relations(examResults, ({ one }) => ({
   institution: one(institutions, { fields: [examResults.institutionId], references: [institutions.id] }),
   program: one(programs, { fields: [examResults.programId], references: [programs.id] }),
   schoolClass: one(schoolClasses, { fields: [examResults.schoolClassId], references: [schoolClasses.id] }),
-  schoolSection: one(schoolClassSections, {
-    fields: [examResults.schoolSectionId],
-    references: [schoolClassSections.id],
-  }),
   madrassaCategory: one(madrassaCategories, {
     fields: [examResults.madrassaCategoryId],
     references: [madrassaCategories.id],

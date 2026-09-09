@@ -8,7 +8,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import { user as authUser } from "@/db/schema/auth";
 import {
@@ -137,8 +136,6 @@ type ActiveEnrollmentContext = {
   schoolClassId: string | null;
   schoolClassName: string | null;
   schoolClassNameUrdu: string | null;
-  schoolSectionId: string | null;
-  schoolSectionName: string | null;
   madrassaSubcategoryId: string | null;
   madrassaSubcategoryName: string | null;
   madrassaSubcategoryNameUrdu: string | null;
@@ -190,7 +187,6 @@ export type OpeningBalanceInput = {
   academicYearName: string;
   actorUserId: string;
   schoolClassId?: string | null;
-  schoolSectionId?: string | null;
   madrassaSubcategoryId?: string | null;
 };
 
@@ -231,8 +227,6 @@ async function getActiveEnrollmentContext(studentId: string): Promise<ActiveEnro
       schoolClassId: studentEnrollments.schoolClassId,
       schoolClassName: schoolClasses.name,
       schoolClassNameUrdu: schoolClasses.nameUrdu,
-      schoolSectionId: studentEnrollments.schoolSectionId,
-      schoolSectionName: schoolClassSections.name,
       madrassaSubcategoryId: studentEnrollments.madrassaSubcategoryId,
       madrassaSubcategoryName: madrassaSubcategories.name,
       madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
@@ -246,7 +240,6 @@ async function getActiveEnrollmentContext(studentId: string): Promise<ActiveEnro
     .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
     .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentEnrollments.schoolSectionId))
     .leftJoin(
       madrassaSubcategories,
       eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
@@ -303,7 +296,6 @@ export async function createFeeCharge(
         institutionId: context.institutionId,
         programId: context.programId,
         schoolClassId: context.schoolClassId,
-        schoolSectionId: context.schoolSectionId,
         madrassaSubcategoryId: context.madrassaSubcategoryId,
         type: input.type as FeeChargeType,
         label: input.label,
@@ -429,7 +421,6 @@ export async function chargeAndCollect(
         institutionId: context.institutionId,
         programId: context.programId,
         schoolClassId: context.schoolClassId,
-        schoolSectionId: context.schoolSectionId,
         madrassaSubcategoryId: context.madrassaSubcategoryId,
         type: input.type as FeeChargeType,
         label: input.label,
@@ -541,7 +532,6 @@ export async function createOpeningBalanceCharge(tx: FeeTx, input: OpeningBalanc
       institutionId: input.institutionId,
       programId: input.programId,
       schoolClassId: input.schoolClassId ?? null,
-      schoolSectionId: input.schoolSectionId ?? null,
       madrassaSubcategoryId: input.madrassaSubcategoryId ?? null,
       type: "custom",
       label: `Opening balance from ${input.academicYearName}`,
@@ -615,7 +605,6 @@ export async function listFeeStudents(
     .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
     .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentEnrollments.schoolSectionId))
     .leftJoin(
       madrassaSubcategories,
       eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
@@ -1236,7 +1225,6 @@ function studentSearchSelection() {
     schoolClassId: schoolClasses.id,
     schoolClassName: schoolClasses.name,
     schoolClassNameUrdu: schoolClasses.nameUrdu,
-    schoolSectionName: schoolClassSections.name,
     madrassaSubcategoryId: madrassaSubcategories.id,
     madrassaSubcategoryName: madrassaSubcategories.name,
     madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,

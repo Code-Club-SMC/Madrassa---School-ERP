@@ -40,7 +40,6 @@ export const createAdmissionApplicationSchema = z.object({
       institutionId: z.string().optional(),
       programId: z.string().optional(),
       schoolClassId: z.string().nullable().optional(),
-      schoolSectionId: z.string().nullable().optional(),
       madrassaSubcategoryId: z.string().nullable().optional(),
       darja: z.string().nullable().optional(),
     })
@@ -371,7 +370,6 @@ export async function acceptAdmissionApplication(
     institutionId: application.institutionId,
     programId: application.programId,
     schoolClassId: application.schoolClassId,
-    schoolSectionId: application.schoolSectionId,
     madrassaSubcategoryId: application.madrassaSubcategoryId,
     darja: application.darja,
   };
@@ -497,7 +495,6 @@ export async function acceptAdmissionApplication(
           institutionId: target.institutionId,
           programId: target.programId,
           schoolClassId: target.schoolClassId,
-          schoolSectionId: target.schoolSectionId,
           madrassaSubcategoryId: target.madrassaSubcategoryId,
           darja: target.darja,
         },
@@ -877,7 +874,6 @@ function toApplicationResponse(application: typeof admissionApplications.$inferS
     institutionId: application.institutionId,
     programId: application.programId,
     schoolClassId: application.schoolClassId,
-    schoolSectionId: application.schoolSectionId,
     madrassaSubcategoryId: application.madrassaSubcategoryId,
     darja: application.darja,
     photoPath: application.photoPath,

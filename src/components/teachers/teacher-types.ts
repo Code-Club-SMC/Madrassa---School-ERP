@@ -33,7 +33,6 @@ export type TeacherAssignment = {
   institutionId: string;
   programId: string;
   schoolClassId: string | null;
-  schoolSectionId: string | null;
   madrassaCategoryId: string | null;
   madrassaSubcategoryId: string | null;
   subjectId: string | null;
@@ -152,7 +151,6 @@ export type TeacherClassAssignment = TeacherAssignment & {
   programNameUrdu?: string;
   schoolClassName?: string;
   schoolClassNameUrdu?: string;
-  schoolSectionName?: string;
   madrassaCategoryName?: string;
   madrassaCategoryNameUrdu?: string;
   madrassaSubcategoryName?: string;

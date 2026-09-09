@@ -11,7 +11,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import {
   examHalls,
@@ -68,7 +67,6 @@ export const examInputSchema = z.object({
   institutionId: z.string().trim().min(1).optional(),
   programId: z.string().trim().min(1).optional(),
   schoolClassId: z.string().trim().optional(),
-  schoolSectionId: z.string().trim().optional(),
   madrassaCategoryId: z.string().trim().optional(),
   madrassaSubcategoryId: z.string().trim().optional(),
   academicYear: z.string().trim().min(1).optional(),
@@ -172,7 +170,6 @@ type ExamDetailRow = ExamSessionRow & {
   programNameUrdu: string;
   schoolClassName: string | null;
   schoolClassNameUrdu: string | null;
-  schoolSectionName: string | null;
   madrassaCategoryName: string | null;
   madrassaCategoryNameUrdu: string | null;
   madrassaSubcategoryName: string | null;
@@ -196,8 +193,6 @@ type RosterStudent = {
   schoolClassId: string | null;
   schoolClassName: string | null;
   schoolClassNameUrdu: string | null;
-  schoolSectionId: string | null;
-  schoolSectionName: string | null;
   madrassaCategoryId: string | null;
   madrassaCategoryName: string | null;
   madrassaCategoryNameUrdu: string | null;
@@ -396,7 +391,6 @@ export async function createExamSession(request: Request, input: z.infer<typeof 
       institutionId,
       programId,
       schoolClassId: input.schoolClassId ?? null,
-      schoolSectionId: input.schoolSectionId ?? null,
       madrassaCategoryId: input.madrassaCategoryId ?? null,
       madrassaSubcategoryId: input.madrassaSubcategoryId ?? null,
       academicYear: academicYear ?? (await getActiveAcademicYear(input.system)).name,
@@ -434,7 +428,6 @@ export async function updateExamSession(
   const nextSystem = input.system ?? current.system;
   validateExamScope(nextSystem, {
     schoolClassId: input.schoolClassId ?? current.schoolClassId ?? undefined,
-    schoolSectionId: input.schoolSectionId ?? current.schoolSectionId ?? undefined,
     madrassaCategoryId: input.madrassaCategoryId ?? current.madrassaCategoryId ?? undefined,
     madrassaSubcategoryId: input.madrassaSubcategoryId ?? current.madrassaSubcategoryId ?? undefined,
   });
@@ -501,7 +494,6 @@ export async function updateExamSession(
         institutionId: nextInstitutionId,
         programId: nextProgramId,
         schoolClassId: nextSystem === "school" ? input.schoolClassId ?? current.schoolClassId : null,
-        schoolSectionId: nextSystem === "school" ? input.schoolSectionId ?? current.schoolSectionId : null,
         madrassaCategoryId: nextSystem === "madrassa" ? input.madrassaCategoryId ?? current.madrassaCategoryId : null,
         madrassaSubcategoryId:
           nextSystem === "madrassa" ? input.madrassaSubcategoryId ?? current.madrassaSubcategoryId : null,
@@ -586,7 +578,6 @@ export async function saveExamMarks(request: Request, examId: string, input: z.i
           institutionId: rosterRow.institutionId,
           programId: rosterRow.programId,
           schoolClassId: rosterRow.schoolClassId,
-          schoolSectionId: rosterRow.schoolSectionId,
           madrassaCategoryId: rosterRow.madrassaCategoryId,
           madrassaSubcategoryId: rosterRow.madrassaSubcategoryId,
           attendanceStatus: row.attendanceStatus,
@@ -702,7 +693,6 @@ export async function publishExamResults(request: Request, examId: string) {
           institutionId: item.roster.institutionId,
           programId: item.roster.programId,
           schoolClassId: item.roster.schoolClassId,
-          schoolSectionId: item.roster.schoolSectionId,
           madrassaCategoryId: item.roster.madrassaCategoryId,
           madrassaSubcategoryId: item.roster.madrassaSubcategoryId,
           obtainedMarks: result.obtainedMarks,
@@ -933,7 +923,6 @@ export async function getExamReport(request: Request, query: z.infer<typeof exam
       position: examResults.position,
       failedSubjects: examResults.failedSubjects,
       schoolClassName: schoolClasses.name,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryName: madrassaCategories.name,
       madrassaSubcategoryName: madrassaSubcategories.name,
     })
@@ -942,7 +931,6 @@ export async function getExamReport(request: Request, query: z.infer<typeof exam
     .innerJoin(students, eq(students.id, examResults.studentId))
     .innerJoin(studentEnrollments, eq(studentEnrollments.id, examResults.enrollmentId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, examResults.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, examResults.schoolSectionId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, examResults.madrassaCategoryId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, examResults.madrassaSubcategoryId))
     .where(and(...clauses))
@@ -1229,7 +1217,6 @@ function serializeExam(row: ExamDetailRow, subjects: ExamSessionSubjectRow[], st
     programName: row.programName,
     programNameUrdu: row.programNameUrdu,
     schoolClassId: row.schoolClassId,
-    schoolSectionId: row.schoolSectionId,
     madrassaCategoryId: row.madrassaCategoryId,
     madrassaSubcategoryId: row.madrassaSubcategoryId,
     academicYear: row.academicYear,
@@ -1368,7 +1355,6 @@ async function fetchExamDetails(clauses: SQL[]): Promise<ExamDetailRow[]> {
       institutionId: examSessions.institutionId,
       programId: examSessions.programId,
       schoolClassId: examSessions.schoolClassId,
-      schoolSectionId: examSessions.schoolSectionId,
       madrassaCategoryId: examSessions.madrassaCategoryId,
       madrassaSubcategoryId: examSessions.madrassaSubcategoryId,
       academicYear: examSessions.academicYear,
@@ -1390,7 +1376,6 @@ async function fetchExamDetails(clauses: SQL[]): Promise<ExamDetailRow[]> {
       programNameUrdu: programs.nameUrdu,
       schoolClassName: schoolClasses.name,
       schoolClassNameUrdu: schoolClasses.nameUrdu,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryName: madrassaCategories.name,
       madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
       madrassaSubcategoryName: madrassaSubcategories.name,
@@ -1400,7 +1385,6 @@ async function fetchExamDetails(clauses: SQL[]): Promise<ExamDetailRow[]> {
     .innerJoin(institutions, eq(institutions.id, examSessions.institutionId))
     .innerJoin(programs, eq(programs.id, examSessions.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, examSessions.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, examSessions.schoolSectionId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, examSessions.madrassaCategoryId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, examSessions.madrassaSubcategoryId))
     .where(and(...clauses))
@@ -1464,7 +1448,7 @@ async function replaceExamSubjects(tx: ExamTx, examId: string, subjects: ExamSub
   );
 }
 
-async function loadExamRoster(exam: Pick<ExamSessionRow, "system" | "institutionId" | "programId" | "schoolClassId" | "schoolSectionId" | "madrassaSubcategoryId">): Promise<RosterStudent[]> {
+async function loadExamRoster(exam: Pick<ExamSessionRow, "system" | "institutionId" | "programId" | "schoolClassId" | "madrassaSubcategoryId">): Promise<RosterStudent[]> {
   const clauses = compactSql([
     eq(students.status, "active"),
     eq(studentEnrollments.status, "active"),
@@ -1472,9 +1456,6 @@ async function loadExamRoster(exam: Pick<ExamSessionRow, "system" | "institution
     eq(studentEnrollments.institutionId, exam.institutionId),
     eq(studentEnrollments.programId, exam.programId),
     exam.system === "school" && exam.schoolClassId ? eq(studentEnrollments.schoolClassId, exam.schoolClassId) : undefined,
-    exam.system === "school" && exam.schoolSectionId
-      ? eq(studentEnrollments.schoolSectionId, exam.schoolSectionId)
-      : undefined,
     exam.system === "madrassa" && exam.madrassaSubcategoryId
       ? eq(studentEnrollments.madrassaSubcategoryId, exam.madrassaSubcategoryId)
       : undefined,
@@ -1498,8 +1479,6 @@ async function loadExamRoster(exam: Pick<ExamSessionRow, "system" | "institution
       schoolClassId: studentEnrollments.schoolClassId,
       schoolClassName: schoolClasses.name,
       schoolClassNameUrdu: schoolClasses.nameUrdu,
-      schoolSectionId: studentEnrollments.schoolSectionId,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryId: madrassaCategories.id,
       madrassaCategoryName: madrassaCategories.name,
       madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
@@ -1513,7 +1492,6 @@ async function loadExamRoster(exam: Pick<ExamSessionRow, "system" | "institution
     .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
     .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentEnrollments.schoolSectionId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
     .where(and(...clauses))
@@ -1590,14 +1568,12 @@ function validateExamScope(
   system: ExamSystem,
   input: {
     schoolClassId?: string | null;
-    schoolSectionId?: string | null;
     madrassaCategoryId?: string | null;
     madrassaSubcategoryId?: string | null;
   },
 ) {
   if (system === "school") {
     if (!input.schoolClassId) throw new HttpError("School exams require a class", 400);
-    if (!input.schoolSectionId) throw new HttpError("School exams require a section", 400);
     return;
   }
 
@@ -1629,22 +1605,20 @@ function reportSystemCondition(system: ExamReportSystem) {
 
 function groupLabelForExam(row: {
   schoolClassName: string | null;
-  schoolSectionName: string | null;
   madrassaCategoryName: string | null;
   madrassaSubcategoryName: string | null;
 }) {
-  if (row.schoolClassName) return `${row.schoolClassName} · ${row.schoolSectionName ?? "No section"}`;
+  if (row.schoolClassName) return `${row.schoolClassName}`;
   return `${row.madrassaCategoryName ?? "Madrassa"} · ${row.madrassaSubcategoryName ?? "Darja"}`;
 }
 
 function groupLabelForRow(row: {
   schoolClassName: string | null;
-  schoolSectionName: string | null;
   madrassaCategoryName: string | null;
   madrassaSubcategoryName: string | null;
   darja?: string | null;
 }) {
-  if (row.schoolClassName) return `${row.schoolClassName} · ${row.schoolSectionName ?? "No section"}`;
+  if (row.schoolClassName) return `${row.schoolClassName}`;
   const darjaSuffix = row.darja ? ` (${row.darja})` : "";
   return `${row.madrassaCategoryName ?? "Madrassa"} · ${row.madrassaSubcategoryName ?? "Darja"}${darjaSuffix}`;
 }
@@ -1656,11 +1630,10 @@ function groupLabelForResult(result: ExamResultRow, exam: ExamDetailRow) {
 
 function groupLabelForReportRow(row: {
   schoolClassName: string | null;
-  schoolSectionName: string | null;
   madrassaCategoryName: string | null;
   madrassaSubcategoryName: string | null;
 }) {
-  if (row.schoolClassName) return `${row.schoolClassName} · ${row.schoolSectionName ?? "No section"}`;
+  if (row.schoolClassName) return `${row.schoolClassName}`;
   return `${row.madrassaCategoryName ?? "Madrassa"} · ${row.madrassaSubcategoryName ?? "Darja"}`;
 }
 

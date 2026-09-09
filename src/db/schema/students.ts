@@ -16,7 +16,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 
 export const students = pgTable(
@@ -90,9 +89,6 @@ export const studentEnrollments = pgTable(
       onDelete: "restrict",
     }),
     schoolClassId: text("school_class_id").references(() => schoolClasses.id, {
-      onDelete: "restrict",
-    }),
-    schoolSectionId: text("school_section_id").references(() => schoolClassSections.id, {
       onDelete: "restrict",
     }),
     madrassaSubcategoryId: text("madrassa_subcategory_id").references(

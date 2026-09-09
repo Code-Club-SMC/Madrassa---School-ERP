@@ -77,7 +77,6 @@ export type AdmissionTarget = {
   institutionId: string;
   programId: string;
   schoolClassId: string | null;
-  schoolSectionId: string | null;
   madrassaSubcategoryId: string | null;
   darja: string | null;
 };
@@ -100,7 +99,6 @@ export async function resolveAdmissionTarget(
       target.defaultSchoolClassId ??
       null)
     : null;
-  const schoolSectionId = allowsSchoolClass ? (override.schoolSectionId ?? null) : null;
 
   const madrassaSubcategoryId = expectedMadrassaSection
     ? (override.madrassaSubcategoryId ??
@@ -151,7 +149,6 @@ export async function resolveAdmissionTarget(
       institutionId: target.institutionId,
       programId: target.programId,
       schoolClassId,
-      schoolSectionId,
       madrassaSubcategoryId,
       darja: override.darja ?? existingSubcategory.darja ?? null,
     };
@@ -168,7 +165,6 @@ export async function resolveAdmissionTarget(
     institutionId: target.institutionId,
     programId: target.programId,
     schoolClassId,
-    schoolSectionId,
     madrassaSubcategoryId: null,
     darja: override.darja ?? null,
   };

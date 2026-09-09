@@ -44,7 +44,6 @@ export type ExamSession = {
   programName: string;
   programNameUrdu: string;
   schoolClassId: string | null;
-  schoolSectionId: string | null;
   madrassaCategoryId: string | null;
   madrassaSubcategoryId: string | null;
   academicYear: string;

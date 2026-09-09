@@ -6,7 +6,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import { user } from "@/db/schema/auth";
 import { studentEnrollments, students } from "@/db/schema/students";
@@ -30,7 +29,6 @@ export const studentAttendance = pgTable(
       .notNull()
       .references(() => programs.id, { onDelete: "restrict" }),
     schoolClassId: text("school_class_id").references(() => schoolClasses.id, { onDelete: "restrict" }),
-    schoolSectionId: text("school_section_id").references(() => schoolClassSections.id, { onDelete: "restrict" }),
     madrassaCategoryId: text("madrassa_category_id").references(() => madrassaCategories.id, {
       onDelete: "restrict",
     }),
@@ -58,7 +56,6 @@ export const studentAttendance = pgTable(
     index("student_attendance_institution_idx").on(table.institutionId),
     index("student_attendance_program_idx").on(table.programId),
     index("student_attendance_school_class_idx").on(table.schoolClassId),
-    index("student_attendance_school_section_idx").on(table.schoolSectionId),
     index("student_attendance_madrassa_category_idx").on(table.madrassaCategoryId),
     index("student_attendance_madrassa_subcategory_idx").on(table.madrassaSubcategoryId),
     index("student_attendance_date_idx").on(table.attendanceDate),
@@ -75,10 +72,6 @@ export const studentAttendanceRelations = relations(studentAttendance, ({ one })
   institution: one(institutions, { fields: [studentAttendance.institutionId], references: [institutions.id] }),
   program: one(programs, { fields: [studentAttendance.programId], references: [programs.id] }),
   schoolClass: one(schoolClasses, { fields: [studentAttendance.schoolClassId], references: [schoolClasses.id] }),
-  schoolSection: one(schoolClassSections, {
-    fields: [studentAttendance.schoolSectionId],
-    references: [schoolClassSections.id],
-  }),
   madrassaCategory: one(madrassaCategories, {
     fields: [studentAttendance.madrassaCategoryId],
     references: [madrassaCategories.id],

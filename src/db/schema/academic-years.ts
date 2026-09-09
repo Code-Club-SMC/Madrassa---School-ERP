@@ -16,7 +16,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import { user } from "@/db/schema/auth";
 import { studentEnrollments, students } from "@/db/schema/students";
@@ -85,12 +84,6 @@ export const promotionRules = pgTable(
     sourceSchoolClassId: text("source_school_class_id").references(() => schoolClasses.id, {
       onDelete: "restrict",
     }),
-    sourceSchoolSectionId: text("source_school_section_id").references(
-      () => schoolClassSections.id,
-      {
-        onDelete: "restrict",
-      },
-    ),
     sourceMadrassaCategoryId: text("source_madrassa_category_id").references(
       () => madrassaCategories.id,
       {
@@ -107,12 +100,6 @@ export const promotionRules = pgTable(
     targetSchoolClassId: text("target_school_class_id").references(() => schoolClasses.id, {
       onDelete: "restrict",
     }),
-    targetSchoolSectionId: text("target_school_section_id").references(
-      () => schoolClassSections.id,
-      {
-        onDelete: "restrict",
-      },
-    ),
     targetMadrassaCategoryId: text("target_madrassa_category_id").references(
       () => madrassaCategories.id,
       {
@@ -139,10 +126,7 @@ export const promotionRules = pgTable(
     index("promotion_rules_system_idx").on(table.system),
     index("promotion_rules_institution_idx").on(table.institutionId),
     index("promotion_rules_program_idx").on(table.programId),
-    index("promotion_rules_source_school_idx").on(
-      table.sourceSchoolClassId,
-      table.sourceSchoolSectionId,
-    ),
+    index("promotion_rules_source_school_idx").on(table.sourceSchoolClassId),
     index("promotion_rules_source_madrassa_idx").on(
       table.sourceMadrassaCategoryId,
       table.sourceMadrassaSubcategoryId,
@@ -252,10 +236,6 @@ export const promotionRuleRelations = relations(promotionRules, ({ one }) => ({
     fields: [promotionRules.sourceSchoolClassId],
     references: [schoolClasses.id],
   }),
-  sourceSchoolSection: one(schoolClassSections, {
-    fields: [promotionRules.sourceSchoolSectionId],
-    references: [schoolClassSections.id],
-  }),
   sourceMadrassaCategory: one(madrassaCategories, {
     fields: [promotionRules.sourceMadrassaCategoryId],
     references: [madrassaCategories.id],
@@ -267,10 +247,6 @@ export const promotionRuleRelations = relations(promotionRules, ({ one }) => ({
   targetSchoolClass: one(schoolClasses, {
     fields: [promotionRules.targetSchoolClassId],
     references: [schoolClasses.id],
-  }),
-  targetSchoolSection: one(schoolClassSections, {
-    fields: [promotionRules.targetSchoolSectionId],
-    references: [schoolClassSections.id],
   }),
   targetMadrassaCategory: one(madrassaCategories, {
     fields: [promotionRules.targetMadrassaCategoryId],

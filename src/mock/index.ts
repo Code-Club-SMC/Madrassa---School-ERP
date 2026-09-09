@@ -37,7 +37,6 @@ export type Student = {
   categoryId?: string;
   subcategoryId?: string;
   classId?: string;
-  section?: string;
   monthlyFee: number;
   status: StudentStatus;
   admissionDate: string;

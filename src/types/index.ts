@@ -107,12 +107,12 @@ export type MadrassaCategory = {
 // ---------- School classes & sections ----------
 export type SchoolClass = {
   id: string;
+  institutionId?: string;
   name: string;
   nameUrdu: string;
   level: "pre_primary" | "primary" | "middle" | "secondary" | "higher_secondary";
   govtEquivalent?: string;
   gender?: "male" | "female";
-  sections: Array<{ id: string; name: string; group?: "science" | "arts" | "commerce" }>;
 };
 
 // ---------- Subject ----------

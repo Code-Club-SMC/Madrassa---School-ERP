@@ -67,7 +67,6 @@ type TeacherDashboardRow = {
     madrassaCategoryId: string | null;
     madrassaSubcategoryId: string | null;
     schoolClassId: string | null;
-    schoolSectionId: string | null;
     academicYear: string;
     subjectId: string | null;
     subjectName: string | null;

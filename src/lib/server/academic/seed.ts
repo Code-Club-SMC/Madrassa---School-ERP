@@ -4,9 +4,9 @@ import {
   madrassaCategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
-import { schoolClasses as schoolClassSeed } from "@/mock/classes";
+import type { SchoolClass } from "@/types";
+import { alQasimSchoolClasses, zainabSchoolClasses } from "@/mock/classes";
 
 export const ACADEMIC_INSTITUTIONS = [
   {
@@ -157,48 +157,39 @@ export async function seedAcademicCatalog() {
       });
   }
 
-  for (const [index, schoolClass] of schoolClassSeed.entries()) {
-    await db
-      .insert(schoolClasses)
-      .values({
-        id: schoolClass.id,
-        name: schoolClass.name,
-        nameUrdu: schoolClass.nameUrdu,
-        level: schoolClass.level,
-        govtEquivalent: schoolClass.govtEquivalent,
-        gender: schoolClass.gender,
-        displayOrder: index + 1,
-      })
-      .onConflictDoUpdate({
-        target: schoolClasses.id,
-        set: {
+  await db.delete(schoolClasses);
+
+  const classCatalogs: { institutionId: string; classes: SchoolClass[] }[] = [
+    { institutionId: "al_qasim_academy", classes: alQasimSchoolClasses },
+    { institutionId: "jamia_zainab_banat", classes: zainabSchoolClasses },
+  ];
+
+  for (const catalog of classCatalogs) {
+    for (const [index, schoolClass] of catalog.classes.entries()) {
+      await db
+        .insert(schoolClasses)
+        .values({
+          id: schoolClass.id,
+          institutionId: catalog.institutionId,
           name: schoolClass.name,
           nameUrdu: schoolClass.nameUrdu,
           level: schoolClass.level,
-          govtEquivalent: schoolClass.govtEquivalent,
+          govtEquivalent: schoolClass.govtEquivalent ?? null,
           gender: schoolClass.gender,
           displayOrder: index + 1,
-          active: true,
-          updatedAt: new Date(),
-        },
-      });
-
-    for (const section of schoolClass.sections) {
-      await db
-        .insert(schoolClassSections)
-        .values({
-          id: section.id,
-          classId: schoolClass.id,
-          name: section.name,
-          group: section.group,
         })
         .onConflictDoUpdate({
-          target: schoolClassSections.id,
+          target: schoolClasses.id,
           set: {
-            classId: schoolClass.id,
-            name: section.name,
-            group: section.group,
+            institutionId: catalog.institutionId,
+            name: schoolClass.name,
+            nameUrdu: schoolClass.nameUrdu,
+            level: schoolClass.level,
+            govtEquivalent: schoolClass.govtEquivalent ?? null,
+            gender: schoolClass.gender,
+            displayOrder: index + 1,
             active: true,
+            updatedAt: new Date(),
           },
         });
     }

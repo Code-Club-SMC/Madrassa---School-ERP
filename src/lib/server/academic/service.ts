@@ -8,7 +8,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import { studentEnrollments } from "@/db/schema/students";
 import { admissionApplications } from "@/db/schema/admission";
@@ -22,6 +21,7 @@ import { HttpError } from "@/lib/server/http";
 import { ensureAcademicSeeded } from "./seed";
 
 export const schoolClassInputSchema = z.object({
+  institutionId: z.string().trim().min(1).optional(),
   name: z.string().trim().min(1),
   nameUrdu: z.string().trim().min(1),
   level: z.enum(["pre_primary", "primary", "middle", "secondary", "higher_secondary"]),
@@ -30,16 +30,6 @@ export const schoolClassInputSchema = z.object({
 });
 
 export const schoolClassUpdateSchema = schoolClassInputSchema.partial().refine(hasAnyKey, {
-  message: "At least one field is required",
-});
-
-export const schoolSectionInputSchema = z.object({
-  name: z.string().trim().min(1),
-  group: z.enum(["science", "arts", "commerce"]).nullable().optional(),
-  active: z.boolean().optional(),
-});
-
-export const schoolSectionUpdateSchema = schoolSectionInputSchema.partial().refine(hasAnyKey, {
   message: "At least one field is required",
 });
 
@@ -109,36 +99,28 @@ export async function listSchoolClasses(request: Request) {
 
   const url = new URL(request.url);
   const gender = url.searchParams.get("gender") as "male" | "female" | null;
+  const institutionId = url.searchParams.get("institutionId");
 
-  const [classes, sections, classCounts, sectionCounts] = await Promise.all([
-    db.select().from(schoolClasses).orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name)),
-    db.select().from(schoolClassSections).orderBy(asc(schoolClassSections.name)),
+  const [classes, classCounts] = await Promise.all([
+    db
+      .select()
+      .from(schoolClasses)
+      .where(institutionId ? eq(schoolClasses.institutionId, institutionId) : undefined)
+      .orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name)),
     db
       .select({ classId: studentEnrollments.schoolClassId, count: count() })
       .from(studentEnrollments)
       .where(and(eq(studentEnrollments.status, "active")))
       .groupBy(studentEnrollments.schoolClassId),
-    db
-      .select({ sectionId: studentEnrollments.schoolSectionId, count: count() })
-      .from(studentEnrollments)
-      .where(and(eq(studentEnrollments.status, "active")))
-      .groupBy(studentEnrollments.schoolSectionId),
   ]);
 
   const filtered = gender ? classes.filter((c) => c.gender === gender) : classes;
 
   const classCountMap = new Map(classCounts.map((row) => [row.classId, Number(row.count)]));
-  const sectionCountMap = new Map(sectionCounts.map((row) => [row.sectionId, Number(row.count)]));
 
   return filtered.map((schoolClass) => ({
     ...schoolClass,
     enrollmentCount: classCountMap.get(schoolClass.id) ?? 0,
-    sections: sections
-      .filter((section) => section.classId === schoolClass.id)
-      .map((section) => ({
-        ...section,
-        enrollmentCount: sectionCountMap.get(section.id) ?? 0,
-      })),
   }));
 }
 
@@ -152,6 +134,7 @@ export async function createSchoolClass(request: Request, input: z.infer<typeof 
     .insert(schoolClasses)
     .values({
       id,
+      institutionId: input.institutionId ?? "al_qasim_academy",
       name: input.name,
       nameUrdu: input.nameUrdu,
       level: input.level,
@@ -186,52 +169,6 @@ export async function updateSchoolClass(
     .returning();
 
   if (!updated) throw new HttpError("School class not found", 404);
-  return updated;
-}
-
-export async function createSchoolSection(
-  request: Request,
-  classId: string,
-  input: z.infer<typeof schoolSectionInputSchema>,
-) {
-  await requirePermission(request, "school_classes", "create");
-
-  const [schoolClass] = await db.select({ id: schoolClasses.id }).from(schoolClasses).where(eq(schoolClasses.id, classId)).limit(1);
-  if (!schoolClass) throw new HttpError("School class not found", 404);
-
-  const [created] = await db
-    .insert(schoolClassSections)
-    .values({
-      id: uniqueId(classId, input.name),
-      classId,
-      name: input.name,
-      group: input.group ?? null,
-      active: input.active ?? true,
-    })
-    .returning();
-
-  return created;
-}
-
-export async function updateSchoolSection(
-  request: Request,
-  classId: string,
-  sectionId: string,
-  input: z.infer<typeof schoolSectionUpdateSchema>,
-) {
-  await requirePermission(request, "school_classes", "edit");
-
-  if (input.active === false) {
-    await assertNoActiveSchoolSectionEnrollments(sectionId);
-  }
-
-  const [updated] = await db
-    .update(schoolClassSections)
-    .set(input)
-    .where(and(eq(schoolClassSections.id, sectionId), eq(schoolClassSections.classId, classId)))
-    .returning();
-
-  if (!updated) throw new HttpError("School section not found", 404);
   return updated;
 }
 
@@ -510,14 +447,6 @@ async function assertNoActiveSchoolClassEnrollments(classId: string) {
     .from(studentEnrollments)
     .where(and(eq(studentEnrollments.schoolClassId, classId), eq(studentEnrollments.status, "active")));
   if (Number(row?.count ?? 0) > 0) throw new HttpError("Cannot deactivate a class with active enrollments", 409);
-}
-
-async function assertNoActiveSchoolSectionEnrollments(sectionId: string) {
-  const [row] = await db
-    .select({ count: count() })
-    .from(studentEnrollments)
-    .where(and(eq(studentEnrollments.schoolSectionId, sectionId), eq(studentEnrollments.status, "active")));
-  if (Number(row?.count ?? 0) > 0) throw new HttpError("Cannot deactivate a section with active enrollments", 409);
 }
 
 async function assertNoActiveMadrassaCategoryEnrollments(categoryId: string) {

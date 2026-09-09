@@ -9,7 +9,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import {
   examSessions,
@@ -105,7 +104,6 @@ const teacherAssignmentBaseSchema = z.object({
   institutionId: z.string().trim().min(1),
   programId: z.string().trim().min(1),
   schoolClassId: nullableId,
-  schoolSectionId: nullableId,
   madrassaCategoryId: nullableId,
   madrassaSubcategoryId: nullableId,
   subjectId: nullableId,
@@ -446,7 +444,6 @@ export async function createTeacherAssignment(request: Request, teacherId: strin
     institutionId: input.institutionId,
     programId: input.programId,
     schoolClassId: input.schoolClassId ?? null,
-    schoolSectionId: input.schoolSectionId ?? null,
     madrassaCategoryId: input.madrassaCategoryId ?? null,
     madrassaSubcategoryId: input.madrassaSubcategoryId ?? null,
     subjectId: input.subjectId ?? null,
@@ -473,7 +470,6 @@ export async function updateTeacherAssignment(
     institutionId: input.institutionId ?? assignment.institutionId,
     programId: input.programId ?? assignment.programId,
     schoolClassId: input.schoolClassId === undefined ? assignment.schoolClassId : input.schoolClassId,
-    schoolSectionId: input.schoolSectionId === undefined ? assignment.schoolSectionId : input.schoolSectionId,
     madrassaCategoryId:
       input.madrassaCategoryId === undefined ? assignment.madrassaCategoryId : input.madrassaCategoryId,
     madrassaSubcategoryId:
@@ -551,7 +547,6 @@ export async function createTeacherTimetablePeriod(
     institutionId: input.institutionId,
     programId: input.programId,
     schoolClassId: input.schoolClassId ?? null,
-    schoolSectionId: input.schoolSectionId ?? null,
     madrassaCategoryId: input.madrassaCategoryId ?? null,
     madrassaSubcategoryId: input.madrassaSubcategoryId ?? null,
     subjectId: input.subjectId ?? null,
@@ -582,7 +577,6 @@ export async function updateTeacherTimetablePeriod(
     institutionId: input.institutionId ?? period.institutionId,
     programId: input.programId ?? period.programId,
     schoolClassId: input.schoolClassId === undefined ? period.schoolClassId : input.schoolClassId,
-    schoolSectionId: input.schoolSectionId === undefined ? period.schoolSectionId : input.schoolSectionId,
     madrassaCategoryId: input.madrassaCategoryId === undefined ? period.madrassaCategoryId : input.madrassaCategoryId,
     madrassaSubcategoryId:
       input.madrassaSubcategoryId === undefined ? period.madrassaSubcategoryId : input.madrassaSubcategoryId,
@@ -619,7 +613,6 @@ export async function updateTeacherTimetablePeriod(
       institutionId: next.institutionId,
       programId: next.programId,
       schoolClassId: next.schoolClassId ?? null,
-      schoolSectionId: next.schoolSectionId ?? null,
       madrassaCategoryId: next.madrassaCategoryId ?? null,
       madrassaSubcategoryId: next.madrassaSubcategoryId ?? null,
       subjectId: next.subjectId ?? null,
@@ -740,7 +733,6 @@ export async function getMyTeacherDashboard(request: Request) {
       institutionId: assignment?.institutionId ?? "",
       programId: assignment?.programId ?? "",
       schoolClassId: null,
-      schoolSectionId: null,
       madrassaCategoryId: assignment?.madrassaCategoryId ?? null,
       madrassaSubcategoryId: row.madrassaSubcategoryId,
       subjectId: row.subjectId,
@@ -776,7 +768,6 @@ export async function assertTeacherCanAccessAttendancePlacement(
     eq(teacherAssignments.active, true),
     eq(teacherAssignments.system, system),
     system === "school" ? eq(teacherAssignments.schoolClassId, filters.classId ?? "") : undefined,
-    system === "school" ? eq(teacherAssignments.schoolSectionId, filters.sectionId ?? "") : undefined,
     system === "madrassa" ? eq(teacherAssignments.institutionId, filters.institutionId ?? "") : undefined,
     system === "madrassa" ? eq(teacherAssignments.madrassaSubcategoryId, filters.subcategoryId ?? "") : undefined,
   ].filter(Boolean);
@@ -802,9 +793,8 @@ async function loadTeacherDetail(id: string) {
         system: teacherAssignments.system,
         institutionId: teacherAssignments.institutionId,
         programId: teacherAssignments.programId,
-        schoolClassId: teacherAssignments.schoolClassId,
-        schoolSectionId: teacherAssignments.schoolSectionId,
-        madrassaCategoryId: teacherAssignments.madrassaCategoryId,
+      schoolClassId: teacherAssignments.schoolClassId,
+      madrassaCategoryId: teacherAssignments.madrassaCategoryId,
         madrassaSubcategoryId: teacherAssignments.madrassaSubcategoryId,
         subjectId: teacherAssignments.subjectId,
         subjectName: examSubjects.name,
@@ -825,9 +815,8 @@ async function loadTeacherDetail(id: string) {
         system: teacherTimetablePeriods.system,
         institutionId: teacherTimetablePeriods.institutionId,
         programId: teacherTimetablePeriods.programId,
-        schoolClassId: teacherTimetablePeriods.schoolClassId,
-        schoolSectionId: teacherTimetablePeriods.schoolSectionId,
-        madrassaCategoryId: teacherTimetablePeriods.madrassaCategoryId,
+      schoolClassId: teacherTimetablePeriods.schoolClassId,
+      madrassaCategoryId: teacherTimetablePeriods.madrassaCategoryId,
         madrassaSubcategoryId: teacherTimetablePeriods.madrassaSubcategoryId,
         subjectId: teacherTimetablePeriods.subjectId,
         subjectName: examSubjects.name,
@@ -1007,7 +996,6 @@ export async function getMyTeacherClasses(request: Request) {
       institutionId: teacherAssignments.institutionId,
       programId: teacherAssignments.programId,
       schoolClassId: teacherAssignments.schoolClassId,
-      schoolSectionId: teacherAssignments.schoolSectionId,
       madrassaCategoryId: teacherAssignments.madrassaCategoryId,
       madrassaSubcategoryId: teacherAssignments.madrassaSubcategoryId,
       subjectId: teacherAssignments.subjectId,
@@ -1021,7 +1009,6 @@ export async function getMyTeacherClasses(request: Request) {
       programNameUrdu: programs.nameUrdu,
       schoolClassName: schoolClasses.name,
       schoolClassNameUrdu: schoolClasses.nameUrdu,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryName: madrassaCategories.name,
       madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
       madrassaSubcategoryName: madrassaSubcategories.name,
@@ -1034,7 +1021,6 @@ export async function getMyTeacherClasses(request: Request) {
     .innerJoin(institutions, eq(institutions.id, teacherAssignments.institutionId))
     .innerJoin(programs, eq(programs.id, teacherAssignments.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, teacherAssignments.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, teacherAssignments.schoolSectionId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, teacherAssignments.madrassaCategoryId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, teacherAssignments.madrassaSubcategoryId))
     .leftJoin(examSubjects, eq(examSubjects.id, teacherAssignments.subjectId))
@@ -1054,10 +1040,8 @@ export async function getMyTeacherClasses(request: Request) {
       programName: sql<string>`null`.as("programName"),
       programNameUrdu: sql<string>`null`.as("programNameUrdu"),
       schoolClassId: examSubjects.schoolClassId,
-      schoolSectionId: schoolClassSections.id,
       schoolClassName: schoolClasses.name,
       schoolClassNameUrdu: schoolClasses.nameUrdu,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryId: madrassaCategories.id,
       madrassaCategoryName: madrassaCategories.name,
       madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
@@ -1075,7 +1059,6 @@ export async function getMyTeacherClasses(request: Request) {
     })
     .from(examSubjects)
     .leftJoin(schoolClasses, eq(schoolClasses.id, examSubjects.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, schoolClasses.id))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, examSubjects.madrassaSubcategoryId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
     .where(and(eq(examSubjects.teacherId, profile.id), eq(examSubjects.active, true)))
@@ -1105,7 +1088,6 @@ export async function getMyTeacherExams(request: Request) {
       system: teacherAssignments.system,
       subjectId: teacherAssignments.subjectId,
       schoolClassId: teacherAssignments.schoolClassId,
-      schoolSectionId: teacherAssignments.schoolSectionId,
       madrassaCategoryId: teacherAssignments.madrassaCategoryId,
       madrassaSubcategoryId: teacherAssignments.madrassaSubcategoryId,
       academicYear: teacherAssignments.academicYear,
@@ -1114,7 +1096,6 @@ export async function getMyTeacherExams(request: Request) {
       subjectCode: examSubjects.code,
       schoolClassName: schoolClasses.name,
       schoolClassNameUrdu: schoolClasses.nameUrdu,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryName: madrassaCategories.name,
       madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
       madrassaSubcategoryName: madrassaSubcategories.name,
@@ -1123,7 +1104,6 @@ export async function getMyTeacherExams(request: Request) {
     .from(teacherAssignments)
     .leftJoin(examSubjects, eq(examSubjects.id, teacherAssignments.subjectId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, teacherAssignments.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, teacherAssignments.schoolSectionId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, teacherAssignments.madrassaCategoryId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, teacherAssignments.madrassaSubcategoryId))
     .where(and(eq(teacherAssignments.teacherProfileId, profile.id), eq(teacherAssignments.active, true)))
@@ -1131,15 +1111,15 @@ export async function getMyTeacherExams(request: Request) {
 
   const subjectIds = uniqueStrings(assignments.map((a) => a.subjectId).filter(Boolean) as string[]);
   const classKeys = assignments
-    .filter((a) => a.system === "school" && a.schoolClassId && a.schoolSectionId)
-    .map((a) => `${a.schoolClassId}::${a.schoolSectionId}`);
+    .filter((a) => a.system === "school" && a.schoolClassId)
+    .map((a) => a.schoolClassId);
   const madrassaKeys = assignments
     .filter((a) => a.system === "madrassa" && a.madrassaSubcategoryId)
     .map((a) => a.madrassaSubcategoryId);
 
   const sessionClauses: (SQL | undefined)[] = [inArray(examSessions.system, ["school", "madrassa"])];
   if (classKeys.length > 0) {
-    sessionClauses.push(and(eq(examSessions.system, "school"), inArray(examSessions.schoolClassId, uniqueStrings(classKeys.map((k) => k.split("::")[0])))));
+    sessionClauses.push(and(eq(examSessions.system, "school"), inArray(examSessions.schoolClassId, uniqueStrings(classKeys))));
   }
   if (madrassaKeys.length > 0) {
     sessionClauses.push(and(eq(examSessions.system, "madrassa"), inArray(examSessions.madrassaSubcategoryId, madrassaKeys as string[])));

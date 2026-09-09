@@ -51,7 +51,6 @@ type AttendanceDailySummaryRow = {
   programName: string;
   programNameUrdu: string;
   schoolClassId: string | null;
-  schoolSectionId: string | null;
   madrassaSubcategoryId: string | null;
   placementLabel: string;
   summary: AttendanceSummary;

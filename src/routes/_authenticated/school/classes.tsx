@@ -155,6 +155,7 @@ function ClassesPage() {
         headers: { "content-type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
+          institutionId: selected?.institutionId ?? "al_qasim_academy",
           name: cf.name.trim() || cf.nameUrdu.trim(),
           nameUrdu: cf.nameUrdu.trim() || cf.name.trim(),
           level: cf.level,

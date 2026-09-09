@@ -62,6 +62,9 @@ export const schoolClasses = pgTable(
   "school_classes",
   {
     id: text("id").primaryKey(),
+    institutionId: text("institution_id")
+      .notNull()
+      .references(() => institutions.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     nameUrdu: text("name_urdu").notNull(),
     level: text("level").notNull(),
@@ -76,26 +79,10 @@ export const schoolClasses = pgTable(
       .notNull(),
   },
   (table) => [
+    index("school_classes_institution_idx").on(table.institutionId),
     index("school_classes_level_idx").on(table.level),
     index("school_classes_active_idx").on(table.active),
     index("school_classes_gender_idx").on(table.gender),
-  ],
-);
-
-export const schoolClassSections = pgTable(
-  "school_class_sections",
-  {
-    id: text("id").primaryKey(),
-    classId: text("class_id")
-      .notNull()
-      .references(() => schoolClasses.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    group: text("group"),
-    active: boolean("active").default(true).notNull(),
-  },
-  (table) => [
-    index("school_class_sections_class_idx").on(table.classId),
-    uniqueIndex("school_class_sections_class_name_idx").on(table.classId, table.name),
   ],
 );
 
@@ -163,14 +150,10 @@ export const programRelations = relations(programs, ({ one }) => ({
   }),
 }));
 
-export const schoolClassRelations = relations(schoolClasses, ({ many }) => ({
-  sections: many(schoolClassSections),
-}));
-
-export const schoolClassSectionRelations = relations(schoolClassSections, ({ one }) => ({
-  class: one(schoolClasses, {
-    fields: [schoolClassSections.classId],
-    references: [schoolClasses.id],
+export const schoolClassRelations = relations(schoolClasses, ({ one }) => ({
+  institution: one(institutions, {
+    fields: [schoolClasses.institutionId],
+    references: [institutions.id],
   }),
 }));
 

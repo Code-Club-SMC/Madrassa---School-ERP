@@ -8,7 +8,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import { admissionApplications } from "@/db/schema/admission";
 import { user as authUser } from "@/db/schema/auth";
@@ -57,8 +56,6 @@ type StudentListRow = {
   schoolClassId: string | null;
   schoolClassName: string | null;
   schoolClassNameUrdu: string | null;
-  schoolSectionId: string | null;
-  schoolSectionName: string | null;
   madrassaCategoryId: string | null;
   madrassaCategoryName: string | null;
   madrassaCategoryNameUrdu: string | null;
@@ -155,7 +152,6 @@ export const moveEnrollmentSchema = z.object({
   institutionId: z.string().trim().min(1),
   programId: z.string().trim().min(1),
   schoolClassId: z.string().trim().nullable().optional(),
-  schoolSectionId: z.string().trim().nullable().optional(),
   madrassaSubcategoryId: z.string().trim().nullable().optional(),
   darja: z.string().trim().nullable().optional(),
   reason: z.string().trim().min(1),
@@ -223,7 +219,6 @@ export async function listStudents(
       .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
       .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
       .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-      .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentEnrollments.schoolSectionId))
       .leftJoin(
         madrassaSubcategories,
         eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
@@ -276,7 +271,6 @@ export async function getStudentProfile(request: Request, studentId: string) {
       .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
       .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
       .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-      .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentEnrollments.schoolSectionId))
       .leftJoin(
         madrassaSubcategories,
         eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
@@ -685,10 +679,9 @@ export async function moveStudentEnrollment(
     .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, students.id))
     .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
     .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
-    .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentEnrollments.schoolSectionId))
-    .leftJoin(
-      madrassaSubcategories,
+      .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
+      .leftJoin(
+        madrassaSubcategories,
       eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
     )
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
@@ -709,7 +702,6 @@ export async function moveStudentEnrollment(
       institutionId: target.institutionId,
       programId: target.programId,
       schoolClassId: target.schoolClassId,
-      schoolSectionId: target.schoolSectionId,
       madrassaSubcategoryId: target.madrassaSubcategoryId,
       darja: target.darja,
       updatedAt: new Date(),
@@ -732,14 +724,12 @@ export async function moveStudentEnrollment(
         institutionName: currentEnrollment.institutionName,
         programName: currentEnrollment.programName,
         groupName: currentEnrollment.schoolClassName ?? currentEnrollment.madrassaSubcategoryName,
-        sectionName: currentEnrollment.schoolSectionName,
         darja: currentEnrollment.darja,
       },
       to: {
         institutionId: target.institutionId,
         programId: target.programId,
         schoolClassId: target.schoolClassId,
-        schoolSectionId: target.schoolSectionId,
         madrassaSubcategoryId: target.madrassaSubcategoryId,
         darja: target.darja,
       },
@@ -862,8 +852,6 @@ function studentListSelection() {
     schoolClassId: schoolClasses.id,
     schoolClassName: schoolClasses.name,
     schoolClassNameUrdu: schoolClasses.nameUrdu,
-    schoolSectionId: schoolClassSections.id,
-    schoolSectionName: schoolClassSections.name,
     madrassaCategoryId: madrassaCategories.id,
     madrassaCategoryName: madrassaCategories.name,
     madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
@@ -915,7 +903,6 @@ function toStudentListItem(row: StudentListRow) {
     programName: row.programName,
     programNameUrdu: row.programNameUrdu,
     classId: row.schoolClassId ?? undefined,
-    section: row.schoolSectionName ?? undefined,
     categoryId: row.madrassaCategoryId ?? undefined,
     subcategoryId: row.madrassaSubcategoryId ?? undefined,
     darja: row.darja ?? undefined,
@@ -957,8 +944,6 @@ function toEnrollmentProfile(row: StudentProfileRow) {
     schoolClassId: row.schoolClassId,
     schoolClassName: row.schoolClassName,
     schoolClassNameUrdu: row.schoolClassNameUrdu,
-    schoolSectionId: row.schoolSectionId,
-    schoolSectionName: row.schoolSectionName,
     madrassaCategoryId: row.madrassaCategoryId,
     madrassaCategoryName: row.madrassaCategoryName,
     madrassaCategoryNameUrdu: row.madrassaCategoryNameUrdu,
@@ -1083,7 +1068,6 @@ async function validateEnrollmentTarget(
       institutionId: input.institutionId,
       programId: input.programId,
       schoolClassId: null,
-      schoolSectionId: null,
       madrassaSubcategoryId: input.madrassaSubcategoryId,
       darja: input.darja ?? subcategory.darja ?? null,
     };
@@ -1097,25 +1081,10 @@ async function validateEnrollmentTarget(
     throw new HttpError("Jamia Zainab school support cannot exceed Class 5", 400);
   }
 
-  if (input.schoolSectionId) {
-    const [section] = await db
-      .select({ id: schoolClassSections.id })
-      .from(schoolClassSections)
-      .where(
-        and(
-          eq(schoolClassSections.id, input.schoolSectionId),
-          eq(schoolClassSections.classId, input.schoolClassId),
-        ),
-      )
-      .limit(1);
-    if (!section) throw new HttpError("School section does not belong to selected class", 400);
-  }
-
   return {
     institutionId: input.institutionId,
     programId: input.programId,
     schoolClassId: input.schoolClassId,
-    schoolSectionId: input.schoolSectionId ?? null,
     madrassaSubcategoryId: null,
     darja: null,
   };

@@ -8,7 +8,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import {
   academicYears,
@@ -57,8 +56,6 @@ type SourceEnrollmentRow = {
   programSystem: string;
   schoolClassId: string | null;
   schoolClassName: string | null;
-  schoolSectionId: string | null;
-  schoolSectionName: string | null;
   madrassaCategoryId: string | null;
   madrassaCategoryName: string | null;
   madrassaSubcategoryId: string | null;
@@ -82,8 +79,6 @@ type PromotionItemMetadata = {
     programName: string;
     schoolClassId: string | null;
     schoolClassName: string | null;
-    schoolSectionId: string | null;
-    schoolSectionName: string | null;
     madrassaCategoryId: string | null;
     madrassaCategoryName: string | null;
     madrassaSubcategoryId: string | null;
@@ -92,7 +87,6 @@ type PromotionItemMetadata = {
   };
   target: {
     schoolClassId: string | null;
-    schoolSectionId: string | null;
     madrassaCategoryId: string | null;
     madrassaSubcategoryId: string | null;
     darja: string | null;

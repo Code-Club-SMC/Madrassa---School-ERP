@@ -6,7 +6,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import { user } from "@/db/schema/auth";
 import { examSubjects } from "@/db/schema/exams";
@@ -66,7 +65,6 @@ export const teacherAssignments = pgTable(
       .notNull()
       .references(() => programs.id, { onDelete: "restrict" }),
     schoolClassId: text("school_class_id").references(() => schoolClasses.id, { onDelete: "restrict" }),
-    schoolSectionId: text("school_section_id").references(() => schoolClassSections.id, { onDelete: "restrict" }),
     madrassaCategoryId: text("madrassa_category_id").references(() => madrassaCategories.id, {
       onDelete: "restrict",
     }),
@@ -87,7 +85,7 @@ export const teacherAssignments = pgTable(
   (table) => [
     index("teacher_assignments_teacher_idx").on(table.teacherProfileId),
     index("teacher_assignments_system_idx").on(table.system),
-    index("teacher_assignments_school_idx").on(table.schoolClassId, table.schoolSectionId),
+    index("teacher_assignments_school_idx").on(table.schoolClassId),
     index("teacher_assignments_madrassa_idx").on(table.madrassaCategoryId, table.madrassaSubcategoryId),
     index("teacher_assignments_subject_idx").on(table.subjectId),
     index("teacher_assignments_active_idx").on(table.active),
@@ -110,7 +108,6 @@ export const teacherTimetablePeriods = pgTable(
       .notNull()
       .references(() => programs.id, { onDelete: "restrict" }),
     schoolClassId: text("school_class_id").references(() => schoolClasses.id, { onDelete: "restrict" }),
-    schoolSectionId: text("school_section_id").references(() => schoolClassSections.id, { onDelete: "restrict" }),
     madrassaCategoryId: text("madrassa_category_id").references(() => madrassaCategories.id, {
       onDelete: "restrict",
     }),
@@ -134,7 +131,7 @@ export const teacherTimetablePeriods = pgTable(
     index("teacher_timetable_teacher_idx").on(table.teacherProfileId),
     index("teacher_timetable_assignment_idx").on(table.assignmentId),
     index("teacher_timetable_weekday_idx").on(table.weekday),
-    index("teacher_timetable_school_idx").on(table.schoolClassId, table.schoolSectionId),
+    index("teacher_timetable_school_idx").on(table.schoolClassId),
     index("teacher_timetable_madrassa_idx").on(table.madrassaCategoryId, table.madrassaSubcategoryId),
     index("teacher_timetable_active_idx").on(table.active),
   ],
@@ -154,10 +151,6 @@ export const teacherAssignmentsRelations = relations(teacherAssignments, ({ one,
   institution: one(institutions, { fields: [teacherAssignments.institutionId], references: [institutions.id] }),
   program: one(programs, { fields: [teacherAssignments.programId], references: [programs.id] }),
   schoolClass: one(schoolClasses, { fields: [teacherAssignments.schoolClassId], references: [schoolClasses.id] }),
-  schoolSection: one(schoolClassSections, {
-    fields: [teacherAssignments.schoolSectionId],
-    references: [schoolClassSections.id],
-  }),
   madrassaCategory: one(madrassaCategories, {
     fields: [teacherAssignments.madrassaCategoryId],
     references: [madrassaCategories.id],
@@ -184,10 +177,6 @@ export const teacherTimetablePeriodsRelations = relations(teacherTimetablePeriod
   schoolClass: one(schoolClasses, {
     fields: [teacherTimetablePeriods.schoolClassId],
     references: [schoolClasses.id],
-  }),
-  schoolSection: one(schoolClassSections, {
-    fields: [teacherTimetablePeriods.schoolSectionId],
-    references: [schoolClassSections.id],
   }),
   madrassaCategory: one(madrassaCategories, {
     fields: [teacherTimetablePeriods.madrassaCategoryId],

@@ -8,7 +8,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import { studentAttendance, type StudentAttendanceStatus } from "@/db/schema/attendance";
 import { studentEnrollments, students } from "@/db/schema/students";
@@ -89,8 +88,6 @@ type RosterStudent = {
   schoolClassId: string | null;
   schoolClassName: string | null;
   schoolClassNameUrdu: string | null;
-  schoolSectionId: string | null;
-  schoolSectionName: string | null;
   madrassaCategoryId: string | null;
   madrassaCategoryName: string | null;
   madrassaCategoryNameUrdu: string | null;
@@ -114,7 +111,6 @@ type AttendanceReportRow = AttendanceRow & {
   programNameUrdu: string;
   programSystem: string;
   schoolClassName: string | null;
-  schoolSectionName: string | null;
   madrassaCategoryName: string | null;
   madrassaSubcategoryName: string | null;
   madrassaSubcategoryNameUrdu: string | null;
@@ -224,7 +220,6 @@ export async function getAttendanceDailySummaryReport(request: Request, query: D
     programName: string;
     programNameUrdu: string;
     schoolClassId: string | null;
-    schoolSectionId: string | null;
     madrassaSubcategoryId: string | null;
     placementLabel: string;
     statuses: Array<{ status: StudentAttendanceStatus }>;
@@ -239,7 +234,6 @@ export async function getAttendanceDailySummaryReport(request: Request, query: D
       row.institutionId,
       row.programId,
       row.schoolClassId ?? "",
-      row.schoolSectionId ?? "",
       row.madrassaSubcategoryId ?? "",
     ].join(":");
     const summaryRow = byPlacement.get(key) ?? {
@@ -252,7 +246,6 @@ export async function getAttendanceDailySummaryReport(request: Request, query: D
       programName: row.programName,
       programNameUrdu: row.programNameUrdu,
       schoolClassId: row.schoolClassId,
-      schoolSectionId: row.schoolSectionId,
       madrassaSubcategoryId: row.madrassaSubcategoryId,
       placementLabel,
       statuses: [],
@@ -271,7 +264,6 @@ export async function getAttendanceDailySummaryReport(request: Request, query: D
     programName: row.programName,
     programNameUrdu: row.programNameUrdu,
     schoolClassId: row.schoolClassId,
-    schoolSectionId: row.schoolSectionId,
     madrassaSubcategoryId: row.madrassaSubcategoryId,
     placementLabel: row.placementLabel,
     summary: summarizeAttendance(row.statuses),
@@ -377,7 +369,6 @@ async function markAttendance(
           institutionId: rosterRow.institutionId,
           programId: rosterRow.programId,
           schoolClassId: rosterRow.schoolClassId,
-          schoolSectionId: rosterRow.schoolSectionId,
           madrassaCategoryId: rosterRow.madrassaCategoryId,
           madrassaSubcategoryId: rosterRow.madrassaSubcategoryId,
           attendanceDate: date,
@@ -411,7 +402,6 @@ async function markAttendance(
             institutionName: rosterRow.institutionName,
             programName: rosterRow.programName,
             className: rosterRow.schoolClassName,
-            sectionName: rosterRow.schoolSectionName,
             madrassaCategoryName: rosterRow.madrassaCategoryName,
             madrassaSubcategoryName: rosterRow.madrassaSubcategoryName,
             darja: rosterRow.darja,
@@ -460,7 +450,6 @@ async function loadRoster(
     isNull(studentEnrollments.endedAt),
     eq(programs.system, system),
     schoolFilters ? eq(studentEnrollments.schoolClassId, schoolFilters.classId) : undefined,
-    schoolFilters ? eq(studentEnrollments.schoolSectionId, schoolFilters.sectionId) : undefined,
     madrassaFilters ? eq(studentEnrollments.institutionId, madrassaFilters.institutionId) : undefined,
     madrassaFilters ? eq(studentEnrollments.madrassaSubcategoryId, madrassaFilters.subcategoryId) : undefined,
   ]);
@@ -483,8 +472,6 @@ async function loadRoster(
       schoolClassId: studentEnrollments.schoolClassId,
       schoolClassName: schoolClasses.name,
       schoolClassNameUrdu: schoolClasses.nameUrdu,
-      schoolSectionId: studentEnrollments.schoolSectionId,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryId: madrassaCategories.id,
       madrassaCategoryName: madrassaCategories.name,
       madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
@@ -498,7 +485,6 @@ async function loadRoster(
     .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
     .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentEnrollments.schoolSectionId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
     .where(and(...clauses))
@@ -529,7 +515,6 @@ async function fetchAttendanceReportRows(
     query.institutionId ? eq(studentAttendance.institutionId, query.institutionId) : undefined,
     query.programId ? eq(studentAttendance.programId, query.programId) : undefined,
     query.classId ? eq(studentAttendance.schoolClassId, query.classId) : undefined,
-    query.sectionId ? eq(studentAttendance.schoolSectionId, query.sectionId) : undefined,
     query.subcategoryId ? eq(studentAttendance.madrassaSubcategoryId, query.subcategoryId) : undefined,
   ]);
 
@@ -541,7 +526,6 @@ async function fetchAttendanceReportRows(
       institutionId: studentAttendance.institutionId,
       programId: studentAttendance.programId,
       schoolClassId: studentAttendance.schoolClassId,
-      schoolSectionId: studentAttendance.schoolSectionId,
       madrassaCategoryId: studentAttendance.madrassaCategoryId,
       madrassaSubcategoryId: studentAttendance.madrassaSubcategoryId,
       attendanceDate: studentAttendance.attendanceDate,
@@ -561,7 +545,6 @@ async function fetchAttendanceReportRows(
       programNameUrdu: programs.nameUrdu,
       programSystem: programs.system,
       schoolClassName: schoolClasses.name,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryName: madrassaCategories.name,
       madrassaSubcategoryName: madrassaSubcategories.name,
       madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
@@ -573,7 +556,6 @@ async function fetchAttendanceReportRows(
     .innerJoin(institutions, eq(institutions.id, studentAttendance.institutionId))
     .innerJoin(programs, eq(programs.id, studentAttendance.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, studentAttendance.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentAttendance.schoolSectionId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, studentAttendance.madrassaSubcategoryId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, studentAttendance.madrassaCategoryId))
     .where(and(...clauses))
@@ -612,7 +594,6 @@ async function loadStudentForHistory(studentId: string, firstAttendanceRow?: Att
       programNameUrdu: programs.nameUrdu,
       programSystem: programs.system,
       schoolClassName: schoolClasses.name,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryName: madrassaCategories.name,
       madrassaSubcategoryName: madrassaSubcategories.name,
       darja: studentEnrollments.darja,
@@ -622,7 +603,6 @@ async function loadStudentForHistory(studentId: string, firstAttendanceRow?: Att
     .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
     .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentEnrollments.schoolSectionId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
     .where(eq(students.id, studentId))
@@ -670,12 +650,11 @@ function serializeRosterStudent(row: RosterStudent, attendance: AttendanceRow | 
 
 function groupLabelForRow(row: {
   schoolClassName: string | null;
-  schoolSectionName: string | null;
   madrassaCategoryName: string | null;
   madrassaSubcategoryName: string | null;
   darja?: string | null;
 }) {
-  if (row.schoolClassName) return `${row.schoolClassName} · ${row.schoolSectionName ?? "No section"}`;
+  if (row.schoolClassName) return `${row.schoolClassName}`;
   const darjaSuffix = row.darja ? ` (${row.darja})` : "";
   return `${row.madrassaCategoryName ?? "Madrassa"} · ${row.madrassaSubcategoryName ?? "Darja"}${darjaSuffix}`;
 }
