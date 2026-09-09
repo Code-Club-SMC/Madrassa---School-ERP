@@ -7,7 +7,6 @@ import {
   madrassaSubcategories,
   programs,
   schoolClasses,
-  schoolClassSections,
 } from "@/db/schema/academic";
 import { studentAttendance } from "@/db/schema/attendance";
 import { user as authUser } from "@/db/schema/auth";
@@ -302,7 +301,6 @@ async function loadGuardianStudents(guardianIds: string[]) {
       programNameUrdu: programs.nameUrdu,
       programSystem: programs.system,
       schoolClassName: schoolClasses.name,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryName: madrassaCategories.name,
       madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
       madrassaSubcategoryName: madrassaSubcategories.name,
@@ -323,7 +321,6 @@ async function loadGuardianStudents(guardianIds: string[]) {
     .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
     .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentEnrollments.schoolSectionId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
     .where(inArray(studentGuardians.guardianId, guardianIds))

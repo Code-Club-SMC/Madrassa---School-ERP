@@ -126,7 +126,6 @@ export const promotionPreviewSchema = z.object({
   institutionId: z.string().trim().min(1),
   programId: z.string().trim().min(1),
   schoolClassId: z.string().trim().nullable().optional(),
-  schoolSectionId: z.string().trim().nullable().optional(),
   madrassaCategoryId: z.string().trim().nullable().optional(),
   madrassaSubcategoryId: z.string().trim().nullable().optional(),
   carryForwardFees: z.boolean().default(true),
@@ -239,7 +238,6 @@ export async function createPromotionPreview(
       system: input.system,
       enrollment: {
         schoolClassId: row.schoolClassId,
-        schoolSectionId: row.schoolSectionId,
         madrassaCategoryId: row.madrassaCategoryId,
         madrassaSubcategoryId: row.madrassaSubcategoryId,
         darja: row.darja,
@@ -285,7 +283,6 @@ export async function createPromotionPreview(
         metadata: {
           filters: {
             schoolClassId: input.schoolClassId ?? null,
-            schoolSectionId: input.schoolSectionId ?? null,
             madrassaCategoryId: input.madrassaCategoryId ?? null,
             madrassaSubcategoryId: input.madrassaSubcategoryId ?? null,
           },
@@ -425,7 +422,6 @@ export async function applyPromotionRun(request: Request, runId: string) {
             programId: run.programId,
             academicYearId: run.targetAcademicYearId,
             schoolClassId: target.schoolClassId,
-            schoolSectionId: target.schoolSectionId,
             madrassaSubcategoryId: target.madrassaSubcategoryId,
             darja: target.darja,
             admissionNo,
@@ -451,7 +447,6 @@ export async function applyPromotionRun(request: Request, runId: string) {
             academicYearName: sourceYear.name,
             actorUserId: actor.id,
             schoolClassId: target.schoolClassId,
-            schoolSectionId: target.schoolSectionId,
             madrassaSubcategoryId: target.madrassaSubcategoryId,
           });
         }
@@ -579,9 +574,6 @@ async function loadSourceEnrollments(input: z.infer<typeof promotionPreviewSchem
       ? eq(programs.system, "madrassa")
       : or(eq(programs.system, "school"), eq(programs.system, "school_support")),
     input.schoolClassId ? eq(studentEnrollments.schoolClassId, input.schoolClassId) : undefined,
-    input.schoolSectionId
-      ? eq(studentEnrollments.schoolSectionId, input.schoolSectionId)
-      : undefined,
     input.madrassaSubcategoryId
       ? eq(studentEnrollments.madrassaSubcategoryId, input.madrassaSubcategoryId)
       : undefined,
@@ -605,8 +597,6 @@ async function loadSourceEnrollments(input: z.infer<typeof promotionPreviewSchem
       programSystem: programs.system,
       schoolClassId: studentEnrollments.schoolClassId,
       schoolClassName: schoolClasses.name,
-      schoolSectionId: studentEnrollments.schoolSectionId,
-      schoolSectionName: schoolClassSections.name,
       madrassaCategoryId: madrassaCategories.id,
       madrassaCategoryName: madrassaCategories.name,
       madrassaSubcategoryId: studentEnrollments.madrassaSubcategoryId,
@@ -618,7 +608,6 @@ async function loadSourceEnrollments(input: z.infer<typeof promotionPreviewSchem
     .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
     .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-    .leftJoin(schoolClassSections, eq(schoolClassSections.id, studentEnrollments.schoolSectionId))
     .leftJoin(
       madrassaSubcategories,
       eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
@@ -667,8 +656,6 @@ function buildPreviewMetadata(
       programName: row.programName,
       schoolClassId: row.schoolClassId,
       schoolClassName: row.schoolClassName,
-      schoolSectionId: row.schoolSectionId,
-      schoolSectionName: row.schoolSectionName,
       madrassaCategoryId: row.madrassaCategoryId,
       madrassaCategoryName: row.madrassaCategoryName,
       madrassaSubcategoryId: row.madrassaSubcategoryId,
