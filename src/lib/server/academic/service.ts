@@ -22,10 +22,12 @@ import { ensureAcademicSeeded } from "./seed";
 
 export const schoolClassInputSchema = z.object({
   institutionId: z.string().trim().min(1).optional(),
+  code: z.string().trim().nullable().optional(),
   name: z.string().trim().min(1),
   nameUrdu: z.string().trim().min(1),
   level: z.string().trim().optional(),
   govtEquivalent: z.string().trim().nullable().optional(),
+  fee: z.coerce.number().int().nonnegative().nullable().optional(),
   active: z.boolean().optional(),
 });
 
@@ -141,10 +143,12 @@ export async function createSchoolClass(request: Request, input: z.infer<typeof 
     .values({
       id,
       institutionId: input.institutionId ?? "al_qasim_academy",
+      code: input.code ?? null,
       name: input.name,
       nameUrdu: input.nameUrdu,
       level: input.level ?? null,
       govtEquivalent: input.govtEquivalent ?? null,
+      fee: input.fee ?? null,
       gender: null,
       displayOrder,
       active: input.active ?? true,
@@ -169,8 +173,10 @@ export async function updateSchoolClass(
     .update(schoolClasses)
     .set({
       ...input,
+      code: input.code ?? undefined,
       level: input.level ?? undefined,
       govtEquivalent: input.govtEquivalent ?? undefined,
+      fee: input.fee ?? undefined,
       updatedAt: new Date(),
     })
     .where(eq(schoolClasses.id, id))
@@ -178,6 +184,15 @@ export async function updateSchoolClass(
 
   if (!updated) throw new HttpError("School class not found", 404);
   return updated;
+}
+
+export async function deleteSchoolClass(request: Request, id: string) {
+  await requirePermission(request, "school_classes", "delete");
+  await assertNoActiveSchoolClassEnrollments(id);
+
+  const [deleted] = await db.delete(schoolClasses).where(eq(schoolClasses.id, id)).returning();
+  if (!deleted) throw new HttpError("School class not found", 404);
+  return deleted;
 }
 
 export async function listMadrassaCategories(request: Request, academicYearId?: string, section?: string) {

@@ -343,8 +343,8 @@ function ClassDetailPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
         <Card className="p-4">
-          <p className="text-xs text-muted-foreground">{t("Equivalent", "حکومتی مساوات")}</p>
-          <p className="font-heading text-2xl font-bold mt-1">{classData.govtEquivalent ?? classPrefix(classData)}</p>
+          <p className="text-xs text-muted-foreground">{t("Total Subjects", "کل مضامین")}</p>
+          <p className="font-heading text-2xl font-bold mt-1">{subjects.length}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">{t("Total Enrollment", "کل داخلہ")}</p>

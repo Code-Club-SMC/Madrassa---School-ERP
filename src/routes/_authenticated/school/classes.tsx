@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, Outlet, useMatches } from "@tanstack/react-router";
-import { Plus, Power, PowerOff } from "lucide-react";
+import { Plus, Power, PowerOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSystem } from "@/components/system-context";
 
 export const Route = createFileRoute("/_authenticated/school/classes")({
   component: ClassesPage,
@@ -39,8 +40,10 @@ type Klass = {
 };
 
 const emptyClassForm = {
+  code: "",
   name: "",
   nameUrdu: "",
+  fee: "" as string | number,
 };
 
 type ClassForm = typeof emptyClassForm;
@@ -52,35 +55,24 @@ function ClassesPage() {
   const navigate = useNavigate();
   const matches = useMatches();
   const isDetailPage = matches.some((m) => m.routeId === "/_authenticated/school/classes/$classId");
+  const { gender } = useSystem();
+  const institutionId = gender === "male" ? "al_qasim_academy" : "jamia_zainab_banat";
   const [classes, setClasses] = useState<Klass[]>([]);
-  const [institutions, setInstitutions] = useState<Array<{ id: string; name: string; nameUrdu: string }>>([]);
-  const [institutionId, setInstitutionId] = useState("");
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [classOpen, setClassOpen] = useState(false);
   const [cf, setCf] = useState(emptyClassForm);
   const [confirmAction, setConfirmAction] = useState<SchoolConfirmAction | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Klass | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const loadClasses = useCallback(async () => {
     setLoading(true);
     try {
-      const [classesRes, institutionsRes] = await Promise.all([
-        fetch(`/api/academic/school/classes?institutionId=${encodeURIComponent(institutionId)}`, { credentials: "include" }),
-        fetch("/api/academic/institutions", { credentials: "include" }),
-      ]);
-
-      const classesPayload = await classesRes.json().catch(() => ({}));
-      if (!classesRes.ok) throw new Error(classesPayload.error || "Could not load classes");
-
-      const institutionsPayload = await institutionsRes.json().catch(() => ({}));
-      if (institutionsRes.ok) {
-        setInstitutions(institutionsPayload.institutions ?? []);
-        if (!institutionId && (institutionsPayload.institutions ?? []).length > 0) {
-          setInstitutionId(institutionsPayload.institutions[0].id);
-        }
-      }
-
-      setClasses((classesPayload.classes ?? []) as Klass[]);
+      const response = await fetch(`/api/academic/school/classes?institutionId=${encodeURIComponent(institutionId)}`, { credentials: "include" });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not load classes");
+      setClasses((payload.classes ?? []) as Klass[]);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not load classes");
     } finally {
@@ -113,8 +105,10 @@ function ClassesPage() {
         credentials: "include",
         body: JSON.stringify({
           institutionId: institutionId || undefined,
+          code: cf.code.trim() || undefined,
           name: cf.name.trim() || cf.nameUrdu.trim(),
           nameUrdu: cf.nameUrdu.trim() || cf.name.trim(),
+          fee: cf.fee !== "" ? Number(cf.fee) : undefined,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -153,6 +147,27 @@ function ClassesPage() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/academic/school/classes/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not delete class");
+      await loadClasses();
+      toast.success("Class deleted");
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete class");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const confirmTitle = confirmAction?.nextActive
     ? "Reactivate class?"
     : "Deactivate class?";
@@ -169,24 +184,10 @@ function ClassesPage() {
         titleUrdu="جماعتیں"
         description="Manage school classes. Student counts come from active enrollments; subject counts come from exam subjects."
         actions={
-          <div className="flex items-center gap-2">
-            <Select value={institutionId} onValueChange={setInstitutionId}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Select institution" />
-              </SelectTrigger>
-              <SelectContent>
-                {institutions.map((inst) => (
-                  <SelectItem key={inst.id} value={inst.id}>
-                    {inst.nameUrdu || inst.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button size="sm" className="gap-1.5" onClick={() => setClassOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Add Class
-            </Button>
-          </div>
+          <Button size="sm" className="gap-1.5" onClick={() => setClassOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Add Class
+          </Button>
         }
       />
 
@@ -239,6 +240,15 @@ function ClassesPage() {
                   <td className="p-3 text-end font-mono">{c.enrollmentCount}</td>
                   <td className="p-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => setDeleteTarget(c)}
+                        disabled={deleting}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                       <Button
                         size="sm"
                         variant={c.active ? "destructive" : "outline"}
@@ -294,6 +304,24 @@ function ClassesPage() {
               />
             </BilingualLabel>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <BilingualLabel urdu="جماعت کا کوڈ" english="Class Code">
+              <Input
+                value={cf.code}
+                onChange={(e) => setCf({ ...cf, code: e.target.value })}
+                placeholder="C1"
+              />
+            </BilingualLabel>
+            <BilingualLabel urdu="فیس" english="Fee">
+              <Input
+                type="number"
+                min={0}
+                value={cf.fee}
+                onChange={(e) => setCf({ ...cf, fee: e.target.value })}
+                placeholder="0"
+              />
+            </BilingualLabel>
+          </div>
         </div>
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => setClassOpen(false)}>
@@ -315,6 +343,23 @@ function ClassesPage() {
             <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={applyActiveChange} disabled={pending}>
               {pending ? "Saving..." : confirmAction?.nextActive ? "Reactivate" : "Deactivate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete class?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this class. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

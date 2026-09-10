@@ -65,11 +65,13 @@ export const schoolClasses = pgTable(
     institutionId: text("institution_id")
       .notNull()
       .references(() => institutions.id, { onDelete: "cascade" }),
+    code: text("code"),
     name: text("name").notNull(),
     nameUrdu: text("name_urdu").notNull(),
     level: text("level"),
     govtEquivalent: text("govt_equivalent"),
     gender: text("gender"),
+    fee: integer("fee"),
     displayOrder: integer("display_order").notNull(),
     active: boolean("active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
