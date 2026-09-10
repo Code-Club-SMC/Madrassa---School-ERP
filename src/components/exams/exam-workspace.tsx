@@ -94,10 +94,8 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
-    code: "",
     name: "",
     nameUrdu: "",
-    group: "general",
     totalMarks: 100,
     passingMarks: 33,
     scopeId: "",
@@ -189,8 +187,8 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
       toast.error(system === "school" ? "Select a class first" : "Select a darja first");
       return;
     }
-    if (!form.code.trim() || !form.name.trim() || !form.nameUrdu.trim()) {
-      toast.error("Code, name, and Urdu name are required");
+    if (!form.name.trim() || !form.nameUrdu.trim()) {
+      toast.error("Name and Urdu name are required");
       return;
     }
 
@@ -199,10 +197,8 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
         system,
         schoolClassId: system === "school" ? targetScopeId : undefined,
         madrassaSubcategoryId: system === "madrassa" ? targetScopeId : undefined,
-        code: form.code,
         name: form.name,
         nameUrdu: form.nameUrdu,
-        group: form.group,
         totalMarks: form.totalMarks,
         passingMarks: form.passingMarks,
         displayOrder: subjects.length + 1,
@@ -210,7 +206,7 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
       });
       toast.success("Subject created");
       setOpen(false);
-      setForm({ code: "", name: "", nameUrdu: "", group: "general", totalMarks: 100, passingMarks: 33, scopeId: targetScopeId, teacherId: "" });
+      setForm({ name: "", nameUrdu: "", totalMarks: 100, passingMarks: 33, scopeId: targetScopeId, teacherId: "" });
       await loadSubjects();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not create subject");
@@ -260,8 +256,6 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
           <TableHeader>
             <TableRow>
               <TableHead>Subject</TableHead>
-              <TableHead>Code</TableHead>
-              <TableHead>Group</TableHead>
               <TableHead>Teacher</TableHead>
               <TableHead className="text-end">Marks</TableHead>
               <TableHead className="text-end">Status</TableHead>
@@ -270,11 +264,11 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground">Loading subjects...</TableCell>
+                <TableCell colSpan={4} className="text-muted-foreground">Loading subjects...</TableCell>
               </TableRow>
             ) : subjects.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground">No subjects configured for this scope.</TableCell>
+                <TableCell colSpan={4} className="text-muted-foreground">No subjects configured for this scope.</TableCell>
               </TableRow>
             ) : (
               subjects.map((subject) => {
@@ -285,8 +279,6 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
                       <p className="font-medium">{subject.name}</p>
                       <p className="font-urdu text-sm text-muted-foreground">{subject.nameUrdu}</p>
                     </TableCell>
-                    <TableCell className="font-mono">{subject.code}</TableCell>
-                    <TableCell>{subject.group}</TableCell>
                     <TableCell>{teacher ? teacher.name : "-"}</TableCell>
                     <TableCell className="text-end font-mono">
                       {subject.totalMarks} / {subject.passingMarks}
@@ -310,14 +302,6 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
         icon={ClipboardList}
       >
         <div className="grid gap-4 p-1">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Code">
-              <Input value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })} />
-            </Field>
-            <Field label="Group">
-              <Input value={form.group} onChange={(event) => setForm({ ...form, group: event.target.value })} />
-            </Field>
-          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Name">
               <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
@@ -791,9 +775,9 @@ export function ExamReportWorkspace() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6}>Loading report...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4}>Loading report...</TableCell></TableRow>
             ) : !report || report.rows.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-muted-foreground">No published results found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-muted-foreground">No published results found.</TableCell></TableRow>
             ) : (
               report.rows.map((row) => (
                 <TableRow key={`${row.examId}:${row.studentId}`}>

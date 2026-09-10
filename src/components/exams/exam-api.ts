@@ -41,10 +41,10 @@ export function createExamSubject(input: {
   system: ExamSystem;
   schoolClassId?: string;
   madrassaSubcategoryId?: string;
-  code: string;
+  code?: string;
   name: string;
   nameUrdu: string;
-  group: string;
+  group?: string;
   totalMarks: number;
   passingMarks: number;
   displayOrder: number;

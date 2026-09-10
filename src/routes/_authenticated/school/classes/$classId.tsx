@@ -84,10 +84,8 @@ function ClassDetailPage() {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [form, setForm] = useState({
-    code: "",
     name: "",
     nameUrdu: "",
-    group: "general",
     totalMarks: 100,
     passingMarks: 33,
     teacherId: "",
@@ -95,10 +93,8 @@ function ClassDetailPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({
-    code: "",
     name: "",
     nameUrdu: "",
-    group: "general",
     totalMarks: 100,
     passingMarks: 33,
     active: true,
@@ -181,10 +177,8 @@ function ClassDetailPage() {
   const openEdit = (subject: ExamSubject) => {
     setEditId(subject.id);
     setEditForm({
-      code: subject.code,
       name: subject.name,
       nameUrdu: subject.nameUrdu,
-      group: subject.group,
       totalMarks: subject.totalMarks,
       passingMarks: subject.passingMarks,
       active: subject.active,
@@ -195,18 +189,16 @@ function ClassDetailPage() {
 
   const saveEdit = async () => {
     if (!editId) return;
-    if (!editForm.code.trim() || !editForm.name.trim() || !editForm.nameUrdu.trim()) {
-      toast.error(t("Code, name, and Urdu name are required", "کوڈ، نام اور اردو نام درکار ہیں"));
+    if (!editForm.name.trim() || !editForm.nameUrdu.trim()) {
+      toast.error(t("Name and Urdu name are required", "نام اور اردو نام درکار ہیں"));
       return;
     }
 
     setPending(true);
     try {
       await updateExamSubject(editId, {
-        code: editForm.code,
         name: editForm.name,
         nameUrdu: editForm.nameUrdu,
-        group: editForm.group,
         totalMarks: editForm.totalMarks,
         passingMarks: editForm.passingMarks,
         active: editForm.active,
@@ -265,8 +257,8 @@ function ClassDetailPage() {
   );
 
   const addSubject = async () => {
-    if (!form.code.trim() || !form.name.trim() || !form.nameUrdu.trim()) {
-      toast.error(t("Code, name, and Urdu name are required", "کوڈ، نام اور اردو نام درکار ہیں"));
+    if (!form.name.trim() || !form.nameUrdu.trim()) {
+      toast.error(t("Name and Urdu name are required", "نام اور اردو نام درکار ہیں"));
       return;
     }
 
@@ -275,10 +267,8 @@ function ClassDetailPage() {
       await createExamSubject({
         system: "school",
         schoolClassId: classId,
-        code: form.code,
         name: form.name,
         nameUrdu: form.nameUrdu,
-        group: form.group,
         totalMarks: form.totalMarks,
         passingMarks: form.passingMarks,
         displayOrder: subjects.length + 1,
@@ -286,7 +276,7 @@ function ClassDetailPage() {
       });
       toast.success(t("Subject added", "مضمون شامل کر دیا گیا"));
       setOpen(false);
-      setForm({ code: "", name: "", nameUrdu: "", group: "general", totalMarks: 100, passingMarks: 33, teacherId: "" });
+      setForm({ name: "", nameUrdu: "", totalMarks: 100, passingMarks: 33, teacherId: "" });
       await loadSubjects();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not add subject");
@@ -357,8 +347,6 @@ function ClassDetailPage() {
           <TableHeader>
             <TableRow>
               <TableHead>{t("Subject", "مضمون")}</TableHead>
-              <TableHead>{t("Code", "کوڈ")}</TableHead>
-              <TableHead>{t("Group", "گروپ")}</TableHead>
               <TableHead>{t("Teacher", "استاد")}</TableHead>
               <TableHead className="text-end">{t("Marks", "نمارات")}</TableHead>
               <TableHead className="text-end">{t("Status", "حالت")}</TableHead>
@@ -368,11 +356,11 @@ function ClassDetailPage() {
           <TableBody>
             {subjectsLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-muted-foreground">{t("Loading subjects...", "مضامین لوڈ ہو رہے ہیں...")}</TableCell>
+                <TableCell colSpan={5} className="text-muted-foreground">{t("Loading subjects...", "مضامین لوڈ ہو رہے ہیں...")}</TableCell>
               </TableRow>
             ) : subjects.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-muted-foreground">{t("No subjects found for this class.", "اس کلاس کے لیے کوئی مضمون نہیں ملا۔")}</TableCell>
+                <TableCell colSpan={5} className="text-muted-foreground">{t("No subjects found for this class.", "اس کلاس کے لیے کوئی مضمون نہیں ملا۔")}</TableCell>
               </TableRow>
             ) : (
               subjects.map((subject) => {
@@ -383,8 +371,6 @@ function ClassDetailPage() {
                       <p className="font-medium">{subject.name}</p>
                       <p className="font-urdu text-sm text-muted-foreground">{subject.nameUrdu}</p>
                     </TableCell>
-                    <TableCell className="font-mono">{subject.code}</TableCell>
-                    <TableCell>{subject.group}</TableCell>
                     <TableCell>{teacher ? teacher.name : "-"}</TableCell>
                     <TableCell className="text-end font-mono">
                       {subject.totalMarks} / {subject.passingMarks}
@@ -425,11 +411,11 @@ function ClassDetailPage() {
                   </TableCell>
                 </TableRow>
               );
-            })
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+            }            )
+          )}
+        </TableBody>
+      </Table>
+    </Card>
 
       <ResponsiveDialog
         title={t("Add Subject", "مضمون شامل کریں")}
@@ -439,22 +425,6 @@ function ClassDetailPage() {
         icon={ClipboardList}
       >
         <div className="grid gap-4 p-1">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <BilingualLabel urdu="کوڈ" english="Code">
-              <Input
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value })}
-                placeholder={t("Code", "کوڈ")}
-              />
-            </BilingualLabel>
-            <BilingualLabel urdu="گروپ" english="Group">
-              <Input
-                value={form.group}
-                onChange={(e) => setForm({ ...form, group: e.target.value })}
-                placeholder={t("Group", "گروپ")}
-              />
-            </BilingualLabel>
-          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <BilingualLabel urdu="نام" english="Name">
               <Input
@@ -528,22 +498,6 @@ function ClassDetailPage() {
         icon={Pencil}
       >
         <div className="grid gap-4 p-1">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <BilingualLabel urdu="کوڈ" english="Code">
-              <Input
-                value={editForm.code}
-                onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
-                placeholder={t("Code", "کوڈ")}
-              />
-            </BilingualLabel>
-            <BilingualLabel urdu="گروپ" english="Group">
-              <Input
-                value={editForm.group}
-                onChange={(e) => setEditForm({ ...editForm, group: e.target.value })}
-                placeholder={t("Group", "گروپ")}
-              />
-            </BilingualLabel>
-          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <BilingualLabel urdu="نام" english="Name">
               <Input
