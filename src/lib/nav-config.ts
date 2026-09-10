@@ -69,7 +69,6 @@ export const navItems: NavItem[] = [
   { group: "school", url: "/school/students", icon: Users2, en: "Students", ur: "طلبہ", roles: ANY_STAFF },
   { group: "school", url: "/school/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
   { group: "school", url: "/school/classes", icon: School, en: "Classes", ur: "جماعتیں", roles: ADMINS },
-  { group: "school", url: "/school/subjects", icon: BookMarked, en: "Subjects", ur: "مضامین", roles: ADMINS },
   { group: "school", url: "/school/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
 
   // ---------- SHARED ----------

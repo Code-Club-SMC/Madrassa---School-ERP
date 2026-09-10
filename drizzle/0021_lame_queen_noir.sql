@@ -1,0 +1,1 @@
+ALTER TABLE "school_classes" ALTER COLUMN "level" DROP NOT NULL;

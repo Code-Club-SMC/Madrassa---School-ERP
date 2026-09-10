@@ -24,7 +24,7 @@ export const schoolClassInputSchema = z.object({
   institutionId: z.string().trim().min(1).optional(),
   name: z.string().trim().min(1),
   nameUrdu: z.string().trim().min(1),
-  level: z.enum(["pre_primary", "primary", "middle", "secondary", "higher_secondary"]),
+  level: z.string().trim().optional(),
   govtEquivalent: z.string().trim().nullable().optional(),
   active: z.boolean().optional(),
 });
@@ -101,7 +101,7 @@ export async function listSchoolClasses(request: Request) {
   const gender = url.searchParams.get("gender") as "male" | "female" | null;
   const institutionId = url.searchParams.get("institutionId");
 
-  const [classes, classCounts] = await Promise.all([
+  const [classes, classCounts, subjectCounts] = await Promise.all([
     db
       .select()
       .from(schoolClasses)
@@ -112,15 +112,21 @@ export async function listSchoolClasses(request: Request) {
       .from(studentEnrollments)
       .where(and(eq(studentEnrollments.status, "active")))
       .groupBy(studentEnrollments.schoolClassId),
+    db
+      .select({ classId: examSubjects.schoolClassId, count: count() })
+      .from(examSubjects)
+      .groupBy(examSubjects.schoolClassId),
   ]);
 
   const filtered = gender ? classes.filter((c) => c.gender === gender) : classes;
 
   const classCountMap = new Map(classCounts.map((row) => [row.classId, Number(row.count)]));
+  const subjectCountMap = new Map(subjectCounts.map((row) => [row.classId, Number(row.count)]));
 
   return filtered.map((schoolClass) => ({
     ...schoolClass,
     enrollmentCount: classCountMap.get(schoolClass.id) ?? 0,
+    subjectCount: subjectCountMap.get(schoolClass.id) ?? 0,
   }));
 }
 
@@ -137,8 +143,9 @@ export async function createSchoolClass(request: Request, input: z.infer<typeof 
       institutionId: input.institutionId ?? "al_qasim_academy",
       name: input.name,
       nameUrdu: input.nameUrdu,
-      level: input.level,
+      level: input.level ?? null,
       govtEquivalent: input.govtEquivalent ?? null,
+      gender: null,
       displayOrder,
       active: input.active ?? true,
     })
@@ -162,6 +169,7 @@ export async function updateSchoolClass(
     .update(schoolClasses)
     .set({
       ...input,
+      level: input.level ?? undefined,
       govtEquivalent: input.govtEquivalent ?? undefined,
       updatedAt: new Date(),
     })

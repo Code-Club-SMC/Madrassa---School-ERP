@@ -3,10 +3,7 @@ import {
   institutions,
   madrassaCategories,
   programs,
-  schoolClasses,
 } from "@/db/schema/academic";
-import type { SchoolClass } from "@/types";
-import { alQasimSchoolClasses, zainabSchoolClasses } from "@/mock/classes";
 
 export const ACADEMIC_INSTITUTIONS = [
   {
@@ -155,44 +152,6 @@ export async function seedAcademicCatalog() {
           updatedAt: new Date(),
         },
       });
-  }
-
-  await db.delete(schoolClasses);
-
-  const classCatalogs: { institutionId: string; classes: SchoolClass[] }[] = [
-    { institutionId: "al_qasim_academy", classes: alQasimSchoolClasses },
-    { institutionId: "jamia_zainab_banat", classes: zainabSchoolClasses },
-  ];
-
-  for (const catalog of classCatalogs) {
-    for (const [index, schoolClass] of catalog.classes.entries()) {
-      await db
-        .insert(schoolClasses)
-        .values({
-          id: schoolClass.id,
-          institutionId: catalog.institutionId,
-          name: schoolClass.name,
-          nameUrdu: schoolClass.nameUrdu,
-          level: schoolClass.level,
-          govtEquivalent: schoolClass.govtEquivalent ?? null,
-          gender: schoolClass.gender,
-          displayOrder: index + 1,
-        })
-        .onConflictDoUpdate({
-          target: schoolClasses.id,
-          set: {
-            institutionId: catalog.institutionId,
-            name: schoolClass.name,
-            nameUrdu: schoolClass.nameUrdu,
-            level: schoolClass.level,
-            govtEquivalent: schoolClass.govtEquivalent ?? null,
-            gender: schoolClass.gender,
-            displayOrder: index + 1,
-            active: true,
-            updatedAt: new Date(),
-          },
-        });
-    }
   }
 
   const STATIC_CATEGORIES = [
