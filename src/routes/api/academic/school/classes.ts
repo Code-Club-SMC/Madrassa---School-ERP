@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   createSchoolClass,
-  deleteSchoolClass,
   listSchoolClasses,
   schoolClassInputSchema,
 } from "@/lib/server/academic/service";
@@ -26,23 +25,6 @@ export const Route = createFileRoute("/api/academic/school/classes")({
           return json({ class: await createSchoolClass(request, body.data) }, 201);
         } catch (error) {
           return errorResponse(error, "Could not create school class");
-        }
-      },
-    },
-  },
-});
-
-export const deleteRoute = createFileRoute("/api/academic/school/classes/$classId")({
-  server: {
-    handlers: {
-      DELETE: async ({ request }) => {
-        try {
-          const url = new URL(request.url);
-          const classId = url.pathname.split("/").pop() || "";
-          await deleteSchoolClass(request, classId);
-          return json({ success: true });
-        } catch (error) {
-          return errorResponse(error, "Could not delete school class");
         }
       },
     },

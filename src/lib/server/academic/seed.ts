@@ -3,6 +3,7 @@ import {
   institutions,
   madrassaCategories,
   programs,
+  schoolClasses,
 } from "@/db/schema/academic";
 
 export const ACADEMIC_INSTITUTIONS = [
@@ -221,12 +222,85 @@ export async function seedAcademicCatalog() {
         set: {
           name: category.name,
           nameUrdu: category.nameUrdu,
-          description: category.description,
-          descriptionUrdu: category.descriptionUrdu,
-          displayOrder: category.displayOrder,
-          active: category.active,
-          section: category.section,
-          formVariantKeys: category.formVariantKeys,
+           description: category.description,
+           descriptionUrdu: category.descriptionUrdu,
+           displayOrder: category.displayOrder,
+           active: category.active,
+           section: category.section,
+           formVariantKeys: category.formVariantKeys,
+           updatedAt: new Date(),
+         },
+       });
+  }
+
+  const SCHOOL_CLASSES = [
+    {
+      id: "aq-c1",
+      institutionId: "al_qasim_academy",
+      code: "C1",
+      name: "Class 1",
+      nameUrdu: "جماعت اول",
+      level: "primary",
+      govtEquivalent: null,
+      gender: "male",
+      displayOrder: 1,
+      active: true,
+    },
+    {
+      id: "aq-c2",
+      institutionId: "al_qasim_academy",
+      code: "C2",
+      name: "Class 2",
+      nameUrdu: "جماعت دوم",
+      level: "primary",
+      govtEquivalent: null,
+      gender: "male",
+      displayOrder: 2,
+      active: true,
+    },
+    {
+      id: "zainab-c1",
+      institutionId: "jamia_zainab_banat",
+      code: "C1",
+      name: "Class 1",
+      nameUrdu: "جماعت اول",
+      level: "primary",
+      govtEquivalent: null,
+      gender: "female",
+      displayOrder: 1,
+      active: true,
+    },
+    {
+      id: "zainab-c2",
+      institutionId: "jamia_zainab_banat",
+      code: "C2",
+      name: "Class 2",
+      nameUrdu: "جماعت دوم",
+      level: "primary",
+      govtEquivalent: null,
+      gender: "female",
+      displayOrder: 2,
+      active: true,
+    },
+  ];
+
+  await db.delete(schoolClasses);
+  for (const schoolClass of SCHOOL_CLASSES) {
+    await db
+      .insert(schoolClasses)
+      .values(schoolClass)
+      .onConflictDoUpdate({
+        target: schoolClasses.id,
+        set: {
+          institutionId: schoolClass.institutionId,
+          code: schoolClass.code,
+          name: schoolClass.name,
+          nameUrdu: schoolClass.nameUrdu,
+          level: schoolClass.level,
+          govtEquivalent: schoolClass.govtEquivalent,
+          gender: schoolClass.gender,
+          displayOrder: schoolClass.displayOrder,
+          active: schoolClass.active,
           updatedAt: new Date(),
         },
       });

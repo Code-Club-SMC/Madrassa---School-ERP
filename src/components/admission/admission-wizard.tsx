@@ -456,7 +456,7 @@ function StepDetails({ form, update, lang }: { form: FormState; update: <K exten
         <Select value={form.classId} onValueChange={(v) => update("classId", v)}>
           <SelectTrigger><SelectValue placeholder={t.selectCategory} /></SelectTrigger>
           <SelectContent>
-            {schoolClasses.map((c) => <SelectItem key={c.id} value={c.id}><span className="font-urdu">{c.nameUrdu}</span> · {c.name}</SelectItem>)}
+            {schoolClasses.filter((c) => !form.gender || c.gender === form.gender).map((c) => <SelectItem key={c.id} value={c.id}><span className="font-urdu">{c.nameUrdu}</span> · {c.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </BilingualLabel>

@@ -1,32 +1,61 @@
 import type { SchoolClass } from "@/types";
 
-const secondaryGroups = ["Science", "Arts"];
-const higherSecondaryGroups = ["Pre-Engineering", "Pre-Medical", "Commerce", "Humanities"];
+export const alQasimSchoolClasses: SchoolClass[] = [
+  {
+    id: "aq-c1",
+    institutionId: "al_qasim_academy",
+    name: "Class 1",
+    nameUrdu: "جماعت اول",
+    level: "primary",
+    govtEquivalent: null,
+    gender: "male",
+    sections: [
+      { id: "aq-c1-a", name: "A", active: true, enrollmentCount: 0 },
+      { id: "aq-c1-b", name: "B", active: true, enrollmentCount: 0 },
+    ],
+  },
+  {
+    id: "aq-c2",
+    institutionId: "al_qasim_academy",
+    name: "Class 2",
+    nameUrdu: "جماعت دوم",
+    level: "primary",
+    govtEquivalent: null,
+    gender: "male",
+    sections: [
+      { id: "aq-c2-a", name: "A", active: true, enrollmentCount: 0 },
+      { id: "aq-c2-b", name: "B", active: true, enrollmentCount: 0 },
+    ],
+  },
+];
 
-function buildClassArray(start: number, end: number, gender: "male" | "female", prefix: string, institutionId: string) {
-  const classes: SchoolClass[] = [];
-  for (let i = start; i <= end; i++) {
-    const grade = i === 0 ? 0 : i === 1 ? 1 : i - 1;
-    const id = i === 0 ? `${prefix}-nursery` : i === 1 ? `${prefix}-kg` : `${prefix}-c${grade}`;
-    const name = i === 0 ? "Nursery" : i === 1 ? "KG" : `Class ${grade}`;
-    const nameUrdu =
-      i === 0 ? "نرسری" : i === 1 ? "کے جی" : `جماعت ${["اول", "دوم", "سوم", "چہارم", "پنجم", "ششم", "ہفتم", "ہشتم", "نہم", "دہم", "یازدہم", "دوازدہم"][grade - 1] || String(grade)}`;
-    const level = i <= 1 ? "pre_primary" : grade <= 5 ? "primary" : grade <= 8 ? "middle" : grade <= 10 ? "secondary" : "higher_secondary";
-    const govtEquivalent = grade === 9 ? "SSC Part I" : grade === 10 ? "SSC Part II" : grade === 11 ? "HSSC Part I" : grade === 12 ? "HSSC Part II" : undefined;
-    classes.push({
-      id,
-      institutionId,
-      name,
-      nameUrdu,
-      level,
-      govtEquivalent,
-      gender,
-    });
-  }
-  return classes;
-}
-
-export const alQasimSchoolClasses: SchoolClass[] = buildClassArray(0, 13, "male", "aq", "al_qasim_academy");
-export const zainabSchoolClasses: SchoolClass[] = buildClassArray(1, 6, "female", "zainab", "jamia_zainab_banat");
+export const zainabSchoolClasses: SchoolClass[] = [
+  {
+    id: "zainab-c1",
+    institutionId: "jamia_zainab_banat",
+    name: "Class 1",
+    nameUrdu: "جماعت اول",
+    level: "primary",
+    govtEquivalent: null,
+    gender: "female",
+    sections: [
+      { id: "zainab-c1-a", name: "A", active: true, enrollmentCount: 0 },
+      { id: "zainab-c1-b", name: "B", active: true, enrollmentCount: 0 },
+    ],
+  },
+  {
+    id: "zainab-c2",
+    institutionId: "jamia_zainab_banat",
+    name: "Class 2",
+    nameUrdu: "جماعت دوم",
+    level: "primary",
+    govtEquivalent: null,
+    gender: "female",
+    sections: [
+      { id: "zainab-c2-a", name: "A", active: true, enrollmentCount: 0 },
+      { id: "zainab-c2-b", name: "B", active: true, enrollmentCount: 0 },
+    ],
+  },
+];
 
 export const schoolClasses: SchoolClass[] = [...alQasimSchoolClasses, ...zainabSchoolClasses];

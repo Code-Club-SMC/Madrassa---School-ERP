@@ -113,6 +113,7 @@ export type SchoolClass = {
   level: "pre_primary" | "primary" | "middle" | "secondary" | "higher_secondary";
   govtEquivalent?: string;
   gender?: "male" | "female";
+  sections?: Array<{ id: string; name: string; group?: string | null; active?: boolean; enrollmentCount?: number }>;
 };
 
 // ---------- Subject ----------

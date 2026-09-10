@@ -42,6 +42,7 @@ import { CredentialsOverlay } from "@/features/users/credentials-display";
 import type { AdmissionAcceptanceWarning, ParentCreds } from "@/components/students/student-types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { schoolClasses } from "@/mock";
 
 const TEXT = {
   ur: {
@@ -381,9 +382,9 @@ export function PdfFormRenderer({
         form,
         declaration,
         photoDataUrl: photo?.dataUrl,
-        target: {
-          madrassaSubcategoryId: form.shoba || undefined,
-        },
+        target: variant.section === "school"
+          ? { schoolClassId: form.classId || undefined }
+          : { madrassaSubcategoryId: form.shoba || undefined },
       }),
         },
       );
@@ -635,7 +636,7 @@ export function PdfFormRenderer({
       )}
 
       {/* Body per layout */}
-      {variant.layout === "school" && <SchoolFields form={form} set={set} lang={lang} t={t} step={step} />}
+      {variant.layout === "school" && <SchoolFields form={form} set={set} lang={lang} t={t} variant={variant} step={step} />}
       {variant.layout === "madrassa-short" && (
         <MadrassaShortFields
           form={form}
@@ -744,7 +745,7 @@ function Section({
   );
 }
 
-type FieldProps = { form: State; set: (k: string, v: string) => void; lang: "ur" | "en"; t: typeof TEXT["ur"]; step?: number };
+type FieldProps = { form: State; set: (k: string, v: string) => void; lang: "ur" | "en"; t: typeof TEXT["ur"]; variant: AdmissionVariant; step?: number };
 
 function gradeOptionsForVariant(variant: AdmissionVariant) {
   const section = variant.category === "female" ? "banat" : "baneen";
@@ -794,7 +795,7 @@ function MadrassaGradeSelect({
 /* ============================================================
  * School layout — Al-Qasim / Zainab (Shoba School)
  * ============================================================ */
-function SchoolFields({ form, set, lang, t, step = 1 }: FieldProps & { step?: number }) {
+function SchoolFields({ form, set, lang, t, variant, step = 1 }: FieldProps & { step?: number }) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
   return (
@@ -918,14 +919,25 @@ function SchoolFields({ form, set, lang, t, step = 1 }: FieldProps & { step?: nu
             required
             lang={lang}
           >
-            <Input
-              id="class"
-              name="class"
-              required
-              className={isRtl ? "font-urdu" : ""}
+            <Select
               value={val("class")}
-              onChange={(e) => set("class", e.target.value)}
-            />
+              onValueChange={(v) => {
+                const selected = schoolClasses.find((c) => c.id === v);
+                set("class", selected ? (selected.nameUrdu || selected.name) : v);
+                set("classId", v);
+              }}
+            >
+              <SelectTrigger id="class" className={isRtl ? "font-urdu" : ""}>
+                <SelectValue placeholder={lang === "ur" ? "جماعت منتخب کریں" : "Select class"} />
+              </SelectTrigger>
+              <SelectContent>
+                {schoolClasses.filter((c) => c.gender === variant.category).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <span className="font-urdu">{c.nameUrdu}</span> · {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </BilingualLabel>
         </Section>
       )}
