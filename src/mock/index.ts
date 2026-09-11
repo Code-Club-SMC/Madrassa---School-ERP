@@ -143,7 +143,7 @@ export const students: Student[] = Array.from({ length: 48 }).map((_, i) => {
     system: sys,
     categoryId: sys === "madrassa" ? cat.id : undefined,
     subcategoryId: sys === "madrassa" ? sub.id : undefined,
-    classId: sys === "school" ? cls.id : undefined,
+    classId: sys === "school" && cls ? cls.id : undefined,
     section: sys === "school" ? (i % 2 ? "A" : "B") : undefined,
     monthlyFee: sys === "madrassa" ? 500 + (i % 4) * 250 : 2500 + (i % 4) * 500,
     status: i % 17 === 0 ? "graduated" : i % 23 === 0 ? "inactive" : "active",

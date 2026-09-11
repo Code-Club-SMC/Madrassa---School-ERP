@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useMemo, useState, useEffect, type ChangeEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/components/language-context";
@@ -42,7 +42,7 @@ import { CredentialsOverlay } from "@/features/users/credentials-display";
 import type { AdmissionAcceptanceWarning, ParentCreds } from "@/components/students/student-types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { schoolClasses } from "@/mock";
+import { madrassaCategories } from "@/mock";
 
 const TEXT = {
   ur: {
@@ -219,6 +219,24 @@ export function PdfFormRenderer({
   const [creds, setCreds] = useState<ParentCreds | null>(null);
   const isRtl = lang === "ur";
   const [step, setStep] = useState(1);
+  const [cls, setCls] = useState<any[]>([]);
+  const [loadingCls, setLoadingCls] = useState(false);
+
+  useEffect(() => {
+    if (variant.section !== "school") {
+      setCls([]);
+      return;
+    }
+    const institutionId = variant.category === "female" ? "jamia_zainab_banat" : "al_qasim_academy";
+    setLoadingCls(true);
+    fetch(`/api/academic/school/classes?institutionId=${encodeURIComponent(institutionId)}`, { credentials: "include" })
+      .then((r) => r.json().catch(() => ({})))
+      .then((payload) => {
+        setCls((payload.classes ?? []) as any[]);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingCls(false));
+  }, [variant.section, variant.category]);
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const val = (k: string) => form[k] ?? "";
@@ -636,7 +654,7 @@ export function PdfFormRenderer({
       )}
 
       {/* Body per layout */}
-      {variant.layout === "school" && <SchoolFields form={form} set={set} lang={lang} t={t} variant={variant} step={step} />}
+      {variant.layout === "school" && <SchoolFields form={form} set={set} lang={lang} t={t} variant={variant} step={step} cls={cls} loadingCls={loadingCls} />}
       {variant.layout === "madrassa-short" && (
         <MadrassaShortFields
           form={form}
@@ -795,7 +813,7 @@ function MadrassaGradeSelect({
 /* ============================================================
  * School layout — Al-Qasim / Zainab (Shoba School)
  * ============================================================ */
-function SchoolFields({ form, set, lang, t, variant, step = 1 }: FieldProps & { step?: number }) {
+function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls }: FieldProps & { step?: number; cls: any[]; loadingCls: boolean }) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
   return (
@@ -920,9 +938,9 @@ function SchoolFields({ form, set, lang, t, variant, step = 1 }: FieldProps & { 
             lang={lang}
           >
             <Select
-              value={val("class")}
+              value={val("classId")}
               onValueChange={(v) => {
-                const selected = schoolClasses.find((c) => c.id === v);
+                const selected = cls.find((c) => c.id === v);
                 set("class", selected ? (selected.nameUrdu || selected.name) : v);
                 set("classId", v);
               }}
@@ -931,7 +949,7 @@ function SchoolFields({ form, set, lang, t, variant, step = 1 }: FieldProps & { 
                 <SelectValue placeholder={lang === "ur" ? "جماعت منتخب کریں" : "Select class"} />
               </SelectTrigger>
               <SelectContent>
-                {schoolClasses.filter((c) => c.gender === variant.category).map((c) => (
+                {cls.filter((c) => c.gender === variant.category).map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     <span className="font-urdu">{c.nameUrdu}</span> · {c.name}
                   </SelectItem>
@@ -976,28 +994,91 @@ function SchoolFields({ form, set, lang, t, variant, step = 1 }: FieldProps & { 
             english="Also Enroll in Madrassa?"
             htmlFor="also_madrassa"
           >
-            <Input
-              id="also_madrassa"
-              name="also_madrassa"
-              className="font-urdu"
-              placeholder="جی / نہیں"
-              value={val("also_madrassa")}
-              onChange={(e) => set("also_madrassa", e.target.value)}
-            />
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="also_madrassa"
+                checked={val("also_madrassa") === "true"}
+                onCheckedChange={(v) => {
+                  const bool = Boolean(v);
+                  set("also_madrassa", bool ? "true" : "false");
+                  if (!bool) {
+                    set("madrassa_category", "");
+                    set("madrassa_category_name", "");
+                    set("madrassa_subcategory", "");
+                    set("madrassa_subcategory_name", "");
+                  }
+                }}
+              />
+              <span className={isRtl ? "font-urdu" : ""}>{lang === "ur" ? "جی" : "Yes"}</span>
+            </div>
           </BilingualLabel>
-          <BilingualLabel
-            urdu="کس شعبہ میں"
-            english="Which Section (if yes)"
-            htmlFor="madrassa_section"
-          >
-            <Input
-              id="madrassa_section"
-              name="madrassa_section"
-              className="font-urdu"
-              value={val("madrassa_section")}
-              onChange={(e) => set("madrassa_section", e.target.value)}
-            />
-          </BilingualLabel>
+          {val("also_madrassa") === "true" && (
+            <>
+              <BilingualLabel
+                urdu="مدرسہ کا زمرہ"
+                english="Madrassa Category"
+                htmlFor="madrassa_category"
+              >
+                <Select
+                  value={val("madrassa_category")}
+                  onValueChange={(v) => {
+                    set("madrassa_category", v);
+                    set("madrassa_category_name", (madrassaCategories.find((c) => c.id === v)?.nameUrdu || madrassaCategories.find((c) => c.id === v)?.name || ""));
+                    set("madrassa_subcategory", "");
+                    set("madrassa_subcategory_name", "");
+                  }}
+                >
+                  <SelectTrigger id="madrassa_category" className={isRtl ? "font-urdu" : ""}>
+                    <SelectValue placeholder={lang === "ur" ? "زمرہ منتخب کریں" : "Select category"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                  {madrassaCategories
+                    .filter((c) => {
+                      const hasMatchingSubcategory = c.subcategories.some((s) => {
+                        const rawSection = (s as any).section ?? "";
+                        const sGender = rawSection === "banat" || rawSection === "female" ? "female" : rawSection === "baneen" || rawSection === "male" ? "male" : rawSection;
+                        return sGender === variant.category;
+                      });
+                      return hasMatchingSubcategory;
+                    })
+                    .map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <span className="font-urdu">{c.nameUrdu || c.name}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </BilingualLabel>
+              {val("madrassa_category") && (
+                <BilingualLabel
+                  urdu="مدرسہ کا کلاس"
+                  english="Madrassa Class"
+                  htmlFor="madrassa_subcategory"
+                >
+                  <Select
+                    value={val("madrassa_subcategory")}
+                    onValueChange={(v) => {
+                      const cat = madrassaCategories.find((c) => c.id === val("madrassa_category"));
+                      const sub = cat?.subcategories.find((s) => s.id === v);
+                      set("madrassa_subcategory", v);
+                      set("madrassa_subcategory_name", sub ? (sub.nameUrdu || sub.name) : "");
+                    }}
+                  >
+                    <SelectTrigger id="madrassa_subcategory" className={isRtl ? "font-urdu" : ""}>
+                      <SelectValue placeholder={lang === "ur" ? "کلاس منتخب کریں" : "Select class"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(madrassaCategories.find((c) => c.id === val("madrassa_category"))?.subcategories ?? []).map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          <span className="font-urdu">{s.nameUrdu || s.name}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </BilingualLabel>
+              )}
+            </>
+          )}
         </Section>
       )}
     </>

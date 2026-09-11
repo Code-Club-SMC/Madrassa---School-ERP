@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLanguage } from "@/components/language-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { ImagePlus, Pencil, CheckCircle2, ArrowLeft, ArrowRight, Loader2, Search
 import { AdmissionStepper } from "./admission-stepper";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { cn } from "@/lib/utils";
-import { madrassaCategories, schoolClasses, students, type System } from "@/mock";
+import { madrassaCategories, students, type System } from "@/mock";
 import { toast } from "sonner";
 
 type FormState = {
@@ -162,6 +162,24 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
   const [form, setForm] = useState<FormState>(init);
   const [submitting, setSubmitting] = useState(false);
   const [doneRef, setDoneRef] = useState<string | null>(null);
+  const [availableClasses, setAvailableClasses] = useState<any[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(false);
+
+  useEffect(() => {
+    if (form.system !== "school" && form.system !== "both") {
+      setAvailableClasses([]);
+      return;
+    }
+    const institutionId = form.gender === "female" ? "jamia_zainab_banat" : "al_qasim_academy";
+    setLoadingClasses(true);
+    fetch(`/api/academic/school/classes?institutionId=${encodeURIComponent(institutionId)}`, { credentials: "include" })
+      .then((r) => r.json().catch(() => ({})))
+      .then((payload) => {
+        setAvailableClasses((payload.classes ?? []) as any[]);
+      })
+      .catch(() => toast.error("Could not load classes"))
+      .finally(() => setLoadingClasses(false));
+  }, [form.system, form.gender]);
 
   const update = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -308,9 +326,9 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
       <div className="mt-6 space-y-6">
         {step === 1 && <StepPersonal form={form} update={update} lang={lang} />}
         {step === 2 && <StepSystem form={form} update={update} lang={lang} />}
-        {step === 3 && <StepDetails form={form} update={update} lang={lang} />}
+        {step === 3 && <StepDetails form={form} update={update} lang={lang} availableClasses={availableClasses} loadingClasses={loadingClasses} />}
         {step === 4 && <StepGuardian form={form} update={update} isPublic={isPublic} lang={lang} />}
-        {step === 5 && <StepReview form={form} goTo={setStep} lang={lang} />}
+        {step === 5 && <StepReview form={form} goTo={setStep} lang={lang} availableClasses={availableClasses} />}
       </div>
 
       {step === 5 && (
@@ -427,7 +445,7 @@ function StepSystem({ form, update, lang }: { form: FormState; update: <K extend
   );
 }
 
-function StepDetails({ form, update, lang }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; lang: "ur" | "en" }) {
+function StepDetails({ form, update, lang, availableClasses, loadingClasses }: { form: FormState; update: <K extends keyof FormState>(k: K, v: FormState[K]) => void; lang: "ur" | "en"; availableClasses: any[]; loadingClasses: boolean }) {
   const t = TEXT[lang];
   const cat = madrassaCategories.find((c) => c.id === form.categoryId);
   const renderMadrassa = (
@@ -450,13 +468,13 @@ function StepDetails({ form, update, lang }: { form: FormState; update: <K exten
       </BilingualLabel>
     </div>
   );
-  const renderSchool = (
+  const renderSchool = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <BilingualLabel urdu={t.schoolClass} english={t.schoolClass} required lang={lang}>
-        <Select value={form.classId} onValueChange={(v) => update("classId", v)}>
-          <SelectTrigger><SelectValue placeholder={t.selectCategory} /></SelectTrigger>
+        <Select value={form.classId} onValueChange={(v) => update("classId", v)} disabled={loadingClasses}>
+          <SelectTrigger><SelectValue placeholder={loadingClasses ? "Loading..." : t.selectCategory} /></SelectTrigger>
           <SelectContent>
-            {schoolClasses.filter((c) => !form.gender || c.gender === form.gender).map((c) => <SelectItem key={c.id} value={c.id}><span className="font-urdu">{c.nameUrdu}</span> · {c.name}</SelectItem>)}
+            {availableClasses.filter((c) => !form.gender || c.gender === form.gender).map((c) => <SelectItem key={c.id} value={c.id}><span className="font-urdu">{c.nameUrdu}</span> · {c.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </BilingualLabel>
@@ -481,7 +499,7 @@ function StepDetails({ form, update, lang }: { form: FormState; update: <K exten
       <CardContent className="space-y-6">
         {(form.system === "madrassa" || form.system === "both") && renderMadrassa}
         {form.system === "both" && <div className="h-px bg-border" />}
-        {(form.system === "school" || form.system === "both") && renderSchool}
+        {(form.system === "school" || form.system === "both") && renderSchool()}
       </CardContent>
     </Card>
   );
@@ -561,11 +579,11 @@ function StepGuardian({ form, update, isPublic, lang }: { form: FormState; updat
   );
 }
 
-function StepReview({ form, goTo, lang }: { form: FormState; goTo: (n: number) => void; lang: "ur" | "en" }) {
-  return <StepReviewInner form={form} goTo={goTo} lang={lang} />;
+function StepReview({ form, goTo, lang, availableClasses }: { form: FormState; goTo: (n: number) => void; lang: "ur" | "en"; availableClasses: { id: string; name: string; nameUrdu: string }[] }) {
+  return <StepReviewInner form={form} goTo={goTo} lang={lang} availableClasses={availableClasses} />;
 }
 
-function StepReviewInner({ form, goTo, lang }: { form: FormState; goTo: (n: number) => void; lang: "ur" | "en" }) {
+function StepReviewInner({ form, goTo, lang, availableClasses }: { form: FormState; goTo: (n: number) => void; lang: "ur" | "en"; availableClasses: { id: string; name: string; nameUrdu: string }[] }) {
   const t = TEXT[lang];
   const row = (label: string, urdu: string, value: string) => (
     <div className="flex justify-between items-start py-2 border-b border-border/50 last:border-0 gap-3">
@@ -578,7 +596,7 @@ function StepReviewInner({ form, goTo, lang }: { form: FormState; goTo: (n: numb
   );
   const cat = madrassaCategories.find((c) => c.id === form.categoryId);
   const sub = cat?.subcategories.find((s) => s.id === form.subcategoryId);
-  const cls = schoolClasses.find((c) => c.id === form.classId);
+  const cls = availableClasses.find((c) => c.id === form.classId);
   return (
     <div className="space-y-4">
       <SectionCard title={t.personal} urdu={t.personal} onEdit={() => goTo(1)} lang={lang}>

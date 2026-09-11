@@ -138,18 +138,23 @@ export async function createSchoolClass(request: Request, input: z.infer<typeof 
 
   const id = uniqueId("class", input.name);
   const displayOrder = await nextSchoolClassOrder();
+  const institutionId = input.institutionId ?? "al_qasim_academy";
+  const [institution] = await db.select().from(institutions).where(eq(institutions.id, institutionId)).limit(1);
+  const section = (institution?.section ?? "").toLowerCase();
+  const gender = section === "banat" || section === "female" ? "female" : "male";
+
   const [created] = await db
     .insert(schoolClasses)
     .values({
       id,
-      institutionId: input.institutionId ?? "al_qasim_academy",
+      institutionId,
       code: input.code ?? null,
       name: input.name,
       nameUrdu: input.nameUrdu,
       level: input.level ?? null,
       govtEquivalent: input.govtEquivalent ?? null,
       fee: input.fee ?? null,
-      gender: null,
+      gender,
       displayOrder,
       active: input.active ?? true,
     })
