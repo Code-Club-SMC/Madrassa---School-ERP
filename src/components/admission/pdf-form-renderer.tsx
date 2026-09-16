@@ -42,7 +42,6 @@ import { CredentialsOverlay } from "@/features/users/credentials-display";
 import type { AdmissionAcceptanceWarning, ParentCreds } from "@/components/students/student-types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { madrassaCategories } from "@/mock";
 
 const TEXT = {
   ur: {
@@ -253,6 +252,19 @@ export function PdfFormRenderer({
     queryKey: ["admission-subcategories", variantSection],
     queryFn: () => getAdmissionSubcategories({ data: { section: variantSection } }),
   });
+
+  const { data: categoriesData } = useQuery({
+    queryKey: ["admission-madrassa-categories"],
+    queryFn: async () => {
+      const response = await fetch(`/api/academic/madrassa/categories`, { credentials: "include" });
+      if (response.status === 401 || response.status === 403) throw new Error("Unauthorized");
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not load categories");
+      return (payload.categories ?? []) as Array<{ id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; subcategories: Array<{ id: string; name: string; nameUrdu: string }> }>;
+    },
+  });
+
+  const madrassaCategoryOptions = (categoriesData ?? []) as Array<{ id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; subcategories: Array<{ id: string; name: string; nameUrdu: string }> }>;
 
   const shobaOptions: GradeSelectOption[] | null = useMemo(() => {
     if (!subcategoryData?.length) return null;
@@ -654,7 +666,7 @@ export function PdfFormRenderer({
       )}
 
       {/* Body per layout */}
-      {variant.layout === "school" && <SchoolFields form={form} set={set} lang={lang} t={t} variant={variant} step={step} cls={cls} loadingCls={loadingCls} />}
+      {variant.layout === "school" && <SchoolFields form={form} set={set} lang={lang} t={t} variant={variant} step={step} cls={cls} loadingCls={loadingCls} madrassaCategoryOptions={madrassaCategoryOptions} />}
       {variant.layout === "madrassa-short" && (
         <MadrassaShortFields
           form={form}
@@ -813,7 +825,7 @@ function MadrassaGradeSelect({
 /* ============================================================
  * School layout — Al-Qasim / Zainab (Shoba School)
  * ============================================================ */
-function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls }: FieldProps & { step?: number; cls: any[]; loadingCls: boolean }) {
+function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls, madrassaCategoryOptions }: FieldProps & { step?: number; cls: any[]; loadingCls: boolean; madrassaCategoryOptions: Array<{ id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; subcategories: Array<{ id: string; name: string; nameUrdu: string }> }> }) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
   return (
@@ -1023,7 +1035,7 @@ function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls }
                   value={val("madrassa_category")}
                   onValueChange={(v) => {
                     set("madrassa_category", v);
-                    set("madrassa_category_name", (madrassaCategories.find((c) => c.id === v)?.nameUrdu || madrassaCategories.find((c) => c.id === v)?.name || ""));
+                    set("madrassa_category_name", (madrassaCategoryOptions.find((c) => c.id === v)?.nameUrdu || madrassaCategoryOptions.find((c) => c.id === v)?.name || ""));
                     set("madrassa_subcategory", "");
                     set("madrassa_subcategory_name", "");
                   }}
@@ -1031,22 +1043,22 @@ function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls }
                   <SelectTrigger id="madrassa_category" className={isRtl ? "font-urdu" : ""}>
                     <SelectValue placeholder={lang === "ur" ? "زمرہ منتخب کریں" : "Select category"} />
                   </SelectTrigger>
-                  <SelectContent>
-                  {madrassaCategories
-                    .filter((c) => {
-                      const hasMatchingSubcategory = c.subcategories.some((s) => {
-                        const rawSection = (s as any).section ?? "";
-                        const sGender = rawSection === "banat" || rawSection === "female" ? "female" : rawSection === "baneen" || rawSection === "male" ? "male" : rawSection;
-                        return sGender === variant.category;
-                      });
-                      return hasMatchingSubcategory;
-                    })
-                    .map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        <span className="font-urdu">{c.nameUrdu || c.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+              <SelectContent>
+                {madrassaCategoryOptions
+                  .filter((c) => {
+                    const hasMatchingSubcategory = c.subcategories.some((s) => {
+                      const rawSection = (s as any).section ?? "";
+                      const sGender = rawSection === "banat" || rawSection === "female" ? "female" : rawSection === "baneen" || rawSection === "male" ? "male" : rawSection;
+                      return sGender === variant.category;
+                    });
+                    return hasMatchingSubcategory;
+                  })
+                  .map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="font-urdu">{c.nameUrdu || c.name}</span>
+                    </SelectItem>
+                  ))}
+              </SelectContent>
                 </Select>
               </BilingualLabel>
               {val("madrassa_category") && (
@@ -1058,7 +1070,7 @@ function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls }
                   <Select
                     value={val("madrassa_subcategory")}
                     onValueChange={(v) => {
-                      const cat = madrassaCategories.find((c) => c.id === val("madrassa_category"));
+                      const cat = madrassaCategoryOptions.find((c) => c.id === val("madrassa_category"));
                       const sub = cat?.subcategories.find((s) => s.id === v);
                       set("madrassa_subcategory", v);
                       set("madrassa_subcategory_name", sub ? (sub.nameUrdu || sub.name) : "");
@@ -1068,7 +1080,7 @@ function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls }
                       <SelectValue placeholder={lang === "ur" ? "کلاس منتخب کریں" : "Select class"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {(madrassaCategories.find((c) => c.id === val("madrassa_category"))?.subcategories ?? []).map((s) => (
+                      {(madrassaCategoryOptions.find((c) => c.id === val("madrassa_category"))?.subcategories ?? []).map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           <span className="font-urdu">{s.nameUrdu || s.name}</span>
                         </SelectItem>

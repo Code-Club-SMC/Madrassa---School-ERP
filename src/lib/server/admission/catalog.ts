@@ -3,7 +3,6 @@ import { db } from "@/db";
 import { programs, schoolClasses, madrassaSubcategories } from "@/db/schema/academic";
 import type { AdmissionVariantKey } from "@/lib/admission-variants";
 import { findMadrassaGrade, getMadrassaGradeById } from "@/lib/madrassa-grade-catalog";
-import { schoolClasses as schoolClassSeed } from "@/mock/classes";
 import { ensureAcademicSeeded } from "@/lib/server/academic/seed";
 import { AdmissionError } from "./errors";
 import type { Section } from "@/types";
@@ -95,7 +94,7 @@ export async function resolveAdmissionTarget(
 
   const schoolClassId = allowsSchoolClass
     ? (override.schoolClassId ??
-      resolveSchoolClassId(form.class || form.admitted_class) ??
+      (await resolveSchoolClassId(form.class || form.admitted_class)) ??
       target.defaultSchoolClassId ??
       null)
     : null;
@@ -189,23 +188,28 @@ export async function getRollPrefix(target: AdmissionTarget) {
   return program?.rollPrefix ?? "ADM";
 }
 
-export function resolveSchoolClassId(value: string | undefined) {
+export async function resolveSchoolClassId(value: string | undefined) {
   const needle = normalize(value);
   if (!needle) return null;
 
-  const exact = schoolClassSeed.find((item) =>
-    normalizedCandidates(item.id, item.name, item.nameUrdu, item.govtEquivalent).some(
-      (candidate) => candidate === needle,
-    ),
-  );
-  if (exact) return exact.id;
+  return db
+    .select({ id: schoolClasses.id, name: schoolClasses.name, nameUrdu: schoolClasses.nameUrdu, govtEquivalent: schoolClasses.govtEquivalent })
+    .from(schoolClasses)
+    .then((rows) => {
+      const exact = rows.find((item) =>
+        normalizedCandidates(item.id, item.name, item.nameUrdu, item.govtEquivalent ?? undefined).some(
+          (candidate) => candidate === needle,
+        ),
+      );
+      if (exact) return exact.id;
 
-  const loose = schoolClassSeed.find((item) =>
-    normalizedCandidates(item.name, item.nameUrdu, item.govtEquivalent).some(
-      (candidate) => candidate.includes(needle) || needle.includes(candidate),
-    ),
-  );
-  return loose?.id ?? null;
+      const loose = rows.find((item) =>
+        normalizedCandidates(item.name, item.nameUrdu, item.govtEquivalent ?? undefined).some(
+          (candidate) => candidate.includes(needle) || needle.includes(candidate),
+        ),
+      );
+      return loose?.id ?? null;
+    });
 }
 
 function variantAllowsSchoolClass(target: VariantTarget) {
