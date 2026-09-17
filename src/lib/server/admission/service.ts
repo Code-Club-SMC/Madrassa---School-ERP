@@ -460,6 +460,39 @@ export async function acceptAdmissionApplication(
         }
       }
 
+      if (target.schoolClassId) {
+        const [schoolClass] = await tx
+          .select({ fee: schoolClasses.fee })
+          .from(schoolClasses)
+          .where(eq(schoolClasses.id, target.schoolClassId))
+          .limit(1);
+
+        if (schoolClass?.fee && schoolClass.fee > 0) {
+          const admissionFeeChargeId = randomUUID();
+          await tx.insert(feeCharges).values({
+            id: admissionFeeChargeId,
+            studentId,
+            enrollmentId,
+            institutionId: target.institutionId,
+            programId: target.programId,
+            schoolClassId: target.schoolClassId,
+            type: "monthly",
+            label: "Monthly Fee",
+            period: activeAcademicYear.name,
+            amountPaisa: schoolClass.fee * 100,
+            dueDate: new Date(),
+            status: "open",
+            notes: "Auto-generated from admission",
+            metadata: {
+              source: "admission",
+              applicationId: id,
+              enrollmentId,
+              rollNo,
+            },
+          });
+        }
+      }
+
       const resolvedGuardianId = await upsertGuardianForStudent(tx, {
         existingGuardianId: guardianId,
         userId: parentUser?.ok ? parentUser.userId : null,

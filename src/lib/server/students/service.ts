@@ -56,6 +56,7 @@ type StudentListRow = {
   schoolClassId: string | null;
   schoolClassName: string | null;
   schoolClassNameUrdu: string | null;
+  schoolClassFee: number | null;
   madrassaCategoryId: string | null;
   madrassaCategoryName: string | null;
   madrassaCategoryNameUrdu: string | null;
@@ -852,6 +853,7 @@ function studentListSelection() {
     schoolClassId: schoolClasses.id,
     schoolClassName: schoolClasses.name,
     schoolClassNameUrdu: schoolClasses.nameUrdu,
+    schoolClassFee: schoolClasses.fee ?? null,
     madrassaCategoryId: madrassaCategories.id,
     madrassaCategoryName: madrassaCategories.name,
     madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
@@ -909,8 +911,8 @@ function toStudentListItem(row: StudentListRow) {
     groupLabel: row.schoolClassNameUrdu ?? row.madrassaSubcategoryNameUrdu ?? row.programNameUrdu,
     groupEnglish: row.schoolClassName ?? row.madrassaSubcategoryName ?? row.programName,
     admissionDate: row.startedAt.toISOString(),
-    monthlyFee: row.madrassaSubcategoryFee ?? 0,
-    monthlyFeePaisa: (row.madrassaSubcategoryFee ?? 0) * 100,
+    monthlyFee: system === "school" ? row.schoolClassFee ?? 0 : row.madrassaSubcategoryFee ?? 0,
+    monthlyFeePaisa: ((system === "school" ? row.schoolClassFee : row.madrassaSubcategoryFee) ?? 0) * 100,
     guardianId: row.guardianId,
     guardianName: row.guardianName ?? "—",
     guardianNameUrdu: row.guardianNameUrdu ?? row.guardianName ?? "—",

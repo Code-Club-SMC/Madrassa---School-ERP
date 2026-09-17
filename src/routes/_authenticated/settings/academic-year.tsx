@@ -198,6 +198,11 @@ function AcademicYearPage() {
       return;
     }
 
+    if (form.endDate <= form.startDate) {
+      toast.error(t("End date must be after start date", "اختتام کی تاریخ آغاز کی تاریخ سے بعد کی ہونی چاہیے"));
+      return;
+    }
+
     createMutation.mutate({
       name: form.name.trim(),
       hijriName: form.hijriName.trim() || null,
@@ -519,6 +524,8 @@ function DatePickerField({
               onSelect={handleSelect}
               captionLayout="dropdown"
               formatters={urduHijriCalendarFormatters}
+              fromYear={1300}
+              toYear={1600}
             />
           ) : (
             <Calendar
@@ -529,6 +536,8 @@ function DatePickerField({
               onSelect={handleSelect}
               captionLayout="dropdown"
               formatters={urduCalendarFormatters}
+              fromYear={1900}
+              toYear={2100}
             />
           )}
         </PopoverContent>

@@ -285,6 +285,9 @@ export function FeeWorkspace({ system }: { system: FeeSystem }) {
                       <p className="truncate font-mono text-[11px] text-muted-foreground">
                         {student.guardianPhone || "No phone"}
                       </p>
+                      <p className="truncate font-mono text-[11px] text-muted-foreground">
+                        {formatPKR(student.monthlyFeePaisa)}
+                      </p>
                       <Button
                         size="sm"
                         className="h-7 gap-1.5 px-3 text-xs"

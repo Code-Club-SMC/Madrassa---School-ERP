@@ -17,6 +17,7 @@ export const Route = createFileRoute("/api/admission/students")({
           const result = await createDirectAdmission(request, body.data);
           return json(result, 201);
         } catch (error) {
+          console.error("ADMISSION_ERROR", error);
           return admissionErrorResponse(error, "Could not create admission");
         }
       },

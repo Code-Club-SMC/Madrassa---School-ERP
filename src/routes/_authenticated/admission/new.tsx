@@ -13,6 +13,7 @@ import { BookLoader } from "@/components/shared/book-loader";
 const searchSchema = z.object({ variant: z.string().optional(), categoryId: z.string().optional() });
 
 export const Route = createFileRoute("/_authenticated/admission/new")({
+  ssr: false,
   validateSearch: searchSchema,
   component: NewAdmissionRoute,
 });

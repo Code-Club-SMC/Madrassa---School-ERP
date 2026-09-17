@@ -30,6 +30,8 @@ export type FeeStudent = {
   groupLabel: string | null;
   guardianName: string | null;
   guardianPhone: string | null;
+  monthlyFee: number;
+  monthlyFeePaisa: number;
   summary: FeeStudentSummary;
 };
 
