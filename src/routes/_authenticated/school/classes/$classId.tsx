@@ -105,8 +105,12 @@ function ClassDetailPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const allowedTeacherSystemScopes = useMemo(() => {
-    return new Set(["school", "both", "all", "qasmia-school", "qasmia-both", "qasmia-madrassa", "madrassa", "zainab-school", "zainab-both", "zainab-madrassa"]);
-  }, []);
+    if (!classData) {
+      return new Set(["school", "all"]);
+    }
+    const prefix = classData.institutionId === "al_qasim_academy" ? "qasmia" : "zainab";
+    return new Set(["school", "all", `${prefix}-school`, `${prefix}-both`]);
+  }, [classData]);
 
   const visibleTeachers = useMemo(() => {
     return teachers.filter((teacher) => allowedTeacherSystemScopes.has(teacher.systemScope));

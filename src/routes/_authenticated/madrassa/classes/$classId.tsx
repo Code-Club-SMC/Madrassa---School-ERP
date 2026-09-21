@@ -128,11 +128,8 @@ function ClassDetailPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const allowedTeacherSystemScopes = useMemo(() => {
-    const section = classSection;
-    if (section === "male") {
-      return new Set(["madrassa", "both", "all", "qasmia-both", "qasmia-madrassa", "qasmia-school", "school"]);
-    }
-    return new Set(["madrassa", "both", "all", "zainab-both", "zainab-madrassa", "zainab-school", "school"]);
+    const prefix = classSection === "female" ? "zainab" : "qasmia";
+    return new Set(["madrassa", "all", `${prefix}-madrassa`, `${prefix}-both`]);
   }, [classSection]);
 
   const visibleTeachers = useMemo(() => {

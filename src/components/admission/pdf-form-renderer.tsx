@@ -632,7 +632,7 @@ export function PdfFormRenderer({
       </Card>
 
       {/* Photo block — only for variants that allow */}
-      {variant.allowPhoto && (
+      {variant.allowPhoto && (+
         <Card>
           <CardContent className="py-6">
             <label className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer flex flex-col items-center gap-2 hover:border-primary/50 transition-colors">

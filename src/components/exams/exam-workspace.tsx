@@ -55,6 +55,7 @@ type ProgramOption = {
 
 type SchoolClassOption = {
   id: string;
+  institutionId: string;
   name: string;
   nameUrdu: string;
   active: boolean;
@@ -112,27 +113,35 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
   }, [system, form.scopeId, options.categories]);
 
   const allowedTeacherSystemScopes = useMemo(() => {
-    const section = scopeSection ?? gender;
-    if (section === "male") {
-      if (system === "madrassa") {
-        return new Set(["madrassa", "both", "all", "qasmia-madrassa", "qasmia-both", "qasmia-school", "school"]);
-      }
-      return new Set(["school", "both", "all", "qasmia-school", "qasmia-both", "qasmia-madrassa", "madrassa"]);
+    const prefix = gender === "male" ? "qasmia" : "zainab";
+
+    if (system === "school") {
+      return new Set(["school", "all", `${prefix}-school`, `${prefix}-both`]);
     }
+
     if (system === "madrassa") {
-      return new Set(["madrassa", "both", "all", "zainab-madrassa", "zainab-both", "zainab-school", "school"]);
+      return new Set(["madrassa", "all", `${prefix}-madrassa`, `${prefix}-both`]);
     }
-    return new Set(["school", "both", "all", "zainab-school", "zainab-both", "zainab-madrassa", "madrassa"]);
-  }, [system, gender, scopeSection]);
+
+    return new Set([
+      "school",
+      "madrassa",
+      "all",
+      `${prefix}-school`,
+      `${prefix}-madrassa`,
+      `${prefix}-both`,
+    ]);
+  }, [system, gender]);
 
   const visibleTeachers = useMemo(() => {
     return teachers.filter((teacher) => allowedTeacherSystemScopes.has(teacher.systemScope));
   }, [teachers, allowedTeacherSystemScopes]);
 
   const loadOptions = useCallback(async () => {
-    const next = await loadAcademicOptions();
+    const institutionId = gender === "male" ? "al_qasim_academy" : "jamia_zainab_banat";
+    const next = await loadAcademicOptions(undefined, institutionId);
     setOptions(next);
-  }, [system]);
+  }, [system, gender]);
 
   const loadTeachers = useCallback(async () => {
     try {
@@ -395,7 +404,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
       const currentSystem = form.examSystem;
       const [examPayload, academicPayload] = await Promise.all([
         listExamSessions(currentSystem, currentSystem === "madrassa" ? gender : undefined),
-        loadAcademicOptions(currentSystem === "madrassa" ? gender : undefined),
+        loadAcademicOptions(currentSystem === "madrassa" ? gender : undefined, undefined),
       ]);
       setExams(examPayload.exams);
       setOptions(academicPayload);
@@ -926,14 +935,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-async function loadAcademicOptions(section?: string): Promise<AcademicOptions> {
+async function loadAcademicOptions(section?: string, institutionId?: string): Promise<AcademicOptions> {
   const categoriesUrl = section
     ? `/api/academic/madrassa/categories?section=${section}`
     : "/api/academic/madrassa/categories";
+  const classesUrl = institutionId
+    ? `/api/academic/school/classes?institutionId=${institutionId}`
+    : "/api/academic/school/classes";
   const [institutionsPayload, programsPayload, classesPayload, categoriesPayload] = await Promise.all([
     requestJson<{ institutions: InstitutionOption[] }>("/api/academic/institutions"),
     requestJson<{ programs: ProgramOption[] }>("/api/academic/programs"),
-    requestJson<{ classes: SchoolClassOption[] }>("/api/academic/school/classes"),
+    requestJson<{ classes: SchoolClassOption[] }>(classesUrl),
     requestJson<{ categories: MadrassaCategoryOption[] }>(categoriesUrl),
   ]);
   return {
