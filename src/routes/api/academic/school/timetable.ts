@@ -20,7 +20,8 @@ export const Route = createFileRoute("/api/academic/school/timetable")({
         }
 
         try {
-          return json({ periods: await listSchoolTimetablePeriods(request, schoolClassId) });
+          const periods = await listSchoolTimetablePeriods(request, schoolClassId);
+          return json({ periods });
         } catch (error) {
           return errorResponse(error, "Could not load school timetable");
         }

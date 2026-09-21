@@ -74,7 +74,7 @@ export async function createSchoolTimetablePeriod(
   request: Request,
   input: z.infer<typeof schoolTimetablePeriodInputSchema>,
 ) {
-  await requirePermission(request, "school_timetable", "create");
+  await requirePermission(request, "school_timetable", "edit");
 
   const id = `tt-${randomUUID().slice(0, 8)}`;
   const displayOrder = await nextSchoolTimetablePeriodOrder(input.schoolClassId);
@@ -126,7 +126,7 @@ export async function updateSchoolTimetablePeriod(
   periodId: string,
   input: Partial<z.infer<typeof schoolTimetablePeriodInputSchema>>,
 ) {
-  await requirePermission(request, "school_timetable", "update");
+  await requirePermission(request, "school_timetable", "edit");
 
   const existing = await db
     .select()
@@ -139,15 +139,16 @@ export async function updateSchoolTimetablePeriod(
   }
 
   const updateData: Record<string, unknown> = { ...input, updatedAt: new Date() };
-  if (input.slots) {
-    const validSubjectIds = input.slots
+  const slots = input.slots;
+  if (slots) {
+    const validSubjectIds = slots
       .map((s) => s.subjectId)
       .filter((id): id is string => id !== null && id !== undefined);
 
     if (validSubjectIds.length > 0) {
       const subjects = await db.select().from(examSubjects).where(inArray(examSubjects.id, validSubjectIds));
       const validSet = new Set(subjects.map((s) => s.id));
-      for (const slot of input.slots) {
+      for (const slot of slots) {
         if (slot.subjectId && !validSet.has(slot.subjectId)) {
           throw new HttpError(`Invalid subject ID: ${slot.subjectId}`, 400);
         }
@@ -157,7 +158,7 @@ export async function updateSchoolTimetablePeriod(
     await db.transaction(async (tx) => {
       await tx.delete(schoolTimetableSlots).where(eq(schoolTimetableSlots.periodId, periodId));
       await tx.insert(schoolTimetableSlots).values(
-        input.slots.map((slot) => ({
+        slots.map((slot) => ({
           id: `tts-${randomUUID().slice(0, 8)}`,
           periodId,
           dayOfWeek: slot.dayOfWeek,

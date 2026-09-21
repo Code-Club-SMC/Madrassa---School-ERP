@@ -85,7 +85,7 @@ function SchoolTimetablePage() {
   });
   const [saving, setSaving] = useState(false);
 
-  const [slotEdit, setSlotEdit] = useState<{ periodId: string; dayOfWeek: number; subjectId: string | null } | null>(null);
+  const [slotEdit, setSlotEdit] = useState<{ periodId: string; dayOfWeek: number; subjectId: string | null; classId: string } | null>(null);
   const [slotSubjectId, setSlotSubjectId] = useState<string | null>(null);
   const [savingSlot, setSavingSlot] = useState(false);
 
@@ -286,12 +286,37 @@ function SchoolTimetablePage() {
     }
   };
 
+  const saveSlot = async () => {
+    if (!slotEdit) return;
+    const period =
+      periods.find((p) => p.id === slotEdit.periodId) ??
+      (slotEdit.classId ? allTimetables[slotEdit.classId]?.find((p) => p.id === slotEdit.periodId) : undefined);
+    if (!period) return;
+    setSavingSlot(true);
+    try {
+      const updatedSlots = period.slots.map((s: TimetablePeriod["slots"][number]) =>
+        s.dayOfWeek === slotEdit.dayOfWeek ? { ...s, subjectId: slotSubjectId } : s,
+      );
+      await updateSchoolTimetablePeriod(period.id, {
+        slots: updatedSlots.map((s: TimetablePeriod["slots"][number]) => ({ dayOfWeek: s.dayOfWeek, subjectId: s.subjectId })),
+      });
+      toast.success(t("Slot updated", "سلٹ اپ ڈیٹ ہو گیا"));
+      setSlotEdit(null);
+      void loadTimetable();
+      void loadAllTimetables();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not update slot");
+    } finally {
+      setSavingSlot(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
       await deleteSchoolTimetablePeriod(deleteTarget.id);
-      toast.success(t("Period deleted", "پیریڈ حذف کر دیا گیا"));
+      toast.success(t("Period deleted", "پیریڈ حذف ہو گیا"));
       setDeleteTarget(null);
       void loadTimetable();
     } catch (error) {
@@ -301,24 +326,9 @@ function SchoolTimetablePage() {
     }
   };
 
-  const saveSlot = async () => {
-    if (!slotEdit || !editingPeriod) return;
-    setSavingSlot(true);
-    try {
-      await updateSchoolTimetablePeriod(editingPeriod.id, {
-        slots: editingPeriod.slots.map((s) =>
-          s.dayOfWeek === slotEdit.dayOfWeek ? { ...s, subjectId: slotSubjectId } : s,
-        ),
-      });
-      toast.success(t("Slot updated", "سلٹ اپ ڈیٹ ہو گیا"));
-      setSlotEdit(null);
-      setSlotSubjectId(null);
-      void loadTimetable();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save slot");
-    } finally {
-      setSavingSlot(false);
-    }
+  const openSlotEdit = (periodId: string, dayOfWeek: number, subjectId: string | null, classId?: string) => {
+    setSlotEdit({ periodId, dayOfWeek, subjectId, classId: classId ?? selectedClassId });
+    setSlotSubjectId(subjectId);
   };
 
   const pageTitle = isUrdu
@@ -339,6 +349,23 @@ function SchoolTimetablePage() {
 
   const currentClass = classes.find((c) => c.id === selectedClassId);
 
+  const getSlotSubject = (period: TimetablePeriod, dayOfWeek: number): ExamSubject | null | undefined => {
+    const slot = period.slots.find((s) => s.dayOfWeek === dayOfWeek);
+    return slot?.subject ?? null;
+  };
+
+  const getPeriodClassId = (period: TimetablePeriod): string => {
+    return period.schoolClassId;
+  };
+
+  const teacherNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const teacher of teachers) {
+      map.set(teacher.id, teacher.name);
+    }
+    return map;
+  }, [teachers]);
+
   return (
     <div>
       <PageHeader
@@ -350,11 +377,18 @@ function SchoolTimetablePage() {
             <Select value={selectedClassId} onValueChange={setSelectedClassId} disabled={loadingClasses || classes.length === 0}>
               <SelectTrigger className="w-[220px]"><SelectValue placeholder={loadingClasses ? "Loading..." : (isUrdu ? "کلاس منتخب کریں" : "Select class")} /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="__all__">{isUrdu ? "تمام کلاسوں" : "All classes"}</SelectItem>
                 {classes.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name} · <span className="font-urdu ms-1">{c.nameUrdu}</span></SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {selectedClassId && selectedClassId !== "__all__" && (
+              <Button size="sm" className="gap-1.5" onClick={openAddPeriod}>
+                <Plus className="h-4 w-4" />
+                {t("Add Timetable", "ٹائم ٹیبل شامل کریں")}
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" />{isUrdu ? "پرنٹ" : "Print"}</Button>
           </div>
         }
@@ -366,12 +400,11 @@ function SchoolTimetablePage() {
             ? "اس شعبے کے لیے کوئی کلاس دستیاب نہیں ہے۔"
             : "No classes available for this section yet."}
         </Card>
-      ) : selectedClassId && periods.length === 0 ? (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground mb-4">{isUrdu ? "اس کلاس کے لیے کوئی پیریڈ نہیں ہے" : "No periods defined for this class yet."}</p>
-          <Button onClick={openAddPeriod} className="gap-1.5"><Plus className="h-4 w-4" />{isUrdu ? "پیریڈ شامل کریں" : "Add Period"}</Button>
+      ) : !selectedClassId || selectedClassId === "__all__" ? (
+        <Card className="p-8 text-center text-muted-foreground">
+          {isUrdu ? "براہ کرم پہلے کلاس منتخب کریں" : "Please select a class to manage its timetable."}
         </Card>
-      ) : selectedClassId ? (
+      ) : periods.length === 0 ? (
         <>
           <Card className="p-4 mb-4 flex items-center justify-between bg-primary/5 border-primary/20">
             <div>
@@ -379,7 +412,7 @@ function SchoolTimetablePage() {
               <p className="text-xs text-muted-foreground">{currentClass?.name} · 6 working days</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" className="gap-1.5" onClick={openAddPeriod}><Plus className="h-4 w-4" />{isUrdu ? "پیریڈ شامل کریں" : "Add Period"}</Button>
+              <Button size="sm" className="gap-1.5" onClick={openAddPeriod}><Plus className="h-4 w-4" />{isUrdu ? "ٹائم ٹیبل شامل کریں" : "Add Timetable"}</Button>
             </div>
           </Card>
 
@@ -394,88 +427,70 @@ function SchoolTimetablePage() {
                       <p className="text-[10px] text-muted-foreground uppercase">{d}</p>
                     </th>
                   ))}
+                  <th className="text-end p-3 w-[80px] font-medium">{isUrdu ? "کارروائیاں" : "Actions"}</th>
                 </tr>
               </thead>
               <tbody>
-                {periods.map((row, i) => (
+                {periods.map((row) => (
                   <tr key={row.id} className="border-b border-border last:border-0">
                     <td className="p-3 align-top">
-                      <div className="flex flex-col gap-1">
-                        <button
-                          type="button"
-                          className="text-start hover:bg-accent/40 rounded-md px-1 py-0.5 -mx-1 transition-colors"
-                          aria-label={isUrdu ? "وقت ترمیم" : "Edit period time"}
-                        >
-                          <p className="font-mono text-xs">{row.timeStart} → {row.timeEnd}</p>
+                      <button
+                        type="button"
+                        onClick={() => openEditPeriod(row)}
+                        className="text-start hover:bg-accent/40 rounded-md px-1 py-0.5 -mx-1 transition-colors w-full"
+                        aria-label={isUrdu ? "وقت ترمیم" : "Edit period time"}
+                      >
+                        <p className="font-mono text-xs">{row.timeStart} → {row.timeEnd}</p>
+                        {isUrdu ? (
                           <p className="font-urdu text-sm text-muted-foreground">{row.labelUrdu}</p>
+                        ) : (
                           <p className="text-[10px] text-muted-foreground uppercase">{row.label}</p>
-                        </button>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => openEditPeriod(row)}
-                          >
-                            <ClipboardList className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive"
-                            onClick={() => setDeleteTarget(row)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
+                        )}
+                      </button>
                     </td>
                     {Array.from({ length: 6 }).map((_, dayIndex) => {
-                      const slot = row.slots.find((s) => s.dayOfWeek === dayIndex);
-                      const subject = slot?.subject;
-                      const muted = row.isBreak;
+                      const subject = getSlotSubject(row, dayIndex);
+                      const isBreak = row.isBreak || (subject === null && row.isBreak);
                       return (
-                        <td key={dayIndex} className="p-2 text-center">
-                          {slotEdit?.periodId === row.id && slotEdit?.dayOfWeek === dayIndex ? (
-                            <div className="flex flex-col gap-1">
-                              <Select value={slotSubjectId ?? ""} onValueChange={setSlotSubjectId}>
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder={isUrdu ? "مضمون" : "Subject"} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {subjects.map((s) => (
-                                    <SelectItem key={s.id} value={s.id}>{s.nameUrdu || s.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="flex gap-1">
-                                <Button size="sm" className="h-7 flex-1 text-xs" onClick={saveSlot} disabled={savingSlot}>
-                                  {isUrdu ? "محفوظ" : "Save"}
-                                </Button>
-                                <Button size="sm" variant="outline" className="h-7 flex-1 text-xs" onClick={() => setSlotEdit(null)}>
-                                  {isUrdu ? "منسوخ" : "Cancel"}
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={muted}
-                              onClick={() => {
-                                setSlotEdit({ periodId: row.id, dayOfWeek: dayIndex, subjectId: slot?.subjectId ?? null });
-                                setSlotSubjectId(slot?.subjectId ?? null);
-                              }}
-                              className={cn(
-                                "w-full rounded-md px-2 py-1.5 text-xs transition-colors",
-                                muted ? "bg-muted/50 text-muted-foreground cursor-not-allowed" : "bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer",
-                              )}
-                            >
-                              {subject ? (subject.nameUrdu || subject.name) : (isUrdu ? "خالی" : "Empty")}
-                            </button>
-                          )}
+                        <td key={dayIndex} className="p-2 text-center align-middle w-[140px]">
+                          <button
+                            type="button"
+                            disabled={isBreak}
+                            onClick={() => openSlotEdit(row.id, dayIndex, subject?.id ?? null, selectedClassId)}
+                            className={cn(
+                              "w-full rounded-md px-2 py-2 text-xs transition-colors flex flex-col items-center justify-center",
+                              isBreak
+                                ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
+                                : "bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer",
+                            )}
+                          >
+                            {subject ? (
+                              <span className="text-center">
+                                <span className="block">{isUrdu ? subject.nameUrdu : subject.name}</span>
+                                {subject.teacherId && (
+                                  <span className="block text-[10px] text-muted-foreground mt-0.5">
+                                    {teacherNameMap.get(subject.teacherId) ?? ""}
+                                  </span>
+                                )}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </button>
                         </td>
                       );
                     })}
+                    <td className="text-end">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => setDeleteTarget(row)}
+                        disabled={deleting}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -483,15 +498,46 @@ function SchoolTimetablePage() {
           </Card>
 
           <Dialog open={periodOpen} onOpenChange={(v) => !v && setPeriodOpen(false)}>
-            <DialogContent className="max-w-sm">
+            <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>{isUrdu ? "پیریڈ شامل کریں / ترمیم کریں" : "Add / Edit Period"}</DialogTitle>
+                <DialogTitle>{editingPeriod ? t("Edit Period", "پیریڈ ترمیم") : t("Add Period", "پیریڈ شامل کریں")}</DialogTitle>
               </DialogHeader>
               <div className="grid gap-3">
-                <div><Label>{isUrdu ? "شروعات کا وقت" : "Start Time"}</Label><Input value={periodForm.timeStart} onChange={(e) => setPeriodForm({ ...periodForm, timeStart: e.target.value })} placeholder="08:00" /></div>
-                <div><Label>{isUrdu ? "اختتام کا وقت" : "End Time"}</Label><Input value={periodForm.timeEnd} onChange={(e) => setPeriodForm({ ...periodForm, timeEnd: e.target.value })} placeholder="08:40" /></div>
-                <div><Label>{isUrdu ? "انگریزی لیبل" : "Label"}</Label><Input value={periodForm.label} onChange={(e) => setPeriodForm({ ...periodForm, label: e.target.value })} placeholder="Period 1" /></div>
-                <div><Label className="font-urdu">اردو لیبل</Label><Input dir="rtl" className="font-urdu" value={periodForm.labelUrdu} onChange={(e) => setPeriodForm({ ...periodForm, labelUrdu: e.target.value })} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <BilingualLabel urdu="شروعات" english="Start Time">
+                    <Input
+                      value={periodForm.timeStart}
+                      onChange={(e) => setPeriodForm({ ...periodForm, timeStart: e.target.value })}
+                      placeholder="07:00"
+                    />
+                  </BilingualLabel>
+                  <BilingualLabel urdu="اختتام" english="End Time">
+                    <Input
+                      value={periodForm.timeEnd}
+                      onChange={(e) => setPeriodForm({ ...periodForm, timeEnd: e.target.value })}
+                      placeholder="08:30"
+                    />
+                  </BilingualLabel>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <BilingualLabel urdu="نام" english="Label">
+                    <Input
+                      value={periodForm.label}
+                      onChange={(e) => setPeriodForm({ ...periodForm, label: e.target.value })}
+                      placeholder="Period 1"
+                    />
+                  </BilingualLabel>
+                  <BilingualLabel urdu="اردو لیبل" english="Urdu Label">
+                    <Input
+                      dir="rtl"
+                      lang="ur"
+                      className="font-urdu"
+                      value={periodForm.labelUrdu}
+                      onChange={(e) => setPeriodForm({ ...periodForm, labelUrdu: e.target.value })}
+                      placeholder="پہلا پیریڈ"
+                    />
+                  </BilingualLabel>
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     id="isBreak"
@@ -499,28 +545,71 @@ function SchoolTimetablePage() {
                     checked={periodForm.isBreak}
                     onChange={(e) => setPeriodForm({ ...periodForm, isBreak: e.target.checked })}
                   />
-                  <Label htmlFor="isBreak">{isUrdu ? "وقفہ" : "Break"}</Label>
+                  <Label htmlFor="isBreak">{t("Break / Prayer slot", "وقفہ / نماز کا سلٹ")}</Label>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setPeriodOpen(false)}>{isUrdu ? "منسوخ" : "Cancel"}</Button>
-                <Button onClick={savePeriod} disabled={saving}>{isUrdu ? "محفوظ" : "Save"}</Button>
+                <Button variant="outline" onClick={() => setPeriodOpen(false)}>
+                  {t("Cancel", "منسوخ کریں")}
+                </Button>
+                <Button onClick={savePeriod} disabled={saving}>
+                  {saving ? t("Saving...", "محفوظ ہو رہا ہے...") : t("Save", "محفوظ کریں")}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
 
-          <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+          <Dialog open={!!slotEdit} onOpenChange={(v) => !v && setSlotEdit(null)}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>{t("Edit Subject", "مضمون ترمیم")}</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-3">
+                <div>
+                  <Label>{t("Subject", "مضمون")}</Label>
+                  <Select value={slotSubjectId ?? "__none"} onValueChange={(v) => setSlotSubjectId(v === "__none" ? null : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("Select subject", "مضمون منتخب کریں")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">{t("None / Break", "خالی / وقفہ")}</SelectItem>
+                      {subjects.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {isUrdu ? s.nameUrdu : s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {subjects.length === 0 && !loadingSubjects && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t("No subjects found for this class.", "اس کلاس کے لیے کوئی مضمون نہیں ملا۔")}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSlotEdit(null)}>
+                  {t("Cancel", "منسوخ کریں")}
+                </Button>
+                <Button onClick={saveSlot} disabled={savingSlot}>
+                  {savingSlot ? t("Saving...", "محفوظ ہو رہا ہے...") : t("Save", "محفوظ کریں")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>{isUrdu ? "پیریڈ حذف کریں" : "Delete Period"}</AlertDialogTitle>
+                <AlertDialogTitle>{t("Delete period?", "پیریڈ حذف کریں؟")}</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {isUrdu ? "کیا آپ واقعی اس پیریڈ کو حذف کرنا چاہتے ہیں؟" : "Are you sure you want to delete this period?"}
+                  {t("This action cannot be undone.", "یہ کارروائی واپس نہیں کی جا سکتی۔")}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>{isUrdu ? "منسوخ" : "Cancel"}</AlertDialogCancel>
+                <AlertDialogCancel disabled={deleting}>{t("Cancel", "منسوخ کریں")}</AlertDialogCancel>
                 <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  {deleting ? (isUrdu ? "حذف ہو رہا ہے..." : "Deleting...") : (isUrdu ? "حذف کریں" : "Delete")}
+                  {deleting ? t("Deleting...", "حذف ہو رہا ہے...") : t("Delete", "حذف کریں")}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
