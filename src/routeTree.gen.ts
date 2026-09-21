@@ -117,6 +117,7 @@ import { Route as ApiAcademicMadrassaCategoriesRouteImport } from './routes/api/
 import { Route as ApiAcademicMadrassaSubcategoriesRouteImport } from './routes/api/academic/madrassa/subcategories'
 import { Route as ApiAcademicMadrassaTimetableRouteImport } from './routes/api/academic/madrassa/timetable'
 import { Route as ApiAcademicSchoolClassesRouteImport } from './routes/api/academic/school/classes'
+import { Route as ApiAcademicSchoolTimetableRouteImport } from './routes/api/academic/school/timetable'
 import { Route as ApiAdmissionApplicationsIdRouteImport } from './routes/api/admission/applications/$id'
 import { Route as ApiAttendanceMadrassaMarkRouteImport } from './routes/api/attendance/madrassa/mark'
 import { Route as ApiAttendanceMadrassaRosterRouteImport } from './routes/api/attendance/madrassa/roster'
@@ -159,6 +160,7 @@ import { Route as ApiAcademicMadrassaCategoriesIdRouteImport } from './routes/ap
 import { Route as ApiAcademicMadrassaTimetableIdRouteImport } from './routes/api/academic/madrassa/timetable/$id'
 import { Route as ApiAcademicMadrassaTimetableStatusRouteImport } from './routes/api/academic/madrassa/timetable/status'
 import { Route as ApiAcademicSchoolClassesClassIdRouteImport } from './routes/api/academic/school/classes/$classId'
+import { Route as ApiAcademicSchoolTimetablePeriodIdRouteImport } from './routes/api/academic/school/timetable/$periodId'
 import { Route as ApiAdmissionApplicationsIdAcceptRouteImport } from './routes/api/admission/applications/$id/accept'
 import { Route as ApiAdmissionApplicationsIdRejectRouteImport } from './routes/api/admission/applications/$id/reject'
 import { Route as ApiAdmissionApplicationsIdStatusRouteImport } from './routes/api/admission/applications/$id/status'
@@ -773,6 +775,12 @@ const ApiAcademicSchoolClassesRoute =
     path: '/api/academic/school/classes',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAcademicSchoolTimetableRoute =
+  ApiAcademicSchoolTimetableRouteImport.update({
+    id: '/api/academic/school/timetable',
+    path: '/api/academic/school/timetable',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAdmissionApplicationsIdRoute =
   ApiAdmissionApplicationsIdRouteImport.update({
     id: '/$id',
@@ -1007,6 +1015,12 @@ const ApiAcademicSchoolClassesClassIdRoute =
     id: '/$classId',
     path: '/$classId',
     getParentRoute: () => ApiAcademicSchoolClassesRoute,
+  } as any)
+const ApiAcademicSchoolTimetablePeriodIdRoute =
+  ApiAcademicSchoolTimetablePeriodIdRouteImport.update({
+    id: '/$periodId',
+    path: '/$periodId',
+    getParentRoute: () => ApiAcademicSchoolTimetableRoute,
   } as any)
 const ApiAdmissionApplicationsIdAcceptRoute =
   ApiAdmissionApplicationsIdAcceptRouteImport.update({
@@ -1248,6 +1262,7 @@ export interface FileRoutesByFullPath {
   '/api/academic/madrassa/subcategories': typeof ApiAcademicMadrassaSubcategoriesRoute
   '/api/academic/madrassa/timetable': typeof ApiAcademicMadrassaTimetableRouteWithChildren
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
+  '/api/academic/school/timetable': typeof ApiAcademicSchoolTimetableRouteWithChildren
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
   '/api/attendance/madrassa/roster': typeof ApiAttendanceMadrassaRosterRoute
@@ -1291,6 +1306,7 @@ export interface FileRoutesByFullPath {
   '/api/academic/madrassa/timetable/$id': typeof ApiAcademicMadrassaTimetableIdRoute
   '/api/academic/madrassa/timetable/status': typeof ApiAcademicMadrassaTimetableStatusRoute
   '/api/academic/school/classes/$classId': typeof ApiAcademicSchoolClassesClassIdRoute
+  '/api/academic/school/timetable/$periodId': typeof ApiAcademicSchoolTimetablePeriodIdRoute
   '/api/admission/applications/$id/accept': typeof ApiAdmissionApplicationsIdAcceptRoute
   '/api/admission/applications/$id/reject': typeof ApiAdmissionApplicationsIdRejectRoute
   '/api/admission/applications/$id/status': typeof ApiAdmissionApplicationsIdStatusRoute
@@ -1412,6 +1428,7 @@ export interface FileRoutesByTo {
   '/api/academic/madrassa/subcategories': typeof ApiAcademicMadrassaSubcategoriesRoute
   '/api/academic/madrassa/timetable': typeof ApiAcademicMadrassaTimetableRouteWithChildren
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
+  '/api/academic/school/timetable': typeof ApiAcademicSchoolTimetableRouteWithChildren
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
   '/api/attendance/madrassa/roster': typeof ApiAttendanceMadrassaRosterRoute
@@ -1455,6 +1472,7 @@ export interface FileRoutesByTo {
   '/api/academic/madrassa/timetable/$id': typeof ApiAcademicMadrassaTimetableIdRoute
   '/api/academic/madrassa/timetable/status': typeof ApiAcademicMadrassaTimetableStatusRoute
   '/api/academic/school/classes/$classId': typeof ApiAcademicSchoolClassesClassIdRoute
+  '/api/academic/school/timetable/$periodId': typeof ApiAcademicSchoolTimetablePeriodIdRoute
   '/api/admission/applications/$id/accept': typeof ApiAdmissionApplicationsIdAcceptRoute
   '/api/admission/applications/$id/reject': typeof ApiAdmissionApplicationsIdRejectRoute
   '/api/admission/applications/$id/status': typeof ApiAdmissionApplicationsIdStatusRoute
@@ -1588,6 +1606,7 @@ export interface FileRoutesById {
   '/api/academic/madrassa/subcategories': typeof ApiAcademicMadrassaSubcategoriesRoute
   '/api/academic/madrassa/timetable': typeof ApiAcademicMadrassaTimetableRouteWithChildren
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
+  '/api/academic/school/timetable': typeof ApiAcademicSchoolTimetableRouteWithChildren
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
   '/api/attendance/madrassa/roster': typeof ApiAttendanceMadrassaRosterRoute
@@ -1631,6 +1650,7 @@ export interface FileRoutesById {
   '/api/academic/madrassa/timetable/$id': typeof ApiAcademicMadrassaTimetableIdRoute
   '/api/academic/madrassa/timetable/status': typeof ApiAcademicMadrassaTimetableStatusRoute
   '/api/academic/school/classes/$classId': typeof ApiAcademicSchoolClassesClassIdRoute
+  '/api/academic/school/timetable/$periodId': typeof ApiAcademicSchoolTimetablePeriodIdRoute
   '/api/admission/applications/$id/accept': typeof ApiAdmissionApplicationsIdAcceptRoute
   '/api/admission/applications/$id/reject': typeof ApiAdmissionApplicationsIdRejectRoute
   '/api/admission/applications/$id/status': typeof ApiAdmissionApplicationsIdStatusRoute
@@ -1764,6 +1784,7 @@ export interface FileRouteTypes {
     | '/api/academic/madrassa/subcategories'
     | '/api/academic/madrassa/timetable'
     | '/api/academic/school/classes'
+    | '/api/academic/school/timetable'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
     | '/api/attendance/madrassa/roster'
@@ -1807,6 +1828,7 @@ export interface FileRouteTypes {
     | '/api/academic/madrassa/timetable/$id'
     | '/api/academic/madrassa/timetable/status'
     | '/api/academic/school/classes/$classId'
+    | '/api/academic/school/timetable/$periodId'
     | '/api/admission/applications/$id/accept'
     | '/api/admission/applications/$id/reject'
     | '/api/admission/applications/$id/status'
@@ -1928,6 +1950,7 @@ export interface FileRouteTypes {
     | '/api/academic/madrassa/subcategories'
     | '/api/academic/madrassa/timetable'
     | '/api/academic/school/classes'
+    | '/api/academic/school/timetable'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
     | '/api/attendance/madrassa/roster'
@@ -1971,6 +1994,7 @@ export interface FileRouteTypes {
     | '/api/academic/madrassa/timetable/$id'
     | '/api/academic/madrassa/timetable/status'
     | '/api/academic/school/classes/$classId'
+    | '/api/academic/school/timetable/$periodId'
     | '/api/admission/applications/$id/accept'
     | '/api/admission/applications/$id/reject'
     | '/api/admission/applications/$id/status'
@@ -2103,6 +2127,7 @@ export interface FileRouteTypes {
     | '/api/academic/madrassa/subcategories'
     | '/api/academic/madrassa/timetable'
     | '/api/academic/school/classes'
+    | '/api/academic/school/timetable'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
     | '/api/attendance/madrassa/roster'
@@ -2146,6 +2171,7 @@ export interface FileRouteTypes {
     | '/api/academic/madrassa/timetable/$id'
     | '/api/academic/madrassa/timetable/status'
     | '/api/academic/school/classes/$classId'
+    | '/api/academic/school/timetable/$periodId'
     | '/api/admission/applications/$id/accept'
     | '/api/admission/applications/$id/reject'
     | '/api/admission/applications/$id/status'
@@ -2210,6 +2236,7 @@ export interface RootRouteChildren {
   ApiAcademicMadrassaSubcategoriesRoute: typeof ApiAcademicMadrassaSubcategoriesRoute
   ApiAcademicMadrassaTimetableRoute: typeof ApiAcademicMadrassaTimetableRouteWithChildren
   ApiAcademicSchoolClassesRoute: typeof ApiAcademicSchoolClassesRouteWithChildren
+  ApiAcademicSchoolTimetableRoute: typeof ApiAcademicSchoolTimetableRouteWithChildren
   ApiAttendanceMadrassaMarkRoute: typeof ApiAttendanceMadrassaMarkRoute
   ApiAttendanceMadrassaRosterRoute: typeof ApiAttendanceMadrassaRosterRoute
   ApiAttendanceReportsDailySummaryRoute: typeof ApiAttendanceReportsDailySummaryRoute
@@ -2991,6 +3018,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAcademicSchoolClassesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/academic/school/timetable': {
+      id: '/api/academic/school/timetable'
+      path: '/api/academic/school/timetable'
+      fullPath: '/api/academic/school/timetable'
+      preLoaderRoute: typeof ApiAcademicSchoolTimetableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admission/applications/$id': {
       id: '/api/admission/applications/$id'
       path: '/$id'
@@ -3284,6 +3318,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/academic/school/classes/$classId'
       preLoaderRoute: typeof ApiAcademicSchoolClassesClassIdRouteImport
       parentRoute: typeof ApiAcademicSchoolClassesRoute
+    }
+    '/api/academic/school/timetable/$periodId': {
+      id: '/api/academic/school/timetable/$periodId'
+      path: '/$periodId'
+      fullPath: '/api/academic/school/timetable/$periodId'
+      preLoaderRoute: typeof ApiAcademicSchoolTimetablePeriodIdRouteImport
+      parentRoute: typeof ApiAcademicSchoolTimetableRoute
     }
     '/api/admission/applications/$id/accept': {
       id: '/api/admission/applications/$id/accept'
@@ -4119,6 +4160,21 @@ const ApiAcademicSchoolClassesRouteWithChildren =
     ApiAcademicSchoolClassesRouteChildren,
   )
 
+interface ApiAcademicSchoolTimetableRouteChildren {
+  ApiAcademicSchoolTimetablePeriodIdRoute: typeof ApiAcademicSchoolTimetablePeriodIdRoute
+}
+
+const ApiAcademicSchoolTimetableRouteChildren: ApiAcademicSchoolTimetableRouteChildren =
+  {
+    ApiAcademicSchoolTimetablePeriodIdRoute:
+      ApiAcademicSchoolTimetablePeriodIdRoute,
+  }
+
+const ApiAcademicSchoolTimetableRouteWithChildren =
+  ApiAcademicSchoolTimetableRoute._addFileChildren(
+    ApiAcademicSchoolTimetableRouteChildren,
+  )
+
 interface ApiPromotionsRunsIdRouteChildren {
   ApiPromotionsRunsIdApplyRoute: typeof ApiPromotionsRunsIdApplyRoute
 }
@@ -4169,6 +4225,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAcademicMadrassaTimetableRoute:
     ApiAcademicMadrassaTimetableRouteWithChildren,
   ApiAcademicSchoolClassesRoute: ApiAcademicSchoolClassesRouteWithChildren,
+  ApiAcademicSchoolTimetableRoute: ApiAcademicSchoolTimetableRouteWithChildren,
   ApiAttendanceMadrassaMarkRoute: ApiAttendanceMadrassaMarkRoute,
   ApiAttendanceMadrassaRosterRoute: ApiAttendanceMadrassaRosterRoute,
   ApiAttendanceReportsDailySummaryRoute: ApiAttendanceReportsDailySummaryRoute,

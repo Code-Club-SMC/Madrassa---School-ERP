@@ -263,3 +263,42 @@ export function deleteTimetablePeriod(id: string) {
     method: "DELETE",
   });
 }
+
+export function listSchoolTimetablePeriods(schoolClassId: string) {
+  return requestJson<{ periods: TimetablePeriod[] }>(`/api/academic/school/timetable?schoolClassId=${schoolClassId}`);
+}
+
+export function createSchoolTimetablePeriod(input: {
+  schoolClassId: string;
+  timeStart: string;
+  timeEnd: string;
+  label: string;
+  labelUrdu: string;
+  isBreak?: boolean;
+  slots: Array<{ dayOfWeek: number; subjectId: string | null }>;
+}) {
+  return requestJson<{ period: TimetablePeriod }>("/api/academic/school/timetable", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateSchoolTimetablePeriod(id: string, input: {
+  timeStart?: string;
+  timeEnd?: string;
+  label?: string;
+  labelUrdu?: string;
+  isBreak?: boolean;
+  slots?: Array<{ dayOfWeek: number; subjectId: string | null }>;
+}) {
+  return requestJson<{ period: TimetablePeriod }>(`/api/academic/school/timetable/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteSchoolTimetablePeriod(id: string) {
+  return requestJson<{ success: true }>(`/api/academic/school/timetable/${id}`, {
+    method: "DELETE",
+  });
+}
