@@ -50,12 +50,25 @@ export function ExamSeatingWorkspace({ examId, system }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [planPayload, hallPayload] = await Promise.all([getSeatingPlan(examId), listExamHalls(system)]);
-      setPayload(planPayload);
-      setHalls(hallPayload.halls);
-      setActiveHallId((current) => current || planPayload.plan?.halls[0]?.id || hallPayload.halls[0]?.id || "");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load seating");
+      const [planResult, hallResult] = await Promise.allSettled([getSeatingPlan(examId), listExamHalls(system)]);
+
+      if (planResult.status === "fulfilled") {
+        setPayload(planResult.value);
+      } else {
+        toast.error(planResult.reason instanceof Error ? planResult.reason.message : "Could not load seating plan");
+      }
+
+      if (hallResult.status === "fulfilled") {
+        setHalls(hallResult.value.halls);
+      } else {
+        toast.error(hallResult.reason instanceof Error ? hallResult.reason.message : "Could not load exam halls");
+      }
+
+      setActiveHallId((current) => {
+        const plan = planResult.status === "fulfilled" ? planResult.value : null;
+        const halls = hallResult.status === "fulfilled" ? hallResult.value.halls : [];
+        return current || plan?.plan?.halls[0]?.id || halls[0]?.id || "";
+      });
     } finally {
       setLoading(false);
     }

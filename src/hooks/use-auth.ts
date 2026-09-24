@@ -12,7 +12,12 @@ export function useAuth() {
 
   const getUser = useCallback(async () => {
     try {
-      const response = await getUserServer();
+      const response = await Promise.race([
+        getUserServer(),
+        new Promise<Response>((_, reject) =>
+          setTimeout(() => reject(new Error("Session check timed out")), 8000),
+        ),
+      ]);
       const data = await response.json();
       const user = data.user ? { ...data.user, role: data.user.role as UserRole } : null;
       setState({ user, isLoading: false });

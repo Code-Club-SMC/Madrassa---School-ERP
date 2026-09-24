@@ -3,7 +3,7 @@ import { admin, username } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { db } from "@/db";
-import { account, session, user } from "@/db/schema/auth";
+import { account, session, user, verification } from "@/db/schema/auth";
 import { authAc, authAdminRoles, authRoles } from "@/lib/auth-permissions";
 
 function trustedOrigins() {
@@ -23,7 +23,7 @@ function trustedOrigins() {
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
-    schema: { user, account, session },
+    schema: { user, account, session, verification },
   }),
   trustedOrigins,
   emailAndPassword: {

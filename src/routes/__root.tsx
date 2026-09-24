@@ -1,3 +1,5 @@
+"use client";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -104,6 +106,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<RootContext>()({
+  ssr: false,
   beforeLoad: async (ctx: any) => {
     let cookie = typeof ctx?.request?.headers?.get === 'function' ? ctx.request.headers.get("cookie") : null;
     if (!cookie && typeof document !== "undefined") {

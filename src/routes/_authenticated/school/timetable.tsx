@@ -127,7 +127,7 @@ function SchoolTimetablePage() {
   }, [selectedClassId]);
 
   const loadAllTimetables = useCallback(async () => {
-    if (!selectedClassId || selectedClassId === "__all__") {
+    if (!classes.length) {
       setAllTimetables({});
       return;
     }
@@ -153,7 +153,7 @@ function SchoolTimetablePage() {
     } finally {
       setLoadingTimetable(false);
     }
-  }, [selectedClassId, classes]);
+  }, [classes]);
 
   const loadSubjects = useCallback(async () => {
     if (!selectedClassId || selectedClassId === "__all__") {
@@ -279,6 +279,7 @@ function SchoolTimetablePage() {
       }
       setPeriodOpen(false);
       void loadTimetable();
+      void loadAllTimetables();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save period");
     } finally {
@@ -319,6 +320,7 @@ function SchoolTimetablePage() {
       toast.success(t("Period deleted", "پیریڈ حذف ہو گیا"));
       setDeleteTarget(null);
       void loadTimetable();
+      void loadAllTimetables();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not delete period");
     } finally {
@@ -386,7 +388,9 @@ function SchoolTimetablePage() {
             {selectedClassId && selectedClassId !== "__all__" && (
               <Button size="sm" className="gap-1.5" onClick={openAddPeriod}>
                 <Plus className="h-4 w-4" />
-                {t("Add Timetable", "ٹائم ٹیبل شامل کریں")}
+                {periods.length > 0
+                  ? (isUrdu ? "پیریڈ شامل کریں" : "Add Period")
+                  : (isUrdu ? "ٹائم ٹیبل شامل کریں" : "Add Timetable")}
               </Button>
             )}
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}><Printer className="h-3.5 w-3.5" />{isUrdu ? "پرنٹ" : "Print"}</Button>
@@ -404,7 +408,7 @@ function SchoolTimetablePage() {
         <Card className="p-8 text-center text-muted-foreground">
           {isUrdu ? "براہ کرم پہلے کلاس منتخب کریں" : "Please select a class to manage its timetable."}
         </Card>
-      ) : periods.length === 0 ? (
+      ) : (
         <>
           <Card className="p-4 mb-4 flex items-center justify-between bg-primary/5 border-primary/20">
             <div>
@@ -412,90 +416,124 @@ function SchoolTimetablePage() {
               <p className="text-xs text-muted-foreground">{currentClass?.name} · 6 working days</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" className="gap-1.5" onClick={openAddPeriod}><Plus className="h-4 w-4" />{isUrdu ? "ٹائم ٹیبل شامل کریں" : "Add Timetable"}</Button>
+              <Badge variant={periods.length > 0 ? "secondary" : "outline"}>
+                {periods.length > 0
+                  ? (isUrdu ? "ٹائم ٹیبل تیار" : "Timetable designed")
+                  : (isUrdu ? "ٹائم ٹیبل نہیں" : "No timetable")}
+              </Badge>
+              <p className="text-xs text-muted-foreground font-mono">
+                {periods.length} {isUrdu ? "پیریڈز" : "periods"}
+              </p>
             </div>
           </Card>
 
           <Card className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-muted/40 border-b border-border">
-                  <th className="text-start p-3 w-[170px] font-medium">{isUrdu ? "پیریڈ" : "Period"}</th>
-                  {DAYS_EN.map((d, i) => (
-                    <th key={d} className="text-center p-3 font-medium">
-                      <p className="font-urdu text-base leading-tight">{DAYS_URDU[i]}</p>
-                      <p className="text-[10px] text-muted-foreground uppercase">{d}</p>
-                    </th>
-                  ))}
-                  <th className="text-end p-3 w-[80px] font-medium">{isUrdu ? "کارروائیاں" : "Actions"}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {periods.map((row) => (
-                  <tr key={row.id} className="border-b border-border last:border-0">
-                    <td className="p-3 align-top">
-                      <button
-                        type="button"
-                        onClick={() => openEditPeriod(row)}
-                        className="text-start hover:bg-accent/40 rounded-md px-1 py-0.5 -mx-1 transition-colors w-full"
-                        aria-label={isUrdu ? "وقت ترمیم" : "Edit period time"}
-                      >
-                        <p className="font-mono text-xs">{row.timeStart} → {row.timeEnd}</p>
-                        {isUrdu ? (
-                          <p className="font-urdu text-sm text-muted-foreground">{row.labelUrdu}</p>
-                        ) : (
-                          <p className="text-[10px] text-muted-foreground uppercase">{row.label}</p>
-                        )}
-                      </button>
-                    </td>
-                    {Array.from({ length: 6 }).map((_, dayIndex) => {
-                      const subject = getSlotSubject(row, dayIndex);
-                      const isBreak = row.isBreak || (subject === null && row.isBreak);
-                      return (
-                        <td key={dayIndex} className="p-2 text-center align-middle w-[140px]">
-                          <button
-                            type="button"
-                            disabled={isBreak}
-                            onClick={() => openSlotEdit(row.id, dayIndex, subject?.id ?? null, selectedClassId)}
-                            className={cn(
-                              "w-full rounded-md px-2 py-2 text-xs transition-colors flex flex-col items-center justify-center",
-                              isBreak
-                                ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
-                                : "bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer",
-                            )}
-                          >
-                            {subject ? (
-                              <span className="text-center">
-                                <span className="block">{isUrdu ? subject.nameUrdu : subject.name}</span>
-                                {subject.teacherId && (
-                                  <span className="block text-[10px] text-muted-foreground mt-0.5">
-                                    {teacherNameMap.get(subject.teacherId) ?? ""}
-                                  </span>
-                                )}
-                              </span>
-                            ) : (
-                              "—"
-                            )}
-                          </button>
-                        </td>
-                      );
-                    })}
-                    <td className="text-end">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => setDeleteTarget(row)}
-                        disabled={deleting}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/40 border-b border-border">
+                  <TableHead className="text-start p-3 w-[170px] font-medium">
+                    {isUrdu ? "پیریڈ" : "Period"}
+                  </TableHead>
+                  {isUrdu
+                    ? DAYS_URDU.map((d, i) => (
+                        <TableHead key={d} className="text-center p-3 w-[140px] font-medium">
+                          <p className="font-urdu text-base leading-tight">{d}</p>
+                        </TableHead>
+                      ))
+                    : DAYS_EN.map((d, i) => (
+                        <TableHead key={d} className="text-center p-3 w-[140px] font-medium">
+                          <p className="text-[10px] text-muted-foreground uppercase">{d}</p>
+                        </TableHead>
+                      ))}
+                  <TableHead className="text-end p-3 w-[80px] font-medium">
+                    {isUrdu ? "کارروائیاں" : "Actions"}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loadingTimetable ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-muted-foreground text-center py-8">
+                      {isUrdu ? "ٹائم ٹیبل لوڈ ہو رہا ہے..." : "Loading timetable..."}
+                    </TableCell>
+                  </TableRow>
+                ) : periods.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-muted-foreground text-center py-8">
+                      {isUrdu
+                        ? "کوئی پیریڈ نہیں۔ شروع کرنے کے لیے 'پیریڈ شامل کریں' پر کلک کریں۔"
+                        : "No periods designed. Click Add Period to begin."}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  periods.map((row) => (
+                    <TableRow key={row.id} className="border-b border-border last:border-0">
+                      <TableCell className="p-3 align-top">
+                        <button
+                          type="button"
+                          onClick={() => openEditPeriod(row)}
+                          className="text-start hover:bg-accent/40 rounded-md px-1 py-0.5 -mx-1 transition-colors w-full"
+                          aria-label={isUrdu ? "وقت ترمیم" : "Edit period time"}
+                        >
+                          <p className="font-mono text-xs">{row.timeStart} → {row.timeEnd}</p>
+                          {isUrdu ? (
+                            <p className="font-urdu text-sm text-muted-foreground">{row.labelUrdu}</p>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground uppercase">{row.label}</p>
+                          )}
+                        </button>
+                      </TableCell>
+                      {Array.from({ length: 6 }).map((_, dayIndex) => {
+                        const subject = getSlotSubject(row, dayIndex);
+                        const isBreak = row.isBreak || (subject === null && row.isBreak);
+                        return (
+                          <TableCell key={dayIndex} className="p-2 text-center align-middle w-[140px]">
+                            <button
+                              type="button"
+                              disabled={isBreak}
+                              onClick={() => openSlotEdit(row.id, dayIndex, subject?.id ?? null, selectedClassId)}
+                              className={cn(
+                                "w-full rounded-md px-2 py-2 text-xs transition-colors flex flex-col items-center justify-center",
+                                isBreak
+                                  ? "bg-muted/50 text-muted-foreground cursor-not-allowed"
+                                  : "bg-primary/10 text-primary font-medium hover:bg-primary/20 cursor-pointer",
+                              )}
+                            >
+                              {subject ? (
+                                <span className="text-center">
+                                  <span className="block">{isUrdu ? subject.nameUrdu : subject.name}</span>
+                                  {subject.teacherId && (
+                                    <span className="block text-[10px] text-muted-foreground mt-0.5">
+                                      {teacherNameMap.get(subject.teacherId) ?? ""}
+                                    </span>
+                                  )}
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </button>
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell className="text-end">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => setDeleteTarget(row)}
+                          disabled={deleting}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </Card>
+        </>
+      )}
 
           <Dialog open={periodOpen} onOpenChange={(v) => !v && setPeriodOpen(false)}>
             <DialogContent className="max-w-md">
@@ -614,8 +652,6 @@ function SchoolTimetablePage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </>
-      ) : null}
     </div>
   );
 }
