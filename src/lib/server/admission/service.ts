@@ -14,7 +14,7 @@ import {
 import { user as authUser } from "@/db/schema/auth";
 import { feeCharges } from "@/db/schema/finance";
 import type { AcademicYearSystem } from "@/db/schema/academic-years";
-import { auth } from "@/lib/auth";
+import { createUser, deleteUser } from "@/lib/server/auth/users";
 import { generateSecurePassword } from "@/lib/generate-password";
 import { getActiveAcademicYear } from "@/lib/server/academic-years/service";
 import { ensureAcademicSeeded } from "@/lib/server/academic/seed";
@@ -750,27 +750,26 @@ async function maybeCreateParentAccount(
   try {
     identity = await createUniqueParentLoginIdentity(parentLoginName);
     const password = input.parentPassword ?? generateSecurePassword(12);
-    const result = await (auth as any).api.createUser({
-      body: {
-        name: application.guardianName,
-        email: identity.email,
-        password,
-        role: "parent",
-        data: {
-          username: identity.username,
-          displayUsername: identity.username,
-          status: "active",
-          systemAccess: "both",
-          mustChangePassword: true,
-        },
+    const createdUserId = await createUser({
+      name: application.guardianName,
+      email: identity.email,
+      username: identity.username,
+      password,
+      role: "parent",
+      data: {
+        username: identity.username,
+        displayUsername: identity.username,
+        status: "active",
+        systemAccess: "both",
+        mustChangePassword: true,
       },
     });
 
-    if (!result?.user?.id) throw new Error("Better Auth did not return a user id");
+    if (!createdUserId.id) throw new Error("User creation did not return an id");
 
     return {
       ok: true as const,
-      userId: result.user.id,
+      userId: createdUserId.id,
       email: identity.email,
       credentials: {
         nameUrdu: application.guardianNameUrdu ?? application.guardianName,
@@ -792,8 +791,7 @@ async function maybeCreateParentAccount(
 
 async function cleanupParentAccount(userId: string) {
   try {
-    const ctx = await (auth as any).$context;
-    await ctx.internalAdapter.deleteUser(userId);
+    await deleteUser(userId);
   } catch {
     // Best-effort cleanup only. The event log still shows the accepted admission context.
   }

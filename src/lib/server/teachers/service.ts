@@ -21,7 +21,7 @@ import {
   teacherTimetablePeriods,
 } from "@/db/schema/teachers";
 import { madrassaTimetablePeriods, madrassaTimetableSlots } from "@/db/schema/timetable";
-import { auth } from "@/lib/auth";
+import { createUser, deleteUser } from "@/lib/server/auth/users";
 import { generateSecurePassword } from "@/lib/generate-password";
 import { ROLE_DEFAULTS } from "@/lib/permissions/role-defaults";
 import { requirePermission } from "@/lib/server/authz";
@@ -147,34 +147,33 @@ export async function createTeacher(request: Request, input: z.infer<typeof crea
 
   const profileId = randomUUID();
   const password = input.password ?? generateSecurePassword(12);
-  const result = await (auth as any).api.createUser({
-    body: {
-      name: input.name,
-      email: input.email,
-      password,
-      role: "teacher",
-      data: {
-        nameUrdu: input.nameUrdu,
-        phone: input.phone,
-        cnic: input.cnic,
-        status: "active",
-        systemAccess: input.systemScope === "all" ? "both" : ["school", "madrassa"].includes(input.systemScope) ? input.systemScope : "both",
-        mustChangePassword: true,
-        linkedTeacherId: profileId,
-        permissions: ROLE_DEFAULTS.teacher,
-        department: "Teaching",
-        designation: input.designation,
-      },
+  const createdUserId = await createUser({
+    name: input.name,
+    email: input.email,
+    username: input.email,
+    password,
+    role: "teacher",
+    data: {
+      nameUrdu: input.nameUrdu,
+      phone: input.phone,
+      cnic: input.cnic,
+      status: "active",
+      systemAccess: input.systemScope === "all" ? "both" : ["school", "madrassa"].includes(input.systemScope) ? input.systemScope : "both",
+      mustChangePassword: true,
+      linkedTeacherId: profileId,
+      permissions: ROLE_DEFAULTS.teacher,
+      department: "Teaching",
+      designation: input.designation,
     },
   });
 
-  if (!result?.user?.id) throw new HttpError("Better Auth did not return a user id", 500);
+  if (!createdUserId.id) throw new HttpError("User creation did not return an id", 500);
 
   try {
     await db.transaction(async (tx) => {
       await tx.insert(teacherProfiles).values({
         id: profileId,
-        userId: result.user.id,
+        userId: createdUserId.id,
         systemScope: input.systemScope,
         gender: input.gender,
         designation: input.designation,
@@ -195,10 +194,10 @@ export async function createTeacher(request: Request, input: z.infer<typeof crea
       await tx
         .update(authUser)
         .set({ linkedTeacherId: profileId, updatedAt: new Date() })
-        .where(eq(authUser.id, result.user.id));
+        .where(eq(authUser.id, createdUserId.id));
     });
   } catch (error) {
-    await cleanupAuthUser(result.user.id);
+    await cleanupAuthUser(createdUserId.id);
     throw error;
   }
 
@@ -894,8 +893,7 @@ async function assertNoTimetableConflict(
 
 async function cleanupAuthUser(userId: string) {
   try {
-    const ctx = await (auth as any).$context;
-    await ctx.internalAdapter.deleteUser(userId);
+    await deleteUser(userId);
   } catch {
     // Best-effort cleanup; preserve the original profile creation failure.
   }

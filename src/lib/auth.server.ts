@@ -3,9 +3,11 @@ import { db } from "@/db";
 import { user, account } from "@/db/schema/auth";
 import { eq, or } from "drizzle-orm";
 import { z } from "zod";
-import { verifyPassword } from "@better-auth/utils/password";
+import { verifyPassword } from "@/lib/server/password";
 import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server";
+import { createHmac } from "node:crypto";
 
+const SESSION_SECRET = process.env.SESSION_SECRET;
 const SESSION_COOKIE = "msmis_session";
 
 type SessionPayload = {
@@ -37,7 +39,21 @@ function createSessionToken(foundUser: typeof user.$inferSelect) {
     designation: foundUser.designation ?? undefined,
   };
 
-  return Buffer.from(JSON.stringify(payload)).toString("base64");
+  const base64 = Buffer.from(JSON.stringify(payload)).toString("base64");
+  const signature = createHmac("sha256", SESSION_SECRET!).update(base64).digest("base64");
+  return `${base64}.${signature}`;
+}
+
+function parseSessionToken(token: string): SessionPayload | null {
+  const [base64, signature] = token.split(".");
+  if (!base64 || !signature) return null;
+  const expected = createHmac("sha256", SESSION_SECRET!).update(base64).digest("base64");
+  if (signature !== expected) return null;
+  try {
+    return JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
+  } catch {
+    return null;
+  }
 }
 
 function userResponse(foundUser: typeof user.$inferSelect) {
@@ -120,24 +136,24 @@ export const getUserServer = createServerFn({ method: "GET" }).handler(async () 
     });
   }
 
-  try {
-    const payload = JSON.parse(Buffer.from(sessionCookie, "base64").toString("utf-8"));
-    const [foundUser] = await db.select().from(user).where(eq(user.id, payload.userId)).limit(1);
-    if (!foundUser) {
-      return new Response(JSON.stringify({ user: null }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ user: userResponse(foundUser) }), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    });
-  } catch {
+  const payload = parseSessionToken(sessionCookie);
+  if (!payload) {
     return new Response(JSON.stringify({ user: null }), {
       status: 200,
       headers: { "content-type": "application/json" },
     });
   }
+
+  const [foundUser] = await db.select().from(user).where(eq(user.id, payload.userId)).limit(1);
+  if (!foundUser) {
+    return new Response(JSON.stringify({ user: null }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  return new Response(JSON.stringify({ user: userResponse(foundUser) }), {
+    status: 200,
+    headers: { "content-type": "application/json" },
+  });
 });

@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { user, account } from "@/db/schema/auth";
 import { eq, sql } from "drizzle-orm";
-import { hashPassword } from "@better-auth/utils/password";
+import { hashPassword } from "@/lib/server/password";
 
 const DEFAULT_ADMIN = {
   name: "Super Admin",

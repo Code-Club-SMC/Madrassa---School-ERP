@@ -21,25 +21,6 @@ services:
       timeout: 5s
       retries: 5
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: msmis-app
-    restart: unless-stopped
-
-    ports:
-      - "3000:3000"
-
-    environment:
-      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/msmis"
-      BETTER_AUTH_SECRET: "change-me"
-      PORT: "3000"
-      NODE_ENV: "production"
-
-    depends_on:
-      postgres:
-        condition: service_healthy
 
 volumes:
   postgres-data:

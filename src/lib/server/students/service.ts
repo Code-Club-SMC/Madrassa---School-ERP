@@ -19,7 +19,7 @@ import {
   studentSiblings,
   students,
 } from "@/db/schema/students";
-import { auth } from "@/lib/auth";
+import { createUser, deleteUser } from "@/lib/server/auth/users";
 import { generateSecurePassword } from "@/lib/generate-password";
 import { requireEditableAcademicYearId } from "@/lib/server/academic-years/service";
 import { createUniqueParentLoginIdentity } from "@/lib/server/auth/parent-login";
@@ -759,27 +759,26 @@ export async function retryGuardianParentAccount(
   try {
     identity = await createUniqueParentLoginIdentity(guardian.name);
     const password = input.password ?? generateSecurePassword(12);
-    const result = await (auth as any).api.createUser({
-      body: {
-        name: guardian.name,
-        email: identity.email,
-        password,
-        role: "parent",
-        data: {
-          username: identity.username,
-          displayUsername: identity.username,
-          status: "active",
-          systemAccess: "both",
-          mustChangePassword: true,
-        },
+    const createdUserId = await createUser({
+      name: guardian.name,
+      email: identity.email,
+      username: identity.username,
+      password,
+      role: "parent",
+      data: {
+        username: identity.username,
+        displayUsername: identity.username,
+        status: "active",
+        systemAccess: "both",
+        mustChangePassword: true,
       },
     });
 
-    if (!result?.user?.id) throw new Error("Better Auth did not return a user id");
+    if (!createdUserId.id) throw new Error("User creation did not return an id");
 
     await db
       .update(guardians)
-      .set({ userId: result.user.id, updatedAt: new Date() })
+      .set({ userId: createdUserId.id, updatedAt: new Date() })
       .where(eq(guardians.id, guardianId));
     await insertStudentEvent(db, {
       studentId,
@@ -787,7 +786,7 @@ export async function retryGuardianParentAccount(
       type: "parent_account_created",
       message: "Parent login created after retry",
       metadata: {
-        userId: result.user.id,
+        userId: createdUserId.id,
         username: identity.username,
         guardianId,
         source: "student_profile_retry",
