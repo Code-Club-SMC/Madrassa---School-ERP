@@ -1,3 +1,5 @@
+import { HttpError } from "@/lib/server/http";
+
 export class AdmissionError extends Error {
   constructor(
     message: string,
@@ -12,6 +14,14 @@ export function admissionErrorResponse(error: unknown, fallback = "Admission req
   if (error instanceof AdmissionError) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: error.status,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  const httpError = error instanceof HttpError ? error : null;
+  if (httpError) {
+    return new Response(JSON.stringify({ error: httpError.message }), {
+      status: httpError.status,
       headers: { "content-type": "application/json" },
     });
   }

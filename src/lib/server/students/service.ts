@@ -179,11 +179,12 @@ export async function listStudents(
   await requirePermission(request, moduleForSystem(query.system), "view");
 
   const clauses = [
-    query.system === "madrassa"
-      ? eq(programs.system, "madrassa")
-      : or(eq(programs.system, "school"), eq(programs.system, "school_support")),
+    query.institutionId
+      ? eq(studentEnrollments.institutionId, query.institutionId)
+      : query.system === "madrassa"
+        ? eq(programs.system, "madrassa")
+        : or(eq(programs.system, "school"), eq(programs.system, "school_support")),
     query.status ? eq(students.status, query.status) : undefined,
-    query.institutionId ? eq(studentEnrollments.institutionId, query.institutionId) : undefined,
     query.programId ? eq(studentEnrollments.programId, query.programId) : undefined,
     query.classId ? eq(studentEnrollments.schoolClassId, query.classId) : undefined,
     query.subcategoryId
@@ -1075,12 +1076,6 @@ async function validateEnrollmentTarget(
   }
 
   if (!input.schoolClassId) throw new HttpError("School class is required", 400);
-  if (
-    program.system === "school_support" &&
-    !["nursery", "kg", "c1", "c2", "c3", "c4", "c5"].includes(input.schoolClassId)
-  ) {
-    throw new HttpError("Jamia Zainab school support cannot exceed Class 5", 400);
-  }
 
   return {
     institutionId: input.institutionId,

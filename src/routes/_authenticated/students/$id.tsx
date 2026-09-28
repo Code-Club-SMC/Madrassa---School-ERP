@@ -87,9 +87,9 @@ function StudentProfile() {
     return (
       <Card className="p-8">
         <p className="text-sm text-destructive">{error ?? "Student not found"}</p>
-        <Button asChild variant="outline" size="sm" className="mt-4">
-          <Link to="/school/students">Back to students</Link>
-        </Button>
+          <Button asChild variant="outline" size="sm" className="mt-4">
+            <Link to="/school/students">Back to students</Link>
+          </Button>
       </Card>
     );
   }

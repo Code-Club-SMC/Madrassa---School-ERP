@@ -113,14 +113,6 @@ export async function resolveAdmissionTarget(
     throw new AdmissionError("A school class is required for Al-Qasim Academy admissions", 400);
   }
 
-  if (
-    target.supportClassOnly &&
-    schoolClassId &&
-    !["nursery", "kg", "c1", "c2", "c3", "c4", "c5"].includes(schoolClassId)
-  ) {
-    throw new AdmissionError("Jamia Zainab school support only allows classes up to Class 5", 400);
-  }
-
   if (schoolClassId) {
     const [existingClass] = await db
       .select({ id: schoolClasses.id })

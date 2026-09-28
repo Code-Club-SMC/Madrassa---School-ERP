@@ -45,7 +45,7 @@ import { cn } from "@/lib/utils";
 import { StudentDetailsSheet } from "./student-details-sheet";
 import type { StudentListItem, StudentStatus, StudentSystem } from "./student-types";
 
-type Props = { system: StudentSystem; section?: "male" | "female" };
+type Props = { system: StudentSystem; section?: "male" | "female"; institutionId?: string };
 
 type SchoolClassOption = {
   id: string;
@@ -66,7 +66,7 @@ type MadrassaCategoryOption = {
 
 const pageSize = 10;
 
-export function StudentsTable({ system, section }: Props) {
+export function StudentsTable({ system, section, institutionId }: Props) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | StudentStatus>("all");
@@ -111,6 +111,7 @@ export function StudentsTable({ system, section }: Props) {
       });
       if (query.trim()) params.set("q", query.trim());
       if (statusFilter !== "all") params.set("status", statusFilter);
+      if (institutionId) params.set("institutionId", institutionId);
       if (groupFilter !== "all") {
         if (system === "school") params.set("classId", groupFilter);
         else params.set("subcategoryId", groupFilter);
@@ -131,7 +132,7 @@ export function StudentsTable({ system, section }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [groupFilter, page, query, statusFilter, system, section]);
+  }, [groupFilter, institutionId, page, query, statusFilter, system, section]);
 
   useEffect(() => {
     void loadGroups();
@@ -174,7 +175,7 @@ export function StudentsTable({ system, section }: Props) {
       category.subcategories.map((item) => ({
         id: item.id,
         name: `${category.name} · ${item.name}`,
-        nameUrdu: `${category.nameUrdu} · ${item.nameUrdu}`,
+        nameUrdu: `${category.nameUrdu} · ${item.name}`,
       })),
     );
   }, [madrassaCategories, schoolClasses, system]);

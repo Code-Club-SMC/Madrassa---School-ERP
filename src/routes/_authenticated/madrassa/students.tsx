@@ -6,6 +6,7 @@ import { useSystem } from "@/components/system-context";
 export const Route = createFileRoute("/_authenticated/madrassa/students")({
   component: () => {
     const { gender } = useSystem();
+    const institutionId = gender === "male" ? "jamia_qasmia_baneen" : "jamia_zainab_banat";
     return (
       <>
         <PageHeader
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/_authenticated/madrassa/students")({
           titleUrdu="مدرسہ کے طلبہ"
           description="Manage all enrolled students across Hifz, Nazira, and Alimiyat programs."
         />
-        <StudentsTable system="madrassa" section={gender} />
+        <StudentsTable system="madrassa" section={gender} institutionId={institutionId} />
       </>
     );
   },

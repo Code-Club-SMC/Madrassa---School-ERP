@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/school/students")({
         titleUrdu="اسکول کے طلبہ"
         description="Manage all enrolled students across KG to Class 5."
       />
-      <StudentsTable system="school" />
+      <StudentsTable system="school" institutionId="al_qasim_academy" />
     </>
   ),
 });

@@ -55,7 +55,6 @@ type MadrassaCategoryOption = {
 };
 
 const NO_SECTION = "__none";
-const SCHOOL_SUPPORT_CLASS_IDS = new Set(["nursery", "kg", "c1", "c2", "c3", "c4", "c5"]);
 
 export function MoveEnrollmentDialog({ profile, open, onOpenChange, onMoved }: Props) {
   const [institutions, setInstitutions] = useState<InstitutionOption[]>([]);
@@ -143,8 +142,7 @@ export function MoveEnrollmentDialog({ profile, open, onOpenChange, onMoved }: P
   const availablePrograms = programs.filter((program) => program.institutionId === institutionId && program.active);
   const availableSchoolClasses = schoolClasses.filter((schoolClass) => {
     if (!schoolClass.active) return false;
-    if (selectedProgram?.system !== "school_support") return true;
-    return SCHOOL_SUPPORT_CLASS_IDS.has(schoolClass.id);
+    return true;
   });
   const availableSubcategories = madrassaCategories.flatMap((category) =>
     category.subcategories

@@ -640,11 +640,11 @@ async function resolveProgramAcademicYearSystem(programId: string): Promise<Acad
     .limit(1);
 
   if (!program) throw new AdmissionError("Admission program not found", 404);
-  if (program.system !== "school" && program.system !== "madrassa") {
+  if (program.system !== "school" && program.system !== "madrassa" && program.system !== "school_support") {
     throw new AdmissionError("Admission program has an invalid academic-year system", 500);
   }
 
-  return program.system;
+  return program.system === "school_support" ? "school" : program.system;
 }
 
 export async function suggestGuardians(

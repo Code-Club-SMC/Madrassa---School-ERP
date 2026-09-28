@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { db } from "@/db";
 import { user, account } from "@/db/schema/auth";
 import { eq, sql } from "drizzle-orm";
