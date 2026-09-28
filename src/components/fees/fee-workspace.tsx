@@ -24,7 +24,7 @@ import type { FeeStudent, FeeSystem } from "./fee-types";
 
 type FeeStatusFilter = "all" | "due" | "clear";
 
-export function FeeWorkspace({ system }: { system: FeeSystem }) {
+export function FeeWorkspace({ system, institutionId }: { system: FeeSystem; institutionId?: string }) {
   const [query, setQuery] = useState("");
   const [students, setStudents] = useState<FeeStudent[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<FeeStudent | null>(null);
@@ -41,6 +41,7 @@ export function FeeWorkspace({ system }: { system: FeeSystem }) {
       const payload = await listFeeStudents(system, query, {
         categoryId: categoryId || undefined,
         status: feeStatus === "all" ? undefined : "active",
+        institutionId: institutionId || undefined,
       });
       let filtered = payload.students ?? [];
       
@@ -57,7 +58,7 @@ export function FeeWorkspace({ system }: { system: FeeSystem }) {
     } finally {
       setLoading(false);
     }
-  }, [query, system, categoryId, feeStatus]);
+  }, [query, system, categoryId, feeStatus, institutionId]);
 
   const handleCollect = async (student: FeeStudent) => {
     setSelectedStudent(student);
