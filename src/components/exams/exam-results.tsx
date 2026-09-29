@@ -43,7 +43,7 @@ export function ExamResults({ system }: Props) {
   const loadExams = async () => {
     setLoading(true);
     try {
-      const payload = await listExamSessions(system, section);
+      const payload = await listExamSessions({ system, section });
       setExams(payload.exams);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not load exams");

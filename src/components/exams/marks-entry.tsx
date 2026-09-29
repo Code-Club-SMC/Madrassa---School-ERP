@@ -7,6 +7,7 @@ import {
   getDmc,
   getExamSession,
   getMarksEntry,
+  getMyTeacherExams,
   lockExamSubject,
   publishExam,
   saveMarks,
@@ -30,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 type Props = {
   examId: string;
@@ -44,6 +46,7 @@ type DraftMark = {
 };
 
 export function MarksEntry({ examId, system, readOnly }: Props) {
+  const { user } = useAuth();
   const [exam, setExam] = useState<ExamSession | null>(null);
   const [subjectId, setSubjectId] = useState("");
   const [payload, setPayload] = useState<MarksEntryPayload | null>(null);
@@ -53,12 +56,35 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
   const [confirmLock, setConfirmLock] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [dmc, setDmc] = useState<DmcPayload | null>(null);
+  const [teacherSubjectIds, setTeacherSubjectIds] = useState<Set<string>>(new Set());
+  const [loadingTeacher, setLoadingTeacher] = useState(false);
+
+  const isTeacher = useMemo(() => user?.role === "teacher", [user?.role]);
+
+  useEffect(() => {
+    if (!isTeacher) return;
+    setLoadingTeacher(true);
+    getMyTeacherExams()
+      .then((data) => {
+        const ids = new Set<string>(data.assignments.filter((a) => a.subjectId).map((a) => a.subjectId as string));
+        setTeacherSubjectIds(ids);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingTeacher(false));
+  }, [isTeacher]);
 
   const loadExam = useCallback(async () => {
     const next = await getExamSession(examId);
     setExam(next.exam);
-    setSubjectId((current) => current || next.exam.subjects[0]?.id || "");
-  }, [examId]);
+    const available = isTeacher
+      ? next.exam.subjects.filter((item) => teacherSubjectIds.has(item.subjectId))
+      : next.exam.subjects;
+    const first = available[0]?.id || "";
+    setSubjectId((current) => {
+      if (current && available.some((item) => item.id === current)) return current;
+      return first;
+    });
+  }, [examId, isTeacher, teacherSubjectIds]);
 
   const loadMarks = useCallback(async () => {
     if (!subjectId) return;
@@ -213,7 +239,7 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
           <Select value={subjectId} onValueChange={setSubjectId}>
             <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
             <SelectContent>
-              {exam.subjects.map((item) => (
+              {(isTeacher ? exam.subjects.filter((item) => teacherSubjectIds.has(item.subjectId)) : exam.subjects).map((item) => (
                 <SelectItem key={item.id} value={item.id}>
                   {item.name} · {item.nameUrdu}
                 </SelectItem>

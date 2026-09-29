@@ -64,15 +64,16 @@ export const navItems: NavItem[] = [
   { group: "madrassa", url: "/madrassa/categories", icon: BookOpen, en: "Categories", ur: "زمرے", roles: ADMINS },
   { group: "madrassa", url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
   { group: "madrassa", url: "/madrassa/hifz", icon: Sparkles, en: "Hifz Tracker", ur: "حفظ ٹریکر", roles: ANY_STAFF },
+  { group: "madrassa", url: "/madrassa/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
 
   // ---------- SCHOOL ----------
   { group: "school", url: "/school/students", icon: Users2, en: "Students", ur: "طلبہ", roles: ANY_STAFF },
   { group: "school", url: "/school/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
   { group: "school", url: "/school/classes", icon: School, en: "Classes", ur: "جماعتیں", roles: ADMINS },
   { group: "school", url: "/school/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
+  { group: "school", url: "/school/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
 
   // ---------- SHARED ----------
-  { group: "shared", url: "/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
   { group: "shared", url: "/id-cards", icon: IdCard, en: "ID Cards", ur: "شناختی کارڈ", roles: ADMINS },
   { group: "shared", url: "/reports", icon: BarChart3, en: "Reports", ur: "رپورٹس", roles: ANY_STAFF },
   { group: "shared", url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: ADMINS },

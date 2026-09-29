@@ -385,7 +385,6 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   const [deleteTarget, setDeleteTarget] = useState<ExamSession | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState({
-    examSystem: system,
     classId: "",
     sectionId: "",
     categoryId: "",
@@ -401,20 +400,19 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const currentSystem = form.examSystem;
       const [examPayload, academicPayload] = await Promise.all([
-        listExamSessions(currentSystem, currentSystem === "madrassa" ? gender : undefined),
-        loadAcademicOptions(currentSystem === "madrassa" ? gender : undefined, undefined),
+        listExamSessions({ system, section: system === "madrassa" ? gender : undefined }),
+        loadAcademicOptions(system === "madrassa" ? gender : undefined, undefined),
       ]);
       setExams(examPayload.exams);
       setOptions(academicPayload);
-      setForm((current) => seedExamForm({ ...current, examSystem: currentSystem }, academicPayload, currentSystem));
+      setForm((current) => seedExamForm(current, academicPayload, system));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not load exams");
     } finally {
       setLoading(false);
     }
-  }, [form.examSystem, gender]);
+  }, [system, gender]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -436,8 +434,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   }, [load]);
 
   async function handleCreate() {
-    const currentSystem = form.examSystem;
-    const scopeId = currentSystem === "school" ? form.classId : form.subcategoryId;
+    const scopeId = system === "school" ? form.classId : form.subcategoryId;
     if (!scopeId || !form.name || !form.nameUrdu || !form.startDate || !form.endDate) {
       toast.error("Exam name, class/darja, and dates are required");
       return;
@@ -447,9 +444,9 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     if (subjectIds.length === 0) {
       try {
         const payload = await listExamSubjects({
-          system: currentSystem,
-          schoolClassId: currentSystem === "school" ? scopeId : undefined,
-          madrassaSubcategoryId: currentSystem === "madrassa" ? scopeId : undefined,
+          system,
+          schoolClassId: system === "school" ? scopeId : undefined,
+          madrassaSubcategoryId: system === "madrassa" ? scopeId : undefined,
           active: true,
         });
         subjectIds = payload.subjects.map((subject) => subject.id);
@@ -461,11 +458,11 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
 
     try {
       await createExamSession({
-        system: currentSystem,
-        schoolClassId: currentSystem === "school" ? form.classId : undefined,
-        schoolSectionId: currentSystem === "school" ? form.sectionId : undefined,
-        madrassaCategoryId: currentSystem === "madrassa" ? form.categoryId : undefined,
-        madrassaSubcategoryId: currentSystem === "madrassa" ? form.subcategoryId : undefined,
+        system,
+        schoolClassId: system === "school" ? form.classId : undefined,
+        schoolSectionId: system === "school" ? form.sectionId : undefined,
+        madrassaCategoryId: system === "madrassa" ? form.categoryId : undefined,
+        madrassaSubcategoryId: system === "madrassa" ? form.subcategoryId : undefined,
         subjectIds,
         type: form.type,
         name: form.name,
@@ -517,24 +514,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
         className="sm:max-w-3xl"
       >
         <div className="grid gap-4 p-1">
-          <Field label="System">
-            <RadioGroup
-              value={form.examSystem}
-              onValueChange={(value) => setForm({ ...form, examSystem: value as ExamSystem, classId: "", sectionId: "", categoryId: "", subcategoryId: "", subjectId: "" })}
-              className="flex flex-wrap gap-4"
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="school" id="system-school" />
-                <Label htmlFor="system-school" className="text-sm cursor-pointer">School</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="madrassa" id="system-madrassa" />
-                <Label htmlFor="system-madrassa" className="text-sm cursor-pointer">Madrassa</Label>
-              </div>
-            </RadioGroup>
-          </Field>
-
-          {form.examSystem === "school" ? (
+          {system === "school" ? (
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Class">
                 <Select value={form.classId} onValueChange={(value) => setForm({ ...form, classId: value })}>
@@ -593,7 +573,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
               <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(form.examSystem === "school" ? ["monthly", "quarterly", "halfyearly", "annual"] : ["sahmahi", "salanah"]).map((type) => (
+                  {(system === "school" ? ["monthly", "quarterly", "halfyearly", "annual"] : ["sahmahi", "salanah"]).map((type) => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
@@ -971,11 +951,11 @@ function seedExamForm<T extends {
 }>(form: T, options: AcademicOptions, system: ExamSystem): T {
   const classId = form.classId || options.classes.find((item) => item.active)?.id || "";
   const sectionId =
-    form.sectionId || options.classes.find((item) => item.id === classId)?.sections.find((item) => item.active)?.id || "";
+    form.sectionId || options.classes.find((item) => item.id === classId)?.sections?.find((item) => item.active)?.id || "";
   const categoryId = form.categoryId || options.categories.find((item) => item.active)?.id || "";
   const subcategoryId =
     form.subcategoryId ||
-    options.categories.find((item) => item.id === categoryId)?.subcategories.find((item) => item.active)?.id ||
+    options.categories.find((item) => item.id === categoryId)?.subcategories?.find((item) => item.active)?.id ||
     "";
   return { ...form, classId, sectionId, categoryId, subcategoryId };
 }

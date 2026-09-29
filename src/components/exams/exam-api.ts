@@ -88,9 +88,16 @@ export function deleteExamSession(id: string) {
   });
 }
 
-export function listExamSessions(system: ExamSystem, section?: string) {
-  const params = new URLSearchParams({ system });
-  if (section) params.set("section", section);
+export function listExamSessions(input: {
+  system: ExamSystem;
+  section?: string;
+  institutionId?: string;
+  programId?: string;
+}) {
+  const params = new URLSearchParams({ system: input.system });
+  if (input.section) params.set("section", input.section);
+  if (input.institutionId) params.set("institutionId", input.institutionId);
+  if (input.programId) params.set("programId", input.programId);
   return requestJson<{ exams: ExamSession[] }>(`/api/exams/sessions?${params.toString()}`);
 }
 
@@ -122,6 +129,10 @@ export function getExamSession(id: string) {
 
 export function getMarksEntry(examId: string, examSubjectId: string) {
   return requestJson<MarksEntryPayload>(`/api/exams/sessions/${examId}/marks?examSubjectId=${examSubjectId}`);
+}
+
+export function getMyTeacherExams() {
+  return requestJson<{ assignments: Array<{ subjectId: string | null; schoolClassId: string | null; madrassaSubcategoryId: string | null; system: string }>; sessions: Array<{ id: string }> }>("/api/teachers/me/exams");
 }
 
 export function saveMarks(examId: string, input: {
