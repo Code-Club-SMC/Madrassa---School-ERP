@@ -434,42 +434,77 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   }, [load]);
 
   async function handleCreate() {
-    const scopeId = system === "school" ? form.classId : form.subcategoryId;
-    if (!scopeId || !form.name || !form.nameUrdu || !form.startDate || !form.endDate) {
-      toast.error("Exam name, class/darja, and dates are required");
+    if (!form.name || !form.nameUrdu || !form.startDate || !form.endDate) {
+      toast.error("Exam name and dates are required");
       return;
     }
 
-    let subjectIds = [form.subjectId].filter(Boolean);
-    if (subjectIds.length === 0) {
-      try {
-        const payload = await listExamSubjects({
-          system,
-          schoolClassId: system === "school" ? scopeId : undefined,
-          madrassaSubcategoryId: system === "madrassa" ? scopeId : undefined,
-          active: true,
-        });
-        subjectIds = payload.subjects.map((subject) => subject.id);
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Could not load subjects for exam");
-        return;
-      }
-    }
-
     try {
-      await createExamSession({
-        system,
-        schoolClassId: system === "school" ? form.classId : undefined,
-        schoolSectionId: system === "school" ? form.sectionId : undefined,
-        madrassaCategoryId: system === "madrassa" ? form.categoryId : undefined,
-        madrassaSubcategoryId: system === "madrassa" ? form.subcategoryId : undefined,
-        subjectIds,
-        type: form.type,
-        name: form.name,
-        nameUrdu: form.nameUrdu,
-        startDate: form.startDate,
-        endDate: form.endDate,
-      });
+      if (system === "school") {
+        const activeClasses = options.classes.filter((item) => item.active);
+        if (activeClasses.length === 0) {
+          toast.error("No active classes found for this school");
+          return;
+        }
+
+        for (const schoolClass of activeClasses) {
+          const classSubjects = await listExamSubjects({
+            system: "school",
+            schoolClassId: schoolClass.id,
+            madrassaSubcategoryId: undefined,
+            active: true,
+          });
+
+          await createExamSession({
+            system: "school",
+            schoolClassId: schoolClass.id,
+            schoolSectionId: undefined,
+            madrassaCategoryId: undefined,
+            madrassaSubcategoryId: undefined,
+            subjectIds: classSubjects.subjects.map((subject) => subject.id),
+            type: form.type,
+            name: form.name,
+            nameUrdu: form.nameUrdu,
+            startDate: form.startDate,
+            endDate: form.endDate,
+          });
+        }
+      } else {
+        const activeCategories = options.categories.filter((item) => item.active);
+        if (activeCategories.length === 0) {
+          toast.error("No active categories found for madrassa");
+          return;
+        }
+
+        for (const category of activeCategories) {
+          const activeSubcategories = category.subcategories.filter((item) => item.active);
+          if (activeSubcategories.length === 0) continue;
+
+          for (const subcategory of activeSubcategories) {
+            const categorySubjects = await listExamSubjects({
+              system: "madrassa",
+              schoolClassId: undefined,
+              madrassaSubcategoryId: subcategory.id,
+              active: true,
+            });
+
+            await createExamSession({
+              system: "madrassa",
+              schoolClassId: undefined,
+              schoolSectionId: undefined,
+              madrassaCategoryId: category.id,
+              madrassaSubcategoryId: subcategory.id,
+              subjectIds: categorySubjects.subjects.map((subject) => subject.id),
+              type: form.type,
+              name: form.name,
+              nameUrdu: form.nameUrdu,
+              startDate: form.startDate,
+              endDate: form.endDate,
+            });
+          }
+        }
+      }
+
       toast.success("Exam created");
       setOpen(false);
       await load();
@@ -514,51 +549,6 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
         className="sm:max-w-3xl"
       >
         <div className="grid gap-4 p-1">
-          {system === "school" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Class">
-                <Select value={form.classId} onValueChange={(value) => setForm({ ...form, classId: value })}>
-                  <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
-                  <SelectContent>
-                    {options.classes.filter((item) => item.active).map((item) => (
-                      <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Section">
-                <Select value={form.sectionId} onValueChange={(value) => setForm({ ...form, sectionId: value })}>
-                  <SelectTrigger><SelectValue placeholder="Select section" /></SelectTrigger>
-                  <SelectContent>
-                    {options.classes.find((item) => item.id === form.classId)?.sections.filter((item) => item.active).map((item) => (
-                      <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-          ) : (
-              <Field label="Category">
-                <RadioGroup
-                  value={form.categoryId}
-                  onValueChange={(value) => {
-                    const firstSubcategory = options.categories.find((item) => item.id === value)?.subcategories.find((item) => item.active)?.id || "";
-                    setForm({ ...form, categoryId: value, subcategoryId: firstSubcategory, subjectId: "" });
-                  }}
-                  className="flex flex-wrap gap-4"
-                >
-                  {options.categories.filter((item) => item.active).map((item) => (
-                    <div key={item.id} className="flex items-center gap-2">
-                      <RadioGroupItem value={item.id} id={`category-${item.id}`} />
-                      <Label htmlFor={`category-${item.id}`} className="text-sm cursor-pointer">
-                        {item.name}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </Field>
-          )}
-
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Exam Name">
               <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
@@ -573,7 +563,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
               <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(system === "school" ? ["monthly", "quarterly", "halfyearly", "annual"] : ["sahmahi", "salanah"]).map((type) => (
+                  {(system === "school" ? ["quarterly", "halfyearly", "annual"] : ["sahmahi", "salanah"]).map((type) => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
