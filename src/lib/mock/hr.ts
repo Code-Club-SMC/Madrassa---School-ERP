@@ -84,18 +84,6 @@ export type StaffLoan = {
   status: "active" | "settled";
 };
 
-export type Department = { id: string; name: string; headStaffId?: string };
-
-export const departments: Department[] = [
-  { id: "dep-quran", name: "Quran & Tajweed" },
-  { id: "dep-arabic", name: "Arabic Studies" },
-  { id: "dep-science", name: "Science" },
-  { id: "dep-math", name: "Mathematics" },
-  { id: "dep-admin", name: "Administration" },
-  { id: "dep-finance", name: "Finance" },
-  { id: "dep-support", name: "Support Services" },
-];
-
 const STAFF_SEED: Omit<StaffMember, "id">[] = [
   { fullName: "Muhammad Saeed Khan", cnic: "35201-1234567-1", dob: "1978-03-12", gender: "male", phone: "+92 300 1234567", emergencyContact: "+92 300 7654321", address: "House 12, Street 5, Lahore", staffType: "teacher", department: "Quran & Tajweed", designation: "Senior Qari", employmentType: "permanent", joinDate: "2015-04-01", status: "active", module: "madrassa" },
   { fullName: "Abdul Rehman Siddiqui", cnic: "35201-2233445-3", dob: "1982-07-22", gender: "male", phone: "+92 301 2233445", emergencyContact: "+92 301 5544332", address: "Block C, Model Town, Lahore", staffType: "teacher", department: "Arabic Studies", designation: "Mudarris", employmentType: "permanent", joinDate: "2017-08-15", status: "active", module: "madrassa" },

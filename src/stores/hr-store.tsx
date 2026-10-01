@@ -6,14 +6,12 @@ import {
   attendanceSeed,
   leavesSeed,
   loansSeed,
-  departments as departmentsSeed,
   type StaffMember,
   type PayrollProfile,
   type Payslip,
   type AttendanceRecord,
   type LeaveRequest,
   type StaffLoan,
-  type Department,
 } from "@/lib/mock/hr";
 
 type NewStaffInput = Omit<StaffMember, "id"> & {
@@ -27,7 +25,6 @@ type HRStore = {
   attendance: AttendanceRecord[];
   leaves: LeaveRequest[];
   loans: StaffLoan[];
-  departments: Department[];
   addStaff: (data: NewStaffInput) => StaffMember;
   updateStaff: (id: string, data: Partial<StaffMember>) => void;
   terminateStaff: (id: string, reason: string) => void;
@@ -40,9 +37,6 @@ type HRStore = {
   rejectLeave: (id: string) => void;
   addLoan: (data: Omit<StaffLoan, "id" | "status" | "remainingBalance">) => void;
   settleLoan: (id: string) => void;
-  addDepartment: (name: string) => void;
-  updateDepartment: (id: string, data: Partial<Department>) => void;
-  deleteDepartment: (id: string) => void;
 };
 
 const Ctx = createContext<HRStore | null>(null);
@@ -54,7 +48,6 @@ export function HRProvider({ children }: { children: ReactNode }) {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>(attendanceSeed);
   const [leaves, setLeaves] = useState<LeaveRequest[]>(leavesSeed);
   const [loans, setLoans] = useState<StaffLoan[]>(loansSeed);
-  const [departments, setDepartments] = useState<Department[]>(departmentsSeed);
 
   const addStaff = useCallback<HRStore["addStaff"]>((data) => {
     const id = `STF-${String(Date.now()).slice(-6)}`;
@@ -147,24 +140,13 @@ export function HRProvider({ children }: { children: ReactNode }) {
     setLoans((p) => p.map((l) => (l.id === id ? { ...l, status: "settled", remainingBalance: 0 } : l)));
   }, []);
 
-  const addDepartment = useCallback<HRStore["addDepartment"]>((name) => {
-    setDepartments((p) => [...p, { id: `dep-${Date.now()}`, name }]);
-  }, []);
-  const updateDepartment = useCallback<HRStore["updateDepartment"]>((id, data) => {
-    setDepartments((p) => p.map((d) => (d.id === id ? { ...d, ...data } : d)));
-  }, []);
-  const deleteDepartment = useCallback<HRStore["deleteDepartment"]>((id) => {
-    setDepartments((p) => p.filter((d) => d.id !== id));
-  }, []);
-
   const value = useMemo<HRStore>(() => ({
-    staff, payrollProfiles, payslips, attendance, leaves, loans, departments,
+    staff, payrollProfiles, payslips, attendance, leaves, loans,
     addStaff, updateStaff, terminateStaff, updatePayrollProfile,
     generatePayroll, approvePayroll, markPayrollPaid,
     bulkSaveAttendance, approveLeave, rejectLeave,
     addLoan, settleLoan,
-    addDepartment, updateDepartment, deleteDepartment,
-  }), [staff, payrollProfiles, payslips, attendance, leaves, loans, departments, addStaff, updateStaff, terminateStaff, updatePayrollProfile, generatePayroll, approvePayroll, markPayrollPaid, bulkSaveAttendance, approveLeave, rejectLeave, addLoan, settleLoan, addDepartment, updateDepartment, deleteDepartment]);
+  }), [staff, payrollProfiles, payslips, attendance, leaves, loans, addStaff, updateStaff, terminateStaff, updatePayrollProfile, generatePayroll, approvePayroll, markPayrollPaid, bulkSaveAttendance, approveLeave, rejectLeave, addLoan, settleLoan]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

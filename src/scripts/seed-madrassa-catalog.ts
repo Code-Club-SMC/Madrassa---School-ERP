@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import { madrassaCategories, madrassaSubcategories } from "@/db/schema/academic";

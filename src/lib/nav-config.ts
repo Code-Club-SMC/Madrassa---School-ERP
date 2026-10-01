@@ -91,7 +91,6 @@ export const navItems: NavItem[] = [
   { group: "shared", url: "/hr/payroll", icon: HandCoins, en: "Payroll", ur: "تنخواہ", roles: ADMINS },
   { group: "shared", url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: ADMINS },
   { group: "shared", url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: ADMINS },
-  { group: "shared", url: "/hr/departments", icon: Building2, en: "Departments", ur: "شعبہ جات", roles: ADMINS },
 
   // ---------- ADMIN (bottom-pinned) ----------
   { group: "admin", url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },

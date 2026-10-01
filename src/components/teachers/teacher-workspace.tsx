@@ -38,6 +38,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { CredentialsOverlay } from "@/features/users/credentials-display";
 import { formatDate, formatPKR } from "@/lib/formatters";
 import { AddTeacherDialog } from "./add-teacher-dialog";
@@ -250,89 +258,111 @@ export function TeacherWorkspace() {
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {teachers.map((teacher) => (
-            <Card key={teacher.id} className="p-4 transition-colors hover:border-primary/40">
-              <div className="flex items-start gap-3">
-                <Avatar className="h-12 w-12 rounded-xl">
-                  <AvatarFallback className="rounded-xl bg-primary/10 text-sm font-semibold text-primary">
-                    {initials(teacher.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{teacher.name}</p>
-                  {teacher.nameUrdu && (
-                    <p dir="rtl" lang="ur" className="truncate text-sm font-urdu text-muted-foreground">
-                      {teacher.nameUrdu}
-                    </p>
-                  )}
-                  <p className="truncate text-xs text-muted-foreground">{teacher.email}</p>
-                </div>
-                <StatusBadge status={teacher.employmentStatus} showUrdu={false} />
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <Info label="Designation" value={teacher.designation} />
-                <Info label="System" value={systemLabel(teacher.systemScope)} />
-                <Info label="Joined" value={formatDate(teacher.joinedAt)} />
-                <Info label="Salary" value={formatPKR(teacher.baseMonthlySalaryPaisa)} mono />
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {teacher.qualification && (
-                  <Badge variant="secondary" className="max-w-full truncate">
-                    {teacher.qualification}
-                  </Badge>
-                )}
-                {teacher.phone && <Badge variant="outline">{teacher.phone}</Badge>}
-              </div>
-
-              <div className="mt-4 flex items-center justify-between border-t pt-3">
-                <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" className="h-8 w-8" asChild aria-label="View profile">
-                    <Link to="/teachers/$id" params={{ id: teacher.id }}>
-                      <Eye className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" asChild aria-label="ID card">
-                    <Link to="/id-cards">
-                      <IdCard className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Timetable" asChild>
-                    <Link to="/teachers/$id" params={{ id: teacher.id }}>
-                      <CalendarDays className="h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-destructive"
-                    aria-label="Delete teacher"
-                    onClick={() => setDeleteTarget(teacher)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={teacher.employmentStatus === "active" ? "outline" : "secondary"}
-                    className="gap-1.5"
-                    onClick={() => setActionTeacher(teacher)}
-                  >
-                    {teacher.employmentStatus === "active" ? (
-                      <UserX className="h-3.5 w-3.5" />
+        <Card className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableHead className="min-w-[220px]">Teacher — استاد</TableHead>
+                <TableHead className="min-w-[160px]">Email</TableHead>
+                <TableHead className="hidden md:table-cell min-w-[130px]">Designation</TableHead>
+                <TableHead className="hidden md:table-cell min-w-[110px]">System</TableHead>
+                <TableHead className="hidden lg:table-cell min-w-[150px]">Qualification</TableHead>
+                <TableHead className="hidden lg:table-cell min-w-[110px]">Joined</TableHead>
+                <TableHead className="hidden lg:table-cell min-w-[110px] text-end">Salary</TableHead>
+                <TableHead className="min-w-[100px]">Status</TableHead>
+                <TableHead className="w-[190px] text-end">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {teachers.map((teacher) => (
+                <TableRow key={teacher.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9 rounded-lg">
+                        <AvatarFallback className="rounded-lg bg-primary/10 text-xs font-semibold text-primary">
+                          {initials(teacher.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{teacher.name}</p>
+                        {teacher.nameUrdu && (
+                          <p dir="rtl" lang="ur" className="truncate text-xs font-urdu text-muted-foreground">
+                            {teacher.nameUrdu}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <p className="truncate text-xs text-muted-foreground">{teacher.email}</p>
+                    {teacher.phone && <p className="truncate text-xs text-muted-foreground">{teacher.phone}</p>}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">{teacher.designation}</TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">
+                    {systemLabel(teacher.systemScope)}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {teacher.qualification ? (
+                      <Badge variant="secondary" className="max-w-full truncate">
+                        {teacher.qualification}
+                      </Badge>
                     ) : (
-                      <UserCheck className="h-3.5 w-3.5" />
+                      <span className="text-xs text-muted-foreground">—</span>
                     )}
-                    {teacher.employmentStatus === "active" ? "Deactivate" : "Activate"}
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">{formatDate(teacher.joinedAt)}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-end font-mono text-sm">
+                    {formatPKR(teacher.baseMonthlySalaryPaisa)}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={teacher.employmentStatus} showUrdu={false} />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" asChild aria-label="View profile">
+                        <Link to="/teachers/$id" params={{ id: teacher.id }}>
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" asChild aria-label="ID card">
+                        <Link to="/id-cards">
+                          <IdCard className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Timetable" asChild>
+                        <Link to="/teachers/$id" params={{ id: teacher.id }}>
+                          <CalendarDays className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive"
+                        aria-label="Delete teacher"
+                        onClick={() => setDeleteTarget(teacher)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={teacher.employmentStatus === "active" ? "outline" : "secondary"}
+                        className="gap-1.5"
+                        onClick={() => setActionTeacher(teacher)}
+                      >
+                        {teacher.employmentStatus === "active" ? (
+                          <UserX className="h-3.5 w-3.5" />
+                        ) : (
+                          <UserCheck className="h-3.5 w-3.5" />
+                        )}
+                        {teacher.employmentStatus === "active" ? "Deactivate" : "Activate"}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
       <AddTeacherDialog open={addOpen} onOpenChange={setAddOpen} onCreated={handleCreated} />
@@ -375,15 +405,6 @@ export function TeacherWorkspace() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-function Info({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="min-w-0 rounded-md bg-muted/40 px-2.5 py-2">
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={`mt-0.5 truncate text-sm ${mono ? "font-mono" : ""}`}>{value}</p>
     </div>
   );
 }

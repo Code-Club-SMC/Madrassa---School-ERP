@@ -363,15 +363,6 @@ export type InventoryItem = {
   updatedAt: string;
 };
 
-export type StockMovement = {
-  id: string;
-  itemId: string;
-  date: string;
-  change: number; // +in / -out
-  reason: "purchase" | "donation" | "distribution" | "graduation_gift" | "loss" | "adjustment";
-  note?: string;
-};
-
 // ---------- Finance ----------
 export type FinanceType = "income" | "expense";
 export type FinanceCategory =

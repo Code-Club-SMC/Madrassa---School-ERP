@@ -44,7 +44,6 @@ import { Route as AuthenticatedFinanceDonationsRouteImport } from './routes/_aut
 import { Route as AuthenticatedFinanceReportsRouteImport } from './routes/_authenticated/finance/reports'
 import { Route as AuthenticatedHrIndexRouteImport } from './routes/_authenticated/hr/index'
 import { Route as AuthenticatedHrAttendanceRouteImport } from './routes/_authenticated/hr/attendance'
-import { Route as AuthenticatedHrDepartmentsRouteImport } from './routes/_authenticated/hr/departments'
 import { Route as AuthenticatedHrLeaveRouteImport } from './routes/_authenticated/hr/leave'
 import { Route as AuthenticatedHrPayrollRouteImport } from './routes/_authenticated/hr/payroll'
 import { Route as AuthenticatedMadrassaAttendanceRouteImport } from './routes/_authenticated/madrassa/attendance'
@@ -364,12 +363,6 @@ const AuthenticatedHrAttendanceRoute =
   AuthenticatedHrAttendanceRouteImport.update({
     id: '/attendance',
     path: '/attendance',
-    getParentRoute: () => AuthenticatedHrRoute,
-  } as any)
-const AuthenticatedHrDepartmentsRoute =
-  AuthenticatedHrDepartmentsRouteImport.update({
-    id: '/departments',
-    path: '/departments',
     getParentRoute: () => AuthenticatedHrRoute,
   } as any)
 const AuthenticatedHrLeaveRoute = AuthenticatedHrLeaveRouteImport.update({
@@ -1177,7 +1170,6 @@ export interface FileRoutesByFullPath {
   '/finance/donations': typeof AuthenticatedFinanceDonationsRoute
   '/finance/reports': typeof AuthenticatedFinanceReportsRoute
   '/hr/attendance': typeof AuthenticatedHrAttendanceRoute
-  '/hr/departments': typeof AuthenticatedHrDepartmentsRoute
   '/hr/leave': typeof AuthenticatedHrLeaveRoute
   '/hr/payroll': typeof AuthenticatedHrPayrollRoute
   '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
@@ -1344,7 +1336,6 @@ export interface FileRoutesByTo {
   '/finance/donations': typeof AuthenticatedFinanceDonationsRoute
   '/finance/reports': typeof AuthenticatedFinanceReportsRoute
   '/hr/attendance': typeof AuthenticatedHrAttendanceRoute
-  '/hr/departments': typeof AuthenticatedHrDepartmentsRoute
   '/hr/leave': typeof AuthenticatedHrLeaveRoute
   '/hr/payroll': typeof AuthenticatedHrPayrollRoute
   '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
@@ -1518,7 +1509,6 @@ export interface FileRoutesById {
   '/_authenticated/finance/donations': typeof AuthenticatedFinanceDonationsRoute
   '/_authenticated/finance/reports': typeof AuthenticatedFinanceReportsRoute
   '/_authenticated/hr/attendance': typeof AuthenticatedHrAttendanceRoute
-  '/_authenticated/hr/departments': typeof AuthenticatedHrDepartmentsRoute
   '/_authenticated/hr/leave': typeof AuthenticatedHrLeaveRoute
   '/_authenticated/hr/payroll': typeof AuthenticatedHrPayrollRoute
   '/_authenticated/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
@@ -1694,7 +1684,6 @@ export interface FileRouteTypes {
     | '/finance/donations'
     | '/finance/reports'
     | '/hr/attendance'
-    | '/hr/departments'
     | '/hr/leave'
     | '/hr/payroll'
     | '/madrassa/attendance'
@@ -1861,7 +1850,6 @@ export interface FileRouteTypes {
     | '/finance/donations'
     | '/finance/reports'
     | '/hr/attendance'
-    | '/hr/departments'
     | '/hr/leave'
     | '/hr/payroll'
     | '/madrassa/attendance'
@@ -2034,7 +2022,6 @@ export interface FileRouteTypes {
     | '/_authenticated/finance/donations'
     | '/_authenticated/finance/reports'
     | '/_authenticated/hr/attendance'
-    | '/_authenticated/hr/departments'
     | '/_authenticated/hr/leave'
     | '/_authenticated/hr/payroll'
     | '/_authenticated/madrassa/attendance'
@@ -2483,13 +2470,6 @@ declare module '@tanstack/react-router' {
       path: '/attendance'
       fullPath: '/hr/attendance'
       preLoaderRoute: typeof AuthenticatedHrAttendanceRouteImport
-      parentRoute: typeof AuthenticatedHrRoute
-    }
-    '/_authenticated/hr/departments': {
-      id: '/_authenticated/hr/departments'
-      path: '/departments'
-      fullPath: '/hr/departments'
-      preLoaderRoute: typeof AuthenticatedHrDepartmentsRouteImport
       parentRoute: typeof AuthenticatedHrRoute
     }
     '/_authenticated/hr/leave': {
@@ -3492,7 +3472,6 @@ const AuthenticatedFinanceRouteWithChildren =
 
 interface AuthenticatedHrRouteChildren {
   AuthenticatedHrAttendanceRoute: typeof AuthenticatedHrAttendanceRoute
-  AuthenticatedHrDepartmentsRoute: typeof AuthenticatedHrDepartmentsRoute
   AuthenticatedHrLeaveRoute: typeof AuthenticatedHrLeaveRoute
   AuthenticatedHrPayrollRoute: typeof AuthenticatedHrPayrollRoute
   AuthenticatedHrIndexRoute: typeof AuthenticatedHrIndexRoute
@@ -3500,7 +3479,6 @@ interface AuthenticatedHrRouteChildren {
 
 const AuthenticatedHrRouteChildren: AuthenticatedHrRouteChildren = {
   AuthenticatedHrAttendanceRoute: AuthenticatedHrAttendanceRoute,
-  AuthenticatedHrDepartmentsRoute: AuthenticatedHrDepartmentsRoute,
   AuthenticatedHrLeaveRoute: AuthenticatedHrLeaveRoute,
   AuthenticatedHrPayrollRoute: AuthenticatedHrPayrollRoute,
   AuthenticatedHrIndexRoute: AuthenticatedHrIndexRoute,

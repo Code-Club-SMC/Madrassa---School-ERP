@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, exists, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { user as authUser } from "@/db/schema/auth";
@@ -214,6 +214,30 @@ export async function createTeacher(request: Request, input: z.infer<typeof crea
   };
 }
 
+const SCOPE_INSTITUTIONS: Record<string, { institutionIds: string[]; system?: "school" | "madrassa" }> = {
+  "qasmia-both": { institutionIds: ["al_qasim_academy", "jamia_qasmia_baneen"] },
+  "qasmia-madrassa": { institutionIds: ["jamia_qasmia_baneen"], system: "madrassa" },
+  "qasmia-school": { institutionIds: ["al_qasim_academy"], system: "school" },
+  "zainab-both": { institutionIds: ["jamia_zainab_banat"] },
+  "zainab-madrassa": { institutionIds: ["jamia_zainab_banat"], system: "madrassa" },
+  "zainab-school": { institutionIds: ["jamia_zainab_banat"], system: "school" },
+};
+
+function systemScopeClause(systemScope: z.infer<typeof teacherListQuerySchema>["systemScope"]): SQL | undefined {
+  if (systemScope === "all") return undefined;
+
+  const scope = SCOPE_INSTITUTIONS[systemScope];
+  if (!scope) return eq(teacherProfiles.systemScope, systemScope);
+
+  const assignmentMatch = and(
+    eq(teacherAssignments.teacherProfileId, teacherProfiles.id),
+    inArray(teacherAssignments.institutionId, scope.institutionIds),
+    scope.system ? eq(teacherAssignments.system, scope.system) : undefined,
+  );
+
+  return exists(db.select({ one: sql`1` }).from(teacherAssignments).where(assignmentMatch));
+}
+
 export async function listTeachers(request: Request, query: z.infer<typeof teacherListQuerySchema>) {
   const actor = await requirePermission(request, "teachers", "view");
   console.log("[teachers] listTeachers called", { actorRole: actor.role, actorId: actor.id, query });
@@ -221,7 +245,7 @@ export async function listTeachers(request: Request, query: z.infer<typeof teach
     eq(authUser.role, "teacher"),
     actor.role === "teacher" && !query.all ? eq(teacherProfiles.userId, actor.id) : undefined,
     query.status === "all" ? undefined : eq(teacherProfiles.employmentStatus, query.status),
-    query.systemScope === "all" ? undefined : eq(teacherProfiles.systemScope, query.systemScope),
+    systemScopeClause(query.systemScope),
     query.q
       ? or(
           ilike(authUser.name, `%${query.q}%`),

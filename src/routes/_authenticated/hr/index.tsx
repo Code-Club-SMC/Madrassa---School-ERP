@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Briefcase, GraduationCap, ShieldUser, HandCoins, CalendarDays,
-  PlaneTakeoff, Building2, ArrowLeft, Users as UsersIcon, TrendingUp, Wallet,
+  PlaneTakeoff, ArrowLeft, Users as UsersIcon, TrendingUp, Wallet,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -27,7 +27,7 @@ type ModCard = {
 };
 
 function HRHub() {
-  const { staff, payrollProfiles, leaves, departments } = useHR();
+  const { staff, payrollProfiles, leaves } = useHR();
 
   const activeStaff = staff.filter((s) => s.status === "active").length;
   const activeTeachers = allTeachers.filter((t) => t.active).length;
@@ -48,7 +48,6 @@ function HRHub() {
     { to: "/hr/payroll", icon: HandCoins, urdu: "تنخواہ", english: "Payroll", description: "Generate, approve, and disburse monthly salaries.", count: formatPKR(monthlyPayroll) + "/mo", accent: "from-amber-500/15 to-amber-500/0 text-amber-600" },
     { to: "/hr/attendance", icon: CalendarDays, urdu: "حاضری عملہ", english: "Staff Attendance", description: "Daily check-in/out, leave-aware attendance log.", count: `${staff.length} tracked`, accent: "from-cyan-500/15 to-cyan-500/0 text-cyan-600" },
     { to: "/hr/leave", icon: PlaneTakeoff, urdu: "چھٹیاں", english: "Leave Management", description: "Leave requests, approvals, and balances.", count: `${pendingLeaves} pending`, accent: "from-rose-500/15 to-rose-500/0 text-rose-600" },
-    { to: "/hr/departments", icon: Building2, urdu: "شعبہ جات", english: "Departments", description: "Organizational units and reporting structure.", count: `${departments.length} units`, accent: "from-fuchsia-500/15 to-fuchsia-500/0 text-fuchsia-600" },
   ];
 
   const kpis = [

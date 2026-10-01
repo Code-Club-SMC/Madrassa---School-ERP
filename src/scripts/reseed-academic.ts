@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { ensureAcademicSeeded } from "@/lib/server/academic/seed";
 
 async function main() {

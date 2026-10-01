@@ -1,19 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Package, AlertTriangle, PackagePlus, Gift, Pencil, History, Trash2, GraduationCap, CheckCircle2, X } from "lucide-react";
+import { Search, Package, AlertTriangle, PackagePlus, Pencil, History, Trash2, X } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
-import { inventoryItems as seedItems, students, madrassaCategories, schoolClasses, type InventoryItem } from "@/mock";
+import { inventoryItems as seedItems, type InventoryItem } from "@/mock";
 import { formatPKR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
@@ -37,7 +35,6 @@ function InventoryPage() {
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState<InventoryItem | null>(null);
-  const [graduationOpen, setGraduationOpen] = useState(false);
 
   const allCategories = useMemo(() => Array.from(new Set(items.map((i) => i.category))), [items]);
 
@@ -82,10 +79,7 @@ function InventoryPage() {
         titleUrdu="انوینٹری"
         description="Books, stationery, mosque and classroom assets."
         actions={
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setGraduationOpen(true)}><GraduationCap className="h-3.5 w-3.5" />Graduation Gift</Button>
-            <Button size="sm" className="gap-1.5" onClick={recordStock}><PackagePlus className="h-3.5 w-3.5" />Record Stock</Button>
-          </div>
+          <Button size="sm" className="gap-1.5" onClick={recordStock}><PackagePlus className="h-3.5 w-3.5" />Record Stock</Button>
         }
       />
 
@@ -192,15 +186,6 @@ function InventoryPage() {
 
       <ItemDialog open={dialogOpen} onOpenChange={setDialogOpen} initial={editing} onSave={save} />
 
-      <GraduationDialog
-        open={graduationOpen}
-        onOpenChange={setGraduationOpen}
-        items={items}
-        onDistribute={(itemId, qty) => {
-          setItems((prev) => prev.map((x) => x.id === itemId ? { ...x, quantity: Math.max(0, x.quantity - qty) } : x));
-        }}
-      />
-
       <Dialog open={!!historyOpen} onOpenChange={(v) => !v && setHistoryOpen(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Transaction History — {historyOpen?.name}</DialogTitle></DialogHeader>
@@ -279,176 +264,6 @@ function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; on
             if (!f.name.trim()) { toast.error("Name is required"); return; }
             onSave({ ...f, id: f.id || `inv-${Date.now()}` });
           }}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function GraduationDialog({ open, onOpenChange, items, onDistribute }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  items: InventoryItem[];
-  onDistribute: (itemId: string, qty: number) => void;
-}) {
-  const eligible = useMemo(() => students.filter((s) => s.status === "graduated" || s.status === "active"), []);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [studentQ, setStudentQ] = useState("");
-  const [sysFilter, setSysFilter] = useState<string>("all");
-  const [groupFilter, setGroupFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [giftItem, setGiftItem] = useState<string>(items[0]?.id ?? "");
-  const [perStudent, setPerStudent] = useState(1);
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    if (open) { setSelectedIds([]); setDone(false); setGiftItem(items[0]?.id ?? ""); setPerStudent(1); setStudentQ(""); setSysFilter("all"); setGroupFilter("all"); setStatusFilter("all"); }
-  }, [open, items]);
-
-  function toggle(id: string) {
-    setSelectedIds((p) => p.includes(id) ? p.filter((x) => x !== id) : [...p, id]);
-  }
-
-  const visibleStudents = useMemo(() => eligible.filter((s) => {
-    if (sysFilter !== "all" && s.system !== sysFilter) return false;
-    if (statusFilter !== "all" && s.status !== statusFilter) return false;
-    if (groupFilter !== "all") {
-      if (s.system === "madrassa" && s.categoryId !== groupFilter) return false;
-      if (s.system === "school" && s.classId !== groupFilter) return false;
-    }
-    if (studentQ) {
-      const q = studentQ.toLowerCase();
-      if (!(s.name.toLowerCase().includes(q) || s.nameUrdu.includes(studentQ) || s.rollNo.toLowerCase().includes(q))) return false;
-    }
-    return true;
-  }), [eligible, sysFilter, statusFilter, groupFilter, studentQ]);
-
-  const allVisibleSelected = visibleStudents.length > 0 && visibleStudents.every((s) => selectedIds.includes(s.id));
-  function toggleAllVisible() {
-    if (allVisibleSelected) setSelectedIds((p) => p.filter((id) => !visibleStudents.some((s) => s.id === id)));
-    else setSelectedIds((p) => Array.from(new Set([...p, ...visibleStudents.map((s) => s.id)])));
-  }
-
-  const item = items.find((i) => i.id === giftItem);
-  const totalNeeded = selectedIds.length * perStudent;
-  const insufficient = item ? totalNeeded > item.quantity : false;
-
-  function distribute() {
-    if (!item) return;
-    if (selectedIds.length === 0) { toast.error("Select at least one student"); return; }
-    if (insufficient) { toast.error(`Not enough stock — need ${totalNeeded}, have ${item.quantity}`); return; }
-    onDistribute(item.id, totalNeeded);
-    setDone(true);
-    toast.success(`Distributed ${totalNeeded} ${item.unit} of ${item.name} to ${selectedIds.length} students`);
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Gift className="h-4 w-4" />Graduation Gift Distribution · رخصتی تحائف</DialogTitle>
-          <DialogDescription>Track inventory deducted as graduation gifts. Auto-creates a stock movement entry.</DialogDescription>
-        </DialogHeader>
-
-        {done ? (
-          <div className="py-10 text-center">
-            <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-            <p className="font-heading text-lg font-bold">Gifts distributed</p>
-            <p className="font-urdu text-sm text-muted-foreground" dir="rtl">تحائف تقسیم ہو گئے</p>
-            <p className="text-xs text-muted-foreground mt-2">{selectedIds.length} students · {item?.name} × {perStudent} each</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_240px] gap-4">
-            <Card className="p-3 flex flex-col gap-2 min-h-0">
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">Select students · طلبہ منتخب کریں</p>
-                <p className="text-[10px] text-muted-foreground font-mono">{selectedIds.length} selected</p>
-              </div>
-              <div className="relative">
-                <Search className="absolute end-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input value={studentQ} onChange={(e) => setStudentQ(e.target.value)} placeholder="Search by name or roll…" className="h-8 pe-8 text-xs" />
-              </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                <Select value={sysFilter} onValueChange={(v) => { setSysFilter(v); setGroupFilter("all"); }}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="System" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All systems</SelectItem>
-                    <SelectItem value="madrassa">Madrassa</SelectItem>
-                    <SelectItem value="school">School</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={groupFilter} onValueChange={setGroupFilter}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Group" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All groups</SelectItem>
-                    {sysFilter !== "school" && madrassaCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    {sysFilter !== "madrassa" && schoolClasses.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="graduated">Graduated</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between border-t pt-2">
-                <label className="flex items-center gap-2 text-xs cursor-pointer">
-                  <Checkbox checked={allVisibleSelected} onCheckedChange={toggleAllVisible} />
-                  Select all visible ({visibleStudents.length})
-                </label>
-                {selectedIds.length > 0 && (
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => setSelectedIds([])}>Clear</Button>
-                )}
-              </div>
-              <div className="max-h-[300px] overflow-y-auto space-y-1 -mx-1 px-1">
-                {visibleStudents.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-6">No students match filters</p>
-                ) : visibleStudents.map((s) => (
-                  <label key={s.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-pointer">
-                    <Checkbox checked={selectedIds.includes(s.id)} onCheckedChange={() => toggle(s.id)} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{s.name}</p>
-                      <p className="font-urdu text-sm truncate text-muted-foreground" dir="rtl">{s.nameUrdu}</p>
-                    </div>
-                    <span className="text-[10px] font-mono text-muted-foreground shrink-0">{s.rollNo}</span>
-                  </label>
-                ))}
-              </div>
-            </Card>
-
-            <div className="space-y-3">
-              <div>
-                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Gift item</Label>
-                <Select value={giftItem} onValueChange={setGiftItem}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{items.map((i) => <SelectItem key={i.id} value={i.id}>{i.name} ({i.quantity} {i.unit})</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Quantity per student</Label>
-                <Input type="number" min={1} value={perStudent} onChange={(e) => setPerStudent(Math.max(1, +e.target.value || 1))} />
-              </div>
-              <div className="rounded-lg bg-muted/50 p-3 text-xs space-y-1">
-                <div className="flex justify-between"><span className="text-muted-foreground">Recipients</span><span className="font-mono">{selectedIds.length}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Total needed</span><span className={cn("font-mono", insufficient && "text-destructive")}>{totalNeeded}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">In stock</span><span className="font-mono">{item?.quantity ?? 0}</span></div>
-              </div>
-              {insufficient && (
-                <div className="flex gap-2 items-start text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
-                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                  Not enough stock for this distribution.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{done ? "Close" : "Cancel"}</Button>
-          {!done && <Button onClick={distribute} disabled={insufficient || selectedIds.length === 0}>Distribute</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>
