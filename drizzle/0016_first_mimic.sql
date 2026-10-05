@@ -1,0 +1,1 @@
+ALTER TABLE "school_classes" ADD COLUMN "gender" text;
