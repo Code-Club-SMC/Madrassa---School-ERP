@@ -1,6 +1,9 @@
 services:
   postgres:
-    image: postgres:18.3-alpine3.23
+    build:
+      context: ./docker/postgres
+      dockerfile: Dockerfile
+    image: msmis/postgres:18.3-alpine3.23
     container_name: msmis-postgres
     restart: unless-stopped
 
@@ -8,18 +11,26 @@ services:
       POSTGRES_DB: msmis
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+      TZ: UTC
+      PGTZ: UTC
 
     ports:
       - "5432:5432"
 
     volumes:
+      # postgres:18 stores data at /var/lib/postgresql/18/docker (PGDATA)
       - postgres-data:/var/lib/postgresql
+
+    shm_size: 256mb
+    stop_grace_period: 30s
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d msmis"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
 
 
 volumes:
