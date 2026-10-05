@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Moon, Sun, ChevronLeft, Search, ArrowLeftRight, Bell } from "lucide-react";
+import { Moon, Sun, ChevronLeft, Search, ArrowLeftRight, Bell, Languages, Check } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -119,6 +119,51 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Language Switcher */}
+        <div className="hidden sm:inline-flex items-center bg-muted/60 dark:bg-muted/40 p-0.5 rounded-full border border-border/60 text-xs shadow-xs">
+          <button
+            type="button"
+            onClick={() => setLang("en")}
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-150 select-none",
+              lang === "en"
+                ? "bg-background text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title="Switch to English"
+          >
+            <Languages className="h-3 w-3 opacity-60" />
+            <span>English</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLang("ur")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-150 select-none",
+              lang === "ur"
+                ? "bg-background text-foreground shadow-xs font-bold"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title="اردو میں تبدیل کریں"
+          >
+            <span className="font-urdu text-[13px] leading-none">اردو</span>
+          </button>
+        </div>
+
+        {/* Mobile Language Switcher */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setLang(lang === "ur" ? "en" : "ur")}
+          className="sm:hidden h-8 px-2 gap-1 text-xs font-medium rounded-full bg-muted/50 border border-border/50"
+          aria-label="Switch language"
+        >
+          <Languages className="h-3.5 w-3.5 text-primary" />
+          <span className={cn("text-xs font-bold", lang === "ur" && "font-urdu")}>
+            {lang === "ur" ? "اردو" : "EN"}
+          </span>
+        </Button>
+
         <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle theme">
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
@@ -197,6 +242,13 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
               <Link to="/change-password">
                 {lang === "ur" ? "پاس ورڈ تبدیل کریں" : "Change password"}
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLang(lang === "ur" ? "en" : "ur")}>
+              <Languages className="h-4 w-4 me-2 opacity-70" />
+              <span>{lang === "ur" ? "زبان تبدیل کریں" : "Switch language"}</span>
+              <span className="ms-auto text-xs font-semibold px-2 py-0.5 rounded bg-muted">
+                {lang === "ur" ? "English" : "اردو"}
+              </span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/reports/")({
 });
 
 const REPORTS = [
-  { key: "attendance", to: "/reports/attendance" as const, icon: ClipboardList, title: "Attendance", titleUrdu: "حاضری", desc: "Daily attendance trends with heatmap and per-student breakdown." },
+  { key: "attendance", to: "/reports/attendance" as const, icon: ClipboardList, title: "Attendance Report", titleUrdu: "حاضری رپورٹ", desc: "Daily attendance trends with heatmap and per-student breakdown." },
   { key: "category", to: "/reports/category" as const, icon: Layers, title: "Category-wise", titleUrdu: "زمرہ وار", desc: "Enrollment, retention and fee collection by Hifz / Nazira / class." },
   { key: "exam", to: "/reports/exams" as const, icon: GraduationCap, title: "Exam Results", titleUrdu: "نتائج", desc: "Series-level pass percentages, grade distribution and subject mastery." },
   { key: "monthly", to: "/reports/monthly" as const, icon: CalendarRange, title: "Monthly Summary", titleUrdu: "ماہانہ", desc: "Combined admissions, attendance, fees for a single month." },

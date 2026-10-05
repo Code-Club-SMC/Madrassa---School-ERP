@@ -147,11 +147,71 @@
     border-color: var(--color-border);
   }
 
+  /* Global Direction & Typography Rules */
+  html[dir="rtl"],
+  html[dir="rtl"] body {
+    direction: rtl;
+    text-align: right;
+    font-family: var(--font-urdu), var(--font-sans);
+  }
+
+  html[dir="ltr"],
+  html[dir="ltr"] body {
+    direction: ltr;
+    text-align: left;
+    font-family: var(--font-sans);
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: var(--font-sans);
     font-feature-settings: 'cv11', 'ss01';
+  }
+
+  /* Form Elements: Ensure text alignment respects the current language */
+  html[dir="rtl"] input:not([type="number"]):not([type="tel"]):not([type="email"]):not([type="url"]):not([data-preserve-dir]),
+  html[dir="rtl"] textarea:not([data-preserve-dir]),
+  html[dir="rtl"] select:not([data-preserve-dir]) {
+    direction: rtl;
+    text-align: right;
+  }
+
+  html[dir="ltr"] input:not([data-preserve-dir]),
+  html[dir="ltr"] textarea:not([data-preserve-dir]),
+  html[dir="ltr"] select:not([data-preserve-dir]) {
+    direction: ltr;
+    text-align: left;
+  }
+
+  /* Tables: Ensure table headers and cells align properly */
+  html[dir="rtl"] th,
+  html[dir="rtl"] td {
+    text-align: right;
+  }
+
+  html[dir="ltr"] th,
+  html[dir="ltr"] td {
+    text-align: left;
+  }
+
+  /* Global override for containers that had static dir="rtl" when English is active */
+  html[dir="ltr"] [dir="rtl"]:not([data-preserve-dir]) {
+    direction: ltr;
+    text-align: left;
+  }
+
+  /* Technical fields, numbers, codes remain LTR */
+  input[type="tel"],
+  input[type="email"],
+  input[type="number"],
+  input[type="url"],
+  .font-mono,
+  code,
+  kbd,
+  [data-preserve-dir] {
+    direction: ltr !important;
+    text-align: left !important;
+    unicode-bidi: plaintext;
   }
 
   .font-heading {
@@ -161,9 +221,11 @@
 
   .font-urdu {
     font-family: var(--font-urdu);
-    font-size: 1.1em;
-    line-height: 1.9;
     letter-spacing: 0;
+  }
+
+  html[dir="rtl"] .font-urdu {
+    line-height: 1.8;
   }
 }
 

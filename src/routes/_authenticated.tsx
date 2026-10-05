@@ -4,10 +4,8 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Outlet, useNavigate, useRouterState, redirect } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app/app-sidebar";
-import { Topbar } from "@/components/app/topbar";
 import { CommandPalette } from "@/components/app/command-palette";
 import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
-import { DraggableLanguageToggle } from "@/components/app/draggable-language-toggle";
 import { useSystem } from "@/components/system-context";
 import { HRProvider } from "@/stores/hr-store";
 import { useAuth } from "@/hooks/use-auth";
@@ -74,13 +72,11 @@ function AuthenticatedLayout() {
         }
       >
         <div className="min-h-dvh flex w-full bg-background">
-          <AppSidebar />
+          <AppSidebar onOpenPalette={() => setPaletteOpen(true)} />
           <SidebarInset className="flex-1 min-w-0 relative">
-            <Topbar onOpenPalette={() => setPaletteOpen(true)} />
             <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-6 max-w-[1600px] w-full mx-auto">
               <Outlet />
             </main>
-            <DraggableLanguageToggle />
           </SidebarInset>
           <MobileBottomNav />
           <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />

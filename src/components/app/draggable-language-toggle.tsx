@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLanguage } from "@/components/language-context";
-import { Button } from "@/components/ui/button";
 import { Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -70,29 +69,50 @@ export function DraggableLanguageToggle({ className, renderLabel }: Props) {
   };
 
   return (
-    <Button
+    <div
       ref={buttonRef}
-      variant="secondary"
-      size="icon"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      onClick={handleClick}
-      aria-label={`Switch language. Current: ${lang === "ur" ? "Urdu" : "English"}`}
       className={cn(
-        "fixed z-50 shadow-lg select-none touch-none",
-        "h-10 w-10 rounded-full",
+        "fixed z-50 select-none touch-none",
         isDragging ? "cursor-grabbing scale-105" : "cursor-grab",
         className,
       )}
       style={{ left: position.x, top: position.y }}
     >
-      <Languages className="h-4 w-4" />
-      <span className="sr-only">{lang === "ur" ? "English" : "اردو"}</span>
-      <span className="absolute -top-1 -end-1 inline-flex h-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground">
-        {lang === "ur" ? "EN" : "UR"}
-      </span>
-    </Button>
+      <div className="flex items-center gap-1.5 p-1 rounded-full bg-background/90 dark:bg-card/90 backdrop-blur-md border border-border/70 shadow-lg ring-1 ring-black/5 dark:ring-white/5">
+        <button
+          type="button"
+          onClick={() => {
+            if (!isDragging) setLang("en");
+          }}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all duration-150",
+            lang === "en"
+              ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Languages className="h-3.5 w-3.5" />
+          <span>English</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (!isDragging) setLang("ur");
+          }}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-150 font-urdu",
+            lang === "ur"
+              ? "bg-primary text-primary-foreground shadow-xs font-bold"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <span className="text-[13px] leading-none">اردو</span>
+        </button>
+      </div>
+    </div>
   );
 }

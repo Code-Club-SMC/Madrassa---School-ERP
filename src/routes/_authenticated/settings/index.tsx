@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  CalendarRange, HandCoins, Globe, MessageSquareText, DatabaseBackup,
-  Receipt, Banknote, ShieldCheck, Users2, type LucideIcon,
+  CalendarRange, HandCoins, Globe, MessageSquareText,
+  Receipt, Banknote, Users2, type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -17,11 +17,9 @@ const TILES: Tile[] = [
   { to: "/settings/concessions", icon: HandCoins, en: "Fee Concessions", ur: "فیس رعایات", desc: "Orphan, hardship, merit and sibling discounts." },
   { to: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", desc: "Hero, announcements, gallery & theme." },
   { to: "/settings/templates", icon: MessageSquareText, en: "SMS / WhatsApp Templates", ur: "پیغام سانچے", desc: "Bilingual templates for fees, absence & results." },
-  { to: "/settings/backup", icon: DatabaseBackup, en: "Backup & Restore", ur: "بیک اپ", desc: "Export full database, schedule automatic backups." },
   { to: "/teachers/salary", icon: Banknote, en: "Salary Slips", ur: "تنخواہ سلپ", desc: "Generate and print monthly teacher salary slips." },
   { to: "/finance/donations", icon: Receipt, en: "Donation Receipts", ur: "عطیات کی رسیدیں", desc: "Issue zakat / sadqa / general donation receipts." },
   { to: "/users", icon: Users2, en: "User Accounts", ur: "صارفین", desc: "Create admins, teachers and parent logins." },
-  { to: "/audit", icon: ShieldCheck, en: "Audit Log", ur: "آڈٹ لاگ", desc: "Track every privileged action in the system." },
 ];
 
 function SettingsHub() {
