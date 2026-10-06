@@ -18,10 +18,10 @@ describe("admission numbering", () => {
     expect(
       visibleScopedNumberPrefix(
         "ADM-REQ",
-        { programId: "zainab_dars_nizami", madrassaSubcategoryId: "bt-tarjuma" },
-        "ZTR",
+        { programId: "zainab_dars_nizami", madrassaSubcategoryId: "bt-dars-ula" },
+        "ZD1",
       ),
-    ).toBe("ADM-REQ-ZTR");
+    ).toBe("ADM-REQ-ZD1");
   });
 
   test("roll number scope code is unique for school classes sharing one program prefix", () => {

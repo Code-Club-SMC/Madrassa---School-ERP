@@ -228,7 +228,16 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
     countMap.set(`${row.subcategoryId ?? ""}:${row.institutionId}`, Number(row.count));
   }
 
+  const ALLOWED_CATEGORY_IDS = ["dars_nizami", "hifz", "qaida_nazira"];
+  const CATEGORY_ORDER: Record<string, number> = {
+    dars_nizami: 1,
+    hifz: 2,
+    qaida_nazira: 3,
+  };
+
   return categories
+    .filter((category) => ALLOWED_CATEGORY_IDS.includes(category.id))
+    .sort((a, b) => (CATEGORY_ORDER[a.id] ?? 99) - (CATEGORY_ORDER[b.id] ?? 99))
     .filter((category) => {
       if (!section) return true;
       if (category.section === section) return true;

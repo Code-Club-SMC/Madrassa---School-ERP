@@ -125,10 +125,26 @@ function CategoriesPage() {
     return null;
   }
 
-  const visibleCategories = categories.filter((c) => {
-    const dbSection = c.section === "baneen" || c.section === "male" ? "male" : c.section === "banat" || c.section === "female" ? "female" : c.section;
-    return dbSection === gender;
-  });
+  const visibleCategories = categories
+    .filter((c) => {
+      const allowed = ["dars_nizami", "hifz", "qaida_nazira"];
+      if (!allowed.includes(c.id)) return false;
+      const dbSection =
+        c.section === "baneen" || c.section === "male"
+          ? "male"
+          : c.section === "banat" || c.section === "female"
+            ? "female"
+            : c.section;
+      return dbSection === gender || (c.subcategories && c.subcategories.length > 0);
+    })
+    .sort((a, b) => {
+      const order: Record<string, number> = {
+        dars_nizami: 1,
+        hifz: 2,
+        qaida_nazira: 3,
+      };
+      return (order[a.id] ?? 99) - (order[b.id] ?? 99);
+    });
 
   const selectedCategory = visibleCategories.find((c) => c.id === selectedCategoryId) ?? null;
   const selectedSubcategories = selectedCategory?.subcategories ?? [];

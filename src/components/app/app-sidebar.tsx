@@ -432,36 +432,20 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
                     <button
                       type="button"
                       onClick={() => setGender(gender === "male" ? "female" : "male")}
-                      className="group relative h-8 w-[52px] mx-auto flex items-center justify-between px-1.5 rounded-full bg-sidebar-accent/40 border border-sidebar-border/60 hover:bg-sidebar-accent/70 transition-all text-xs select-none"
+                      className="h-8 w-8 mx-auto flex items-center justify-center rounded-xl bg-sidebar-accent/50 border border-sidebar-border/60 hover:bg-sidebar-accent hover:border-sidebar-primary/50 transition-all text-sm select-none shadow-xs"
                       aria-label="Toggle campus"
                     >
-                      <span
-                        className={cn(
-                          "transition-all duration-150 z-10 text-xs text-center w-[22px]",
-                          gender === "male" ? "opacity-100 scale-110" : "opacity-35 scale-90",
-                        )}
-                      >
-                        🕌
-                      </span>
-                      <span
-                        className={cn(
-                          "transition-all duration-150 z-10 text-xs text-center w-[22px]",
-                          gender === "female" ? "opacity-100 scale-110" : "opacity-35 scale-90",
-                        )}
-                      >
-                        🌙
-                      </span>
-                      {/* Sliding toggle indicator */}
-                      <span
-                        className={cn(
-                          "absolute top-0.5 bottom-0.5 w-[24px] rounded-full bg-sidebar-primary/25 border border-sidebar-primary/50 transition-all duration-200 ease-out",
-                          gender === "male" ? "start-0.5" : "start-[26px]",
-                        )}
-                      />
+                      <span>{gender === "male" ? "🕌" : "🌙"}</span>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side={isUrdu ? "left" : "right"} className="text-xs">
-                    {gender === "male" ? "جامعہ قاسمیہ (تبدیل کرنے کے لیے کلک کریں)" : "جامعہ زینب (تبدیل کرنے کے لیے کلک کریں)"}
+                    {gender === "male"
+                      ? isUrdu
+                        ? "جامعہ قاسمیہ (للبنین) — تبدیل کرنے کے لیے کلک کریں"
+                        : "Jamia Qasimia (Boys) — Click to switch"
+                      : isUrdu
+                        ? "جامعہ زینب (للبنات) — تبدیل کرنے کے لیے کلک کریں"
+                        : "Jamia Zainab (Girls) — Click to switch"}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -521,36 +505,18 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
                     <button
                       type="button"
                       onClick={() => setLang(lang === "ur" ? "en" : "ur")}
-                      className="group relative h-8 w-[52px] mx-auto flex items-center justify-between px-1.5 rounded-full bg-sidebar-accent/40 border border-sidebar-border/60 hover:bg-sidebar-accent/70 transition-all text-xs select-none"
+                      className="h-8 w-8 mx-auto flex items-center justify-center rounded-xl bg-sidebar-accent/50 border border-sidebar-border/60 hover:bg-sidebar-accent hover:border-sidebar-primary/50 transition-all select-none shadow-xs text-sidebar-foreground"
                       aria-label="Toggle language"
                     >
-                      <span
-                        className={cn(
-                          "transition-all duration-150 z-10 text-[10px] font-bold leading-none text-center w-[22px]",
-                          lang === "en" ? "text-sidebar-foreground opacity-100" : "text-muted-foreground opacity-40",
-                        )}
-                      >
-                        EN
-                      </span>
-                      <span
-                        className={cn(
-                          "transition-all duration-150 z-10 font-urdu font-bold text-[11px] leading-none text-center w-[22px]",
-                          lang === "ur" ? "text-sidebar-foreground opacity-100" : "text-muted-foreground opacity-40",
-                        )}
-                      >
-                        اردو
-                      </span>
-                      {/* Sliding toggle indicator */}
-                      <span
-                        className={cn(
-                          "absolute top-0.5 bottom-0.5 w-[24px] rounded-full bg-sidebar-primary/25 border border-sidebar-primary/50 transition-all duration-200 ease-out",
-                          lang === "en" ? "start-0.5" : "start-[26px]",
-                        )}
-                      />
+                      {lang === "en" ? (
+                        <span className="text-[11px] font-bold leading-none">EN</span>
+                      ) : (
+                        <span className="font-urdu font-bold text-[12px] leading-none">اردو</span>
+                      )}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side={isUrdu ? "left" : "right"} className="text-xs">
-                    {lang === "ur" ? "English (تبدیل کرنے کے لیے کلک کریں)" : "اردو (Click to switch)"}
+                    {lang === "ur" ? "English (تبدیل کرنے کے لیے کلک کریں)" : "اردو (Click to switch to Urdu)"}
                   </TooltipContent>
                 </Tooltip>
               )}

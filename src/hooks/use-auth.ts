@@ -14,12 +14,15 @@ export function useAuth() {
     try {
       const response = await Promise.race([
         getUserServer(),
-        new Promise<Response>((_, reject) =>
+        new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Session check timed out")), 8000),
         ),
       ]);
-      const data = await response.json();
-      const user = data.user ? { ...data.user, role: data.user.role as UserRole } : null;
+      const data =
+        response && typeof (response as { json?: unknown }).json === "function"
+          ? await (response as Response).json()
+          : (response as { user?: User; error?: string } | null);
+      const user = data?.user ? { ...data.user, role: data.user.role as UserRole } : null;
       setState({ user, isLoading: false });
       return user;
     } catch {
@@ -30,9 +33,15 @@ export function useAuth() {
 
   const login = useCallback(async ({ identifier, password }: { identifier: string; password: string }) => {
     const response = await loginServer({ data: { identifier, password } });
-    const data = await response.json();
-    if (!response.ok || data.error) {
-      throw new Error(data.error ?? "Login failed");
+    const data =
+      response && typeof (response as { json?: unknown }).json === "function"
+        ? await (response as Response).json()
+        : (response as { user?: User; error?: string } | null);
+    if (!data || data.error) {
+      throw new Error(data?.error ?? "Login failed");
+    }
+    if (!data.user) {
+      throw new Error("Login failed");
     }
     const user = { ...data.user, role: data.user.role as UserRole };
     setState({ user, isLoading: false });

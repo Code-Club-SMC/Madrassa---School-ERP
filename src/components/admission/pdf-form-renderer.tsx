@@ -784,7 +784,7 @@ function gradeOptionsForVariant(variant: AdmissionVariant) {
       ? ["hifz"]
       : variant.key === "madrassa-boys-nazira" || variant.key === "madrassa-girls-nazira"
         ? ["nazira"]
-        : ["preparatory", "dars_nizami", "tajweed", "takhassus", "short_course"];
+        : ["dars_nizami"];
 
   return madrassaGradesForSection(section, kinds);
 }

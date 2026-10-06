@@ -12,9 +12,10 @@ type Props = {
 
 export function DraggableLanguageToggle({ className, renderLabel }: Props) {
   const { lang, setLang } = useLanguage();
+  const [hasCustomPos, setHasCustomPos] = useState(false);
   const [position, setPosition] = useState<{ x: number; y: number }>({ x: 16, y: 16 });
   const [isDragging, setIsDragging] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const dragStart = useRef<{ x: number; y: number; originX: number; originY: number } | null>(null);
 
   useEffect(() => {
@@ -23,73 +24,84 @@ export function DraggableLanguageToggle({ className, renderLabel }: Props) {
     if (stored) {
       try {
         const parsed = JSON.parse(stored) as { x: number; y: number };
-        setPosition({ x: parsed.x ?? 16, y: parsed.y ?? 16 });
+        if (typeof parsed?.x === "number" && typeof parsed?.y === "number") {
+          setPosition({ x: parsed.x, y: parsed.y });
+          setHasCustomPos(true);
+        }
       } catch {}
     }
   }, []);
 
-  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // If clicking a button or anything inside a button, do not capture or drag
     if ((event.target as HTMLElement).closest("button")) {
-      const target = event.target as HTMLElement;
-      if (target.tagName === "BUTTON" && !isDragging) return;
+      return;
     }
     event.preventDefault();
     setIsDragging(true);
+    setHasCustomPos(true);
+
+    const rect = containerRef.current?.getBoundingClientRect();
+    const currentX = rect ? rect.left : position.x;
+    const currentY = rect ? rect.top : position.y;
+
     dragStart.current = {
       x: event.clientX,
       y: event.clientY,
-      originX: position.x,
-      originY: position.y,
+      originX: currentX,
+      originY: currentY,
     };
-    buttonRef.current?.setPointerCapture(event.pointerId);
+    containerRef.current?.setPointerCapture(event.pointerId);
   };
 
-  const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!isDragging || !dragStart.current) return;
     const dx = event.clientX - dragStart.current.x;
     const dy = event.clientY - dragStart.current.y;
-    setPosition({
-      x: Math.max(0, Math.min(window.innerWidth - 40, dragStart.current.originX + dx)),
-      y: Math.max(0, Math.min(window.innerHeight - 40, dragStart.current.originY + dy)),
-    });
+    const newX = Math.max(8, Math.min(window.innerWidth - 140, dragStart.current.originX + dx));
+    const newY = Math.max(8, Math.min(window.innerHeight - 50, dragStart.current.originY + dy));
+    setPosition({ x: newX, y: newY });
   };
 
-  const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
     setIsDragging(false);
     dragStart.current = null;
     try {
       localStorage.setItem("msmis-lang-toggle-pos", JSON.stringify(position));
     } catch {}
-    buttonRef.current?.releasePointerCapture(event.pointerId);
-  };
-
-  const handleClick = () => {
-    if (isDragging) return;
-    setLang(lang === "ur" ? "en" : "ur");
+    try {
+      containerRef.current?.releasePointerCapture(event.pointerId);
+    } catch {}
   };
 
   return (
     <div
-      ref={buttonRef}
+      ref={containerRef}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
       className={cn(
-        "fixed z-50 select-none touch-none",
+        "fixed z-40 select-none w-fit h-fit max-w-fit max-h-fit pointer-events-auto",
+        !hasCustomPos ? (className ?? "bottom-4 end-4") : "",
         isDragging ? "cursor-grabbing scale-105" : "cursor-grab",
-        className,
       )}
-      style={{ left: position.x, top: position.y }}
+      style={
+        hasCustomPos
+          ? { left: `${position.x}px`, top: `${position.y}px`, bottom: "auto", right: "auto", insetInlineEnd: "auto" }
+          : undefined
+      }
     >
-      <div className="flex items-center gap-1.5 p-1 rounded-full bg-background/90 dark:bg-card/90 backdrop-blur-md border border-border/70 shadow-lg ring-1 ring-black/5 dark:ring-white/5">
+      <div className="flex items-center gap-1.5 p-1 rounded-full bg-background/95 dark:bg-card/95 backdrop-blur-md border border-border/80 shadow-lg ring-1 ring-black/5 dark:ring-white/5">
         <button
           type="button"
-          onClick={() => {
-            if (!isDragging) setLang("en");
+          onClick={(e) => {
+            e.stopPropagation();
+            setLang("en");
           }}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all duration-150",
+            "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all duration-150 cursor-pointer",
             lang === "en"
               ? "bg-primary text-primary-foreground shadow-xs font-semibold"
               : "text-muted-foreground hover:text-foreground",
@@ -100,11 +112,12 @@ export function DraggableLanguageToggle({ className, renderLabel }: Props) {
         </button>
         <button
           type="button"
-          onClick={() => {
-            if (!isDragging) setLang("ur");
+          onClick={(e) => {
+            e.stopPropagation();
+            setLang("ur");
           }}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-150 font-urdu",
+            "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-150 font-urdu cursor-pointer",
             lang === "ur"
               ? "bg-primary text-primary-foreground shadow-xs font-bold"
               : "text-muted-foreground hover:text-foreground",

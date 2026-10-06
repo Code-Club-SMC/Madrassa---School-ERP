@@ -58,12 +58,12 @@ export const variantTargets: Record<AdmissionVariantKey, VariantTarget> = {
   "madrassa-boys-general": {
     institutionId: "jamia_qasmia_baneen",
     programId: "qasmia_dars_nizami",
-    defaultMadrassaSubcategoryId: "bn-idadiya-awwal",
+    defaultMadrassaSubcategoryId: "bn-dars-ula",
   },
   "madrassa-girls-general": {
     institutionId: "jamia_zainab_banat",
     programId: "zainab_dars_nizami",
-    defaultMadrassaSubcategoryId: "bt-tarjuma",
+    defaultMadrassaSubcategoryId: "bt-dars-ula",
   },
   "madrassa-girls-nazira": {
     institutionId: "jamia_zainab_banat",

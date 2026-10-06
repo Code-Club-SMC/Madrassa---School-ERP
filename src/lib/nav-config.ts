@@ -22,7 +22,6 @@ import {
   Globe,
   School,
   BookMarked,
-  Sparkles,
   Bell,
   HandCoins,
   Receipt,
@@ -68,7 +67,6 @@ export const navItems: NavItem[] = [
   { group: "madrassa", url: "/madrassa/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
   { group: "madrassa", url: "/madrassa/categories", icon: BookOpen, en: "Categories", ur: "زمرے", roles: ADMINS },
   { group: "madrassa", url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
-  { group: "madrassa", url: "/madrassa/hifz", icon: Sparkles, en: "Hifz Tracker", ur: "حفظ ٹریکر", roles: ANY_STAFF },
   { group: "madrassa", url: "/madrassa/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
 
   // ---------- SCHOOL ----------
@@ -146,7 +144,6 @@ const MADRASSA_CHILDREN: NavChild[] = [
   { url: "/madrassa/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
   { url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
   { url: "/madrassa/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
-  { url: "/madrassa/hifz", icon: Sparkles, en: "Hifz Tracker", ur: "حفظ ٹریکر", roles: ANY_STAFF },
 ];
 
 const SCHOOL_CHILDREN: NavChild[] = [
@@ -165,6 +162,20 @@ export const navParents: NavParent[] = [
     ur: "ڈیش بورڈ",
     url: "/dashboard",
     roles: [...ANY_STAFF, "parent"],
+  },
+  {
+    key: "admission",
+    icon: FileSignature,
+    en: "Admission",
+    ur: "داخلہ",
+    url: "/admission",
+    roles: ADMINS,
+    children: [
+      { url: "/admission", icon: FileSignature, en: "Overview", ur: "جائزہ", roles: ADMINS },
+      { url: "/admission/new", icon: UserPlus, en: "New Admission", ur: "نیا داخلہ", roles: ADMINS },
+      { url: "/admission/queue", icon: ListChecks, en: "Application Queue", ur: "درخواستوں کی قطار", roles: ADMINS },
+      { url: "/admission/interviews", icon: UserRoundCheck, en: "Interviews", ur: "انٹرویو", roles: ADMINS },
+    ],
   },
   {
     key: "academic",
@@ -216,20 +227,6 @@ export const navParents: NavParent[] = [
       { url: "/reports/attendance", icon: CalendarCheck, en: "Attendance Report", ur: "حاضری رپورٹ", roles: ANY_STAFF },
       { url: "/reports/category", icon: Layers, en: "Category", ur: "زمرہ", roles: ANY_STAFF },
       { url: "/reports/admin", icon: Gauge, en: "Admin", ur: "ایڈمن", roles: ANY_STAFF },
-    ],
-  },
-  {
-    key: "admission",
-    icon: FileSignature,
-    en: "Admission",
-    ur: "داخلہ",
-    url: "/admission",
-    roles: ADMINS,
-    children: [
-      { url: "/admission", icon: FileSignature, en: "Overview", ur: "جائزہ", roles: ADMINS },
-      { url: "/admission/new", icon: UserPlus, en: "New Admission", ur: "نیا داخلہ", roles: ADMINS },
-      { url: "/admission/queue", icon: ListChecks, en: "Application Queue", ur: "درخواستوں کی قطار", roles: ADMINS },
-      { url: "/admission/interviews", icon: UserRoundCheck, en: "Interviews", ur: "انٹرویو", roles: ADMINS },
     ],
   },
   {

@@ -5,8 +5,8 @@ const { describe, expect, test } = await import(bunTestModule);
 
 describe("admission catalog resolution", () => {
   test("does not resolve madrassa darja ids as school classes", async () => {
-    expect(await resolveSchoolClassId("bn-idadiya-awwal")).toBeNull();
-    expect(await resolveSchoolClassId("bt-tarjuma")).toBeNull();
+    expect(await resolveSchoolClassId("bn-dars-ula")).toBeNull();
+    expect(await resolveSchoolClassId("bt-dars-ula")).toBeNull();
   });
 
   test("resolves real school class ids and labels", async () => {

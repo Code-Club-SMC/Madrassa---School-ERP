@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/components/language-context";
 import { DraggableLanguageToggle } from "@/components/app/draggable-language-toggle";
 import { useAuth } from "@/hooks/use-auth";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -100,15 +101,15 @@ function LoginPage() {
         lang={lang}
       >
         <div className="w-full max-w-[430px] space-y-8">
-          <div className="space-y-3 text-right">
+          <div className="space-y-3 text-start">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
               <School className="h-6 w-6" />
             </div>
             <div className="space-y-1">
-              <p className="font-urdu text-3xl font-bold leading-loose">
+              <p className={cn("text-3xl font-bold", lang === "ur" ? "font-urdu leading-loose" : "")}>
                 {lang === "ur" ? "خوش آمدید" : "Welcome"}
               </p>
-              <p className="font-urdu text-sm text-muted-foreground">
+              <p className={cn("text-sm text-muted-foreground", lang === "ur" ? "font-urdu" : "")}>
                 {lang === "ur"
                   ? "اپنے اکاؤنٹ میں داخل ہونے کے لیے درست طریقہ منتخب کریں"
                   : "Select the correct method to log into your account"}
@@ -141,12 +142,12 @@ function LoginPage() {
             onSubmit={onSubmit}
             className="space-y-5 rounded-xl border border-border bg-background p-6 shadow-sm"
           >
-            <div className="space-y-2 text-right">
-              <label htmlFor="identifier" className="font-urdu text-sm font-medium">
+            <div className="space-y-2 text-start">
+              <label htmlFor="identifier" className={cn("text-sm font-medium", lang === "ur" ? "font-urdu" : "")}>
                 {mode === "staff"
                   ? lang === "ur"
-                    ? "ای میل"
-                    : "Email"
+                    ? "ای میل یا یوزر نیم"
+                    : "Email or Username"
                   : lang === "ur"
                     ? "لاگ اِن آئی ڈی"
                     : "Login ID"}
@@ -154,10 +155,14 @@ function LoginPage() {
               <Input
                 id="identifier"
                 dir="ltr"
-                type={mode === "staff" ? "email" : "text"}
-                inputMode={mode === "staff" ? "email" : "text"}
-                autoComplete={mode === "staff" ? "email" : "username"}
-                placeholder={mode === "staff" ? "name@example.com" : "muhammad.yousaf4821"}
+                type="text"
+                inputMode={mode === "staff" ? "text" : "text"}
+                autoComplete={mode === "staff" ? "username" : "username"}
+                placeholder={
+                  mode === "staff"
+                    ? (lang === "ur" ? "admin@example.com یا یوزر نیم" : "admin@example.com or username")
+                    : "muhammad.yousaf4821"
+                }
                 value={mode === "staff" ? staffEmail : parentUsername}
                 onChange={(event) =>
                   mode === "staff"
@@ -168,8 +173,8 @@ function LoginPage() {
               />
             </div>
 
-            <div className="space-y-2 text-right">
-              <label htmlFor="password" className="font-urdu text-sm font-medium">
+            <div className="space-y-2 text-start">
+              <label htmlFor="password" className={cn("text-sm font-medium", lang === "ur" ? "font-urdu" : "")}>
                 {lang === "ur" ? "پاس ورڈ" : "Password"}
               </label>
               <Input
@@ -185,16 +190,16 @@ function LoginPage() {
             </div>
 
             {error && (
-              <Alert variant="destructive" className="text-right">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="font-urdu">{error}</AlertDescription>
+              <Alert variant="destructive" className="text-start">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <AlertDescription className={lang === "ur" ? "font-urdu" : ""}>{error}</AlertDescription>
               </Alert>
             )}
 
             <Button
               type="submit"
               disabled={submitting}
-              className="h-11 w-full gap-2 font-urdu text-base"
+              className={cn("h-11 w-full gap-2 text-base", lang === "ur" ? "font-urdu" : "font-medium")}
             >
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {lang === "ur" ? "داخل ہوں" : "Sign In"}
@@ -202,19 +207,18 @@ function LoginPage() {
           </form>
 
           <div className="space-y-4 text-center">
-            <p className="font-urdu text-sm leading-loose text-muted-foreground">
+            <p className={cn("text-sm text-muted-foreground", lang === "ur" ? "font-urdu leading-loose" : "")}>
               {lang === "ur"
                 ? "پاس ورڈ بھولنے پر دفتر یا منتظم سے رابطہ کریں"
                 : "Contact the office or administrator if you forgot your password"}
             </p>
             <Link
               to="/apply"
-              className="font-urdu text-sm font-medium text-primary underline-offset-4 hover:underline"
+              className={cn("text-sm font-medium text-primary underline-offset-4 hover:underline", lang === "ur" ? "font-urdu" : "")}
             >
               {lang === "ur" ? "آن لائن داخلہ درخواست" : "Online Admission Application"}
             </Link>
           </div>
-          <DraggableLanguageToggle className="fixed bottom-4 end-4" />
         </div>
       </main>
 
@@ -260,6 +264,7 @@ function LoginPage() {
             : "System for educational and administrative affairs"}
         </p>
       </aside>
+      <DraggableLanguageToggle className="fixed bottom-4 end-4 z-40" />
     </div>
   );
 }

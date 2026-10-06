@@ -1,9 +1,14 @@
+import { notInArray, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   institutions,
   madrassaCategories,
+  madrassaSubcategories,
   programs,
 } from "@/db/schema/academic";
+import { studentEnrollments } from "@/db/schema/students";
+import { admissionApplications } from "@/db/schema/admission";
+import { buildMadrassaCategories } from "@/lib/madrassa-grade-catalog";
 
 export const ACADEMIC_INSTITUTIONS = [
   {
@@ -154,65 +159,43 @@ export async function seedAcademicCatalog() {
       });
   }
 
-  const STATIC_CATEGORIES = [
+  const CANONICAL_CATEGORIES = [
     {
-      id: "nazara_male",
-      name: "Nazara",
-      nameUrdu: "ناظرہ",
-      description: "Nazara / Qaida category",
-      descriptionUrdu: "ناظرہ / قاعدہ زمرہ",
+      id: "dars_nizami",
+      name: "Dars-e-Nizami",
+      nameUrdu: "درس نظامی",
+      description: "Institution-provided Dars-e-Nizami grade sequence.",
+      descriptionUrdu: "ادارے کی فراہم کردہ درس نظامی درجات کی ترتیب",
       displayOrder: 1,
       active: true,
       section: "male",
-      formVariantKeys: ["madrassa-boys-nazira"],
+      formVariantKeys: ["madrassa-boys-general", "madrassa-girls-general"],
     },
     {
-      id: "hifiz_male",
-      name: "Hifiz",
-      nameUrdu: "حفاظ",
-      description: "Hifiz / Memorization category",
-      descriptionUrdu: "حفظ زمرہ",
+      id: "hifz",
+      name: "Hifz",
+      nameUrdu: "حفظ",
+      description: "Memorization grades provided by Jamia Qasmia Lil-Baneen.",
+      descriptionUrdu: "جامعہ قاسمیہ للبنین کے فراہم کردہ حفظ کے درجات",
       displayOrder: 2,
       active: true,
       section: "male",
       formVariantKeys: ["madrassa-boys-hifz"],
     },
     {
-      id: "alam_male",
-      name: "Alam",
-      nameUrdu: "علم",
-      description: "Alam / Dars-e-Nizami category",
-      descriptionUrdu: "علم / درس نظامی زمرہ",
+      id: "qaida_nazira",
+      name: "Nazira",
+      nameUrdu: "ناظرہ",
+      description: "Nazira grades provided separately for boys and girls madrassas.",
+      descriptionUrdu: "بنین اور بنات مدارس کے لیے فراہم کردہ ناظرہ درجات",
       displayOrder: 3,
       active: true,
       section: "male",
-      formVariantKeys: ["madrassa-boys-general"],
-    },
-    {
-      id: "nazara_female",
-      name: "Nazara",
-      nameUrdu: "ناظرہ",
-      description: "Nazara / Qaida category",
-      descriptionUrdu: "ناظرہ / قاعدہ زمرہ",
-      displayOrder: 1,
-      active: true,
-      section: "female",
-      formVariantKeys: ["madrassa-girls-nazira"],
-    },
-    {
-      id: "alam_female",
-      name: "Alam",
-      nameUrdu: "علم",
-      description: "Alam / Dars-e-Nizami category",
-      descriptionUrdu: "علم / درس نظامی زمرہ",
-      displayOrder: 2,
-      active: true,
-      section: "female",
-      formVariantKeys: ["madrassa-girls-general"],
+      formVariantKeys: ["madrassa-boys-nazira", "madrassa-girls-nazira"],
     },
   ];
 
-  for (const category of STATIC_CATEGORIES) {
+  for (const category of CANONICAL_CATEGORIES) {
     await db
       .insert(madrassaCategories)
       .values(category)
@@ -221,15 +204,79 @@ export async function seedAcademicCatalog() {
         set: {
           name: category.name,
           nameUrdu: category.nameUrdu,
-           description: category.description,
-           descriptionUrdu: category.descriptionUrdu,
-           displayOrder: category.displayOrder,
-           active: category.active,
-           section: category.section,
-           formVariantKeys: category.formVariantKeys,
-           updatedAt: new Date(),
-         },
+          description: category.description,
+          descriptionUrdu: category.descriptionUrdu,
+          displayOrder: category.displayOrder,
+          active: category.active,
+          section: category.section,
+          formVariantKeys: category.formVariantKeys,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  const catalogCategories = buildMadrassaCategories();
+  const validSubcategoryIds: string[] = [];
+
+  for (const cat of catalogCategories) {
+    for (const sub of cat.subcategories) {
+      validSubcategoryIds.push(sub.id);
+      await db
+        .insert(madrassaSubcategories)
+        .values({
+          id: sub.id,
+          categoryId: cat.id,
+          name: sub.name,
+          nameUrdu: sub.nameUrdu,
+          rollPrefix: sub.rollPrefix,
+          darja: sub.darja ?? null,
+          govtEquivalent: sub.govtEquivalent ?? null,
+          durationYears: sub.durationYears,
+          fee: null,
+          displayOrder: sub.displayOrder ?? 0,
+          active: true,
+          section: sub.section ?? "male",
+        })
+        .onConflictDoUpdate({
+          target: madrassaSubcategories.id,
+          set: {
+            categoryId: cat.id,
+            name: sub.name,
+            nameUrdu: sub.nameUrdu,
+            rollPrefix: sub.rollPrefix,
+            darja: sub.darja ?? null,
+            govtEquivalent: sub.govtEquivalent ?? null,
+            durationYears: sub.durationYears,
+            section: sub.section ?? "male",
+            updatedAt: new Date(),
+          },
         });
+    }
+  }
+
+  const allowedCategoryIds = CANONICAL_CATEGORIES.map((c) => c.id);
+  try {
+    if (validSubcategoryIds.length > 0) {
+      await db
+        .update(studentEnrollments)
+        .set({ madrassaSubcategoryId: "bn-dars-ula" })
+        .where(notInArray(studentEnrollments.madrassaSubcategoryId, validSubcategoryIds));
+
+      await db
+        .update(admissionApplications)
+        .set({ madrassaSubcategoryId: "bn-dars-ula" })
+        .where(notInArray(admissionApplications.madrassaSubcategoryId, validSubcategoryIds));
+
+      await db
+        .delete(madrassaSubcategories)
+        .where(notInArray(madrassaSubcategories.id, validSubcategoryIds));
+    }
+
+    await db
+      .delete(madrassaCategories)
+      .where(notInArray(madrassaCategories.id, allowedCategoryIds));
+  } catch (err) {
+    console.warn("Madrassa categories cleanup notice:", err);
   }
 }
 
