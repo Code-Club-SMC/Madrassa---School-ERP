@@ -22,12 +22,18 @@ const createSchema = z.object({
   designation: z.string().optional(),
 });
 
+import { KNOWN_URDU_NAMES } from "@/lib/user-names";
+
 export const Route = createFileRoute("/api/users/")({
   server: {
     handlers: {
       GET: async () => {
         const rows = await db.select().from(user).orderBy(desc(user.createdAt));
-        return new Response(JSON.stringify({ users: rows }), {
+        const enriched = rows.map((r) => ({
+          ...r,
+          nameUrdu: r.nameUrdu || (r.name ? KNOWN_URDU_NAMES[r.name] : null) || null,
+        }));
+        return new Response(JSON.stringify({ users: enriched }), {
           status: 200,
           headers: { "content-type": "application/json" },
         });

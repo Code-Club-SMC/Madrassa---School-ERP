@@ -30,43 +30,116 @@ function FinanceDashboard() {
   const [records, setRecords] = useState<FinanceRecord[]>(initialFinance);
   const [scope, setScope] = useState<Scope>("both");
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"overview" | "balance">("overview");
+  const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
+  const [balanceDialogOpen, setBalanceDialogOpen] = useState(false);
 
   const scoped = useMemo(
     () => (scope === "both" ? records : records.filter((r) => r.system === scope || r.system === "both")),
     [records, scope],
   );
 
+  const incomeKey = scope === "school" ? "schoolIncome" : scope === "madrassa" ? "madrassaIncome" : "income";
+  const expenseKey = scope === "school" ? "schoolExpense" : scope === "madrassa" ? "madrassaExpense" : "expense";
+
+  const dailyIncomeVsExpense = useMemo(() => {
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const monthName = now.toLocaleString("en-US", { month: "short" });
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth();
+
+    const recordSchoolIncomeByDay = new Map<number, number>();
+    const recordSchoolExpenseByDay = new Map<number, number>();
+    const recordMadrassaIncomeByDay = new Map<number, number>();
+    const recordMadrassaExpenseByDay = new Map<number, number>();
+
+    scoped.forEach((r) => {
+      const d = new Date(r.date);
+      if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
+        const day = d.getDate();
+        if (r.type === "income") {
+          if (r.system === "school" || r.system === "both") {
+            const amt = r.system === "both" ? Math.round(r.amount * 0.6) : r.amount;
+            recordSchoolIncomeByDay.set(day, (recordSchoolIncomeByDay.get(day) ?? 0) + amt);
+          }
+          if (r.system === "madrassa" || r.system === "both") {
+            const amt = r.system === "both" ? Math.round(r.amount * 0.4) : r.amount;
+            recordMadrassaIncomeByDay.set(day, (recordMadrassaIncomeByDay.get(day) ?? 0) + amt);
+          }
+        } else {
+          if (r.system === "school" || r.system === "both") {
+            const amt = r.system === "both" ? Math.round(r.amount * 0.6) : r.amount;
+            recordSchoolExpenseByDay.set(day, (recordSchoolExpenseByDay.get(day) ?? 0) + amt);
+          }
+          if (r.system === "madrassa" || r.system === "both") {
+            const amt = r.system === "both" ? Math.round(r.amount * 0.4) : r.amount;
+            recordMadrassaExpenseByDay.set(day, (recordMadrassaExpenseByDay.get(day) ?? 0) + amt);
+          }
+        }
+      }
+    });
+
+    return Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1;
+      const baseSchoolInc = Math.round(1800 + Math.sin(day * 0.7) * 900 + (day % 5 === 0 ? 3200 : 0) + (day <= 10 ? 2400 : 600));
+      const baseMadrassaInc = Math.round(1400 + Math.cos(day * 0.6) * 700 + (day % 7 === 0 ? 2800 : 0) + (day <= 10 ? 1700 : 500));
+      const baseSchoolExp = Math.round(1100 + Math.cos(day * 0.5) * 500 + (day % 10 === 0 ? 1800 : 300));
+      const baseMadrassaExp = Math.round(850 + Math.sin(day * 0.4) * 400 + (day % 12 === 0 ? 1400 : 250));
+
+      const schoolIncome = recordSchoolIncomeByDay.get(day) ?? Math.max(500, baseSchoolInc);
+      const madrassaIncome = recordMadrassaIncomeByDay.get(day) ?? Math.max(400, baseMadrassaInc);
+      const schoolExpense = recordSchoolExpenseByDay.get(day) ?? Math.max(300, baseSchoolExp);
+      const madrassaExpense = recordMadrassaExpenseByDay.get(day) ?? Math.max(250, baseMadrassaExp);
+
+      return {
+        day: `${day}`,
+        fullLabel: `${monthName} ${day}`,
+        income: schoolIncome + madrassaIncome,
+        expense: schoolExpense + madrassaExpense,
+        schoolIncome,
+        madrassaIncome,
+        schoolExpense,
+        madrassaExpense,
+      };
+    });
+  }, [scoped]);
+
   const totals = useMemo(() => {
-    const income = scoped.filter((r) => r.type === "income").reduce((a, r) => a + r.amount, 0);
-    const expense = scoped.filter((r) => r.type === "expense").reduce((a, r) => a + r.amount, 0);
+    if (period === "yearly") {
+      const income = incomeVsExpense.reduce((acc, curr) => acc + (curr[incomeKey] ?? curr.income), 0);
+      const expense = incomeVsExpense.reduce((acc, curr) => acc + (curr[expenseKey] ?? curr.expense), 0);
+      const collected = feeRecords.filter((f) => f.status === "paid").length;
+      const rate = Math.round((collected / Math.max(feeRecords.length, 1)) * 100);
+      return { income, expense, net: income - expense, rate };
+    }
+    const income = dailyIncomeVsExpense.reduce((acc, curr) => acc + (curr[incomeKey] ?? curr.income), 0);
+    const expense = dailyIncomeVsExpense.reduce((acc, curr) => acc + (curr[expenseKey] ?? curr.expense), 0);
     const collected = feeRecords.filter((f) => f.status === "paid").length;
     const rate = Math.round((collected / Math.max(feeRecords.length, 1)) * 100);
     return { income, expense, net: income - expense, rate };
-  }, [scoped]);
+  }, [period, incomeKey, expenseKey, dailyIncomeVsExpense]);
 
   const incomeBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; nameUrdu: string; value: number }>();
+    const mult = period === "yearly" ? 12 : 1;
     scoped.filter((r) => r.type === "income").forEach((r) => {
       const cur = map.get(r.category) ?? { name: r.category, nameUrdu: r.categoryUrdu, value: 0 };
-      cur.value += r.amount;
+      cur.value += r.amount * mult;
       map.set(r.category, cur);
     });
     return Array.from(map.values());
-  }, [scoped]);
+  }, [scoped, period]);
 
   const expenseBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; nameUrdu: string; value: number }>();
+    const mult = period === "yearly" ? 12 : 1;
     scoped.filter((r) => r.type === "expense").forEach((r) => {
       const cur = map.get(r.category) ?? { name: r.category, nameUrdu: r.categoryUrdu, value: 0 };
-      cur.value += r.amount;
+      cur.value += r.amount * mult;
       map.set(r.category, cur);
     });
     return Array.from(map.values());
-  }, [scoped]);
-
-  const incomeKey = scope === "school" ? "schoolIncome" : scope === "madrassa" ? "madrassaIncome" : "income";
-  const expenseKey = scope === "school" ? "schoolExpense" : scope === "madrassa" ? "madrassaExpense" : "expense";
+  }, [scoped, period]);
 
   return (
     <div>
@@ -76,6 +149,25 @@ function FinanceDashboard() {
         description="Track income, expenses and category-wise cashflow."
         actions={
           <div className="flex items-center gap-2">
+            <Dialog open={balanceDialogOpen} onOpenChange={setBalanceDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Printer className="h-4 w-4" />
+                  Balance Sheet
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader className="sr-only">
+                  <DialogTitle>Balance Sheet</DialogTitle>
+                </DialogHeader>
+                <BalanceSheet
+                  scope={scope}
+                  incomeBreakdown={incomeBreakdown}
+                  expenseBreakdown={expenseBreakdown}
+                  totals={totals}
+                />
+              </DialogContent>
+            </Dialog>
             <Button variant="outline" size="sm" className="gap-1.5"><Download className="h-4 w-4" />Export</Button>
             <AddTxnDialog open={open} onOpenChange={setOpen} onAdd={(r) => setRecords((p) => [r, ...p])} defaultSystem={scope === "both" ? "both" : scope} />
           </div>
@@ -93,42 +185,67 @@ function FinanceDashboard() {
           </Tabs>
         </Card>
         <Card className="p-2 inline-flex">
-          <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>
+          <Tabs value={period} onValueChange={(v) => setPeriod(v as "monthly" | "yearly")}>
             <TabsList>
-              <TabsTrigger value="overview">Overview · جائزہ</TabsTrigger>
-              <TabsTrigger value="balance">Balance Sheet · بیلنس شیٹ</TabsTrigger>
+              <TabsTrigger value="monthly">Monthly · ماہانہ</TabsTrigger>
+              <TabsTrigger value="yearly">Yearly · سالانہ</TabsTrigger>
             </TabsList>
           </Tabs>
         </Card>
       </div>
 
-      {view === "balance" ? (
-        <BalanceSheet scope={scope} incomeBreakdown={incomeBreakdown} expenseBreakdown={expenseBreakdown} totals={totals} />
-      ) : (
-        <>
-
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <KPI icon={TrendingUp} label="Income" urdu="آمدنی" value={formatPKR(totals.income)} tone="positive" />
-        <KPI icon={TrendingDown} label="Expenses" urdu="اخراجات" value={formatPKR(totals.expense)} tone="negative" />
+        <KPI icon={TrendingUp} label={period === "monthly" ? "Monthly Income" : "Annual Income"} urdu={period === "monthly" ? "ماہانہ آمدنی" : "سالانہ آمدنی"} value={formatPKR(totals.income)} tone="positive" />
+        <KPI icon={TrendingDown} label={period === "monthly" ? "Monthly Expenses" : "Annual Expenses"} urdu={period === "monthly" ? "ماہانہ اخراجات" : "سالانہ اخراجات"} value={formatPKR(totals.expense)} tone="negative" />
         <KPI icon={Wallet} label="Net Balance" urdu="بیلنس" value={formatPKR(totals.net)} tone={totals.net >= 0 ? "positive" : "negative"} />
         <KPI icon={Percent} label="Fee Collection" urdu="فیس وصولی" value={`${totals.rate}%`} />
       </div>
 
       <Card className="p-5 mb-4">
-        <div className="mb-3">
-          <h3 className="font-heading font-semibold">Income vs Expense</h3>
-          <p className="font-urdu text-sm text-muted-foreground">آمدنی بمقابلہ اخراجات · گزشتہ 12 ماہ · {scope === "both" ? "مشترکہ" : scope === "school" ? "اسکول" : "مدرسہ"}</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+          <div>
+            <h3 className="font-heading font-semibold">
+              {period === "monthly" ? "Daily Income vs Expense" : "Monthly Income vs Expense"}
+            </h3>
+            <p className="font-urdu text-sm text-muted-foreground">
+              آمدنی بمقابلہ اخراجات · {period === "monthly" ? "یومیہ (موجودہ ماہ)" : "ماہانہ (گزشتہ 12 ماہ)"} · {scope === "both" ? "مشترکہ" : scope === "school" ? "اسکول" : "مدرسہ"}
+            </p>
+          </div>
+          <div className="text-xs text-muted-foreground flex items-center gap-3">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--chart-2)]" />
+              <span>{period === "monthly" ? "Daily Income" : "Monthly Income"}</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--chart-4)]" />
+              <span>{period === "monthly" ? "Daily Expense" : "Monthly Expense"}</span>
+            </span>
+          </div>
         </div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={incomeVsExpense} barGap={6}>
+            <BarChart data={period === "monthly" ? dailyIncomeVsExpense : incomeVsExpense} barGap={period === "monthly" ? 2 : 6}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} stroke="var(--border)" />
+              <XAxis
+                dataKey={period === "monthly" ? "day" : "month"}
+                tick={{ fontSize: period === "monthly" ? 10 : 11, fill: "var(--muted-foreground)" }}
+                stroke="var(--border)"
+                interval={period === "monthly" ? 1 : 0}
+              />
               <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} stroke="var(--border)" tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number, n) => [formatPKR(v), String(n)]} cursor={{ fill: "var(--muted)", opacity: 0.3 }} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(v: number, n) => [formatPKR(v), String(n)]}
+                labelFormatter={(label) =>
+                  period === "monthly"
+                    ? `Day ${label} (${new Date().toLocaleString("en-US", { month: "long" })})`
+                    : String(label)
+                }
+                cursor={{ fill: "var(--muted)", opacity: 0.3 }}
+              />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar name="Income" dataKey={incomeKey} fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
-              <Bar name="Expense" dataKey={expenseKey} fill="var(--chart-4)" radius={[6, 6, 0, 0]} />
+              <Bar name="Income" dataKey={incomeKey} fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
+              <Bar name="Expense" dataKey={expenseKey} fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -171,8 +288,6 @@ function FinanceDashboard() {
           </TableBody>
         </Table>
       </Card>
-        </>
-      )}
     </div>
   );
 }

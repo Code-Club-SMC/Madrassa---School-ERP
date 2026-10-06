@@ -49,9 +49,13 @@ const VARIANTS: Record<StatusKey, { label: string; urdu: string; className: stri
   parent: { label: "Parent", urdu: "والدین", className: "bg-teal-500/10 text-teal-700 border-teal-300/40 dark:text-teal-400" },
 };
 
+import { useLanguage } from "@/components/language-context";
+
 type Props = { status: StatusKey; showUrdu?: boolean };
 
-export function StatusBadge({ status, showUrdu = true }: Props) {
+export function StatusBadge({ status, showUrdu }: Props) {
+  const { lang } = useLanguage();
+  const isUrdu = showUrdu !== undefined ? showUrdu : lang === "ur";
   const v = VARIANTS[status];
   return (
     <span
@@ -60,7 +64,7 @@ export function StatusBadge({ status, showUrdu = true }: Props) {
         v.className,
       )}
     >
-      {showUrdu ? (
+      {isUrdu ? (
         <span className="font-urdu text-[0.95em] leading-none">{v.urdu}</span>
       ) : (
         <span className="font-sans">{v.label}</span>

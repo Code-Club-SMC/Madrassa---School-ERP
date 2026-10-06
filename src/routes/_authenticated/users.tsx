@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, ShieldAlert, KeyRound, Trash2, Eye, MoreHorizontal, UserCheck, UserX, Pencil, Loader2 } from "lucide-react";
+import { Plus, Search, ShieldAlert, KeyRound, Trash2, Eye, MoreHorizontal, UserCheck, UserX, Pencil, Loader2, Users2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -21,10 +21,9 @@ import { CreateUserStepper } from "@/features/users/create-user-stepper";
 import { CredentialsOverlay } from "@/features/users/credentials-display";
 import { UserDetailSheet } from "@/features/users/user-detail-sheet";
 import { generateSecurePassword } from "@/lib/generate-password";
-import { Users2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { requireRoles } from "@/lib/route-guards";
-import { toAppUser } from "@/lib/auth-utils";
+import { useLanguage } from "@/components/language-context";
+import { getUserDisplayName, getUserInitials, ACCESS_LABELS } from "@/lib/user-names";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, { credentials: "include", ...init });
@@ -40,6 +39,8 @@ export const Route = createFileRoute("/_authenticated/users")({
 });
 
 function UsersPage() {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const { user: currentUser, isLoading: sessionLoading } = useAuth();
   const [list, setList] = useState<User[]>(seedUsers);
   const [q, setQ] = useState("");
@@ -55,20 +56,32 @@ function UsersPage() {
   const [creds, setCreds] = useState<{ nameUrdu: string; nameEnglish: string; email: string; role: string; password: string } | null>(null);
 
   const filtered = useMemo(
-    () => list.filter((u) =>
-      (roleFilter === "all" || u.role === roleFilter) &&
-      (statusFilter === "all" || u.status === statusFilter) &&
-      (!q || u.name.toLowerCase().includes(q.toLowerCase()) || (u.nameUrdu ?? "").includes(q) || u.email.toLowerCase().includes(q.toLowerCase())),
-    ),
-    [list, q, roleFilter, statusFilter],
+    () =>
+      list.filter((u) => {
+        const displayName = getUserDisplayName(u, lang).toLowerCase();
+        const query = q.toLowerCase();
+        return (
+          (roleFilter === "all" || u.role === roleFilter) &&
+          (statusFilter === "all" || u.status === statusFilter) &&
+          (!q ||
+            u.name.toLowerCase().includes(query) ||
+            (u.nameUrdu ?? "").toLowerCase().includes(query) ||
+            displayName.includes(query) ||
+            u.email.toLowerCase().includes(query))
+        );
+      }),
+    [list, q, roleFilter, statusFilter, lang],
   );
 
-  const stats = useMemo(() => ({
-    total: list.filter((u) => u.status === "active").length,
-    admins: list.filter((u) => u.role === "admin" || u.role === "super_admin").length,
-    teachers: list.filter((u) => u.role === "teacher").length,
-    neverLogged: list.filter((u) => !u.lastLoginAt).length,
-  }), [list]);
+  const stats = useMemo(
+    () => ({
+      total: list.filter((u) => u.status === "active").length,
+      admins: list.filter((u) => u.role === "admin" || u.role === "super_admin").length,
+      teachers: list.filter((u) => u.role === "teacher").length,
+      neverLogged: list.filter((u) => !u.lastLoginAt).length,
+    }),
+    [list],
+  );
 
   const roleBreakdown = useMemo(() => {
     const roles: { role: UserRole; urdu: string; en: string }[] = [
@@ -182,7 +195,15 @@ function UsersPage() {
       });
 
       setList((l) => l.map((x) => (x.id === u.id ? { ...x, status: nextStatus } : x)));
-      toast.success(nextStatus === "active" ? "اکاؤنٹ فعال ہو گیا · Activated" : "اکاؤنٹ غیر فعال ہو گیا · Deactivated");
+      toast.success(
+        isUrdu
+          ? nextStatus === "active"
+            ? "اکاؤنٹ فعال ہو گیا"
+            : "اکاؤنٹ غیر فعال ہو گیا"
+          : nextStatus === "active"
+            ? "Account activated"
+            : "Account deactivated",
+      );
     } catch {}
   }
 
@@ -226,13 +247,16 @@ function UsersPage() {
     try {
       await api(`/api/users/${deleteUser.id}`, { method: "DELETE" });
       setList((l) => l.filter((x) => x.id !== deleteUser.id));
-      toast.success("صارف حذف کر دیا گیا · User deleted");
+      toast.success(isUrdu ? "صارف حذف کر دیا گیا" : "User deleted");
       setDeleteUser(null);
       setDeleteConfirm("");
     } catch {}
   }
 
-  const initials = (u: User) => (u.nameUrdu ?? u.name).slice(0, 2);
+  const accessLabel = (acc?: string) => {
+    if (!acc) return "—";
+    return isUrdu ? ACCESS_LABELS[acc]?.ur ?? acc : ACCESS_LABELS[acc]?.en ?? acc;
+  };
 
   if (sessionLoading || !currentUser) {
     return (
@@ -240,7 +264,7 @@ function UsersPage() {
         <PageHeader title="User Management" titleUrdu="صارف انتظام" />
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Loading session...
+          {isUrdu ? "سیشن لوڈ ہو رہا ہے..." : "Loading session..."}
         </div>
       </div>
     );
@@ -250,7 +274,12 @@ function UsersPage() {
     return (
       <div>
         <PageHeader title="User Management" titleUrdu="صارف انتظام" />
-        <EmptyState icon={ShieldAlert} heading="Access denied" headingUrdu="رسائی محدود ہے" description="Only Super Admins can manage user accounts." />
+        <EmptyState
+          icon={ShieldAlert}
+          heading="Access denied"
+          headingUrdu="رسائی محدود ہے"
+          description={isUrdu ? "صرف سپر ایڈمن صارفین کے اکاؤنٹس کا انتظام کر سکتے ہیں۔" : "Only Super Admins can manage user accounts."}
+        />
       </div>
     );
   }
@@ -261,11 +290,11 @@ function UsersPage() {
         title="User Management"
         titleUrdu="صارف انتظام"
         description="Manage system users, roles, and module permissions."
+        descriptionUrdu="سسٹم صارفین، کرداروں اور ماڈیول کی اجازتوں کا انتظام کریں۔"
         actions={
           <Button onClick={() => setCreateOpen(true)} className="gap-1.5">
             <Plus className="h-4 w-4" />
-            <span className="font-urdu">نیا صارف</span>
-            <span className="text-xs opacity-80">New User</span>
+            <span>{isUrdu ? "نیا صارف" : "New User"}</span>
           </Button>
         }
       />
@@ -281,13 +310,18 @@ function UsersPage() {
       <Card className="p-3 mb-4">
         <div className="flex items-center justify-between mb-2">
           <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
-            <span className="font-urdu text-sm normal-case me-2" dir="rtl" lang="ur">کرداروں کے مطابق تقسیم</span>
-            Distribution by Role
+            {isUrdu ? (
+              <span className="font-urdu text-sm normal-case" dir="rtl" lang="ur">
+                کرداروں کے مطابق تقسیم
+              </span>
+            ) : (
+              <span>Distribution by Role</span>
+            )}
           </p>
           {loadingUsers && (
             <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Syncing
+              {isUrdu ? "ہم آہنگی ہو رہی ہے..." : "Syncing"}
             </p>
           )}
         </div>
@@ -297,7 +331,7 @@ function UsersPage() {
             onClick={() => setRoleFilter("all")}
             className={`rounded-full border px-3 py-1 text-xs transition ${roleFilter === "all" ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
           >
-            <span className="font-urdu me-1.5" dir="rtl" lang="ur">سب</span>All · {list.length}
+            {isUrdu ? "سب" : "All"} · {list.length}
           </button>
           {roleBreakdown.filter((r) => r.count > 0).map((r) => (
             <button
@@ -306,8 +340,7 @@ function UsersPage() {
               onClick={() => setRoleFilter(r.role)}
               className={`rounded-full border px-3 py-1 text-xs transition ${roleFilter === r.role ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
             >
-              <span className="font-urdu me-1.5" dir="rtl" lang="ur">{r.urdu}</span>
-              {r.en} · <span className="font-mono">{r.count}</span>
+              <span>{isUrdu ? r.urdu : r.en}</span> · <span className="font-mono">{r.count}</span>
             </button>
           ))}
         </div>
@@ -317,30 +350,30 @@ function UsersPage() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="نام یا ای میل تلاش کریں · Search name or email" className="pe-9" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={isUrdu ? "نام یا ای میل تلاش کریں..." : "Search name or email..."}
+              className="pe-9"
+            />
           </div>
           <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as UserRole | "all")}>
             <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Roles · تمام</SelectItem>
-              <SelectItem value="super_admin">Super Admin · سپر ایڈمن</SelectItem>
-              <SelectItem value="admin">Admin · ایڈمن</SelectItem>
-              <SelectItem value="principal">Principal · پرنسپل</SelectItem>
-              <SelectItem value="hr_manager">HR Manager · ایچ آر منیجر</SelectItem>
-              <SelectItem value="accountant">Accountant · اکاؤنٹنٹ</SelectItem>
-              <SelectItem value="librarian">Librarian · لائبریرین</SelectItem>
-              <SelectItem value="receptionist">Receptionist · استقبالیہ</SelectItem>
-              <SelectItem value="teacher">Teacher · استاد</SelectItem>
-              <SelectItem value="staff">Staff · عملہ</SelectItem>
-              <SelectItem value="parent">Parent · والدین</SelectItem>
+              <SelectItem value="all">{isUrdu ? "تمام کردار" : "All Roles"}</SelectItem>
+              {roleBreakdown.map((r) => (
+                <SelectItem key={r.role} value={r.role}>
+                  {isUrdu ? r.urdu : r.en}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "active" | "inactive")}>
             <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All · تمام</SelectItem>
-              <SelectItem value="active">Active · فعال</SelectItem>
-              <SelectItem value="inactive">Inactive · غیر فعال</SelectItem>
+              <SelectItem value="all">{isUrdu ? "تمام کیفیات" : "All Statuses"}</SelectItem>
+              <SelectItem value="active">{isUrdu ? "فعال" : "Active"}</SelectItem>
+              <SelectItem value="inactive">{isUrdu ? "غیر فعال" : "Inactive"}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -350,58 +383,108 @@ function UsersPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead><span className="font-urdu">صارف</span> · User</TableHead>
-              <TableHead><span className="font-urdu">کردار</span> · Role</TableHead>
-              <TableHead className="hidden md:table-cell"><span className="font-urdu">رسائی</span> · Access</TableHead>
-              <TableHead className="hidden lg:table-cell"><span className="font-urdu">آخری لاگ ان</span> · Last Login</TableHead>
-              <TableHead><span className="font-urdu">کیفیت</span> · Status</TableHead>
+              <TableHead>{isUrdu ? "صارف" : "User"}</TableHead>
+              <TableHead>{isUrdu ? "کردار" : "Role"}</TableHead>
+              <TableHead className="hidden md:table-cell">{isUrdu ? "رسائی" : "Access"}</TableHead>
+              <TableHead className="hidden lg:table-cell">{isUrdu ? "آخری لاگ ان" : "Last Login"}</TableHead>
+              <TableHead>{isUrdu ? "کیفیت" : "Status"}</TableHead>
               <TableHead className="w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="py-12">
-                <EmptyState icon={Users2} heading="No users match your filters" headingUrdu="کوئی صارف نہیں ملا" description="Adjust your search or filters." />
-              </TableCell></TableRow>
-            ) : filtered.map((u) => (
-              <TableRow key={u.id} className={u.status === "inactive" ? "opacity-60" : ""}>
-                <TableCell>
-                  <button className="flex items-center gap-3 text-start" onClick={() => setDetailUser(u)}>
-                    <Avatar className="h-9 w-9"><AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">{initials(u)}</AvatarFallback></Avatar>
-                    <div className="min-w-0">
-                      <p className="font-urdu text-sm font-medium leading-tight" dir="rtl" lang="ur">{u.nameUrdu ?? u.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{u.email}</p>
-                    </div>
-                  </button>
-                </TableCell>
-                <TableCell><StatusBadge status={u.role} /></TableCell>
-                <TableCell className="hidden md:table-cell text-xs text-muted-foreground capitalize">{u.systemAccess ?? "—"}</TableCell>
-                <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
-                  {u.lastLoginAt ? formatDate(u.lastLoginAt) : <span className="italic">Never · کبھی نہیں</span>}
-                </TableCell>
-                <TableCell><StatusBadge status={u.status} /></TableCell>
-                <TableCell className="text-end">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Actions"><MoreHorizontal className="h-4 w-4" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setDetailUser(u)}><Eye className="h-3.5 w-3.5 me-2" /><span className="font-urdu">تفصیل</span><span className="ms-1.5 text-xs text-muted-foreground">View</span></DropdownMenuItem>
-                      <DropdownMenuItem disabled={u.role === "super_admin"} onClick={() => setEditUser(u)}><Pencil className="h-3.5 w-3.5 me-2" /><span className="font-urdu">ترمیم</span><span className="ms-1.5 text-xs text-muted-foreground">Edit</span></DropdownMenuItem>
-                      <DropdownMenuItem disabled={u.role === "super_admin"} onClick={() => setResetUser(u)}><KeyRound className="h-3.5 w-3.5 me-2" /><span className="font-urdu">پاس ورڈ ری سیٹ</span></DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDeactivate(u)} disabled={u.id === currentUser?.id || u.role === "super_admin"}>
-                        {u.status === "active" ? <><UserX className="h-3.5 w-3.5 me-2" /><span className="font-urdu">غیر فعال کریں</span></> : <><UserCheck className="h-3.5 w-3.5 me-2" /><span className="font-urdu">فعال کریں</span></>}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" disabled={u.id === currentUser?.id || u.role === "super_admin"} onClick={() => { setDeleteUser(u); setDeleteConfirm(""); }}>
-                        <Trash2 className="h-3.5 w-3.5 me-2" /><span className="font-urdu">حذف کریں</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+              <TableRow>
+                <TableCell colSpan={6} className="py-12">
+                  <EmptyState
+                    icon={Users2}
+                    heading={isUrdu ? "کوئی صارف نہیں ملا" : "No users match your filters"}
+                    headingUrdu="کوئی صارف نہیں ملا"
+                    description={isUrdu ? "تلاش یا فلٹرز کو تبدیل کر کے دیکھیں۔" : "Adjust your search or filters."}
+                  />
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filtered.map((u) => (
+                <TableRow key={u.id} className={u.status === "inactive" ? "opacity-60" : ""}>
+                  <TableCell>
+                    <button className="flex items-center gap-3 text-start" onClick={() => setDetailUser(u)}>
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                          {getUserInitials(u, lang)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p
+                          className={isUrdu ? "font-urdu text-sm font-medium leading-tight" : "text-sm font-medium leading-tight font-sans"}
+                          dir={isUrdu ? "rtl" : "ltr"}
+                          lang={lang}
+                        >
+                          {getUserDisplayName(u, lang)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">{u.email}</p>
+                      </div>
+                    </button>
+                  </TableCell>
+                  <TableCell><StatusBadge status={u.role} /></TableCell>
+                  <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                    {accessLabel(u.systemAccess)}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                    {u.lastLoginAt ? formatDate(u.lastLoginAt) : <span className="italic">{isUrdu ? "کبھی نہیں" : "Never"}</span>}
+                  </TableCell>
+                  <TableCell><StatusBadge status={u.status} /></TableCell>
+                  <TableCell className="text-end">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" aria-label="Actions">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setDetailUser(u)}>
+                          <Eye className="h-3.5 w-3.5 me-2" />
+                          <span>{isUrdu ? "تفصیل" : "View"}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem disabled={u.role === "super_admin"} onClick={() => setEditUser(u)}>
+                          <Pencil className="h-3.5 w-3.5 me-2" />
+                          <span>{isUrdu ? "ترمیم" : "Edit"}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem disabled={u.role === "super_admin"} onClick={() => setResetUser(u)}>
+                          <KeyRound className="h-3.5 w-3.5 me-2" />
+                          <span>{isUrdu ? "پاس ورڈ ری سیٹ" : "Reset Password"}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDeactivate(u)} disabled={u.id === currentUser?.id || u.role === "super_admin"}>
+                          {u.status === "active" ? (
+                            <>
+                              <UserX className="h-3.5 w-3.5 me-2" />
+                              <span>{isUrdu ? "غیر فعال کریں" : "Deactivate"}</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="h-3.5 w-3.5 me-2" />
+                              <span>{isUrdu ? "فعال کریں" : "Activate"}</span>
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          disabled={u.id === currentUser?.id || u.role === "super_admin"}
+                          onClick={() => {
+                            setDeleteUser(u);
+                            setDeleteConfirm("");
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 me-2" />
+                          <span>{isUrdu ? "حذف کریں" : "Delete"}</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </Card>
@@ -415,23 +498,32 @@ function UsersPage() {
       <Dialog open={!!resetUser} onOpenChange={(v) => !v && setResetUser(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>
-              <span className="font-urdu block leading-loose" dir="rtl" lang="ur">پاس ورڈ ری سیٹ</span>
-              <span className="text-sm text-muted-foreground font-normal block mt-0.5">Reset Password</span>
-            </DialogTitle>
+            <DialogTitle>{isUrdu ? "پاس ورڈ ری سیٹ" : "Reset Password"}</DialogTitle>
             <DialogDescription>
-              A new secure password will be generated. The user must change it on next login.
+              {isUrdu
+                ? "نیا محفوظ پاس ورڈ تیار کیا جائے گا۔ صارف کو اگلی بار لاگ ان کرنے پر اسے تبدیل کرنا ہوگا۔"
+                : "A new secure password will be generated. The user must change it on next login."}
             </DialogDescription>
           </DialogHeader>
           {resetUser && (
             <div className="text-sm border border-border rounded-lg p-3 bg-muted/40">
-              <p className="font-urdu text-base" dir="rtl" lang="ur">{resetUser.nameUrdu ?? resetUser.name}</p>
+              <p
+                className={isUrdu ? "font-urdu text-base" : "font-sans font-medium"}
+                dir={isUrdu ? "rtl" : "ltr"}
+                lang={lang}
+              >
+                {getUserDisplayName(resetUser, lang)}
+              </p>
               <p className="text-xs text-muted-foreground">{resetUser.email}</p>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResetUser(null)}><span className="font-urdu">منسوخ</span></Button>
-            <Button onClick={confirmReset}><span className="font-urdu">ری سیٹ کریں</span></Button>
+            <Button variant="outline" onClick={() => setResetUser(null)}>
+              {isUrdu ? "منسوخ" : "Cancel"}
+            </Button>
+            <Button onClick={confirmReset}>
+              {isUrdu ? "ری سیٹ کریں" : "Reset Password"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -440,23 +532,36 @@ function UsersPage() {
       <Dialog open={!!deleteUser} onOpenChange={(v) => !v && setDeleteUser(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              <span className="font-urdu block leading-loose text-destructive" dir="rtl" lang="ur">صارف حذف کریں</span>
-              <span className="text-sm text-muted-foreground font-normal block mt-0.5">Delete User · This action is permanent</span>
+            <DialogTitle className="text-destructive">
+              {isUrdu ? "صارف حذف کریں" : "Delete User"}
             </DialogTitle>
             <DialogDescription>
-              Type the user's email to confirm permanent deletion.
+              {isUrdu
+                ? "مستقل حذف کرنے کی تصدیق کے لیے صارف کا ای میل درج کریں۔"
+                : "Type the user's email to confirm permanent deletion."}
             </DialogDescription>
           </DialogHeader>
           {deleteUser && (
             <div className="space-y-3">
               <p className="text-sm font-mono bg-muted/40 rounded p-2">{deleteUser.email}</p>
-              <Input value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder={deleteUser.email} />
+              <Input
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                placeholder={deleteUser.email}
+              />
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteUser(null)}><span className="font-urdu">منسوخ</span></Button>
-            <Button variant="destructive" disabled={!deleteUser || deleteConfirm !== deleteUser.email} onClick={confirmDelete}><span className="font-urdu">مستقل حذف کریں</span></Button>
+            <Button variant="outline" onClick={() => setDeleteUser(null)}>
+              {isUrdu ? "منسوخ" : "Cancel"}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!deleteUser || deleteConfirm !== deleteUser.email}
+              onClick={confirmDelete}
+            >
+              {isUrdu ? "مستقل حذف کریں" : "Permanently Delete"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

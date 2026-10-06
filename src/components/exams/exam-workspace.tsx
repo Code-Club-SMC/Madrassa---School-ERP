@@ -24,6 +24,7 @@ import {
   Eye,
   X,
   Filter,
+  Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -173,7 +174,7 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
 
   const loadOptions = useCallback(async () => {
     const institutionId = gender === "male" ? "al_qasim_academy" : "jamia_zainab_banat";
-    const next = await loadAcademicOptions(undefined, institutionId);
+    const next = await loadAcademicOptions(system === "madrassa" ? gender : undefined, institutionId);
     setOptions(next);
   }, [system, gender]);
 
@@ -437,12 +438,59 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     endDate: "",
   });
 
+  const activeInstitution = useMemo(() => {
+    if (system === "school") {
+      return gender === "male"
+        ? {
+            id: "al_qasim_academy",
+            name: "Al-Qasim Academy",
+            nameUrdu: "القاسم اکیڈمی (بنین)",
+            campus: "Boys Campus",
+            campusUrdu: "شعبہ بنین",
+            icon: "🕌",
+          }
+        : {
+            id: "jamia_zainab_banat",
+            name: "Jamia Zainab School",
+            nameUrdu: "جامعہ زینب (بنات)",
+            campus: "Girls Campus",
+            campusUrdu: "شعبہ بنات",
+            icon: "🌙",
+          };
+    } else {
+      return gender === "male"
+        ? {
+            id: "jamia_qasmia_baneen",
+            name: "Jamia Qasmia Lil-Baneen",
+            nameUrdu: "جامعہ قاسمیہ للبنین",
+            campus: "Boys Campus",
+            campusUrdu: "شعبہ بنین",
+            icon: "🕌",
+          }
+        : {
+            id: "jamia_zainab_banat",
+            name: "Jamia Zainab Lil-Banat",
+            nameUrdu: "جامعہ زینب للبنات",
+            campus: "Girls Campus",
+            campusUrdu: "شعبہ بنات",
+            icon: "🌙",
+          };
+    }
+  }, [system, gender]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [examPayload, academicPayload] = await Promise.all([
-        listExamSessions({ system, section: system === "madrassa" ? gender : undefined }),
-        loadAcademicOptions(system === "madrassa" ? gender : undefined, undefined),
+        listExamSessions({
+          system,
+          section: gender,
+          institutionId: activeInstitution.id,
+        }),
+        loadAcademicOptions(
+          system === "madrassa" ? gender : undefined,
+          system === "school" ? activeInstitution.id : undefined,
+        ),
       ]);
       setExams(examPayload.exams);
       setOptions(academicPayload);
@@ -452,7 +500,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     } finally {
       setLoading(false);
     }
-  }, [system, gender]);
+  }, [system, gender, activeInstitution.id]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -534,7 +582,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
       if (system === "school") {
         const activeClasses = options.classes.filter((item) => item.active);
         if (activeClasses.length === 0) {
-          toast.error("No active classes found for this school");
+          toast.error(`No active classes found for ${activeInstitution.name}`);
           return;
         }
 
@@ -548,6 +596,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
 
           await createExamSession({
             system: "school",
+            institutionId: activeInstitution.id,
             schoolClassId: schoolClass.id,
             schoolSectionId: undefined,
             madrassaCategoryId: undefined,
@@ -563,7 +612,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
       } else {
         const activeCategories = options.categories.filter((item) => item.active);
         if (activeCategories.length === 0) {
-          toast.error("No active categories found for madrassa");
+          toast.error(`No active categories found for ${activeInstitution.name}`);
           return;
         }
 
@@ -581,6 +630,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
 
             await createExamSession({
               system: "madrassa",
+              institutionId: activeInstitution.id,
               schoolClassId: undefined,
               schoolSectionId: undefined,
               madrassaCategoryId: category.id,
@@ -604,22 +654,27 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     }
   }
 
-  const title = system === "school" ? "School Examinations" : "Madrassa Examinations";
-  const titleUrdu = system === "school" ? "امتحانات — اسکول" : "امتحانات — مدرسہ";
-
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={title}
-        titleUrdu={titleUrdu}
-        description="Internal exam sessions, subjects, marks, DMCs, seating plans, and published results."
-        actions={
-          <Button size="sm" className="gap-1.5 shadow-xs" onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4" />
-            New Exam
-          </Button>
-        }
-      />
+      <div className="space-y-2">
+        <PageHeader
+          title={`${activeInstitution.name} — Examinations`}
+          titleUrdu={`${activeInstitution.nameUrdu} — امتحانات`}
+          description={`Internal exam sessions, subjects, marks, DMCs, seating plans, and published results for ${activeInstitution.name} (${activeInstitution.campus}).`}
+          actions={
+            <Button size="sm" className="gap-1.5 shadow-xs" onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4" />
+              New Exam
+            </Button>
+          }
+        />
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs w-fit text-primary font-medium shadow-2xs">
+          <span className="text-sm">{activeInstitution.icon}</span>
+          <span>
+            Active Institution: <strong className="font-semibold">{activeInstitution.name}</strong> ({activeInstitution.campus})
+          </span>
+        </div>
+      </div>
 
       {/* 4 Summary Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -795,13 +850,13 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
       ) : filteredExams.length === 0 ? (
         <Card className="p-12 text-center border-dashed">
           <GraduationCap className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-40" />
-          <h4 className="font-semibold text-base">No examinations found</h4>
+          <h4 className="font-semibold text-base">No examinations found for {activeInstitution.name}</h4>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
             {exams.length === 0
-              ? "No exam sessions have been created yet. Click 'New Exam' to schedule one."
+              ? `No exam sessions have been scheduled yet for ${activeInstitution.name} (${activeInstitution.campus}). Click 'New Exam' to schedule one.`
               : "No exam sessions match your active search and filter criteria."}
           </p>
-          {(searchQuery || selectedTerm !== "all" || selectedClass !== "all" || selectedStatus !== "all") && (
+          {searchQuery || selectedTerm !== "all" || selectedClass !== "all" || selectedStatus !== "all" ? (
             <Button
               variant="outline"
               size="sm"
@@ -814,6 +869,15 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
               className="mt-4 text-xs"
             >
               Reset Filters
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setOpen(true)}
+              className="mt-4 text-xs gap-1.5"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Exam
             </Button>
           )}
         </Card>
@@ -921,9 +985,9 @@ export function ExamDetailWorkspace({ examId, system }: { examId: string; system
     <div>
       <BackLink system={system} examId={examId} />
       <PageHeader
-        title={exam.name}
+        title={cleanExamName(exam.name)}
         titleUrdu={exam.nameUrdu}
-        description={`${exam.groupLabel} · ${formatDate(exam.startDate)} - ${formatDate(exam.endDate)}`}
+        description={`${exam.groupLabel}${exam.institutionName ? ` · ${exam.institutionName}` : ""} · ${formatDate(exam.startDate)} - ${formatDate(exam.endDate)}`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}>
@@ -1107,6 +1171,12 @@ function ExamTableView({
                     <div>
                       <p className="font-semibold text-xs text-foreground">{cleanExamName(exam.name)}</p>
                       <p className="font-urdu text-[11px] text-muted-foreground">{exam.nameUrdu}</p>
+                      {exam.institutionName && (
+                        <p className="text-[10px] text-muted-foreground/80 mt-0.5 flex items-center gap-1 font-medium">
+                          <Building2 className="h-2.5 w-2.5 opacity-70" />
+                          {exam.institutionName}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </TableCell>
@@ -1216,6 +1286,12 @@ function ExamCard({ exam, onDelete }: { exam: ExamSession; onDelete?: (exam: Exa
           <School className="h-3 w-3" />
           {exam.groupLabel}
         </Badge>
+        {exam.institutionName && (
+          <Badge variant="outline" className="text-xs text-muted-foreground py-0.5 px-2 gap-1">
+            <Building2 className="h-3 w-3 opacity-70" />
+            {exam.institutionName}
+          </Badge>
+        )}
         <Badge variant="outline" className="text-xs text-muted-foreground py-0.5 px-2">
           <Calendar className="h-3 w-3 me-1 opacity-70" />
           {exam.academicYear}

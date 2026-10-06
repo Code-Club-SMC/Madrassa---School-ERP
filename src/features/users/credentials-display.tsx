@@ -13,6 +13,9 @@ type Creds = {
   password: string;
 };
 
+import { useLanguage } from "@/components/language-context";
+import { ROLE_LABELS } from "@/lib/user-names";
+
 export function CredentialsOverlay({
   creds,
   onClose,
@@ -22,22 +25,42 @@ export function CredentialsOverlay({
   onClose: () => void;
   onViewUser?: () => void;
 }) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const [reveal, setReveal] = useState(false);
   if (!creds) return null;
   const isParent = creds.role === "parent";
   const loginId = isParent ? creds.username : creds.email;
 
   const copyAll = () => {
-    const text = [
-      "لاگ اِن معلومات",
-      `نام: ${creds.nameUrdu}`,
-      `${isParent ? "لاگ اِن آئی ڈی" : "ای میل"}: ${loginId ?? ""}`,
-      `پاس ورڈ: ${creds.password}`,
-      `لنک: ${typeof window !== "undefined" ? window.location.origin + "/login" : "/login"}`,
-    ].join("\n");
+    const text = isUrdu
+      ? [
+          "لاگ اِن معلومات",
+          `نام: ${creds.nameUrdu || creds.nameEnglish}`,
+          `${isParent ? "لاگ اِن آئی ڈی" : "ای میل"}: ${loginId ?? ""}`,
+          `پاس ورڈ: ${creds.password}`,
+          `لنک: ${typeof window !== "undefined" ? window.location.origin + "/login" : "/login"}`,
+        ].join("\n")
+      : [
+          "Login Credentials",
+          `Name: ${creds.nameEnglish || creds.nameUrdu}`,
+          `${isParent ? "Login ID" : "Email"}: ${loginId ?? ""}`,
+          `Password: ${creds.password}`,
+          `Link: ${typeof window !== "undefined" ? window.location.origin + "/login" : "/login"}`,
+        ].join("\n");
     navigator.clipboard?.writeText(text);
-    toast.success("لاگ اِن معلومات کاپی ہو گئیں");
+    toast.success(isUrdu ? "لاگ اِن معلومات کاپی ہو گئیں" : "Login credentials copied");
   };
+
+  const displayName = isUrdu
+    ? creds.nameUrdu || creds.nameEnglish
+    : creds.nameEnglish || creds.nameUrdu;
+
+  const roleText = (ROLE_LABELS[creds.role as keyof typeof ROLE_LABELS]
+    ? isUrdu
+      ? ROLE_LABELS[creds.role as keyof typeof ROLE_LABELS].ur
+      : ROLE_LABELS[creds.role as keyof typeof ROLE_LABELS].en
+    : creds.role);
 
   return (
     <Dialog open={!!creds} onOpenChange={(v) => !v && onClose()}>
@@ -48,20 +71,24 @@ export function CredentialsOverlay({
               <CheckCircle2 className="w-7 h-7 text-emerald-600" />
             </div>
             <DialogTitle asChild>
-              <h3 className="font-urdu text-xl font-bold leading-loose" dir="rtl" lang="ur">
-                صارف کامیابی سے بن گیا
+              <h3 className={isUrdu ? "font-urdu text-xl font-bold leading-loose" : "text-lg font-bold"} dir={isUrdu ? "rtl" : "ltr"}>
+                {isUrdu ? "صارف کامیابی سے بن گیا" : "User Created Successfully"}
               </h3>
             </DialogTitle>
-            <DialogDescription className="font-urdu">لاگ اِن معلومات محفوظ کر لیں</DialogDescription>
+            <DialogDescription className={isUrdu ? "font-urdu" : "text-sm"}>
+              {isUrdu ? "لاگ اِن معلومات محفوظ کر لیں" : "Save the login credentials securely"}
+            </DialogDescription>
           </div>
         </DialogHeader>
         <div className="rounded-xl border border-border bg-muted/40 divide-y divide-border text-sm">
-          <Row label="نام" value={`${creds.nameUrdu} · ${creds.nameEnglish}`} />
-          <Row label={isParent ? "لاگ اِن آئی ڈی" : "ای میل"} value={loginId ?? ""} mono />
-          <Row label="کردار" value={roleLabel(creds.role)} />
+          <Row label={isUrdu ? "نام" : "Name"} value={displayName} />
+          <Row label={isParent ? (isUrdu ? "لاگ اِن آئی ڈی" : "Login ID") : (isUrdu ? "ای میل" : "Email")} value={loginId ?? ""} mono />
+          <Row label={isUrdu ? "کردار" : "Role"} value={roleText} />
           <div className="flex items-center justify-between gap-2 px-3 py-2.5">
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] uppercase text-muted-foreground tracking-wider">پاس ورڈ</p>
+              <p className="text-[10px] uppercase text-muted-foreground tracking-wider">
+                {isUrdu ? "پاس ورڈ" : "Password"}
+              </p>
               <p className="font-mono text-sm break-all">{reveal ? creds.password : "•".repeat(creds.password.length)}</p>
             </div>
             <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setReveal((v) => !v)} aria-label="Toggle password">
@@ -72,14 +99,27 @@ export function CredentialsOverlay({
         <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300/40 px-3 py-2 flex items-start gap-2">
           <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
           <div>
-            <p className="font-urdu text-xs leading-loose" dir="rtl" lang="ur">یہ پاس ورڈ دوبارہ نہیں دکھایا جائے گا</p>
-            <p className="font-urdu text-[11px] text-muted-foreground" dir="rtl" lang="ur">اسے ابھی محفوظ کر لیں۔</p>
+            <p className="text-xs leading-snug font-medium" dir={isUrdu ? "rtl" : "ltr"}>
+              {isUrdu ? "یہ پاس ورڈ دوبارہ نہیں دکھایا جائے گا" : "This password will not be shown again."}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5" dir={isUrdu ? "rtl" : "ltr"}>
+              {isUrdu ? "اسے ابھی محفوظ کر لیں۔" : "Make sure to copy and save it now."}
+            </p>
           </div>
         </div>
         <DialogFooter className="flex-wrap gap-2 sm:justify-end">
-          <Button variant="outline" onClick={copyAll} className="gap-1.5"><Copy className="h-3.5 w-3.5" /><span className="font-urdu">تمام کاپی کریں</span></Button>
-          {onViewUser && <Button variant="outline" onClick={onViewUser}><span className="font-urdu">صارف دیکھیں</span></Button>}
-          <Button onClick={onClose}><span className="font-urdu">بند کریں</span></Button>
+          <Button variant="outline" onClick={copyAll} className="gap-1.5">
+            <Copy className="h-3.5 w-3.5" />
+            <span>{isUrdu ? "تمام کاپی کریں" : "Copy All"}</span>
+          </Button>
+          {onViewUser && (
+            <Button variant="outline" onClick={onViewUser}>
+              <span>{isUrdu ? "صارف دیکھیں" : "View User"}</span>
+            </Button>
+          )}
+          <Button onClick={onClose}>
+            <span>{isUrdu ? "بند کریں" : "Close"}</span>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -93,12 +133,4 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
       <span className={mono ? "font-mono text-sm" : "text-sm font-medium"}>{value}</span>
     </div>
   );
-}
-
-function roleLabel(role: string) {
-  if (role === "parent") return "والدین";
-  if (role === "teacher") return "استاد";
-  if (role === "admin") return "منتظم";
-  if (role === "super_admin") return "اعلیٰ منتظم";
-  return role;
 }

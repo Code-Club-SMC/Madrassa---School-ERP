@@ -44,7 +44,6 @@ import { Route as AuthenticatedFinanceReportsRouteImport } from './routes/_authe
 import { Route as AuthenticatedHrIndexRouteImport } from './routes/_authenticated/hr/index'
 import { Route as AuthenticatedHrAttendanceRouteImport } from './routes/_authenticated/hr/attendance'
 import { Route as AuthenticatedHrLeaveRouteImport } from './routes/_authenticated/hr/leave'
-import { Route as AuthenticatedHrPayrollRouteImport } from './routes/_authenticated/hr/payroll'
 import { Route as AuthenticatedMadrassaAttendanceRouteImport } from './routes/_authenticated/madrassa/attendance'
 import { Route as AuthenticatedMadrassaExamsRouteImport } from './routes/_authenticated/madrassa/exams'
 import { Route as AuthenticatedMadrassaFeesRouteImport } from './routes/_authenticated/madrassa/fees'
@@ -362,11 +361,6 @@ const AuthenticatedHrAttendanceRoute =
 const AuthenticatedHrLeaveRoute = AuthenticatedHrLeaveRouteImport.update({
   id: '/leave',
   path: '/leave',
-  getParentRoute: () => AuthenticatedHrRoute,
-} as any)
-const AuthenticatedHrPayrollRoute = AuthenticatedHrPayrollRouteImport.update({
-  id: '/payroll',
-  path: '/payroll',
   getParentRoute: () => AuthenticatedHrRoute,
 } as any)
 const AuthenticatedMadrassaAttendanceRoute =
@@ -1164,7 +1158,6 @@ export interface FileRoutesByFullPath {
   '/finance/reports': typeof AuthenticatedFinanceReportsRoute
   '/hr/attendance': typeof AuthenticatedHrAttendanceRoute
   '/hr/leave': typeof AuthenticatedHrLeaveRoute
-  '/hr/payroll': typeof AuthenticatedHrPayrollRoute
   '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
   '/madrassa/exams': typeof AuthenticatedMadrassaExamsRouteWithChildren
   '/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
@@ -1329,7 +1322,6 @@ export interface FileRoutesByTo {
   '/finance/reports': typeof AuthenticatedFinanceReportsRoute
   '/hr/attendance': typeof AuthenticatedHrAttendanceRoute
   '/hr/leave': typeof AuthenticatedHrLeaveRoute
-  '/hr/payroll': typeof AuthenticatedHrPayrollRoute
   '/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
   '/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
   '/madrassa/hifz': typeof AuthenticatedMadrassaHifzRoute
@@ -1501,7 +1493,6 @@ export interface FileRoutesById {
   '/_authenticated/finance/reports': typeof AuthenticatedFinanceReportsRoute
   '/_authenticated/hr/attendance': typeof AuthenticatedHrAttendanceRoute
   '/_authenticated/hr/leave': typeof AuthenticatedHrLeaveRoute
-  '/_authenticated/hr/payroll': typeof AuthenticatedHrPayrollRoute
   '/_authenticated/madrassa/attendance': typeof AuthenticatedMadrassaAttendanceRoute
   '/_authenticated/madrassa/exams': typeof AuthenticatedMadrassaExamsRouteWithChildren
   '/_authenticated/madrassa/fees': typeof AuthenticatedMadrassaFeesRoute
@@ -1675,7 +1666,6 @@ export interface FileRouteTypes {
     | '/finance/reports'
     | '/hr/attendance'
     | '/hr/leave'
-    | '/hr/payroll'
     | '/madrassa/attendance'
     | '/madrassa/exams'
     | '/madrassa/fees'
@@ -1840,7 +1830,6 @@ export interface FileRouteTypes {
     | '/finance/reports'
     | '/hr/attendance'
     | '/hr/leave'
-    | '/hr/payroll'
     | '/madrassa/attendance'
     | '/madrassa/fees'
     | '/madrassa/hifz'
@@ -2011,7 +2000,6 @@ export interface FileRouteTypes {
     | '/_authenticated/finance/reports'
     | '/_authenticated/hr/attendance'
     | '/_authenticated/hr/leave'
-    | '/_authenticated/hr/payroll'
     | '/_authenticated/madrassa/attendance'
     | '/_authenticated/madrassa/exams'
     | '/_authenticated/madrassa/fees'
@@ -2458,13 +2446,6 @@ declare module '@tanstack/react-router' {
       path: '/leave'
       fullPath: '/hr/leave'
       preLoaderRoute: typeof AuthenticatedHrLeaveRouteImport
-      parentRoute: typeof AuthenticatedHrRoute
-    }
-    '/_authenticated/hr/payroll': {
-      id: '/_authenticated/hr/payroll'
-      path: '/payroll'
-      fullPath: '/hr/payroll'
-      preLoaderRoute: typeof AuthenticatedHrPayrollRouteImport
       parentRoute: typeof AuthenticatedHrRoute
     }
     '/_authenticated/madrassa/attendance': {
@@ -3454,14 +3435,12 @@ const AuthenticatedFinanceRouteWithChildren =
 interface AuthenticatedHrRouteChildren {
   AuthenticatedHrAttendanceRoute: typeof AuthenticatedHrAttendanceRoute
   AuthenticatedHrLeaveRoute: typeof AuthenticatedHrLeaveRoute
-  AuthenticatedHrPayrollRoute: typeof AuthenticatedHrPayrollRoute
   AuthenticatedHrIndexRoute: typeof AuthenticatedHrIndexRoute
 }
 
 const AuthenticatedHrRouteChildren: AuthenticatedHrRouteChildren = {
   AuthenticatedHrAttendanceRoute: AuthenticatedHrAttendanceRoute,
   AuthenticatedHrLeaveRoute: AuthenticatedHrLeaveRoute,
-  AuthenticatedHrPayrollRoute: AuthenticatedHrPayrollRoute,
   AuthenticatedHrIndexRoute: AuthenticatedHrIndexRoute,
 }
 

@@ -75,19 +75,19 @@ const MADRASSA_SUBJECTS = [
 ];
 
 const TEACHERS = [
-  { name: "Maulana Abdul Rehman", role: "teacher", subject: "QUR", placement: "qasmia-madrassa" },
-  { name: "Ustad Muhammad Yasin", role: "teacher", subject: "NZA", placement: "qasmia-madrassa" },
-  { name: "Qaria Sakina Noor", role: "teacher", subject: "TJQ", placement: "zainab-madrassa" },
-  { name: "Nadeem Ahmad", role: "teacher", subject: "MATH", placement: "qasim-school" },
-  { name: "Sadia Iqbal", role: "teacher", subject: "EN", placement: "qasim-school" },
-  { name: "Kamran Shah", role: "teacher", subject: "SCI", placement: "qasim-school" },
-  { name: "Rehana Kausar", role: "teacher", subject: "UR", placement: "qasim-school" },
-  { name: "Bilal Ahmed", role: "principal", subject: "PAK", placement: "qasim-school" },
-  { name: "Haji Ghulam Abbas", role: "teacher", subject: "HAD", placement: "qasmia-madrassa" },
-  { name: "Zarina Bibi", role: "accountant", subject: "BAL", placement: "zainab-madrassa" },
-  { name: "Shabana Kausar", role: "teacher", subject: "TJQ", placement: "zainab-madrassa" },
-  { name: "Rabia Noor", role: "teacher", subject: "UR", placement: "zainab-school" },
-  { name: "Amna Aslam", role: "teacher", subject: "EN", placement: "zainab-school" },
+  { name: "Maulana Abdul Rehman", nameUrdu: "مولانا عبدالرحمٰن", role: "teacher", subject: "QUR", placement: "qasmia-madrassa" },
+  { name: "Ustad Muhammad Yasin", nameUrdu: "استاد محمد یاسین", role: "teacher", subject: "NZA", placement: "qasmia-madrassa" },
+  { name: "Qaria Sakina Noor", nameUrdu: "قاریہ سکینہ نور", role: "teacher", subject: "TJQ", placement: "zainab-madrassa" },
+  { name: "Nadeem Ahmad", nameUrdu: "ندیم احمد", role: "teacher", subject: "MATH", placement: "qasim-school" },
+  { name: "Sadia Iqbal", nameUrdu: "سعدیہ اقبال", role: "teacher", subject: "EN", placement: "qasim-school" },
+  { name: "Kamran Shah", nameUrdu: "کامران شاہ", role: "teacher", subject: "SCI", placement: "qasim-school" },
+  { name: "Rehana Kausar", nameUrdu: "ریحانہ کوثر", role: "teacher", subject: "UR", placement: "qasim-school" },
+  { name: "Bilal Ahmed", nameUrdu: "بلال احمد", role: "principal", subject: "PAK", placement: "qasim-school" },
+  { name: "Haji Ghulam Abbas", nameUrdu: "حاجی غلام عباس", role: "teacher", subject: "HAD", placement: "qasmia-madrassa" },
+  { name: "Zarina Bibi", nameUrdu: "زرینہ بی بی", role: "accountant", subject: "BAL", placement: "zainab-madrassa" },
+  { name: "Shabana Kausar", nameUrdu: "شبانہ کوثر", role: "teacher", subject: "TJQ", placement: "zainab-madrassa" },
+  { name: "Rabia Noor", nameUrdu: "رابعہ نور", role: "teacher", subject: "UR", placement: "zainab-school" },
+  { name: "Amna Aslam", nameUrdu: "آمنہ اسلم", role: "teacher", subject: "EN", placement: "zainab-school" },
 ] as const;
 
 const PLACEMENT_INSTITUTION: Record<string, string> = {
@@ -253,6 +253,7 @@ async function main() {
     teacherRows.push({
       id: userId,
       name: t.name,
+      nameUrdu: t.nameUrdu,
       email,
       username: email,
       emailVerified: true,

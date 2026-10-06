@@ -14,7 +14,7 @@ function TeacherSalaryBoundaryPage() {
       <PageHeader
         title="Teacher Salary"
         titleUrdu="اساتذہ کی تنخواہ"
-        description="Teacher V1 stores salary input fields on the teacher profile. Payroll, payments, and payslips are not active in this version."
+        description="Teacher profiles store salary info directly. Base salary, bank details, and payment methods are maintained on each profile."
       />
 
       <Card className="p-6">
@@ -23,11 +23,10 @@ function TeacherSalaryBoundaryPage() {
             <Banknote className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Payroll workflow is not included in Teacher V1</h2>
+            <h2 className="text-lg font-semibold">Teacher Salary Information</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Use each teacher profile&apos;s Salary Info tab for base salary, bank account,
-              payment method, effective date, and notes. Salary disbursement, deductions,
-              payslips, and payroll reports will belong to the future HR/payroll module.
+              payment method, effective date, and notes.
             </p>
           </div>
           <div>

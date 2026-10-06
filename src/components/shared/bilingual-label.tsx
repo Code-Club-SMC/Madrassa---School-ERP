@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Label } from "@/components/ui/label";
+import { useLanguage } from "@/components/language-context";
 
 type Props = {
   urdu: string;
@@ -10,15 +11,16 @@ type Props = {
   children?: ReactNode;
 };
 
-export function BilingualLabel({ urdu, english, htmlFor, required, lang = "ur", children }: Props) {
-  const isUrdu = lang === "ur";
+export function BilingualLabel({ urdu, english, htmlFor, required, lang, children }: Props) {
+  const { lang: ctxLang } = useLanguage();
+  const activeLang = lang ?? ctxLang;
+  const isUrdu = activeLang === "ur";
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={htmlFor} dir={isUrdu ? "rtl" : "ltr"} lang={isUrdu ? "ur" : "en"} className={`${isUrdu ? "font-urdu" : "font-heading"} text-base text-foreground leading-tight`}>
         {isUrdu ? urdu : english}
         {required && <span className="text-destructive ms-1">*</span>}
       </Label>
-      {isUrdu && <span className="text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground font-medium -mt-1">{english}</span>}
       {children}
     </div>
   );

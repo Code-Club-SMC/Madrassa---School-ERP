@@ -8,11 +8,16 @@ import { resolveDisplayPerms } from "./resolve-perms";
 import { formatDate } from "@/lib/format";
 import type { User } from "@/types";
 
+import { useLanguage } from "@/components/language-context";
+import { getUserDisplayName, getUserInitials, ROLE_LABELS, ACCESS_LABELS, STATUS_LABELS } from "@/lib/user-names";
+
 type Props = { user: User | null; onClose: () => void };
 
 export function UserDetailSheet({ user, onClose }: Props) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   if (!user) return null;
-  const initials = (user.nameUrdu ?? user.name).slice(0, 2);
+  const initials = getUserInitials(user, lang);
   const perms = resolveDisplayPerms(user);
 
   return (
@@ -25,13 +30,22 @@ export function UserDetailSheet({ user, onClose }: Props) {
             </Avatar>
             <div className="min-w-0 flex-1">
               <SheetTitle>
-                <span className="font-urdu text-xl block leading-loose" dir="rtl" lang="ur">{user.nameUrdu ?? user.name}</span>
-                <span className="text-sm text-muted-foreground font-normal block mt-0.5">{user.name}</span>
+                <span
+                  className={isUrdu ? "font-urdu text-xl block leading-loose" : "font-sans text-xl font-bold block"}
+                  dir={isUrdu ? "rtl" : "ltr"}
+                  lang={lang}
+                >
+                  {getUserDisplayName(user, lang)}
+                </span>
               </SheetTitle>
               <div className="flex flex-wrap gap-2 mt-2">
                 <StatusBadge status={user.role} />
                 <StatusBadge status={user.status} />
-                {user.systemAccess && <Badge variant="outline">{user.systemAccess}</Badge>}
+                {user.systemAccess && (
+                  <Badge variant="outline">
+                    {isUrdu ? ACCESS_LABELS[user.systemAccess]?.ur ?? user.systemAccess : ACCESS_LABELS[user.systemAccess]?.en ?? user.systemAccess}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -39,8 +53,8 @@ export function UserDetailSheet({ user, onClose }: Props) {
 
         <Tabs defaultValue="details" className="mt-6">
           <TabsList>
-            <TabsTrigger value="details"><span className="font-urdu">تفصیل</span><span className="ms-1.5 text-xs">Details</span></TabsTrigger>
-            <TabsTrigger value="perms"><span className="font-urdu">اجازتیں</span><span className="ms-1.5 text-xs">Permissions</span></TabsTrigger>
+            <TabsTrigger value="details">{isUrdu ? "تفصیل" : "Details"}</TabsTrigger>
+            <TabsTrigger value="perms">{isUrdu ? "اجازتیں" : "Permissions"}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="mt-4">
@@ -48,11 +62,31 @@ export function UserDetailSheet({ user, onClose }: Props) {
               <Row urdu="ای میل" en="Email" value={user.email} />
               <Row urdu="فون" en="Phone" value={user.phone ?? "—"} />
               <Row urdu="شناختی کارڈ" en="CNIC" value={maskCnic(user.cnic)} />
-              <Row urdu="کردار" en="Role" value={user.role} />
-              <Row urdu="سسٹم رسائی" en="System Access" value={user.systemAccess ?? "—"} />
-              <Row urdu="آخری لاگ ان" en="Last Login" value={user.lastLoginAt ? formatDate(user.lastLoginAt) : "Never"} />
-              <Row urdu="بنانے والا" en="Created By" value={`${user.createdBy} · ${formatDate(user.createdAt)}`} />
-              <Row urdu="کیفیت" en="Status" value={user.status} />
+              <Row
+                urdu="کردار"
+                en="Role"
+                value={isUrdu ? ROLE_LABELS[user.role]?.ur ?? user.role : ROLE_LABELS[user.role]?.en ?? user.role}
+              />
+              <Row
+                urdu="سسٹم رسائی"
+                en="System Access"
+                value={isUrdu ? (ACCESS_LABELS[user.systemAccess ?? ""]?.ur ?? user.systemAccess ?? "—") : (ACCESS_LABELS[user.systemAccess ?? ""]?.en ?? user.systemAccess ?? "—")}
+              />
+              <Row
+                urdu="آخری لاگ ان"
+                en="Last Login"
+                value={user.lastLoginAt ? formatDate(user.lastLoginAt) : (isUrdu ? "کبھی نہیں" : "Never")}
+              />
+              <Row
+                urdu="بنانے والا"
+                en="Created By"
+                value={user.createdBy ? `${user.createdBy} · ${formatDate(user.createdAt)}` : "—"}
+              />
+              <Row
+                urdu="کیفیت"
+                en="Status"
+                value={isUrdu ? STATUS_LABELS[user.status]?.ur ?? user.status : STATUS_LABELS[user.status]?.en ?? user.status}
+              />
             </dl>
           </TabsContent>
 
@@ -64,8 +98,6 @@ export function UserDetailSheet({ user, onClose }: Props) {
     </Sheet>
   );
 }
-
-import { useLanguage } from "@/components/language-context";
 
 function Row({ urdu, en, value }: { urdu: string; en: string; value: string }) {
   const { lang } = useLanguage();

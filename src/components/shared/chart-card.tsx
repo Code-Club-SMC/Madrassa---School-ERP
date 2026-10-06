@@ -33,6 +33,8 @@ export function ChartCard({ title, titleUrdu, description, actions, children, cl
   );
 }
 
+import { useLanguage } from "@/components/language-context";
+
 type KpiProps = {
   label: string;
   labelUrdu: string;
@@ -42,6 +44,7 @@ type KpiProps = {
 };
 
 export function KpiCard({ label, labelUrdu, value, delta, accent = "default" }: KpiProps) {
+  const { lang } = useLanguage();
   const accentClass =
     accent === "success"
       ? "text-chart-1"
@@ -52,10 +55,15 @@ export function KpiCard({ label, labelUrdu, value, delta, accent = "default" }: 
           : "text-foreground";
   return (
     <Card className="p-5">
-      <p dir="rtl" lang="ur" className="font-urdu text-base text-foreground leading-tight">
-        {labelUrdu}
-      </p>
-      <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium mt-0.5">{label}</p>
+      {lang === "ur" ? (
+        <p dir="rtl" lang="ur" className="font-urdu text-base text-foreground leading-tight">
+          {labelUrdu}
+        </p>
+      ) : (
+        <p className="text-[11px] text-muted-foreground uppercase tracking-wide font-medium">
+          {label}
+        </p>
+      )}
       <div className="flex items-baseline gap-2 mt-3">
         <p className={cn("font-heading text-3xl font-bold tracking-tight", accentClass)}>{value}</p>
         {delta && (

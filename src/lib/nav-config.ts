@@ -88,26 +88,22 @@ export const navItems: NavItem[] = [
   { group: "shared", url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: ADMINS },
   { group: "shared", url: "/finance", icon: Wallet, en: "Finance", ur: "مالیات", roles: ADMINS },
   { group: "shared", url: "/finance/reports", icon: BarChart3, en: "Finance Reports", ur: "مالی رپورٹس", roles: ADMINS },
-  { group: "shared", url: "/finance/donations", icon: Receipt, en: "Donations", ur: "عطیات", roles: ADMINS },
+  { group: "shared", url: "/finance/donations", icon: Receipt, en: "Donation Receipts", ur: "عطیات کی رسیدیں", roles: ADMINS },
+  { group: "shared", url: "/settings/concessions", icon: HandCoins, en: "Fee Concessions", ur: "رعایات", roles: ADMINS },
   { group: "shared", url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین", roles: PARENT_SAFE },
   { group: "shared", url: "/notifications", icon: Bell, en: "Notifications", ur: "اعلانات", roles: NOTIFICATION_ROLES },
   { group: "shared", url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
 
-  // ---------- HR MANAGEMENT (unified: Staff + Teachers + Users + Payroll) ----------
+  // ---------- HR MANAGEMENT (unified: Staff + Teachers + Users + Admin Operations) ----------
   { group: "shared", url: "/hr", icon: UsersRound, en: "HR Management", ur: "انسانی وسائل", roles: ADMINS },
   { group: "shared", url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: TEACHER_MANAGERS },
   { group: "shared", url: "/teachers/salary", icon: Banknote, en: "Salary Slips", ur: "تنخواہ سلپ", roles: TEACHER_MANAGERS },
   { group: "shared", url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: ["super_admin"] },
-  { group: "shared", url: "/hr/payroll", icon: HandCoins, en: "Payroll", ur: "تنخواہ", roles: ADMINS },
   { group: "shared", url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: ADMINS },
   { group: "shared", url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: ADMINS },
-
-  // ---------- ADMIN (bottom-pinned) ----------
-  { group: "admin", url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },
-  { group: "admin", url: "/settings/concessions", icon: HandCoins, en: "Concessions", ur: "رعایات", roles: ADMINS },
-  { group: "admin", url: "/settings/templates", icon: MessageSquareText, en: "Msg Templates", ur: "پیغام سانچے", roles: ADMINS },
-  { group: "admin", url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: ADMINS },
-  { group: "admin", url: "/settings", icon: Settings, en: "Settings", ur: "ترتیبات", roles: ADMINS },
+  { group: "shared", url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },
+  { group: "shared", url: "/settings/templates", icon: MessageSquareText, en: "SMS & Msg Templates", ur: "پیغام و ایس ایم ایس", roles: ADMINS },
+  { group: "shared", url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: ADMINS },
 ];
 
 // ---------------------------------------------------------------------------
@@ -144,6 +140,7 @@ const MADRASSA_CHILDREN: NavChild[] = [
   { url: "/madrassa/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
   { url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
   { url: "/madrassa/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
+  { url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
 ];
 
 const SCHOOL_CHILDREN: NavChild[] = [
@@ -152,6 +149,7 @@ const SCHOOL_CHILDREN: NavChild[] = [
   { url: "/school/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
   { url: "/school/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
   { url: "/school/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
+  { url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
 ];
 
 export const navParents: NavParent[] = [
@@ -193,7 +191,8 @@ export const navParents: NavParent[] = [
     children: [
       { url: "/finance", icon: Wallet, en: "Overview", ur: "جائزہ", roles: ADMINS },
       { url: "/finance/reports", icon: BarChart3, en: "Finance Reports", ur: "مالی رپورٹس", roles: ADMINS },
-      { url: "/finance/donations", icon: Receipt, en: "Donations", ur: "عطیات", roles: ADMINS },
+      { url: "/finance/donations", icon: Receipt, en: "Donation Receipts", ur: "عطیات کی رسیدیں", roles: ADMINS },
+      { url: "/settings/concessions", icon: HandCoins, en: "Fee Concessions", ur: "رعایات", roles: ADMINS },
       { url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: ADMINS },
     ],
   },
@@ -207,10 +206,12 @@ export const navParents: NavParent[] = [
       { url: "/hr", icon: UsersRound, en: "Overview", ur: "جائزہ", roles: ADMINS },
       { url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: ADMINS },
       { url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: ADMINS },
-      { url: "/hr/payroll", icon: HandCoins, en: "Payroll", ur: "تنخواہ", roles: ADMINS },
       { url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: TEACHER_MANAGERS },
       { url: "/teachers/salary", icon: Banknote, en: "Salary Slips", ur: "تنخواہ سلپ", roles: TEACHER_MANAGERS },
       { url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: ["super_admin"] },
+      { url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },
+      { url: "/settings/templates", icon: MessageSquareText, en: "SMS & Msg Templates", ur: "پیغام و ایس ایم ایس", roles: ADMINS },
+      { url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: ADMINS },
     ],
   },
   {
@@ -239,21 +240,6 @@ export const navParents: NavParent[] = [
       { url: "/id-cards", icon: IdCard, en: "ID Cards", ur: "شناختی کارڈ", roles: ADMINS },
       { url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین", roles: PARENT_SAFE },
       { url: "/notifications", icon: Bell, en: "Notifications", ur: "اعلانات", roles: NOTIFICATION_ROLES },
-    ],
-  },
-  {
-    key: "settings",
-    icon: Settings,
-    en: "Settings",
-    ur: "ترتیبات",
-    roles: ADMINS,
-    children: [
-      { url: "/settings", icon: Settings, en: "Settings", ur: "ترتیبات", roles: ADMINS },
-      { url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
-      { url: "/settings/concessions", icon: HandCoins, en: "Concessions", ur: "رعایات", roles: ADMINS },
-      { url: "/settings/templates", icon: MessageSquareText, en: "Msg Templates", ur: "پیغام سانچے", roles: ADMINS },
-      { url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: ADMINS },
-      { url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },
     ],
   },
 ];
@@ -310,13 +296,28 @@ export function findParentForPath(
   }
 
   // 3. Fallback prefix checks
-  if (pathname.startsWith("/madrassa") || pathname.startsWith("/school")) {
+  if (
+    pathname.startsWith("/settings/academic-year") ||
+    pathname.startsWith("/madrassa") ||
+    pathname.startsWith("/school")
+  ) {
     return parents.find((p) => p.key === "academic");
   }
-  if (pathname.startsWith("/finance") || pathname.startsWith("/inventory")) {
+  if (
+    pathname.startsWith("/finance") ||
+    pathname.startsWith("/inventory") ||
+    pathname.startsWith("/settings/concessions")
+  ) {
     return parents.find((p) => p.key === "finance");
   }
-  if (pathname.startsWith("/hr") || pathname.startsWith("/teachers") || pathname.startsWith("/users")) {
+  if (
+    pathname.startsWith("/hr") ||
+    pathname.startsWith("/teachers") ||
+    pathname.startsWith("/users") ||
+    pathname.startsWith("/holidays") ||
+    pathname.startsWith("/settings/templates") ||
+    pathname.startsWith("/settings/website")
+  ) {
     return parents.find((p) => p.key === "hr");
   }
   if (pathname.startsWith("/reports")) {
@@ -324,9 +325,6 @@ export function findParentForPath(
   }
   if (pathname.startsWith("/admission")) {
     return parents.find((p) => p.key === "admission");
-  }
-  if (pathname.startsWith("/settings") || pathname.startsWith("/holidays")) {
-    return parents.find((p) => p.key === "settings");
   }
   if (pathname.startsWith("/id-cards") || pathname.startsWith("/parents") || pathname.startsWith("/notifications")) {
     return parents.find((p) => p.key === "records");
@@ -345,7 +343,10 @@ Object.assign(PAGE_TITLES, {
   "/admission/interviews": { en: "Interviews & Waitlist", ur: "انٹرویو" },
   "/teachers/salary": { en: "Salary Slips", ur: "تنخواہ سلپ" },
   "/finance/reports": { en: "Finance Reports", ur: "مالی رپورٹس" },
-  "/finance/donations": { en: "Donations", ur: "عطیات" },
-  "/settings/templates": { en: "Message Templates", ur: "پیغام سانچے" },
+  "/finance/donations": { en: "Donation Receipts", ur: "عطیات کی رسیدیں" },
+  "/settings/concessions": { en: "Fee Concessions", ur: "رعایات" },
+  "/settings/templates": { en: "SMS & Msg Templates", ur: "پیغام و ایس ایم ایس" },
+  "/settings/website": { en: "Website CMS", ur: "ویب سائٹ" },
+  "/settings/academic-year": { en: "Academic Year", ur: "تعلیمی سال" },
   "/reports/attendance": { en: "Attendance Report", ur: "حاضری رپورٹ" },
 });

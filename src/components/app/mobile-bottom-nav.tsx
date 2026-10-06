@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Users2, FileSignature, BarChart3, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, Users2, FileSignature, BarChart3, Wallet } from "lucide-react";
 import { useSystem } from "@/components/system-context";
 import { useLanguage } from "@/components/language-context";
 import { cn } from "@/lib/utils";
@@ -16,14 +16,14 @@ export function MobileBottomNav() {
     { url: studentsUrl, icon: Users2, en: "Students", ur: "طلبہ" },
     { url: "/admission", icon: FileSignature, en: "Admission", ur: "داخلہ" },
     { url: "/reports", icon: BarChart3, en: "Reports", ur: "رپورٹس" },
-    { url: "/settings", icon: MoreHorizontal, en: "More", ur: "مزید" },
+    { url: "/finance", icon: Wallet, en: "Finance", ur: "مالیات" },
   ];
 
   const isActive = (url: string) => {
     if (pathname === url) return true;
     if (url === "/dashboard") return false; // never match prefixes for dashboard
     // require exact match for short top-level URLs that are parents of other nav items
-    if (url === "/reports" || url === "/settings") return false;
+    if (url === "/reports" || url === "/finance") return false;
     return pathname.startsWith(url + "/");
   };
 

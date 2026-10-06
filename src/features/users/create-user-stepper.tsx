@@ -40,7 +40,7 @@ type Props = {
 const ROLE_OPTIONS: { value: StepperRole; urdu: string; english: string; tagline: string; icon: typeof ShieldCheck }[] = [
   { value: "admin",        urdu: "منتظم",        english: "Admin",         tagline: "Manages all institutional operations",     icon: ShieldCheck },
   { value: "principal",    urdu: "پرنسپل",       english: "Principal",     tagline: "Oversight of academics, exams & reports",   icon: Crown },
-  { value: "hr_manager",   urdu: "ایچ آر منیجر", english: "HR Manager",     tagline: "Staff, payroll, leave & departments",       icon: Briefcase },
+  { value: "hr_manager",   urdu: "ایچ آر منیجر", english: "HR Manager",     tagline: "Staff, leave & departments",                icon: Briefcase },
   { value: "accountant",   urdu: "اکاؤنٹنٹ",     english: "Accountant",    tagline: "Fees, finance, donations & ledgers",        icon: Calculator },
   { value: "librarian",    urdu: "لائبریرین",    english: "Librarian",     tagline: "Library inventory & book issuance",         icon: LibraryIcon },
   { value: "receptionist", urdu: "استقبالیہ",    english: "Receptionist",  tagline: "Front-desk, admissions intake, ID cards",   icon: Phone },
@@ -177,12 +177,15 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
         <div className="border-b border-border bg-card px-6 py-4">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
-              <h2 className="font-urdu text-2xl font-bold leading-loose" dir="rtl" lang="ur">
-                {isEdit ? "صارف میں ترمیم" : "نیا صارف بنائیں"}
-              </h2>
-              <p className="text-xs uppercase tracking-widest text-muted-foreground mt-0.5">
-                {isEdit ? "Edit User" : "Create New User"}
-              </p>
+              {lang === "ur" ? (
+                <h2 className="font-urdu text-2xl font-bold leading-loose" dir="rtl" lang="ur">
+                  {isEdit ? "صارف میں ترمیم" : "نیا صارف بنائیں"}
+                </h2>
+              ) : (
+                <h2 className="text-xl font-bold tracking-tight">
+                  {isEdit ? "Edit User" : "Create New User"}
+                </h2>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -207,8 +210,12 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
                       {done ? <Check className="h-3 w-3" /> : s.n}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-urdu text-sm leading-tight truncate" dir="rtl" lang="ur">{s.urdu}</p>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{s.english}</p>
+                      <p className={cn(
+                        "leading-tight truncate",
+                        lang === "ur" ? "font-urdu text-sm" : "text-xs font-semibold uppercase tracking-wider",
+                      )} dir={lang === "ur" ? "rtl" : "ltr"} lang={lang}>
+                        {lang === "ur" ? s.urdu : s.english}
+                      </p>
                     </div>
                   </div>
                   {i < stepDefs.length - 1 && <div className="h-px w-2 bg-border" />}
@@ -432,17 +439,17 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
         <div className="border-t border-border bg-card px-6 py-4 flex justify-between items-center">
           <Button variant="ghost" onClick={prev} disabled={stepIdx === 0} className="gap-1.5">
             <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
-            <span className="font-urdu">پچھلا</span>
+            <span>{lang === "ur" ? "پچھلا" : "Back"}</span>
           </Button>
           {step !== 4 ? (
             <Button onClick={next} className="gap-1.5">
-              <span className="font-urdu">اگلا</span>
+              <span>{lang === "ur" ? "اگلا" : "Next"}</span>
               <ChevronRight className="h-4 w-4 rtl:rotate-180" />
             </Button>
           ) : (
             <Button onClick={submit} disabled={submitting} className="gap-1.5">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              <span className="font-urdu">{isEdit ? "تبدیلیاں محفوظ کریں" : "صارف بنائیں"}</span>
+              <span>{lang === "ur" ? (isEdit ? "تبدیلیاں محفوظ کریں" : "صارف بنائیں") : (isEdit ? "Save Changes" : "Create User")}</span>
             </Button>
           )}
         </div>

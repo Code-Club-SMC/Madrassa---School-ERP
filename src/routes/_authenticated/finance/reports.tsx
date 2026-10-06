@@ -1,368 +1,917 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
-import { BarChart3, Download, Printer, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  Download,
+  Printer,
+  Search,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDate, formatPKR } from "@/lib/formatters";
+import {
+  aggregateByCategory,
+  aggregateByMonth,
+  filterTransactions,
+  type ComprehensiveTransaction,
+  type FinancePeriod,
+  type FinanceScope,
+} from "@/lib/finance/comprehensive-reports";
 
 export const Route = createFileRoute("/_authenticated/finance/reports")({
   component: FinanceReportsPage,
 });
 
-type ReportKey = "daily" | "dues" | "student" | "institution" | "audit";
-type ReportSystem = "both" | "school" | "madrassa";
-type ReportPayload = Record<string, unknown>;
-type ReportRow = Record<string, unknown>;
+type FinanceReportType = "income" | "expenses";
 
-const endpointByReport: Record<ReportKey, string> = {
-  daily: "/api/fees/reports/daily-collection",
-  dues: "/api/fees/reports/outstanding-dues",
-  student: "/api/fees/reports/student-ledger",
-  institution: "/api/fees/reports/institution-summary",
-  audit: "/api/fees/reports/reversal-refund-audit",
-};
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
-function FinanceReportsPage() {
-  const [report, setReport] = useState<ReportKey>("daily");
-  const [system, setSystem] = useState<ReportSystem>("both");
-  const [dateFrom, setDateFrom] = useState(today());
-  const [dateTo, setDateTo] = useState(today());
-  const [query, setQuery] = useState("");
-  const [data, setData] = useState<ReportPayload | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({ system });
-      if (dateFrom) params.set("dateFrom", dateFrom);
-      if (dateTo) params.set("dateTo", dateTo);
-      if (query.trim()) params.set("q", query.trim());
-
-      const response = await fetch(`${endpointByReport[report]}?${params.toString()}`, {
-        credentials: "include",
-      });
-
-      let payload: Record<string, unknown> | null = null;
-      try {
-        const text = await response.text();
-        payload = text ? JSON.parse(text) : null;
-      } catch {
-        payload = null;
-      }
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error("Session expired. Please log in again.");
-        }
-        if (response.status === 403) {
-          throw new Error("You do not have permission to view finance reports.");
-        }
-        const errorMsg =
-          (typeof payload?.error === "string" && payload.error) ||
-          (typeof payload?.message === "string" && payload.message) ||
-          `Failed to load report (${response.status} ${response.statusText || "Server error"})`;
-        throw new Error(errorMsg);
-      }
-
-      setData(payload as ReportPayload);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not load report";
-      setError(message);
-      toast.error(message);
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [dateFrom, dateTo, query, report, system]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  return (
-    <div>
-      <PageHeader
-        title="Finance Reports"
-        titleUrdu="مالی رپورٹس"
-        description="Collection, dues, student ledger, institution summary, and reversal/refund audit reports."
-        actions={
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" className="gap-1.5">
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => window.print()}>
-              <Printer className="h-4 w-4" />
-              Print
-            </Button>
-          </div>
-        }
-      />
-
-      <Card className="mb-4 p-3">
-        <div className="grid gap-3 lg:grid-cols-[1fr_160px_160px]">
-          <div className="relative">
-            <Search className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search student, receipt, or actor..."
-              className="pe-9"
-            />
-          </div>
-          <Input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
-          <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Tabs value={report} onValueChange={(value) => setReport(value as ReportKey)}>
-            <TabsList>
-              <TabsTrigger value="daily">Daily</TabsTrigger>
-              <TabsTrigger value="dues">Dues</TabsTrigger>
-              <TabsTrigger value="student">Student</TabsTrigger>
-              <TabsTrigger value="institution">Institution</TabsTrigger>
-              <TabsTrigger value="audit">Audit</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <Tabs value={system} onValueChange={(value) => setSystem(value as ReportSystem)}>
-            <TabsList>
-              <TabsTrigger value="both">Both</TabsTrigger>
-              <TabsTrigger value="school">School</TabsTrigger>
-              <TabsTrigger value="madrassa">Madrassa</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </Card>
-
-      <ReportContent
-        report={report}
-        data={data}
-        loading={loading}
-        error={error}
-        onRetry={() => void load()}
-      />
-    </div>
-  );
-}
-
-function ReportContent({
-  report,
-  data,
-  loading,
-  error,
-  onRetry,
-}: {
-  report: ReportKey;
-  data: ReportPayload | null;
-  loading: boolean;
-  error: string | null;
-  onRetry: () => void;
-}) {
-  if (loading) {
-    return <Card className="p-8 text-center text-sm text-muted-foreground">Loading report...</Card>;
-  }
-
-  if (error) {
-    return (
-      <Card className="p-8 text-center space-y-3">
-        <p className="text-sm text-destructive">{error}</p>
-        <Button size="sm" variant="outline" onClick={onRetry}>
-          Try Again
-        </Button>
-      </Card>
-    );
-  }
-
-  if (report === "daily") return <DailyCollectionReport rows={rowsFrom(data, ["receipts", "rows", "payments"])} />;
-  if (report === "dues") return <OutstandingDuesReport rows={rowsFrom(data, ["students", "rows", "dues"])} />;
-  if (report === "student") return <StudentLedgerReport rows={rowsFrom(data, ["rows", "ledger", "students"])} />;
-  if (report === "institution") return <InstitutionSummaryReport rows={rowsFrom(data, ["institutions", "rows", "summary"])} />;
-  return <AuditReport rows={rowsFrom(data, ["adjustments", "rows", "audit"])} />;
-}
-
-function DailyCollectionReport({ rows }: { rows: ReportRow[] }) {
-  return (
-    <ReportTable
-      empty="No collection rows for this range."
-      headers={["Receipt", "Date", "Student", "Method", "Gross", "Refunded", "Net"]}
-      rows={rows.map((row) => [
-        text(row, ["receiptNo", "receipt_no"]),
-        date(row, ["receivedAt", "date", "createdAt"]),
-        text(row, ["studentName", "student", "name"]),
-        text(row, ["method"]),
-        money(row, ["grossPaisa", "amountPaisa", "grossAmountPaisa"]),
-        money(row, ["refundedPaisa", "refundPaisa"]),
-        money(row, ["netPaisa", "netAmountPaisa", "amountPaisa"]),
-      ])}
-    />
-  );
-}
-
-function OutstandingDuesReport({ rows }: { rows: ReportRow[] }) {
-  return (
-    <ReportTable
-      empty="No outstanding dues found."
-      headers={["Student", "Institution", "Group", "Current", "30+", "60+", "90+", "Total"]}
-      rows={rows.map((row) => [
-        text(row, ["studentName", "student", "name"]),
-        text(row, ["institutionName", "institution"]),
-        text(row, ["groupLabel", "group", "className", "darja"]),
-        money(row, ["currentPaisa", "current"]),
-        money(row, ["thirtyPaisa", "bucket30Paisa", "30"]),
-        money(row, ["sixtyPaisa", "bucket60Paisa", "60"]),
-        money(row, ["ninetyPaisa", "bucket90Paisa", "90"]),
-        money(row, ["totalOutstandingPaisa", "outstandingPaisa", "totalPaisa"]),
-      ])}
-    />
-  );
-}
-
-function StudentLedgerReport({ rows }: { rows: ReportRow[] }) {
-  return (
-    <ReportTable
-      empty="No student ledger rows found."
-      headers={["Student", "Reference", "Date", "Type", "Debit", "Credit", "Balance"]}
-      rows={rows.map((row) => [
-        text(row, ["studentName", "student", "name"]),
-        text(row, ["reference", "receiptNo", "chargeLabel", "label"]),
-        date(row, ["date", "createdAt", "receivedAt", "dueDate"]),
-        text(row, ["type", "kind", "status"]),
-        money(row, ["debitPaisa", "chargePaisa", "amountPaisa"]),
-        money(row, ["creditPaisa", "paidPaisa"]),
-        money(row, ["balancePaisa", "outstandingPaisa"]),
-      ])}
-    />
-  );
-}
-
-function InstitutionSummaryReport({ rows }: { rows: ReportRow[] }) {
-  return (
-    <ReportTable
-      empty="No institution summary rows found."
-      headers={["Institution", "Charges", "Collected", "Reversed", "Refunded", "Outstanding"]}
-      rows={rows.map((row) => [
-        text(row, ["institutionName", "institution"]),
-        money(row, ["chargedPaisa", "totalChargedPaisa"]),
-        money(row, ["collectedPaisa", "totalPaidPaisa"]),
-        money(row, ["reversedPaisa", "totalReversedPaisa"]),
-        money(row, ["refundedPaisa", "totalRefundedPaisa"]),
-        money(row, ["outstandingPaisa"]),
-      ])}
-    />
-  );
-}
-
-function AuditReport({ rows }: { rows: ReportRow[] }) {
-  return (
-    <ReportTable
-      empty="No reversals or refunds found."
-      headers={["Date", "Actor", "Type", "Reference", "Amount", "Reason"]}
-      rows={rows.map((row) => [
-        date(row, ["createdAt", "date"]),
-        text(row, ["actorName", "actorEmail", "actor"]),
-        text(row, ["type"]),
-        text(row, ["reference", "receiptNo", "chargeId", "paymentId"]),
-        money(row, ["amountPaisa"]),
-        text(row, ["reason"]),
-      ])}
-    />
-  );
-}
-
-function ReportTable({
-  headers,
-  rows,
-  empty,
-}: {
-  headers: string[];
-  rows: string[][];
-  empty: string;
-}) {
-  return (
-    <Card className="overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/40 hover:bg-muted/40">
-            {headers.map((header, index) => (
-              <TableHead key={header} className={index >= headers.length - 3 ? "text-end" : undefined}>
-                {header}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={headers.length} className="py-10 text-center text-sm text-muted-foreground">
-                {empty}
-              </TableCell>
-            </TableRow>
-          ) : (
-            rows.map((row, rowIndex) => (
-              <TableRow key={row.join(":") || rowIndex}>
-                {row.map((cell, cellIndex) => (
-                  <TableCell
-                    key={`${cellIndex}:${cell}`}
-                    className={cellIndex >= headers.length - 3 ? "text-end font-mono text-xs" : "text-sm"}
-                  >
-                    {cell || "—"}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </Card>
-  );
-}
-
-function rowsFrom(data: ReportPayload | null, keys: string[]) {
-  if (Array.isArray(data)) return data.filter(isReportRow);
-  if (!data || !isReportRow(data)) return [];
-  for (const key of keys) {
-    const value = data[key];
-    if (Array.isArray(value)) return value.filter(isReportRow);
-  }
-  return [];
-}
-
-function isReportRow(value: unknown): value is ReportRow {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value));
-}
-
-function valueFrom(row: ReportRow, keys: string[]) {
-  for (const key of keys) {
-    const value = row[key];
-    if (value !== null && value !== undefined) return value;
-  }
-  return null;
-}
-
-function text(row: ReportRow, keys: string[]) {
-  const value = valueFrom(row, keys);
-  return value === null ? "—" : String(value);
-}
-
-function money(row: ReportRow, keys: string[]) {
-  const value = valueFrom(row, keys);
-  return typeof value === "number" ? formatPKR(value) : "—";
-}
-
-function date(row: ReportRow, keys: string[]) {
-  const value = valueFrom(row, keys);
-  if (!value) return "—";
-  const parsed = new Date(String(value));
-  return Number.isNaN(parsed.getTime()) ? String(value) : formatDate(parsed);
+function formatRupees(amount: number): string {
+  return new Intl.NumberFormat("en-PK", {
+    style: "currency",
+    currency: "PKR",
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function FinanceReportsPage() {
+  const [report, setReport] = useState<FinanceReportType>("income");
+  const [period, setPeriod] = useState<FinancePeriod>("annually");
+  const [system, setSystem] = useState<FinanceScope>("both");
+  const [year, setYear] = useState<number>(2026);
+  const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
+  const [dateFrom, setDateFrom] = useState<string>("2026-05-01");
+  const [dateTo, setDateTo] = useState<string>(today());
+  const [query, setQuery] = useState("");
+
+  // Aggregated comprehensive transactions for Income and Expenses
+  const filteredIncomeTransactions = useMemo(() => {
+    return filterTransactions({
+      type: "income",
+      scope: system,
+      period,
+      year,
+      month,
+      dateFrom,
+      dateTo,
+      query,
+    });
+  }, [system, period, year, month, dateFrom, dateTo, query]);
+
+  const filteredExpenseTransactions = useMemo(() => {
+    return filterTransactions({
+      type: "expense",
+      scope: system,
+      period,
+      year,
+      month,
+      dateFrom,
+      dateTo,
+      query,
+    });
+  }, [system, period, year, month, dateFrom, dateTo, query]);
+
+  // Summary Metrics
+  const incomeTotal = useMemo(() => {
+    return filteredIncomeTransactions.reduce((acc, tx) => acc + tx.amount, 0);
+  }, [filteredIncomeTransactions]);
+
+  const expenseTotal = useMemo(() => {
+    return filteredExpenseTransactions.reduce((acc, tx) => acc + tx.amount, 0);
+  }, [filteredExpenseTransactions]);
+
+  const incomeCategories = useMemo(() => {
+    return aggregateByCategory(filteredIncomeTransactions);
+  }, [filteredIncomeTransactions]);
+
+  const expenseCategories = useMemo(() => {
+    return aggregateByCategory(filteredExpenseTransactions);
+  }, [filteredExpenseTransactions]);
+
+  const incomeMonthlyBreakdown = useMemo(() => {
+    return aggregateByMonth(filteredIncomeTransactions);
+  }, [filteredIncomeTransactions]);
+
+  const expenseMonthlyBreakdown = useMemo(() => {
+    return aggregateByMonth(filteredExpenseTransactions);
+  }, [filteredExpenseTransactions]);
+
+  // Print metadata
+  const printReportMeta = useMemo(() => {
+    const periodLabel =
+      period === "annually"
+        ? `Annual Fiscal Year ${year}`
+        : period === "monthly"
+        ? `Month: ${MONTH_NAMES[month - 1]} ${year}`
+        : `Daily Range: ${dateFrom} to ${dateTo}`;
+
+    const scopeLabel =
+      system === "both"
+        ? "Consolidated (School & Madrassa Network)"
+        : system === "school"
+        ? "Al-Qasim Academy (School Campus)"
+        : "Jamia Qasimia (Madrassa Campus)";
+
+    const title =
+      report === "income"
+        ? "OFFICIAL STATEMENT OF REVENUE & INCOME"
+        : "OFFICIAL STATEMENT OF EXPENDITURES & DISBURSEMENTS";
+
+    return { title, periodLabel, scopeLabel };
+  }, [report, period, system, year, month, dateFrom, dateTo]);
+
+  // Export to CSV
+  const handleExportCsv = () => {
+    let headers: string[] = [];
+    let rows: (string | number)[][] = [];
+    const filename = `finance-${report}-report-${system}-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    if (report === "income") {
+      headers = ["Voucher No", "Date", "Category", "Party Name", "Role", "Campus", "Method", "Amount (PKR)", "Status"];
+      rows = filteredIncomeTransactions.map((tx) => [
+        tx.voucherNo,
+        tx.date,
+        tx.categoryLabel,
+        tx.partyName,
+        tx.partyRole,
+        tx.systemLabel,
+        tx.paymentMethod.toUpperCase(),
+        tx.amount,
+        tx.status,
+      ]);
+    } else {
+      headers = ["Voucher No", "Date", "Expense Head", "Beneficiary/Vendor", "Role", "Campus", "Method", "Amount (PKR)", "Status"];
+      rows = filteredExpenseTransactions.map((tx) => [
+        tx.voucherNo,
+        tx.date,
+        tx.categoryLabel,
+        tx.partyName,
+        tx.partyRole,
+        tx.systemLabel,
+        tx.paymentMethod.toUpperCase(),
+        tx.amount,
+        tx.status,
+      ]);
+    }
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((e) => e.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(","))].join(
+        "\n",
+      );
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Financial report exported successfully");
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Print Stylesheet */}
+      <style>{`
+        @media print {
+          body {
+            background: white !important;
+            color: black !important;
+            font-size: 10pt;
+          }
+          nav, aside, header, .no-print, button, input, [role="tablist"], .print-hidden {
+            display: none !important;
+          }
+          .print-only {
+            display: block !important;
+          }
+          .print-sheet {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            width: 100% !important;
+          }
+          table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+          }
+          th, td {
+            border: 1px solid #d1d5db !important;
+            padding: 5px 8px !important;
+            color: black !important;
+          }
+          th {
+            background-color: #f3f4f6 !important;
+            font-weight: bold !important;
+          }
+          tr {
+            page-break-inside: avoid !important;
+          }
+        }
+      `}</style>
+
+      {/* Screen Page Header */}
+      <div className="no-print">
+        <PageHeader
+          title="Finance Reports"
+          titleUrdu="مالی رپورٹس"
+          description="Comprehensive income and expenses reports with annual, monthly, and daily granularity across School and Madrassa."
+          actions={
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={handleExportCsv}>
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button
+                size="sm"
+                className="gap-1.5 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                onClick={() => window.print()}
+              >
+                <Printer className="h-4 w-4" />
+                Print Report
+              </Button>
+            </div>
+          }
+        />
+      </div>
+
+      {/* Official Printable Document Header (Rendered on window.print()) */}
+      <div className="hidden print:block border-b-2 border-primary/40 pb-4 mb-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-bold font-serif text-gray-900 tracking-wide">
+              الجامعة القاسمية و اکیڈمی القاسم
+            </h1>
+            <h2 className="text-sm font-semibold uppercase text-gray-800 tracking-wider">
+              Al-Qasim Integrated Educational Network
+            </h2>
+            <p className="text-xs text-gray-600">
+              Department of Finance, Accounts & Internal Audit · شعبہ مالیات و آڈٹ
+            </p>
+          </div>
+          <div className="text-end text-xs text-gray-700 space-y-0.5">
+            <div className="font-bold text-sm text-gray-900 uppercase">
+              {printReportMeta.title}
+            </div>
+            <div>
+              <span className="font-semibold">Period:</span> {printReportMeta.periodLabel}
+            </div>
+            <div>
+              <span className="font-semibold">Scope:</span> {printReportMeta.scopeLabel}
+            </div>
+            <div>
+              <span className="font-semibold">Date Issued:</span> {new Date().toLocaleDateString("en-PK")}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Control Panel: Filters, Search, Tabs & Granularity */}
+      <Card className="no-print p-4 space-y-3.5 border-border/60 shadow-sm">
+        {/* Top Control Bar: Search and Period Pickers */}
+        <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+          <div className="relative">
+            <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by student, donor, staff, receipt voucher, or category..."
+              className="ps-9"
+            />
+          </div>
+
+          {/* Period specific selectors */}
+          <div className="flex flex-wrap items-center gap-2">
+            {period === "annually" && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground font-medium">Fiscal Year:</span>
+                <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+                  <SelectTrigger className="w-28 h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2026">2026-2027</SelectItem>
+                    <SelectItem value="2025">2025-2026</SelectItem>
+                    <SelectItem value="2024">2024-2025</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {period === "monthly" && (
+              <div className="flex items-center gap-2">
+                <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
+                  <SelectTrigger className="w-32 h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTH_NAMES.map((name, i) => (
+                      <SelectItem key={i} value={String(i + 1)}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+                  <SelectTrigger className="w-24 h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2026">2026</SelectItem>
+                    <SelectItem value="2025">2025</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {period === "daily" && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">From:</span>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="h-9 w-36 text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">To:</span>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="h-9 w-36 text-xs"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Control Bar: Report Tabs (Income & Expenses only), Period Selector, System Scope */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/50">
+          {/* Primary Report Types: Income & Expenses */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs value={report} onValueChange={(v) => setReport(v as FinanceReportType)}>
+              <TabsList className="h-9 bg-muted/60 p-1">
+                <TabsTrigger value="income" className="text-xs gap-1.5 data-[state=active]:font-semibold">
+                  <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Income · آمدنی
+                </TabsTrigger>
+                <TabsTrigger value="expenses" className="text-xs gap-1.5 data-[state=active]:font-semibold">
+                  <TrendingDown className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
+                  Expenses · اخراجات
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Granularity & System Scope */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Time Period Granularity */}
+            <Tabs value={period} onValueChange={(v) => setPeriod(v as FinancePeriod)}>
+              <TabsList className="h-9 bg-muted/60 p-1">
+                <TabsTrigger value="annually" className="text-xs">
+                  Annually · سالانہ
+                </TabsTrigger>
+                <TabsTrigger value="monthly" className="text-xs">
+                  Monthly · ماہانہ
+                </TabsTrigger>
+                <TabsTrigger value="daily" className="text-xs">
+                  Daily · روزانہ
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* Institutional System Scope */}
+            <Tabs value={system} onValueChange={(v) => setSystem(v as FinanceScope)}>
+              <TabsList className="h-9 bg-muted/60 p-1">
+                <TabsTrigger value="both" className="text-xs">
+                  Both
+                </TabsTrigger>
+                <TabsTrigger value="school" className="text-xs">
+                  School
+                </TabsTrigger>
+                <TabsTrigger value="madrassa" className="text-xs">
+                  Madrassa
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </div>
+      </Card>
+
+      {/* Report Body Content */}
+      {report === "income" ? (
+        <IncomeReportView
+          period={period}
+          year={year}
+          month={month}
+          totalIncome={incomeTotal}
+          categories={incomeCategories}
+          monthlyBreakdown={incomeMonthlyBreakdown}
+          transactions={filteredIncomeTransactions}
+        />
+      ) : (
+        <ExpenseReportView
+          period={period}
+          year={year}
+          month={month}
+          totalExpense={expenseTotal}
+          categories={expenseCategories}
+          monthlyBreakdown={expenseMonthlyBreakdown}
+          transactions={filteredExpenseTransactions}
+        />
+      )}
+
+      {/* Printable Signature & Authorization Block */}
+      <div className="hidden print:grid grid-cols-3 gap-8 mt-12 pt-6 border-t border-gray-300 text-center text-xs">
+        <div>
+          <div className="h-14 border-b border-dashed border-gray-400 mb-2"></div>
+          <p className="font-semibold text-gray-900">Prepared By (محاسب)</p>
+          <p className="text-gray-500 text-[10px]">Senior Accountant / Bursar</p>
+        </div>
+        <div>
+          <div className="h-14 border-b border-dashed border-gray-400 mb-2"></div>
+          <p className="font-semibold text-gray-900">Verified By (آڈیٹر)</p>
+          <p className="text-gray-500 text-[10px]">Internal Audit Committee</p>
+        </div>
+        <div>
+          <div className="h-14 border-b border-dashed border-gray-400 mb-2"></div>
+          <p className="font-semibold text-gray-900">Approved By (مہتمم / پرنسپل)</p>
+          <p className="text-gray-500 text-[10px]">Head of Institution / Principal</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 1. Income Report Component
+// -------------------------------------------------------------
+function IncomeReportView({
+  period,
+  year,
+  month,
+  totalIncome,
+  categories,
+  monthlyBreakdown,
+  transactions,
+}: {
+  period: FinancePeriod;
+  year: number;
+  month: number;
+  totalIncome: number;
+  categories: Array<{ label: string; labelUrdu: string; total: number; count: number; percentage: number; tone: string }>;
+  monthlyBreakdown: Array<{ monthNumber: number; monthName: string; monthNameUrdu: string; total: number; count: number }>;
+  transactions: ComprehensiveTransaction[];
+}) {
+  const feeIncome = useMemo(() => {
+    return transactions
+      .filter((t) => t.category.includes("fee"))
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
+
+  const donationIncome = useMemo(() => {
+    return transactions
+      .filter((t) => t.category.includes("donation"))
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
+
+  return (
+    <div className="space-y-4">
+      {/* Summary KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="p-4 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20">
+          <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+            <TrendingUp className="h-4 w-4" />
+            Total Revenue · کل آمدنی
+          </div>
+          <p className="font-heading text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-2 font-mono">
+            {formatRupees(totalIncome)}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {transactions.length} receipts & vouchers in period
+          </p>
+        </Card>
+
+        <Card className="p-4">
+          <div className="text-xs font-medium text-muted-foreground">
+            Student Fees · طلبہ کی فیسیں
+          </div>
+          <p className="font-heading text-xl font-bold mt-2 font-mono text-foreground">
+            {formatRupees(feeIncome)}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Tuition, admission, exams, transport
+          </p>
+        </Card>
+
+        <Card className="p-4">
+          <div className="text-xs font-medium text-muted-foreground">
+            Donations & Charity · عطیات و صدقات
+          </div>
+          <p className="font-heading text-xl font-bold mt-2 font-mono text-purple-700 dark:text-purple-300">
+            {formatRupees(donationIncome)}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Zakat, Sadqa, Fitrana, Building Fund
+          </p>
+        </Card>
+
+        <Card className="p-4">
+          <div className="text-xs font-medium text-muted-foreground">
+            Average Inflow / Transaction
+          </div>
+          <p className="font-heading text-xl font-bold mt-2 font-mono">
+            {transactions.length > 0 ? formatRupees(Math.round(totalIncome / transactions.length)) : "PKR 0"}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Verified across all payment channels
+          </p>
+        </Card>
+      </div>
+
+      {/* Category Breakdown Table */}
+      <Card className="p-4 overflow-hidden border-border/60">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-semibold text-sm">Income Account Heads Breakdown</h3>
+            <p className="text-xs text-muted-foreground">Detailed contribution of each revenue stream</p>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {categories.length} Categories Active
+          </Badge>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40">
+              <TableHead>Account Head · عنوان کھاتہ</TableHead>
+              <TableHead className="text-center">Vouchers</TableHead>
+              <TableHead className="text-end">Amount (PKR)</TableHead>
+              <TableHead className="text-end">Share</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {categories.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-6 text-sm text-muted-foreground">
+                  No income transactions recorded for the selected period.
+                </TableCell>
+              </TableRow>
+            ) : (
+              categories.map((c) => (
+                <TableRow key={c.label}>
+                  <TableCell className="font-medium text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${c.tone}`}>
+                        {c.label}
+                      </span>
+                      <span className="text-xs text-muted-foreground font-urdu">{c.labelUrdu}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center text-xs font-mono">{c.count}</TableCell>
+                  <TableCell className="text-end font-mono font-semibold text-sm">
+                    {formatRupees(c.total)}
+                  </TableCell>
+                  <TableCell className="text-end text-xs font-mono font-medium">
+                    {c.percentage}%
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Monthly distribution when Annual period is active */}
+      {period === "annually" && (
+        <Card className="p-4 overflow-hidden border-border/60">
+          <div className="mb-3">
+            <h3 className="font-semibold text-sm">12-Month Annual Inflow Progression</h3>
+            <p className="text-xs text-muted-foreground">Month-by-month revenue collection trajectory</p>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead>Month</TableHead>
+                <TableHead className="text-center">Receipts</TableHead>
+                <TableHead className="text-end">Total Inflow (PKR)</TableHead>
+                <TableHead className="text-end">Annual Share</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {monthlyBreakdown.map((m) => {
+                const share = totalIncome > 0 ? Math.round((m.total / totalIncome) * 100) : 0;
+                return (
+                  <TableRow key={m.monthNumber}>
+                    <TableCell className="text-xs font-medium">
+                      {m.monthName} <span className="text-muted-foreground font-urdu ms-1">({m.monthNameUrdu})</span>
+                    </TableCell>
+                    <TableCell className="text-center text-xs font-mono">{m.count}</TableCell>
+                    <TableCell className="text-end font-mono text-xs font-semibold">
+                      {formatRupees(m.total)}
+                    </TableCell>
+                    <TableCell className="text-end text-xs font-mono">{share}%</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {/* Itemized Transactions Table */}
+      <Card className="p-4 overflow-hidden border-border/60">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-semibold text-sm">Itemized Revenue & Receipt Ledger</h3>
+            <p className="text-xs text-muted-foreground">Individual receipt transactions with payer references</p>
+          </div>
+          <span className="text-xs text-muted-foreground font-mono">{transactions.length} rows</span>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40">
+              <TableHead>Voucher No</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Account Head</TableHead>
+              <TableHead>Party / Donor / Student</TableHead>
+              <TableHead>Campus</TableHead>
+              <TableHead>Method</TableHead>
+              <TableHead className="text-end">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {transactions.slice(0, 50).map((tx) => (
+              <TableRow key={tx.id}>
+                <TableCell className="font-mono text-xs font-semibold text-primary">{tx.voucherNo}</TableCell>
+                <TableCell className="text-xs font-mono">{tx.date}</TableCell>
+                <TableCell className="text-xs">
+                  <span className="font-medium">{tx.categoryLabel}</span>
+                </TableCell>
+                <TableCell className="text-xs">
+                  <div className="font-medium">{tx.partyName}</div>
+                  <span className="text-[10px] text-muted-foreground">{tx.partyRole}</span>
+                </TableCell>
+                <TableCell className="text-xs">{tx.systemLabel}</TableCell>
+                <TableCell className="text-xs">
+                  <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                    {tx.paymentMethod}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-end font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                  {formatRupees(tx.amount)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 2. Expenses Report Component
+// -------------------------------------------------------------
+function ExpenseReportView({
+  period,
+  year,
+  month,
+  totalExpense,
+  categories,
+  monthlyBreakdown,
+  transactions,
+}: {
+  period: FinancePeriod;
+  year: number;
+  month: number;
+  totalExpense: number;
+  categories: Array<{ label: string; labelUrdu: string; total: number; count: number; percentage: number; tone: string }>;
+  monthlyBreakdown: Array<{ monthNumber: number; monthName: string; monthNameUrdu: string; total: number; count: number }>;
+  transactions: ComprehensiveTransaction[];
+}) {
+  const payrollTotal = useMemo(() => {
+    return transactions
+      .filter((t) => t.category.includes("salary"))
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
+
+  const operationsTotal = useMemo(() => {
+    return transactions
+      .filter((t) => !t.category.includes("salary"))
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
+
+  return (
+    <div className="space-y-4">
+      {/* Summary KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="p-4 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20">
+          <div className="flex items-center gap-2 text-xs font-medium text-rose-700 dark:text-rose-300">
+            <TrendingDown className="h-4 w-4" />
+            Total Expenditure · کل اخراجات
+          </div>
+          <p className="font-heading text-2xl font-bold text-rose-700 dark:text-rose-300 mt-2 font-mono">
+            {formatRupees(totalExpense)}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {transactions.length} vouchers disbursed in period
+          </p>
+        </Card>
+
+        <Card className="p-4">
+          <div className="text-xs font-medium text-muted-foreground">
+            Staff & Faculty Payroll · تنخواہیں
+          </div>
+          <p className="font-heading text-xl font-bold mt-2 font-mono text-foreground">
+            {formatRupees(payrollTotal)}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            School teachers, Qaris, Mudarris, Admin
+          </p>
+        </Card>
+
+        <Card className="p-4">
+          <div className="text-xs font-medium text-muted-foreground">
+            Operations, Utilities & Mess · معمول کے اخراجات
+          </div>
+          <p className="font-heading text-xl font-bold mt-2 font-mono text-amber-700 dark:text-amber-300">
+            {formatRupees(operationsTotal)}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            WAPDA, Gas, Mess Ration, Maintenance, Books
+          </p>
+        </Card>
+
+        <Card className="p-4">
+          <div className="text-xs font-medium text-muted-foreground">
+            Average Outflow / Voucher
+          </div>
+          <p className="font-heading text-xl font-bold mt-2 font-mono">
+            {transactions.length > 0 ? formatRupees(Math.round(totalExpense / transactions.length)) : "PKR 0"}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Reconciled against verified vendor bills
+          </p>
+        </Card>
+      </div>
+
+      {/* Category Breakdown Table */}
+      <Card className="p-4 overflow-hidden border-border/60">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-semibold text-sm">Expenditure Head of Accounts</h3>
+            <p className="text-xs text-muted-foreground">Itemized categories of institutional operational cost</p>
+          </div>
+          <Badge variant="outline" className="text-xs">
+            {categories.length} Categories Active
+          </Badge>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40">
+              <TableHead>Expense Head · مد خرچ</TableHead>
+              <TableHead className="text-center">Vouchers</TableHead>
+              <TableHead className="text-end">Amount (PKR)</TableHead>
+              <TableHead className="text-end">Share</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {categories.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-6 text-sm text-muted-foreground">
+                  No expense records found for the selected period.
+                </TableCell>
+              </TableRow>
+            ) : (
+              categories.map((c) => (
+                <TableRow key={c.label}>
+                  <TableCell className="font-medium text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${c.tone}`}>
+                        {c.label}
+                      </span>
+                      <span className="text-xs text-muted-foreground font-urdu">{c.labelUrdu}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center text-xs font-mono">{c.count}</TableCell>
+                  <TableCell className="text-end font-mono font-semibold text-sm">
+                    {formatRupees(c.total)}
+                  </TableCell>
+                  <TableCell className="text-end text-xs font-mono font-medium">
+                    {c.percentage}%
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Monthly distribution when Annual period is active */}
+      {period === "annually" && (
+        <Card className="p-4 overflow-hidden border-border/60">
+          <div className="mb-3">
+            <h3 className="font-semibold text-sm">12-Month Annual Expense Outflow</h3>
+            <p className="text-xs text-muted-foreground">Monthly expense distribution across calendar year</p>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead>Month</TableHead>
+                <TableHead className="text-center">Vouchers</TableHead>
+                <TableHead className="text-end">Total Outflow (PKR)</TableHead>
+                <TableHead className="text-end">Annual Share</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {monthlyBreakdown.map((m) => {
+                const share = totalExpense > 0 ? Math.round((m.total / totalExpense) * 100) : 0;
+                return (
+                  <TableRow key={m.monthNumber}>
+                    <TableCell className="text-xs font-medium">
+                      {m.monthName} <span className="text-muted-foreground font-urdu ms-1">({m.monthNameUrdu})</span>
+                    </TableCell>
+                    <TableCell className="text-center text-xs font-mono">{m.count}</TableCell>
+                    <TableCell className="text-end font-mono text-xs font-semibold">
+                      {formatRupees(m.total)}
+                    </TableCell>
+                    <TableCell className="text-end text-xs font-mono">{share}%</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      {/* Itemized Transactions Table */}
+      <Card className="p-4 overflow-hidden border-border/60">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="font-semibold text-sm">Itemized Expense Vouchers Ledger</h3>
+            <p className="text-xs text-muted-foreground">Individual expense vouchers with payee & beneficiary details</p>
+          </div>
+          <span className="text-xs text-muted-foreground font-mono">{transactions.length} rows</span>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40">
+              <TableHead>Voucher No</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Expense Head</TableHead>
+              <TableHead>Payee / Vendor / Staff</TableHead>
+              <TableHead>Campus</TableHead>
+              <TableHead>Method</TableHead>
+              <TableHead className="text-end">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {transactions.slice(0, 50).map((tx) => (
+              <TableRow key={tx.id}>
+                <TableCell className="font-mono text-xs font-semibold text-primary">{tx.voucherNo}</TableCell>
+                <TableCell className="text-xs font-mono">{tx.date}</TableCell>
+                <TableCell className="text-xs font-medium">{tx.categoryLabel}</TableCell>
+                <TableCell className="text-xs">
+                  <div className="font-medium">{tx.partyName}</div>
+                  <span className="text-[10px] text-muted-foreground">{tx.description}</span>
+                </TableCell>
+                <TableCell className="text-xs">{tx.systemLabel}</TableCell>
+                <TableCell className="text-xs">
+                  <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                    {tx.paymentMethod}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-end font-mono text-xs font-bold text-rose-700 dark:text-rose-300">
+                  {formatRupees(tx.amount)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+    </div>
+  );
 }

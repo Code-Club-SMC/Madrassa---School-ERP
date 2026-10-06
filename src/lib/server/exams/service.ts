@@ -25,7 +25,7 @@ import {
 } from "@/db/schema/exams";
 import { studentEnrollments, students } from "@/db/schema/students";
 import type { ModuleKey, PermissionAction } from "@/lib/permissions/module-registry";
-import { requirePermission } from "@/lib/server/authz";
+import { getRequestUser, requirePermission } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
 import { insertStudentEvent } from "@/lib/server/students/events";
 import { buildHallSeating, buildMixedHallSeating, countViolations, type SeatingStudent } from "@/lib/seating";
@@ -85,15 +85,30 @@ export const examUpdateSchema = examInputSchema
   })
   .refine((value) => Object.keys(value).length > 0, { message: "At least one field is required" });
 
+const emptyToUndefined = (val: unknown) => {
+  if (typeof val !== "string") return val;
+  const trimmed = val.trim();
+  return trimmed === "" || trimmed === "all" ? undefined : trimmed;
+};
+
 export const examListQuerySchema = z.object({
-  system: z.enum(systems),
-  status: z.enum(examStatuses).optional(),
-  academicYear: z.string().trim().optional(),
-  institutionId: z.string().trim().optional(),
-  programId: z.string().trim().optional(),
-  schoolClassId: z.string().trim().optional(),
-  madrassaSubcategoryId: z.string().trim().optional(),
-  section: z.enum(["male", "female"]).optional(),
+  system: z.preprocess(emptyToUndefined, z.enum(systems).optional()),
+  status: z.preprocess(emptyToUndefined, z.enum(examStatuses).optional()),
+  academicYear: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  institutionId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  programId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  schoolClassId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  madrassaSubcategoryId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  section: z.preprocess(
+    (val) => {
+      const v = emptyToUndefined(val);
+      if (!v) return undefined;
+      if (v === "male" || v === "baneen") return "baneen";
+      if (v === "female" || v === "banat") return "banat";
+      return v;
+    },
+    z.enum(["male", "female", "baneen", "banat"]).optional(),
+  ),
 });
 
 export const marksQuerySchema = z.object({
@@ -311,10 +326,22 @@ export async function deleteExamSubject(request: Request, id: string) {
 }
 
 export async function listExamSessions(request: Request, query: z.infer<typeof examListQuerySchema>) {
-  await requireExamPermission(request, query.system, "view");
-  const institutionSection = query.section === "male" ? "baneen" : query.section === "female" ? "banat" : query.section;
+  if (query.system) {
+    await requireExamPermission(request, query.system, "view");
+  } else {
+    const user = await getRequestUser(request);
+    if (!user) throw new HttpError("Authentication required", 401);
+  }
+
+  const institutionSection =
+    query.section === "male" || query.section === "baneen"
+      ? "baneen"
+      : query.section === "female" || query.section === "banat"
+        ? "banat"
+        : undefined;
+
   const clauses = compactSql([
-    eq(examSessions.system, query.system),
+    query.system ? eq(examSessions.system, query.system) : undefined,
     query.status ? eq(examSessions.status, query.status) : undefined,
     query.academicYear ? eq(examSessions.academicYear, query.academicYear) : undefined,
     query.institutionId ? eq(examSessions.institutionId, query.institutionId) : undefined,
@@ -326,7 +353,17 @@ export async function listExamSessions(request: Request, query: z.infer<typeof e
 
   const exams = await fetchExamDetails(clauses);
   const subjects = await loadSessionSubjects(exams.map((exam) => exam.id));
-  const counts = await Promise.all(exams.map((exam) => loadExamRoster(exam).then((rows) => [exam.id, rows.length] as const)));
+  const counts = await Promise.all(
+    exams.map(async (exam) => {
+      try {
+        const rows = await loadExamRoster(exam);
+        return [exam.id, rows.length] as const;
+      } catch (err) {
+        console.error(`[listExamSessions] roster error for exam ${exam.id}:`, err);
+        return [exam.id, 0] as const;
+      }
+    }),
+  );
   const countMap = new Map(counts);
 
   return {
@@ -376,6 +413,38 @@ export async function createExamSession(request: Request, input: z.infer<typeof 
     }
 
     academicYear ??= (await getActiveAcademicYear("madrassa")).name;
+  } else if (input.system === "school") {
+    if (!institutionId || !programId) {
+      if (input.schoolClassId) {
+        const [cls] = await db
+          .select({ institutionId: schoolClasses.institutionId })
+          .from(schoolClasses)
+          .where(eq(schoolClasses.id, input.schoolClassId))
+          .limit(1);
+        if (cls) {
+          institutionId ??= cls.institutionId;
+          const [matchedProgram] = await db
+            .select({ programId: programs.id, institutionId: programs.institutionId })
+            .from(programs)
+            .where(and(eq(programs.institutionId, cls.institutionId), eq(programs.system, "school"), eq(programs.active, true)))
+            .limit(1);
+          if (matchedProgram) {
+            programId ??= matchedProgram.programId;
+          }
+        }
+      }
+      institutionId ??= "al_qasim_academy";
+      if (!programId) {
+        const [matchedProgram] = await db
+          .select({ programId: programs.id })
+          .from(programs)
+          .where(and(eq(programs.institutionId, institutionId), eq(programs.system, "school"), eq(programs.active, true)))
+          .limit(1);
+        programId = matchedProgram?.programId ?? "al_qasim_school";
+      }
+    }
+
+    academicYear ??= (await getActiveAcademicYear("school")).name;
   }
 
   if (!institutionId || !programId) {
@@ -469,6 +538,39 @@ export async function updateExamSession(
     }
 
     nextAcademicYear ??= (await getActiveAcademicYear("madrassa")).name;
+  } else if (nextSystem === "school") {
+    if (!nextInstitutionId || !nextProgramId) {
+      const classId = input.schoolClassId ?? current.schoolClassId;
+      if (classId) {
+        const [cls] = await db
+          .select({ institutionId: schoolClasses.institutionId })
+          .from(schoolClasses)
+          .where(eq(schoolClasses.id, classId))
+          .limit(1);
+        if (cls) {
+          nextInstitutionId ??= cls.institutionId;
+          const [matchedProgram] = await db
+            .select({ programId: programs.id, institutionId: programs.institutionId })
+            .from(programs)
+            .where(and(eq(programs.institutionId, cls.institutionId), eq(programs.system, "school"), eq(programs.active, true)))
+            .limit(1);
+          if (matchedProgram) {
+            nextProgramId ??= matchedProgram.programId;
+          }
+        }
+      }
+      nextInstitutionId ??= "al_qasim_academy";
+      if (!nextProgramId) {
+        const [matchedProgram] = await db
+          .select({ programId: programs.id })
+          .from(programs)
+          .where(and(eq(programs.institutionId, nextInstitutionId), eq(programs.system, "school"), eq(programs.active, true)))
+          .limit(1);
+        nextProgramId = matchedProgram?.programId ?? "al_qasim_school";
+      }
+    }
+
+    nextAcademicYear ??= (await getActiveAcademicYear("school")).name;
   }
 
   if (nextInstitutionId && nextProgramId) {

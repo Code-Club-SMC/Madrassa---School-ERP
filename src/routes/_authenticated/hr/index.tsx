@@ -17,6 +17,9 @@ import {
   Trash2,
   CalendarClock,
   Settings,
+  CalendarX,
+  MessageSquareText,
+  Globe,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -116,7 +119,7 @@ const WEEKDAYS = [
 
 function HRHub() {
   const { lang } = useLanguage();
-  const { staff, payrollProfiles, leaves } = useHR();
+  const { staff, leaves } = useHR();
 
   const [teachers, setTeachers] = useState<TeacherDashboardRow[]>([]);
   const [loadingTeachers, setLoadingTeachers] = useState(true);
@@ -156,22 +159,6 @@ function HRHub() {
   const activeUsers = allUsers.filter((u) => u.status === "active").length;
   const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
 
-  const monthlyPayroll = useMemo(
-    () =>
-      payrollProfiles.reduce(
-        (sum, p) =>
-          sum +
-          p.basicSalary +
-          p.hra +
-          p.transportAllowance +
-          p.medicalAllowance -
-          p.eobi -
-          p.incomeTax,
-        0,
-      ),
-    [payrollProfiles],
-  );
-
   const modules: ModCard[] = [
     {
       to: "/teachers",
@@ -192,15 +179,6 @@ function HRHub() {
       accent: "from-violet-500/15 to-violet-500/0 text-violet-600",
     },
     {
-      to: "/hr/payroll",
-      icon: HandCoins,
-      urdu: "تنخواہ",
-      english: "Payroll",
-      description: "Generate, approve, and disburse monthly salaries.",
-      count: formatPKR(monthlyPayroll) + "/mo",
-      accent: "from-amber-500/15 to-amber-500/0 text-amber-600",
-    },
-    {
       to: "/hr/attendance",
       icon: CalendarDays,
       urdu: "حاضری عملہ",
@@ -218,6 +196,33 @@ function HRHub() {
       count: `${pendingLeaves} pending`,
       accent: "from-rose-500/15 to-rose-500/0 text-rose-600",
     },
+    {
+      to: "/holidays",
+      icon: CalendarX,
+      urdu: "تعطیلات",
+      english: "Holidays & Vacations",
+      description: "Institutional holiday calendar and seasonal vacation dates.",
+      count: "Calendar",
+      accent: "from-blue-500/15 to-blue-500/0 text-blue-600",
+    },
+    {
+      to: "/settings/templates",
+      icon: MessageSquareText,
+      urdu: "پیغام و ایس ایم ایس",
+      english: "SMS & Msg Templates",
+      description: "Automated SMS, WhatsApp and portal messaging templates.",
+      count: "Templates",
+      accent: "from-amber-500/15 to-amber-500/0 text-amber-600",
+    },
+    {
+      to: "/settings/website",
+      icon: Globe,
+      urdu: "ویب سائٹ",
+      english: "Website CMS",
+      description: "Public portal content, admission banners, and announcements.",
+      count: "CMS",
+      accent: "from-teal-500/15 to-teal-500/0 text-teal-600",
+    },
   ];
 
   const kpis = [
@@ -229,18 +234,18 @@ function HRHub() {
       hint: `${activeStaff + activeTeachers} active`,
     },
     {
+      label: "Teaching Faculty",
+      urdu: "تدریسی عملہ",
+      value: activeTeachers,
+      icon: GraduationCap,
+      hint: `${allTeachers.length} registered`,
+    },
+    {
       label: "User Accounts",
       urdu: "صارف اکاؤنٹس",
       value: allUsers.length,
       icon: ShieldUser,
       hint: `${activeUsers} active`,
-    },
-    {
-      label: "Monthly Payroll",
-      urdu: "ماہانہ تنخواہ",
-      value: formatPKR(monthlyPayroll),
-      icon: Wallet,
-      hint: `${payrollProfiles.length} profiles`,
     },
     {
       label: "Pending Leaves",
@@ -376,7 +381,7 @@ function HRHub() {
       <PageHeader
         title="HR Management"
         titleUrdu="انسانی وسائل کا انتظام"
-        description="Unified hub for staff, teachers, user accounts, payroll, attendance, and timetable management."
+        description="Unified hub for staff, teachers, user accounts, attendance, and timetable management."
       />
 
       {/* KPI strip */}
