@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { madrassaCategories, madrassaSubcategories } from "@/db/schema/academic";
 import { buildMadrassaCategories } from "@/lib/madrassa-grade-catalog";
 

@@ -168,7 +168,7 @@ export async function seedAcademicCatalog() {
       descriptionUrdu: "ادارے کی فراہم کردہ درس نظامی درجات کی ترتیب",
       displayOrder: 1,
       active: true,
-      section: "male",
+      section: "both",
       formVariantKeys: ["madrassa-boys-general", "madrassa-girls-general"],
     },
     {
@@ -190,7 +190,7 @@ export async function seedAcademicCatalog() {
       descriptionUrdu: "بنین اور بنات مدارس کے لیے فراہم کردہ ناظرہ درجات",
       displayOrder: 3,
       active: true,
-      section: "male",
+      section: "both",
       formVariantKeys: ["madrassa-boys-nazira", "madrassa-girls-nazira"],
     },
   ];

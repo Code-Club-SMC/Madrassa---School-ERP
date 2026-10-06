@@ -228,30 +228,52 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
     countMap.set(`${row.subcategoryId ?? ""}:${row.institutionId}`, Number(row.count));
   }
 
-  const ALLOWED_CATEGORY_IDS = ["dars_nizami", "hifz", "qaida_nazira"];
   const CATEGORY_ORDER: Record<string, number> = {
     dars_nizami: 1,
     hifz: 2,
     qaida_nazira: 3,
   };
 
+  const EXCLUDED_CATEGORY_IDS = [
+    "preparatory",
+    "short_courses",
+    "short_course",
+    "tajweed",
+    "takhassus",
+  ];
+
   return categories
-    .filter((category) => ALLOWED_CATEGORY_IDS.includes(category.id))
-    .sort((a, b) => (CATEGORY_ORDER[a.id] ?? 99) - (CATEGORY_ORDER[b.id] ?? 99))
+    .filter((category) => category.active !== false && !EXCLUDED_CATEGORY_IDS.includes(category.id))
+    .sort((a, b) => (CATEGORY_ORDER[a.id] ?? (a.displayOrder ?? 99)) - (CATEGORY_ORDER[b.id] ?? (b.displayOrder ?? 99)))
     .filter((category) => {
       if (!section) return true;
-      if (category.section === section) return true;
+      if (!category.section || category.section === "both" || category.section === "all") return true;
       const dbSections =
-        section === "male" ? ["male", "baneen"] : section === "female" ? ["female", "banat"] : [section];
+        section === "male"
+          ? ["male", "baneen", "both", "all"]
+          : section === "female"
+            ? ["female", "banat", "both", "all"]
+            : [section, "both", "all"];
+      if (dbSections.includes(category.section)) return true;
       return subcategories.some(
-        (subcategory) => subcategory.categoryId === category.id && dbSections.includes(subcategory.section),
+        (subcategory) =>
+          subcategory.categoryId === category.id &&
+          (!subcategory.section || dbSections.includes(subcategory.section)),
       );
     })
     .map((category) => {
       const dbSections =
-        section === "male" ? ["male", "baneen"] : section === "female" ? ["female", "banat"] : section ? [section] : [];
+        section === "male"
+          ? ["male", "baneen", "both", "all"]
+          : section === "female"
+            ? ["female", "banat", "both", "all"]
+            : section ? [section, "both", "all"] : [];
       const children = subcategories
-        .filter((subcategory) => subcategory.categoryId === category.id && (!section || dbSections.includes(subcategory.section)))
+        .filter(
+          (subcategory) =>
+            subcategory.categoryId === category.id &&
+            (!section || !subcategory.section || dbSections.includes(subcategory.section)),
+        )
         .map((subcategory) => {
           const qasmiaCount = countMap.get(`${subcategory.id}:jamia_qasmia_baneen`) ?? 0;
           const zainabCount = countMap.get(`${subcategory.id}:jamia_zainab_banat`) ?? 0;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Download,
@@ -28,7 +28,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -83,23 +85,33 @@ export function StudentsTable({ system, section, institutionId }: Props) {
 
   const loadGroups = useCallback(async () => {
     try {
-      let url = "/api/academic/madrassa/categories";
       if (system === "school") {
-        url = "/api/academic/school/classes";
-      } else if (section) {
+        const url = institutionId
+          ? `/api/academic/school/classes?institutionId=${encodeURIComponent(institutionId)}`
+          : "/api/academic/school/classes";
+        const response = await fetch(url, { credentials: "include" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Could not load school classes");
+        let classes = (payload.classes ?? []) as SchoolClassOption[];
+        if (classes.length === 0 && institutionId) {
+          const fallbackRes = await fetch("/api/academic/school/classes", { credentials: "include" });
+          const fallbackPayload = await fallbackRes.json().catch(() => ({}));
+          classes = (fallbackPayload.classes ?? []) as SchoolClassOption[];
+        }
+        setSchoolClasses(classes);
+      } else {
         const params = new URLSearchParams();
-        params.set("section", section);
-        url = `/api/academic/madrassa/categories?${params.toString()}`;
+        if (section) params.set("section", section);
+        const url = `/api/academic/madrassa/categories?${params.toString()}`;
+        const response = await fetch(url, { credentials: "include" });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Could not load categories");
+        setMadrassaCategories((payload.categories ?? []) as MadrassaCategoryOption[]);
       }
-      const response = await fetch(url, { credentials: "include" });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Could not load filters");
-      if (system === "school") setSchoolClasses(payload.classes ?? []);
-      else setMadrassaCategories(payload.categories ?? []);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not load filters");
     }
-  }, [system, section]);
+  }, [system, section, institutionId]);
 
   const loadStudents = useCallback(async () => {
     setLoading(true);
@@ -163,22 +175,6 @@ export function StudentsTable({ system, section, institutionId }: Props) {
   };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const groupOptions = useMemo(() => {
-    if (system === "school") {
-      return schoolClasses.map((item) => ({
-        id: item.id,
-        name: item.name,
-        nameUrdu: item.nameUrdu,
-      }));
-    }
-    return madrassaCategories.flatMap((category) =>
-      category.subcategories.map((item) => ({
-        id: item.id,
-        name: `${category.name} · ${item.name}`,
-        nameUrdu: `${category.nameUrdu} · ${item.name}`,
-      })),
-    );
-  }, [madrassaCategories, schoolClasses, system]);
 
   const initials = (name: string) =>
     name
@@ -216,16 +212,37 @@ export function StudentsTable({ system, section, institutionId }: Props) {
               <Filter className="h-3.5 w-3.5 me-1.5 text-muted-foreground" />
               <SelectValue placeholder={system === "madrassa" ? "Darja" : "Class"} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[320px]">
               <SelectItem value="all">
                 {system === "madrassa" ? "All Darjat — تمام" : "All Classes — تمام"}
               </SelectItem>
-              {groupOptions.map((group) => (
-                <SelectItem key={group.id} value={group.id}>
-                  <span className="font-urdu">{group.nameUrdu}</span>
-                  <span className="text-muted-foreground ms-2 text-xs">{group.name}</span>
-                </SelectItem>
-              ))}
+              {system === "madrassa" ? (
+                madrassaCategories.map((category) => {
+                  const subs = category.subcategories ?? [];
+                  if (subs.length === 0) return null;
+                  return (
+                    <SelectGroup key={category.id}>
+                      <SelectLabel className="font-urdu text-xs font-semibold text-primary/80 px-2 py-1.5 bg-muted/40 rounded-sm mt-1">
+                        {category.nameUrdu || category.name}
+                        {category.name && category.nameUrdu ? ` (${category.name})` : ""}
+                      </SelectLabel>
+                      {subs.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          <span className="font-urdu">{sub.nameUrdu || sub.name}</span>
+                          <span className="text-muted-foreground ms-2 text-xs">{sub.name || sub.nameUrdu}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  );
+                })
+              ) : (
+                schoolClasses.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    <span className="font-urdu">{item.nameUrdu || item.name}</span>
+                    <span className="text-muted-foreground ms-2 text-xs">{item.name || item.nameUrdu}</span>
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
 

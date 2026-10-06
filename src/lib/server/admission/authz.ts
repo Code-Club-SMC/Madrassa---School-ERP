@@ -6,7 +6,7 @@ import type { User, UserRole } from "@/types";
 import { AdmissionError } from "./errors";
 
 export async function getRequestUser(request: Request): Promise<User | null> {
-  const session = await getSessionUser();
+  const session = await getSessionUser(request);
   if (!session) return null;
   return { ...session, role: session.role as UserRole, status: session.status as User["status"], systemAccess: session.systemAccess as User["systemAccess"] };
 }

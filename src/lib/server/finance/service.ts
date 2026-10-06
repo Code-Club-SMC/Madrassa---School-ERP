@@ -97,15 +97,18 @@ export const refundPaymentSchema = z.object({
   reason: z.string().trim().min(3),
 });
 
+const emptyToUndefined = (val: unknown) =>
+  typeof val === "string" && val.trim() === "" ? undefined : val;
+
 export const reportQuerySchema = z.object({
-  system: z.enum(["both", "school", "madrassa"]).default("both"),
-  institutionId: z.string().trim().optional(),
-  programId: z.string().trim().optional(),
-  dateFrom: z.string().trim().optional(),
-  dateTo: z.string().trim().optional(),
-  method: z.enum(paymentMethods).optional(),
-  userId: z.string().trim().optional(),
-  q: z.string().trim().optional(),
+  system: z.preprocess(emptyToUndefined, z.enum(["both", "school", "madrassa"]).default("both")),
+  institutionId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  programId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  dateFrom: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  dateTo: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  method: z.preprocess(emptyToUndefined, z.enum(paymentMethods).optional()),
+  userId: z.preprocess(emptyToUndefined, z.string().trim().optional()),
+  q: z.preprocess(emptyToUndefined, z.string().trim().optional()),
 });
 
 type FeeSystem = "school" | "madrassa";
@@ -942,7 +945,7 @@ export async function getDailyCollectionReport(request: Request, query: ReportQu
     const reversedPaisa = reversalByPayment.get(payment.id) ?? 0;
     return {
       receiptNo: payment.receiptNo,
-      date: payment.receivedAt.toISOString(),
+      date: safeIsoDate(payment.receivedAt),
       studentId: payment.studentId,
       studentName: payment.studentName,
       studentNameUrdu: payment.studentNameUrdu,
@@ -1043,7 +1046,7 @@ export async function getOutstandingDuesReport(request: Request, query: ReportQu
   );
 
   return {
-    asOf: asOf.toISOString(),
+    asOf: safeIsoDate(asOf),
     summary: {
       currentPaisa: rows.reduce((sum, row) => sum + row.currentPaisa, 0),
       bucket30Paisa: rows.reduce((sum, row) => sum + row.bucket30Paisa, 0),
@@ -1086,8 +1089,8 @@ export async function getStudentLedgerReport(request: Request, query: ReportQuer
       chargeId: charge.chargeId,
       chargeLabel: charge.label,
       chargeType: charge.type,
-      chargeDate: charge.createdAt.toISOString(),
-      dueDate: charge.dueDate?.toISOString() ?? null,
+      chargeDate: safeIsoDate(charge.createdAt),
+      dueDate: safeIsoDateOrNull(charge.dueDate),
       chargedPaisa: charge.amountPaisa,
       paidPaisa: ledger.paidPaisa,
       refundedPaisa: ledger.refundedPaisa,
@@ -1190,7 +1193,7 @@ export async function getReversalRefundAuditReport(request: Request, query: Repo
   return {
     rows: rows.map((row) => ({
       id: row.id,
-      date: row.createdAt.toISOString(),
+      date: safeIsoDate(row.createdAt),
       actorUserId: row.actorUserId,
       actorName: row.actorName,
       actorEmail: row.actorEmail,
@@ -1470,7 +1473,7 @@ async function fetchPaymentReportRows(query: ReportQuery) {
     .innerJoin(institutions, eq(institutions.id, feePayments.institutionId))
     .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
     .leftJoin(authUser, eq(authUser.id, feePayments.receivedByUserId))
-    .where(and(...clauses))
+    .where(clauses.length > 0 ? and(...clauses) : undefined)
     .orderBy(desc(feePayments.receivedAt), desc(feePayments.createdAt));
 }
 
@@ -1542,7 +1545,7 @@ async function fetchAdjustmentReportRows(
     .leftJoin(feeCharges, eq(feeCharges.id, feeAdjustments.chargeId))
     .leftJoin(feePayments, eq(feePayments.id, feeAdjustments.paymentId))
     .leftJoin(authUser, eq(authUser.id, feeAdjustments.actorUserId))
-    .where(and(...clauses))
+    .where(clauses.length > 0 ? and(...clauses) : undefined)
     .orderBy(desc(feeAdjustments.createdAt));
 }
 
@@ -1603,7 +1606,7 @@ async function fetchChargeContextRows(
     .innerJoin(programs, eq(programs.id, feeCharges.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, feeCharges.schoolClassId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, feeCharges.madrassaSubcategoryId))
-    .where(and(...clauses))
+    .where(clauses.length > 0 ? and(...clauses) : undefined)
     .orderBy(desc(feeCharges.createdAt));
 }
 
@@ -1727,26 +1730,40 @@ function emptyChargeLedger(
   };
 }
 
+function safeIsoDate(value: unknown): string {
+  if (!value) return new Date().toISOString();
+  if (value instanceof Date) return value.toISOString();
+  const parsed = new Date(value as string | number);
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+}
+
+function safeIsoDateOrNull(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString();
+  const parsed = new Date(value as string | number);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
 function serializeCharge(charge: FeeCharge) {
   return {
     ...charge,
-    dueDate: charge.dueDate?.toISOString() ?? null,
-    reversedAt: charge.reversedAt?.toISOString() ?? null,
-    createdAt: charge.createdAt.toISOString(),
-    updatedAt: charge.updatedAt.toISOString(),
+    dueDate: safeIsoDateOrNull(charge.dueDate),
+    reversedAt: safeIsoDateOrNull(charge.reversedAt),
+    createdAt: safeIsoDate(charge.createdAt),
+    updatedAt: safeIsoDate(charge.updatedAt),
   };
 }
 
 function serializePayment(payment: FeePayment, allocations: FeePaymentAllocation[] = []) {
   return {
     ...payment,
-    receivedAt: payment.receivedAt.toISOString(),
-    reversedAt: payment.reversedAt?.toISOString() ?? null,
-    createdAt: payment.createdAt.toISOString(),
-    updatedAt: payment.updatedAt.toISOString(),
+    receivedAt: safeIsoDate(payment.receivedAt),
+    reversedAt: safeIsoDateOrNull(payment.reversedAt),
+    createdAt: safeIsoDate(payment.createdAt),
+    updatedAt: safeIsoDate(payment.updatedAt),
     allocations: allocations.map((allocation) => ({
       ...allocation,
-      createdAt: allocation.createdAt.toISOString(),
+      createdAt: safeIsoDate(allocation.createdAt),
     })),
   };
 }
@@ -1754,7 +1771,7 @@ function serializePayment(payment: FeePayment, allocations: FeePaymentAllocation
 function serializeAdjustment(adjustment: FeeAdjustment) {
   return {
     ...adjustment,
-    createdAt: adjustment.createdAt.toISOString(),
+    createdAt: safeIsoDate(adjustment.createdAt),
   };
 }
 

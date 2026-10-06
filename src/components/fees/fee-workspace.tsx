@@ -48,7 +48,7 @@ export function FeeWorkspace({ system, institutionId }: { system: FeeSystem; ins
       if (feeStatus === "due") {
         filtered = filtered.filter((s) => s.summary.outstandingPaisa > 0);
       } else if (feeStatus === "clear") {
-        filtered = filtered.filter((s) => s.summary.outstandingPaisa === 0);
+        filtered = filtered.filter((s) => s.summary.outstandingPaisa <= 0);
       }
       
       setStudents(filtered);
@@ -89,7 +89,7 @@ export function FeeWorkspace({ system, institutionId }: { system: FeeSystem; ins
   const titleUrdu = system === "school" ? "اسکول — فیس" : "مدرسہ کی فیس";
 
   const totalStudents = students.length;
-  const paidStudents = students.filter((s) => s.summary.outstandingPaisa === 0).length;
+  const paidStudents = students.filter((s) => s.summary.outstandingPaisa <= 0).length;
   const pendingStudents = totalStudents - paidStudents;
   const collectionRate = totalStudents > 0 ? Math.round((paidStudents / totalStudents) * 100) : 0;
   const totalOutstanding = useMemo(() => students.reduce((sum, s) => sum + s.summary.outstandingPaisa, 0), [students]);
@@ -259,49 +259,50 @@ export function FeeWorkspace({ system, institutionId }: { system: FeeSystem; ins
                 />
               </div>
             ) : (
-              students.map((student) => (
-                <div
-                  key={student.id}
-                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/60"
-                >
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarFallback className="bg-muted text-sm font-bold">
-                      {student.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate font-urdu text-sm font-medium">{student.nameUrdu}</p>
-                      <Badge
-                        variant={student.summary.outstandingPaisa > 0 ? "destructive" : "secondary"}
-                        className="shrink-0"
-                      >
-                        {student.summary.outstandingPaisa > 0 ? "Due" : "Clear"}
-                      </Badge>
+              students.map((student) => {
+                const isSubmitted = student.summary.outstandingPaisa <= 0;
+                return (
+                  <div
+                    key={student.id}
+                    className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/60"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarFallback className="bg-muted text-sm font-bold">
+                          {student.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {student.name}
+                          {student.nameUrdu && student.nameUrdu !== student.name && (
+                            <span className="font-urdu text-xs text-muted-foreground ml-1.5 font-normal">
+                              ({student.nameUrdu})
+                            </span>
+                          )}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {student.rollNo} · {student.groupLabel ?? student.institutionName}
+                        </p>
+                        <div className="mt-1 flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
+                          <span>{student.guardianPhone || "No phone"}</span>
+                          <span>{formatPKR(student.monthlyFeePaisa)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {student.rollNo} · {student.groupLabel ?? student.institutionName}
-                    </p>
-                    <div className="mt-1 flex items-center justify-between gap-2">
-                      <p className="truncate font-mono text-[11px] text-muted-foreground">
-                        {student.guardianPhone || "No phone"}
-                      </p>
-                      <p className="truncate font-mono text-[11px] text-muted-foreground">
-                        {formatPKR(student.monthlyFeePaisa)}
-                      </p>
-                      <Button
-                        size="sm"
-                        className="h-7 gap-1.5 px-3 text-xs"
-                        onClick={() => handleCollect(student)}
-                        disabled={student.summary.outstandingPaisa === 0}
-                      >
-                        <HandCoins className="h-3 w-3" />
-                        Collect
-                      </Button>
-                    </div>
+
+                    <Button
+                      size="sm"
+                      className="h-8 shrink-0 gap-1.5 px-3 text-xs"
+                      onClick={() => handleCollect(student)}
+                      disabled={isSubmitted}
+                    >
+                      <HandCoins className="h-3.5 w-3.5" />
+                      Collect
+                    </Button>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </CardContent>

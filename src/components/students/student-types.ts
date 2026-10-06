@@ -20,6 +20,7 @@ export type StudentListItem = {
   institutionName: string;
   institutionNameUrdu: string;
   institutionSection: string;
+  section?: string;
   programId: string;
   programName: string;
   programNameUrdu: string;

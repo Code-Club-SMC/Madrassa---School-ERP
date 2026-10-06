@@ -452,6 +452,7 @@ export function buildMadrassaCategories(): MadrassaCategory[] {
           govtEquivalent: gradeItem.govtEquivalent,
           durationYears: gradeItem.durationYears,
           reviewRequired: gradeItem.reviewRequired,
+          displayOrder: gradeItem.displayOrder,
         })),
     }))
     .filter((category) => category.subcategories.length > 0);

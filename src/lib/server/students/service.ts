@@ -901,6 +901,7 @@ function toStudentListItem(row: StudentListRow) {
     institutionName: row.institutionName,
     institutionNameUrdu: row.institutionNameUrdu,
     institutionSection: row.institutionSection ?? (row.gender === "female" ? "banat" : "baneen"),
+    section: row.institutionSection ?? (row.gender === "female" ? "banat" : "baneen"),
     programId: row.programId,
     programName: row.programName,
     programNameUrdu: row.programNameUrdu,

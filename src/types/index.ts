@@ -93,6 +93,7 @@ export type MadrassaSubcategory = {
   govtEquivalent?: string;
   durationYears?: number;
   reviewRequired?: boolean;
+  displayOrder?: number;
 };
 
 export type MadrassaCategory = {
@@ -102,6 +103,7 @@ export type MadrassaCategory = {
   description: string;
   descriptionUrdu: string;
   subcategories: MadrassaSubcategory[];
+  displayOrder?: number;
 };
 
 // ---------- School classes & sections ----------

@@ -35,20 +35,48 @@ function FinanceReportsPage() {
   const [query, setQuery] = useState("");
   const [data, setData] = useState<ReportPayload | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const params = new URLSearchParams({ system, dateFrom, dateTo });
+      const params = new URLSearchParams({ system });
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo) params.set("dateTo", dateTo);
       if (query.trim()) params.set("q", query.trim());
+
       const response = await fetch(`${endpointByReport[report]}?${params.toString()}`, {
         credentials: "include",
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Could not load report");
+
+      let payload: Record<string, unknown> | null = null;
+      try {
+        const text = await response.text();
+        payload = text ? JSON.parse(text) : null;
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Session expired. Please log in again.");
+        }
+        if (response.status === 403) {
+          throw new Error("You do not have permission to view finance reports.");
+        }
+        const errorMsg =
+          (typeof payload?.error === "string" && payload.error) ||
+          (typeof payload?.message === "string" && payload.message) ||
+          `Failed to load report (${response.status} ${response.statusText || "Server error"})`;
+        throw new Error(errorMsg);
+      }
+
       setData(payload as ReportPayload);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load report");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not load report";
+      setError(message);
+      toast.error(message);
       setData(null);
     } finally {
       setLoading(false);
@@ -113,7 +141,13 @@ function FinanceReportsPage() {
         </div>
       </Card>
 
-      <ReportContent report={report} data={data} loading={loading} />
+      <ReportContent
+        report={report}
+        data={data}
+        loading={loading}
+        error={error}
+        onRetry={() => void load()}
+      />
     </div>
   );
 }
@@ -122,13 +156,28 @@ function ReportContent({
   report,
   data,
   loading,
+  error,
+  onRetry,
 }: {
   report: ReportKey;
   data: ReportPayload | null;
   loading: boolean;
+  error: string | null;
+  onRetry: () => void;
 }) {
   if (loading) {
     return <Card className="p-8 text-center text-sm text-muted-foreground">Loading report...</Card>;
+  }
+
+  if (error) {
+    return (
+      <Card className="p-8 text-center space-y-3">
+        <p className="text-sm text-destructive">{error}</p>
+        <Button size="sm" variant="outline" onClick={onRetry}>
+          Try Again
+        </Button>
+      </Card>
+    );
   }
 
   if (report === "daily") return <DailyCollectionReport rows={rowsFrom(data, ["receipts", "rows", "payments"])} />;

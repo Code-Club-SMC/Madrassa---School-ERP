@@ -16,6 +16,7 @@ export function errorResponse(error: unknown, fallback = "Request failed") {
     });
   }
 
+  console.error("[api-error]", error);
   return new Response(JSON.stringify({ error: error instanceof Error ? error.message : fallback }), {
     status: 500,
     headers: { "content-type": "application/json" },

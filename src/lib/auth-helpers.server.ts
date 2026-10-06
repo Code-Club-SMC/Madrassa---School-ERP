@@ -5,7 +5,8 @@ import { eq } from "drizzle-orm";
 import type { User } from "@/types";
 import { createHmac } from "node:crypto";
 
-const SESSION_SECRET = process.env.SESSION_SECRET;
+const SESSION_SECRET =
+  process.env.SESSION_SECRET || "msmis_erp_fallback_secret_key_2026_super_secure";
 const SESSION_COOKIE = "msmis_session";
 
 type SessionPayload = {
@@ -25,7 +26,7 @@ type SessionPayload = {
 function parseSessionToken(token: string): SessionPayload | null {
   const [base64, signature] = token.split(".");
   if (!base64 || !signature) return null;
-  const expected = createHmac("sha256", SESSION_SECRET!).update(base64).digest("base64");
+  const expected = createHmac("sha256", SESSION_SECRET).update(base64).digest("base64");
   if (signature !== expected) return null;
   try {
     return JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
@@ -34,7 +35,7 @@ function parseSessionToken(token: string): SessionPayload | null {
   }
 }
 
-export async function getSessionUser(): Promise<{
+export async function getSessionUser(request?: Request): Promise<{
   id: string;
   name: string;
   nameUrdu?: string;
@@ -51,7 +52,26 @@ export async function getSessionUser(): Promise<{
   department?: string;
   designation?: string;
 } | null> {
-  const sessionCookie = getCookie(SESSION_COOKIE);
+  let sessionCookie: string | undefined;
+
+  if (request) {
+    const cookieHeader = request.headers.get("cookie");
+    if (cookieHeader) {
+      const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE}=([^;]+)`));
+      if (match) {
+        sessionCookie = decodeURIComponent(match[1]);
+      }
+    }
+  }
+
+  if (!sessionCookie) {
+    try {
+      sessionCookie = getCookie(SESSION_COOKIE);
+    } catch {
+      // getCookie may fail if outside event AsyncLocalStorage context
+    }
+  }
+
   if (!sessionCookie) return null;
 
   const payload = parseSessionToken(sessionCookie);

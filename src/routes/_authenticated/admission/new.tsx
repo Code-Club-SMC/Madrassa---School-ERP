@@ -18,6 +18,46 @@ export const Route = createFileRoute("/_authenticated/admission/new")({
   component: NewAdmissionRoute,
 });
 
+type MadrassaCategoryItem = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  description: string;
+  descriptionUrdu: string;
+  section: string;
+  formVariantKeys?: string[];
+};
+
+const DEFAULT_CATEGORIES: MadrassaCategoryItem[] = [
+  {
+    id: "dars_nizami",
+    name: "Dars-e-Nizami",
+    nameUrdu: "درس نظامی",
+    description: "Institution-provided Dars-e-Nizami grade sequence.",
+    descriptionUrdu: "ادارے کی فراہم کردہ درس نظامی درجات کی ترتیب",
+    section: "both",
+    formVariantKeys: ["madrassa-boys-general", "madrassa-girls-general"],
+  },
+  {
+    id: "hifz",
+    name: "Hifz",
+    nameUrdu: "حفظ",
+    description: "Memorization grades provided by Jamia Qasmia Lil-Baneen.",
+    descriptionUrdu: "جامعہ قاسمیہ للبنین کے فراہم کردہ حفظ کے درجات",
+    section: "male",
+    formVariantKeys: ["madrassa-boys-hifz"],
+  },
+  {
+    id: "qaida_nazira",
+    name: "Nazira",
+    nameUrdu: "ناظرہ",
+    description: "Nazira grades provided separately for boys and girls madrassas.",
+    descriptionUrdu: "بنین اور بنات مدارس کے لیے فراہم کردہ ناظرہ درجات",
+    section: "both",
+    formVariantKeys: ["madrassa-boys-nazira", "madrassa-girls-nazira"],
+  },
+];
+
 function NewAdmissionRoute() {
   const { variant: variantKey, categoryId } = Route.useSearch();
   const { lang } = useLanguage();
@@ -32,38 +72,76 @@ function NewAdmissionRoute() {
       }
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not load categories");
-      return (payload.categories ?? []) as { id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; formVariantKeys?: string[] }[];
+      return (payload.categories ?? []) as MadrassaCategoryItem[];
     },
     enabled: !variantKey,
   });
 
-  const qasimiaCategories = useMemo(() => (categoriesData ?? []).filter((c) => {
-    const dbSection = c.section === "baneen" || c.section === "male" ? "male" : c.section === "banat" || c.section === "female" ? "female" : c.section;
-    return dbSection === "male";
-  }), [categoriesData]);
+  const categoriesList = useMemo(() => {
+    if (categoriesData && categoriesData.length > 0) {
+      return categoriesData;
+    }
+    return DEFAULT_CATEGORIES;
+  }, [categoriesData]);
 
-  const zainabCategories = useMemo(() => (categoriesData ?? []).filter((c) => {
-    const dbSection = c.section === "baneen" || c.section === "male" ? "male" : c.section === "banat" || c.section === "female" ? "female" : c.section;
-    return dbSection === "female";
-  }), [categoriesData]);
+  const qasimiaCategories = useMemo(() => {
+    return categoriesList.filter((c) => {
+      if (c.id === "hifz" || c.id === "dars_nizami" || c.id === "qaida_nazira") return true;
+      const sec = (c.section || "").toLowerCase();
+      if (sec === "male" || sec === "baneen" || sec === "both" || sec === "all") return true;
+      if (c.formVariantKeys?.some((k) => k.includes("boys"))) return true;
+      return sec !== "female" && sec !== "banat";
+    });
+  }, [categoriesList]);
 
-  const resolveVariantForCategory = (category: { id: string; name: string; nameUrdu: string; section: string; formVariantKeys?: string[] }) => {
-    const sectionKey = category.section === "baneen" || category.section === "male" ? "male" : "female";
+  const zainabCategories = useMemo(() => {
+    return categoriesList.filter((c) => {
+      if (c.id === "hifz") return false;
+      if (c.id === "dars_nizami" || c.id === "qaida_nazira") return true;
+      const sec = (c.section || "").toLowerCase();
+      if (sec === "female" || sec === "banat" || sec === "both" || sec === "all") return true;
+      if (c.formVariantKeys?.some((k) => k.includes("girls"))) return true;
+      return false;
+    });
+  }, [categoriesList]);
+
+  const resolveVariantForCategory = (
+    category: MadrassaCategoryItem,
+    targetSection: "male" | "female"
+  ) => {
     const assigned = category.formVariantKeys ?? [];
-    const pool = ADMISSION_VARIANTS.filter((v) => v.category === sectionKey && v.section === "madrassa");
-    const matches = assigned.length > 0 ? pool.filter((v) => assigned.includes(v.key)) : pool;
+    const pool = ADMISSION_VARIANTS.filter(
+      (v) => v.category === targetSection && v.section === "madrassa"
+    );
+    const matches = assigned.length > 0 ? pool.filter((v) => assigned.includes(v.key)) : [];
     if (matches.length > 0) return matches[0];
+
     const normalized = (category.nameUrdu || category.name || category.id).toLowerCase();
-    if (normalized.includes("nazara") || normalized.includes("ناظرہ") || normalized.includes("nazira") || normalized.includes("qaida") || normalized.includes("قاعدہ")) {
+    if (
+      normalized.includes("nazara") ||
+      normalized.includes("ناظرہ") ||
+      normalized.includes("nazira") ||
+      normalized.includes("qaida") ||
+      normalized.includes("قاعدہ")
+    ) {
       return pool.find((v) => v.key.includes("nazira")) ?? null;
     }
-    if (normalized.includes("hifiz") || normalized.includes("حفاظ") || normalized.includes("hifz")) {
+    if (
+      targetSection === "male" &&
+      (normalized.includes("hifiz") || normalized.includes("حفاظ") || normalized.includes("hifz"))
+    ) {
       return pool.find((v) => v.key.includes("hifz")) ?? null;
     }
-    if (normalized.includes("alam") || normalized.includes("علم") || normalized.includes("nizami") || normalized.includes("نظامی")) {
+    if (
+      normalized.includes("alam") ||
+      normalized.includes("علم") ||
+      normalized.includes("nizami") ||
+      normalized.includes("نظامی") ||
+      normalized.includes("general")
+    ) {
       return pool.find((v) => v.key.includes("general")) ?? null;
     }
-    return null;
+    return pool[0] ?? null;
   };
 
   const variant = getVariant(variantKey);
@@ -86,22 +164,31 @@ function NewAdmissionRoute() {
     return <BookLoader text={lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading..."} className="h-96" />;
   }
 
-  const openCategoryForm = (category: { id: string; name: string; nameUrdu: string; section: string; formVariantKeys?: string[] }) => {
-    const resolved = resolveVariantForCategory(category);
+  const openCategoryForm = (
+    category: MadrassaCategoryItem,
+    targetSection: "male" | "female"
+  ) => {
+    const resolved = resolveVariantForCategory(category, targetSection);
     if (resolved) {
-      navigate({ to: "/admission/new", search: { variant: resolved.key, categoryId: category.id } });
+      navigate({
+        to: "/admission/new",
+        search: { variant: resolved.key, categoryId: category.id },
+      });
     }
   };
 
-  const renderMadrassaCard = (category: { id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; formVariantKeys?: string[] }) => {
-    const resolved = resolveVariantForCategory(category);
+  const renderMadrassaCard = (
+    category: MadrassaCategoryItem,
+    targetSection: "male" | "female"
+  ) => {
+    const resolved = resolveVariantForCategory(category, targetSection);
     if (!resolved) return null;
     const displayTitle = lang === "ur" ? (category.nameUrdu || category.name) : (category.name || category.nameUrdu);
     const displaySubtitle = lang === "ur" ? (category.descriptionUrdu || category.description) : (category.description || category.descriptionUrdu);
     return (
       <Card
         className="p-6 hover:border-primary/50 hover:shadow-md transition-all cursor-pointer h-full group"
-        onClick={() => openCategoryForm(category)}
+        onClick={() => openCategoryForm(category, targetSection)}
       >
         <div className="flex items-start gap-4">
           <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
@@ -139,9 +226,6 @@ function NewAdmissionRoute() {
     );
   };
 
-  const maleMadrassaCards = qasimiaCategories.map((c) => ({ ...c, group: "madrassa" }));
-  const femaleMadrassaCards = zainabCategories.map((c) => ({ ...c, group: "madrassa" }));
-
   return (
     <div className="space-y-8">
       <PageHeader
@@ -150,12 +234,12 @@ function NewAdmissionRoute() {
         description={lang === "ur" ? "داخلہ کے لیے زمرہ منتخب کریں" : "Select a category for admission"}
       />
 
-      {maleMadrassaCards.length > 0 && (
+      {qasimiaCategories.length > 0 && (
         <section>
           <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <BookOpen className="h-5 w-5 text-primary" />
-          </div>
+            <div className="p-2 rounded-lg bg-primary/10">
+              <BookOpen className="h-5 w-5 text-primary" />
+            </div>
             <div>
               <h3 className="text-lg font-semibold">
                 {lang === "ur" ? "جامعہ قاسمیہ للبنین" : "Jamia Qasimia lilBanin"}
@@ -166,23 +250,23 @@ function NewAdmissionRoute() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {maleMadrassaCards.map((c) => (
-              <div key={c.id}>{renderMadrassaCard(c)}</div>
+            {qasimiaCategories.map((c) => (
+              <div key={`male-${c.id}`}>{renderMadrassaCard(c, "male")}</div>
             ))}
             {renderSchoolCard("school-boys-main")}
           </div>
         </section>
       )}
 
-      {femaleMadrassaCards.length > 0 && (
+      {zainabCategories.length > 0 && (
         <section>
           <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <BookOpen className="h-5 w-5 text-primary" />
-          </div>
+            <div className="p-2 rounded-lg bg-primary/10">
+              <BookOpen className="h-5 w-5 text-primary" />
+            </div>
             <div>
               <h3 className="text-lg font-semibold">
-                {lang === "ur" ? "جامعہ زینب للبنات" : "Jamyah Zainab lilbanat"}
+                {lang === "ur" ? "جامعہ زینب للبنات" : "Jamia Zainab lilBanat"}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {lang === "ur" ? "مذہبی تعلیم" : "Religious Education"}
@@ -190,8 +274,8 @@ function NewAdmissionRoute() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {femaleMadrassaCards.map((c) => (
-              <div key={c.id}>{renderMadrassaCard(c)}</div>
+            {zainabCategories.map((c) => (
+              <div key={`female-${c.id}`}>{renderMadrassaCard(c, "female")}</div>
             ))}
             {renderSchoolCard("school-girls-main")}
           </div>
