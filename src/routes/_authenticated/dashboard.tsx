@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import {
@@ -15,17 +15,27 @@ import {
   TrendingUp,
   Filter,
   Check,
-  CalendarClock,
-  Sparkles,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Wallet,
+  HeartHandshake,
+  ShieldCheck,
+  Store,
+  Utensils,
+  Layers,
+  Zap,
+  Wrench,
+  FileText,
+  HeartPulse,
+  MoreHorizontal,
 } from "lucide-react";
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
-  Cell,
   Legend,
   Line,
   LineChart,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -35,7 +45,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import { KpiCard } from "@/components/shared/kpi-card";
 import { BookLoader } from "@/components/shared/book-loader";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatPKR, relativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -61,38 +70,6 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
 });
 
-type TeacherDashboardRow = {
-  id: string;
-  name: string;
-  email: string;
-  designation: string;
-  systemScope: string;
-  employmentStatus: string;
-  assignments: Array<{
-    id: string;
-    system: string;
-    madrassaCategoryId: string | null;
-    madrassaSubcategoryId: string | null;
-    schoolClassId: string | null;
-    academicYear: string;
-    subjectId: string | null;
-    subjectName: string | null;
-    subjectNameUrdu: string | null;
-  }>;
-  timetable: Array<{
-    id: string;
-    weekday: number;
-    startTime: string;
-    endTime: string;
-    madrassaSubcategoryId: string | null;
-    schoolClassId: string | null;
-    subjectId: string | null;
-    subjectName: string | null;
-    subjectNameUrdu: string | null;
-    active: boolean;
-  }>;
-};
-
 const ACTIVITY_ICONS = {
   admission: UserPlus,
   fee: Banknote,
@@ -106,6 +83,97 @@ const ACTIVITY_TONE = {
   attendance: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
   exam: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
 } as const;
+
+
+type FinancialSourceIcon =
+  | "Banknote"
+  | "HeartHandshake"
+  | "ShieldCheck"
+  | "Store"
+  | "Utensils"
+  | "BookOpen"
+  | "Layers"
+  | "Users"
+  | "Zap"
+  | "Wrench"
+  | "FileText"
+  | "HeartPulse"
+  | "MoreHorizontal";
+
+type FinancialBreakdownItem = {
+  id: string;
+  nameEn: string;
+  nameUr: string;
+  amount: number;
+  iconName: FinancialSourceIcon;
+};
+
+type CashflowPeriodData = {
+  totalIncome: number;
+  totalExpenses: number;
+  incomeSources: FinancialBreakdownItem[];
+  expenseCategories: FinancialBreakdownItem[];
+};
+
+type CashflowMeta = {
+  monthly: CashflowPeriodData;
+  daily: CashflowPeriodData;
+};
+
+function getFinanceIcon(name: FinancialSourceIcon) {
+  switch (name) {
+    case "Banknote":
+      return Banknote;
+    case "HeartHandshake":
+      return HeartHandshake;
+    case "ShieldCheck":
+      return ShieldCheck;
+    case "Store":
+      return Store;
+    case "Utensils":
+      return Utensils;
+    case "BookOpen":
+      return BookOpen;
+    case "Layers":
+      return Layers;
+    case "Users":
+      return Users;
+    case "Zap":
+      return Zap;
+    case "Wrench":
+      return Wrench;
+    case "FileText":
+      return FileText;
+    case "HeartPulse":
+      return HeartPulse;
+    case "MoreHorizontal":
+      return MoreHorizontal;
+    default:
+      return Banknote;
+  }
+}
+
+type FinancialMeta = {
+  titleEn: string;
+  titleUr: string;
+  subEn: string;
+  subUr: string;
+  target: number;
+  collected: number;
+  pending: number;
+  recoveryRate: string;
+  studentStatus: {
+    cleared: { count: number; pct: string };
+    partial: { count: number; pct: string };
+    unpaid: { count: number; pct: string };
+  };
+  monthlyHistory: Array<{
+    month: string;
+    monthUr: string;
+    collected: number;
+    target: number;
+  }>;
+};
 
 type EntityConfig = {
   key: DashboardFilter;
@@ -150,31 +218,14 @@ type EntityConfig = {
       color: string;
     }>;
   };
-  distributionMeta: {
-    titleEn: string;
-    titleUr: string;
-    subEn: string;
-    subUr: string;
-    data: Array<{
-      name: string;
-      nameUr: string;
-      value: number;
-      color: string;
-    }>;
-  };
+  financialMeta: FinancialMeta;
+  cashflowMeta: CashflowMeta;
   attendanceSummary: {
     avgRate: string;
     bestDay: string;
     lowDay: string;
     rates: Array<{ day: string; dayUr: string; rate: number }>;
   };
-  quickActions: Array<{
-    titleEn: string;
-    titleUr: string;
-    to: string;
-    search?: Record<string, string>;
-    icon: typeof UserPlus;
-  }>;
 };
 
 const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
@@ -241,17 +292,74 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
         },
       ],
     },
-    distributionMeta: {
-      titleEn: "Institution Distribution",
-      titleUr: "شعبہ جات کے لحاظ سے طلبہ کی تقسیم",
-      subEn: "Overall enrollment breakdown among institutions",
-      subUr: "مجموعی 1,248 طلبہ و طالبات کا ادارہ جاتی تناسب",
-      data: [
-        { name: "Jamia Qasimia (Madrassa)", nameUr: "جامعہ قاسمیہ (مدرسہ)", value: 546, color: "#10b981" },
-        { name: "Al-Qasim Academy (School)", nameUr: "القاسم اکیڈمی (سکول)", value: 312, color: "#3b82f6" },
-        { name: "Jamia Zainab (Madrassa)", nameUr: "جامعہ زینب (مدرسہ)", value: 266, color: "#ec4899" },
-        { name: "Jamia Zainab (School)", nameUr: "جامعہ زینب (سکول)", value: 124, color: "#f59e0b" },
+    financialMeta: {
+      titleEn: "Monthly Fee Collection & Recovery",
+      titleUr: "ماہانہ فیس وصولی و بقایا جات",
+      subEn: "Current month collection progress and dues recovery across all branches",
+      subUr: "تمام شعبہ جات میں فیس وصولی اور واجب الادا بقایا جات کا تجزیہ",
+      target: 2056500,
+      collected: 1842000,
+      pending: 214500,
+      recoveryRate: "89.6%",
+      studentStatus: {
+        cleared: { count: 842, pct: "68%" },
+        partial: { count: 268, pct: "21%" },
+        unpaid: { count: 138, pct: "11%" },
+      },
+      monthlyHistory: [
+        { month: "May", monthUr: "مئی", collected: 1720000, target: 1900000 },
+        { month: "Jun", monthUr: "جون", collected: 1780000, target: 1950000 },
+        { month: "Jul", monthUr: "جولائی", collected: 1810000, target: 2000000 },
+        { month: "Aug", monthUr: "اگست", collected: 1830000, target: 2020000 },
+        { month: "Sep", monthUr: "ستمبر", collected: 1820000, target: 2040000 },
+        { month: "Oct", monthUr: "اکتوبر", collected: 1842000, target: 2056500 },
       ],
+    },
+    cashflowMeta: {
+      monthly: {
+        totalIncome: 3200000,
+        totalExpenses: 2205000,
+        incomeSources: [
+          { id: "fees", nameEn: "Student Tuition & Admission Fees", nameUr: "فیس طلباء و داخلہ جات", amount: 1842000, iconName: "Banknote" },
+          { id: "donations", nameEn: "Donations & General Atiyaat", nameUr: "عطیات و عمومی امداد", amount: 620000, iconName: "HeartHandshake" },
+          { id: "zakat", nameEn: "Zakat & Sadaqat Fund", nameUr: "زکوٰۃ و صدقات فنڈ", amount: 380000, iconName: "ShieldCheck" },
+          { id: "waqf", nameEn: "Waqf / Shop & Property Rent", nameUr: "وقف املاک و دکانوں کا کرایہ", amount: 175000, iconName: "Store" },
+          { id: "mess", nameEn: "Hostel & Food / Mess Fund", nameUr: "طعام و ہاسٹل فنڈ", amount: 110000, iconName: "Utensils" },
+          { id: "books", nameEn: "Books, Stationery & Uniform", nameUr: "کتب، یونیفارم و درسی سامان", amount: 48000, iconName: "BookOpen" },
+          { id: "other", nameEn: "Other / Misc Revenue", nameUr: "دیگر متفرق آمدن", amount: 25000, iconName: "Layers" },
+        ],
+        expenseCategories: [
+          { id: "salaries", nameEn: "Teacher & Staff Salaries", nameUr: "اساتذہ و عملہ کی تنخواہیں", amount: 1480000, iconName: "Users" },
+          { id: "utilities", nameEn: "Utilities (Electricity, Gas, Water)", nameUr: "یوٹیلیٹی بلز (بجلی، گیس، پانی)", amount: 245000, iconName: "Zap" },
+          { id: "mess", nameEn: "Kitchen, Ration & Mess Supplies", nameUr: "طعام، راشن و باورچی خانہ", amount: 215000, iconName: "Utensils" },
+          { id: "maintenance", nameEn: "Building Repairs & Maintenance", nameUr: "مرمت و عمارت کی دیکھ بھال", amount: 110000, iconName: "Wrench" },
+          { id: "stationery", nameEn: "Stationery, Printing & Exams", nameUr: "سٹیشنری، پرنٹنگ و امتحانی اخراجات", amount: 65000, iconName: "FileText" },
+          { id: "welfare", nameEn: "Student Welfare & Medical Aid", nameUr: "طلبہ امداد و طبی سہولیات", amount: 55000, iconName: "HeartPulse" },
+          { id: "misc", nameEn: "General Admin & Miscellaneous", nameUr: "دیگر انتظامی و متفرق اخراجات", amount: 35000, iconName: "MoreHorizontal" },
+        ],
+      },
+      daily: {
+        totalIncome: 120200,
+        totalExpenses: 44400,
+        incomeSources: [
+          { id: "fees", nameEn: "Today's Fee Counter Collection", nameUr: "آج کی کاؤنٹر فیس وصولی", amount: 68000, iconName: "Banknote" },
+          { id: "donations", nameEn: "Daily Donations & Walk-in Charity", nameUr: "روزانہ عطیات و دستی امداد", amount: 24000, iconName: "HeartHandshake" },
+          { id: "zakat", nameEn: "Zakat & Sadaqat Receipts", nameUr: "زکوٰۃ و صدقات کی رسیدیں", amount: 15000, iconName: "ShieldCheck" },
+          { id: "waqf", nameEn: "Shop Rent Daily Share", nameUr: "دکانوں کے یومیہ کرایہ تناسب", amount: 5800, iconName: "Store" },
+          { id: "mess", nameEn: "Canteen & Daily Food Token", nameUr: "کینٹین و طعام ٹوکن وصولی", amount: 3700, iconName: "Utensils" },
+          { id: "books", nameEn: "Bookshop & Stationary Sale", nameUr: "کتب و سٹیشنری کی فروخت", amount: 2500, iconName: "BookOpen" },
+          { id: "other", nameEn: "Miscellaneous Cash Receipts", nameUr: "دیگر متفرق نقد وصولیاں", amount: 1200, iconName: "Layers" },
+        ],
+        expenseCategories: [
+          { id: "salaries", nameEn: "Daily Wages & Staff Allowances", nameUr: "یومیہ اجرت و عارضی عملہ", amount: 8500, iconName: "Users" },
+          { id: "utilities", nameEn: "Generator Fuel & Utilities", nameUr: "جنریٹر ایندھن و یوٹیلیٹیز", amount: 9200, iconName: "Zap" },
+          { id: "mess", nameEn: "Fresh Milk, Vegetables & Food", nameUr: "دودھ، سبزی و تازہ راشن", amount: 14800, iconName: "Utensils" },
+          { id: "maintenance", nameEn: "Urgent Plumbing & Electrical", nameUr: "فوری مرمت و پلمبنگ", amount: 4500, iconName: "Wrench" },
+          { id: "stationery", nameEn: "Daily Photocopy & Test Papers", nameUr: "فوٹو کاپی و ٹیسٹ پرنٹنگ", amount: 2400, iconName: "FileText" },
+          { id: "welfare", nameEn: "Emergency Student First-Aid", nameUr: "ہنگامی ادویات و طبی امداد", amount: 3200, iconName: "HeartPulse" },
+          { id: "misc", nameEn: "Daily Tea, Cleaning & Logistics", nameUr: "چائے، صفائی و متفرق اخراجات", amount: 1800, iconName: "MoreHorizontal" },
+        ],
+      },
     },
     attendanceSummary: {
       avgRate: "94.2%",
@@ -267,32 +375,6 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
         { day: "Sun", dayUr: "اتوار", rate: 94 },
       ],
     },
-    quickActions: [
-      {
-        titleEn: "New Admission",
-        titleUr: "نیا داخلہ",
-        to: "/admission/new",
-        icon: UserPlus,
-      },
-      {
-        titleEn: "Madrassa Attendance",
-        titleUr: "مدرسہ حاضری",
-        to: "/madrassa/attendance",
-        icon: CalendarCheck2,
-      },
-      {
-        titleEn: "School Attendance",
-        titleUr: "سکول حاضری",
-        to: "/school/attendance",
-        icon: CalendarCheck2,
-      },
-      {
-        titleEn: "Receive Fees",
-        titleUr: "فیس وصولی",
-        to: "/madrassa/fees",
-        icon: Banknote,
-      },
-    ],
   },
 
   qasimia_madrassa: {
@@ -352,16 +434,74 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
         },
       ],
     },
-    distributionMeta: {
-      titleEn: "Qasimia Department Distribution",
-      titleUr: "جامعہ قاسمیہ — شعبہ جات کی تقسیم",
-      subEn: "546 male madrassa students across departments",
-      subUr: "546 بنین طلبہ کا شعبہ وار تناسب",
-      data: [
-        { name: "Dars-e-Nizami", nameUr: "درس نظامی (8 درجات)", value: 248, color: "#10b981" },
-        { name: "Hifz-ul-Quran", nameUr: "حفظ القرآن (3 درجات)", value: 162, color: "#06b6d4" },
-        { name: "Nazira & Qaida", nameUr: "ناظرہ و قاعدہ", value: 136, color: "#6366f1" },
+    financialMeta: {
+      titleEn: "Qasimia Fee Collection & Recovery",
+      titleUr: "جامعہ قاسمیہ — فیس وصولی و بقایا جات",
+      subEn: "Current month fees and arrears recovery for male madrassa",
+      subUr: "جامعہ قاسمیہ للبنین کی ماہانہ فیس وصولی اور ریکوری کی صورتحال",
+      target: 869000,
+      collected: 785000,
+      pending: 84000,
+      recoveryRate: "90.3%",
+      studentStatus: {
+        cleared: { count: 382, pct: "70%" },
+        partial: { count: 112, pct: "21%" },
+        unpaid: { count: 52, pct: "9%" },
+      },
+      monthlyHistory: [
+        { month: "May", monthUr: "مئی", collected: 735000, target: 810000 },
+        { month: "Jun", monthUr: "جون", collected: 750000, target: 825000 },
+        { month: "Jul", monthUr: "جولائی", collected: 762000, target: 840000 },
+        { month: "Aug", monthUr: "اگست", collected: 770000, target: 850000 },
+        { month: "Sep", monthUr: "ستمبر", collected: 778000, target: 860000 },
+        { month: "Oct", monthUr: "اکتوبر", collected: 785000, target: 869000 },
       ],
+    },
+    cashflowMeta: {
+      monthly: {
+        totalIncome: 1530000,
+        totalExpenses: 984000,
+        incomeSources: [
+          { id: "fees", nameEn: "Dars-e-Nizami & Hifz Fees", nameUr: "درس نظامی و حفظ فیس", amount: 785000, iconName: "Banknote" },
+          { id: "donations", nameEn: "Jamia Qasimia Donations", nameUr: "جامعہ قاسمیہ عمومی عطیات", amount: 340000, iconName: "HeartHandshake" },
+          { id: "zakat", nameEn: "Zakat & Sadaqat (Madrassa)", nameUr: "زکوٰۃ و صدقات برائے طلبہ", amount: 215000, iconName: "ShieldCheck" },
+          { id: "waqf", nameEn: "Madrassa Waqf Shops Rent", nameUr: "وقف دکانوں کا کرایہ", amount: 95000, iconName: "Store" },
+          { id: "mess", nameEn: "Kitchen & Dining Fund", nameUr: "طعام و باورچی خانہ فنڈ", amount: 65000, iconName: "Utensils" },
+          { id: "books", nameEn: "Syllabus Books & Registration", nameUr: "درسی کتب و رجسٹریشن", amount: 18000, iconName: "BookOpen" },
+          { id: "other", nameEn: "Other Receipts", nameUr: "متفرق وصولی", amount: 12000, iconName: "Layers" },
+        ],
+        expenseCategories: [
+          { id: "salaries", nameEn: "Madrassa Teachers & Staff", nameUr: "اساتذہ و عملہ مدرسہ تنخواہیں", amount: 620000, iconName: "Users" },
+          { id: "utilities", nameEn: "Hostel & Mosque Utilities", nameUr: "مسجد و ہاسٹل بجلی/گیس بلز", amount: 105000, iconName: "Zap" },
+          { id: "mess", nameEn: "Student Food & Ration", nameUr: "طلبہ کا راشن و طعام", amount: 135000, iconName: "Utensils" },
+          { id: "maintenance", nameEn: "Building & Mosque Maintenance", nameUr: "مسجد و عمارت کی دیکھ بھال", amount: 48000, iconName: "Wrench" },
+          { id: "stationery", nameEn: "Registers, Tests & Exam Papers", nameUr: "رجسٹرز، ٹیسٹ و امتحانی کاغذ", amount: 22000, iconName: "FileText" },
+          { id: "welfare", nameEn: "Mustahiq Students Stipend", nameUr: "مستحق طلبہ کی کفالت و امداد", amount: 38000, iconName: "HeartPulse" },
+          { id: "misc", nameEn: "Guest Hospitality & Misc", nameUr: "مہمان نوازی و متفرق انتظامی", amount: 16000, iconName: "MoreHorizontal" },
+        ],
+      },
+      daily: {
+        totalIncome: 56000,
+        totalExpenses: 22800,
+        incomeSources: [
+          { id: "fees", nameEn: "Madrassa Fee Receipts", nameUr: "مدرسہ فیس وصولی", amount: 26000, iconName: "Banknote" },
+          { id: "donations", nameEn: "Daily Cash Donations", nameUr: "روزانہ نقد عطیات", amount: 14000, iconName: "HeartHandshake" },
+          { id: "zakat", nameEn: "Zakat Tokens & Sadaqah", nameUr: "زکوٰۃ و صدقات رسیدات", amount: 9000, iconName: "ShieldCheck" },
+          { id: "waqf", nameEn: "Waqf Daily Share", nameUr: "وقف یومیہ حصہ", amount: 3200, iconName: "Store" },
+          { id: "mess", nameEn: "Hostel Food Contribution", nameUr: "طعام فنڈ وصولی", amount: 2200, iconName: "Utensils" },
+          { id: "books", nameEn: "Book Sales", nameUr: "کتب کی فروخت", amount: 1000, iconName: "BookOpen" },
+          { id: "other", nameEn: "Misc Receipts", nameUr: "متفرق وصولیاں", amount: 600, iconName: "Layers" },
+        ],
+        expenseCategories: [
+          { id: "salaries", nameEn: "Support Staff Daily Wages", nameUr: "ملازمین کی یومیہ اجرت", amount: 3500, iconName: "Users" },
+          { id: "utilities", nameEn: "Mosque / Hostel Fuel", nameUr: "جنریٹر ایندھن و گیس", amount: 4200, iconName: "Zap" },
+          { id: "mess", nameEn: "Daily Fresh Ration & Milk", nameUr: "تازہ سبزی، دودھ و راشن", amount: 9200, iconName: "Utensils" },
+          { id: "maintenance", nameEn: "Minor Hardware & Plumbing", nameUr: "پلمبنگ و الیکٹرک مرمت", amount: 2100, iconName: "Wrench" },
+          { id: "stationery", nameEn: "Daily Notes & Copies", nameUr: "روزانہ فوٹو کاپی", amount: 800, iconName: "FileText" },
+          { id: "welfare", nameEn: "Student Emergency Clinic", nameUr: "طالب علم کلینک ادویات", amount: 2100, iconName: "HeartPulse" },
+          { id: "misc", nameEn: "Hospitality & Cleanliness", nameUr: "صفائی و مہمانداری", amount: 900, iconName: "MoreHorizontal" },
+        ],
+      },
     },
     attendanceSummary: {
       avgRate: "95.8%",
@@ -377,33 +517,6 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
         { day: "Sun", dayUr: "اتوار", rate: 95 },
       ],
     },
-    quickActions: [
-      {
-        titleEn: "New Qasimia Admission",
-        titleUr: "نیا داخلہ (قاسمیہ)",
-        to: "/admission/new",
-        search: { categoryId: "dars_nizami", variant: "madrassa-boys-general" },
-        icon: UserPlus,
-      },
-      {
-        titleEn: "Madrassa Attendance",
-        titleUr: "حاضری برائے بنین",
-        to: "/madrassa/attendance",
-        icon: CalendarCheck2,
-      },
-      {
-        titleEn: "Madrassa Fees",
-        titleUr: "فیس وصولی (مدرسہ)",
-        to: "/madrassa/fees",
-        icon: Banknote,
-      },
-      {
-        titleEn: "Madrassa Classes",
-        titleUr: "درجات و کلاسز",
-        to: "/madrassa/categories",
-        icon: BookOpen,
-      },
-    ],
   },
 
   qasim_academy: {
@@ -412,8 +525,8 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
     labelUr: "القاسم اکیڈمی ٹل (سکول)",
     shortNameEn: "Al-Qasim Academy",
     shortNameUr: "القاسم اکیڈمی",
-    descEn: "Formal secondary and primary school education for boys.",
-    descUr: "بنین کے لیے پرائمری، مڈل اور ہائی سکول کی باقاعدہ عصری تعلیم",
+    descEn: "Formal education and curriculum for boys school.",
+    descUr: "بنین کے لیے سکول کی باقاعدہ تعلیم و تدریس",
     taglineEn: "Formal school curriculum & academics for boys",
     taglineUr: "بنین کے لیے عصری و اسکول کی تعلیم",
     icon: School,
@@ -422,8 +535,8 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
     studentCount: 312,
     kpis: {
       totalStudents: "312",
-      studentsSublineEn: "Primary 154 · Middle 98 · High 60",
-      studentsSublineUr: "پرائمری 154 · مڈل 98 · ہائی 60",
+      studentsSublineEn: "312 Students · School Section",
+      studentsSublineUr: "312 طلبہ · شعبہ سکول",
       attendanceRate: "92.6%",
       attendanceSublineEn: "289 Present · 23 Absent",
       attendanceSublineUr: "289 حاضر · 23 غیر حاضر",
@@ -434,45 +547,97 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
       arrearsSublineEn: "88% recovery rate",
       arrearsSublineUr: "88% وصولی کی شرح",
       teacherCount: 11,
-      teachersSublineEn: "Science 6 · Humanities 5",
-      teachersSublineUr: "سائنس 6 · آرٹس 5",
+      teachersSublineEn: "11 School Teachers",
+      teachersSublineUr: "11 اساتذہ سکول",
     },
     chartMeta: {
-      titleEn: "Al-Qasim Academy — Grade Level Trend",
-      titleUr: "القاسم اکیڈمی — درجات وار داخلوں کا رجحان",
-      subEn: "Monthly trend for Primary, Middle, and High School (Last 12 Months)",
-      subUr: "پرائمری، مڈل اور ہائی سکول کے ماہانہ داخلوں کی پیش رفت",
+      titleEn: "Al-Qasim Academy — School Enrollment Trend",
+      titleUr: "القاسم اکیڈمی — داخلوں کا رجحان",
+      subEn: "Monthly enrollment growth for School Department (Last 12 Months)",
+      subUr: "شعبہ سکول میں ماہانہ داخلوں کی مجموعی پیش رفت",
       lines: [
         {
           dataKey: "series1",
-          nameEn: "Primary (Class 1-5)",
-          nameUr: "پرائمری (جماعت 1-5)",
+          nameEn: "School Enrolled",
+          nameUr: "شعبہ سکول داخلے",
           color: "#3b82f6",
         },
         {
           dataKey: "series2",
-          nameEn: "Middle (Class 6-8)",
-          nameUr: "مڈل (جماعت 6-8)",
+          nameEn: "New Monthly Admissions",
+          nameUr: "نئے داخلے",
           color: "#8b5cf6",
-        },
-        {
-          dataKey: "series3",
-          nameEn: "High School (Class 9-10)",
-          nameUr: "ہائی سکول (جماعت 9-10)",
-          color: "#0ea5e9",
         },
       ],
     },
-    distributionMeta: {
-      titleEn: "School Section Breakdown",
-      titleUr: "القاسم اکیڈمی — درجات وار طلبہ کی تقسیم",
-      subEn: "312 boys school students across sections",
-      subUr: "312 بنین سکول طلبہ کا تناسب",
-      data: [
-        { name: "Primary (Class 1-5)", nameUr: "پرائمری سیکشن", value: 154, color: "#3b82f6" },
-        { name: "Middle (Class 6-8)", nameUr: "مڈل سیکشن", value: 98, color: "#8b5cf6" },
-        { name: "High School (Class 9-10)", nameUr: "ہائی سکول", value: 60, color: "#0ea5e9" },
+    financialMeta: {
+      titleEn: "Academy Fee Collection & Recovery",
+      titleUr: "القاسم اکیڈمی — فیس وصولی و بقایا جات",
+      subEn: "Current month fees and arrears recovery for school boys",
+      subUr: "القاسم اکیڈمی سکول کے ماہانہ فیس واجبات اور وصولی کا جائزہ",
+      target: 634500,
+      collected: 562000,
+      pending: 72500,
+      recoveryRate: "88.6%",
+      studentStatus: {
+        cleared: { count: 215, pct: "69%" },
+        partial: { count: 65, pct: "21%" },
+        unpaid: { count: 32, pct: "10%" },
+      },
+      monthlyHistory: [
+        { month: "May", monthUr: "مئی", collected: 510000, target: 580000 },
+        { month: "Jun", monthUr: "جون", collected: 528000, target: 595000 },
+        { month: "Jul", monthUr: "جولائی", collected: 540000, target: 610000 },
+        { month: "Aug", monthUr: "اگست", collected: 551000, target: 620000 },
+        { month: "Sep", monthUr: "ستمبر", collected: 555000, target: 628000 },
+        { month: "Oct", monthUr: "اکتوبر", collected: 562000, target: 634500 },
       ],
+    },
+    cashflowMeta: {
+      monthly: {
+        totalIncome: 785000,
+        totalExpenses: 657000,
+        incomeSources: [
+          { id: "fees", nameEn: "School Tuition & Exam Fees", nameUr: "سکول ماہانہ ٹیوشن و امتحانی فیس", amount: 562000, iconName: "Banknote" },
+          { id: "donations", nameEn: "Academy Support Grants", nameUr: "اکیڈمی گرانٹس و معاونت", amount: 110000, iconName: "HeartHandshake" },
+          { id: "zakat", nameEn: "Orphan Education Scholarships", nameUr: "یتیم و نادار طلبہ تعلیمی فنڈ", amount: 35000, iconName: "ShieldCheck" },
+          { id: "waqf", nameEn: "Facility Usage Share", nameUr: "سکول املاک کا حصہ", amount: 30000, iconName: "Store" },
+          { id: "mess", nameEn: "Canteen & Transport Charges", nameUr: "کینٹین و ٹرانسپورٹ واجبات", amount: 22000, iconName: "Utensils" },
+          { id: "books", nameEn: "Uniform, Notebooks & Books", nameUr: "یونیفارم، کاپیاں و درسی کتب", amount: 20000, iconName: "BookOpen" },
+          { id: "other", nameEn: "Sports & Club Fees", nameUr: "کھیل و دیگر فیس", amount: 6000, iconName: "Layers" },
+        ],
+        expenseCategories: [
+          { id: "salaries", nameEn: "School Teachers & Staff Salaries", nameUr: "سکول اساتذہ و سٹاف تنخواہیں", amount: 480000, iconName: "Users" },
+          { id: "utilities", nameEn: "School Utilities & Internet", nameUr: "بجلی، گیس، پانی و انٹرنیٹ", amount: 75000, iconName: "Zap" },
+          { id: "mess", nameEn: "Science Lab & Canteen Supplies", nameUr: "سائنس لیب و کینٹین اخراجات", amount: 20000, iconName: "Utensils" },
+          { id: "maintenance", nameEn: "Desks, Whiteboards & Classrooms", nameUr: "ڈیسک، وائٹ بورڈز و کلاس رومز", amount: 32000, iconName: "Wrench" },
+          { id: "stationery", nameEn: "Exam Papers, Worksheets & Print", nameUr: "امتحانی پرچے، ورک شیٹس و پرنٹنگ", amount: 28000, iconName: "FileText" },
+          { id: "welfare", nameEn: "Fee Concession & Student Support", nameUr: "فیس رعایت و طالب علم وظائف", amount: 12000, iconName: "HeartPulse" },
+          { id: "misc", nameEn: "School Events & Operations", nameUr: "تقاریب، مقابلے و دفتری اخراجات", amount: 10000, iconName: "MoreHorizontal" },
+        ],
+      },
+      daily: {
+        totalIncome: 30600,
+        totalExpenses: 11000,
+        incomeSources: [
+          { id: "fees", nameEn: "School Cash Counter Fees", nameUr: "سکول کاؤنٹر نقد فیس", amount: 22000, iconName: "Banknote" },
+          { id: "donations", nameEn: "Alumni & Parent Contributions", nameUr: "والدین کی معاونت", amount: 4000, iconName: "HeartHandshake" },
+          { id: "zakat", nameEn: "Student Aid Donations", nameUr: "طالب علم امداد عطیات", amount: 1500, iconName: "ShieldCheck" },
+          { id: "waqf", nameEn: "Daily Facility Share", nameUr: "یومیہ حصہ", amount: 1000, iconName: "Store" },
+          { id: "mess", nameEn: "School Canteen Sales", nameUr: "سکول کینٹین آمدن", amount: 800, iconName: "Utensils" },
+          { id: "books", nameEn: "Stationery & Badges", nameUr: "سٹیشنری و بیجز", amount: 1000, iconName: "BookOpen" },
+          { id: "other", nameEn: "Admission Form Sales", nameUr: "داخلہ فارم کی فروخت", amount: 300, iconName: "Layers" },
+        ],
+        expenseCategories: [
+          { id: "salaries", nameEn: "Daily Assistant Wages", nameUr: "معاون عملہ کی یومیہ اجرت", amount: 2500, iconName: "Users" },
+          { id: "utilities", nameEn: "Power & Computer Lab Fuel", nameUr: "بجلی و کمپیوٹر لیب ایندھن", amount: 2800, iconName: "Zap" },
+          { id: "mess", nameEn: "Daily Canteen Restocking", nameUr: "کینٹین راشن", amount: 2200, iconName: "Utensils" },
+          { id: "maintenance", nameEn: "Furniture & Door Repairs", nameUr: "فرنیچر و دروازوں کی مرمت", amount: 1400, iconName: "Wrench" },
+          { id: "stationery", nameEn: "Daily Tests & Printing Paper", nameUr: "روزانہ ٹیسٹ پیپرز و پرنٹنگ", amount: 1100, iconName: "FileText" },
+          { id: "welfare", nameEn: "Student First-Aid Box", nameUr: "فرسٹ ایڈ باکس اخراجات", amount: 600, iconName: "HeartPulse" },
+          { id: "misc", nameEn: "Sanitation & Cleaning", nameUr: "صفائی و متفرق ضروریات", amount: 400, iconName: "MoreHorizontal" },
+        ],
+      },
     },
     attendanceSummary: {
       avgRate: "92.6%",
@@ -488,33 +653,6 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
         { day: "Sun", dayUr: "اتوار", rate: 92 },
       ],
     },
-    quickActions: [
-      {
-        titleEn: "New School Admission",
-        titleUr: "نیا داخلہ (اکیڈمی)",
-        to: "/admission/new",
-        search: { variant: "school-boys-main" },
-        icon: UserPlus,
-      },
-      {
-        titleEn: "School Attendance",
-        titleUr: "سکول حاضری",
-        to: "/school/attendance",
-        icon: CalendarCheck2,
-      },
-      {
-        titleEn: "School Fees",
-        titleUr: "سکول فیس",
-        to: "/school/fees",
-        icon: Banknote,
-      },
-      {
-        titleEn: "School Classes",
-        titleUr: "سکول کلاسز",
-        to: "/school/classes",
-        icon: School,
-      },
-    ],
   },
 
   zainab_madrassa: {
@@ -568,15 +706,74 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
         },
       ],
     },
-    distributionMeta: {
-      titleEn: "Zainab Madrassa Distribution",
-      titleUr: "جامعہ زینب — شعبہ وار تقسیم",
-      subEn: "266 female madrassa students across departments",
-      subUr: "266 طالبات کا شعبہ وار تناسب",
-      data: [
-        { name: "Dars-e-Nizami Banat", nameUr: "درس نظامی بنات", value: 142, color: "#ec4899" },
-        { name: "Nazira & Qaida Banat", nameUr: "ناظرہ و قاعدہ بنات", value: 124, color: "#a855f7" },
+    financialMeta: {
+      titleEn: "Zainab Madrassa Fee Collection & Recovery",
+      titleUr: "جامعہ زینب مدرسہ — فیس وصولی و بقایا جات",
+      subEn: "Current month fees and dues recovery for female madrassa",
+      subUr: "جامعہ زینب للبنات کی ماہانہ فیس اور وصولی کی کارکردگی",
+      target: 383000,
+      collected: 345000,
+      pending: 38000,
+      recoveryRate: "90.1%",
+      studentStatus: {
+        cleared: { count: 188, pct: "71%" },
+        partial: { count: 54, pct: "20%" },
+        unpaid: { count: 24, pct: "9%" },
+      },
+      monthlyHistory: [
+        { month: "May", monthUr: "مئی", collected: 322000, target: 355000 },
+        { month: "Jun", monthUr: "جون", collected: 330000, target: 362000 },
+        { month: "Jul", monthUr: "جولائی", collected: 336000, target: 370000 },
+        { month: "Aug", monthUr: "اگست", collected: 340000, target: 375000 },
+        { month: "Sep", monthUr: "ستمبر", collected: 342000, target: 380000 },
+        { month: "Oct", monthUr: "اکتوبر", collected: 345000, target: 383000 },
       ],
+    },
+    cashflowMeta: {
+      monthly: {
+        totalIncome: 619000,
+        totalExpenses: 383000,
+        incomeSources: [
+          { id: "fees", nameEn: "Girls Dars-e-Nizami Fees", nameUr: "درس نظامی بنات فیس", amount: 345000, iconName: "Banknote" },
+          { id: "donations", nameEn: "Banat Madrassa Donations", nameUr: "جامعہ زینب عطیات و خیرات", amount: 120000, iconName: "HeartHandshake" },
+          { id: "zakat", nameEn: "Zakat for Talibaat Fund", nameUr: "طالبات زکوٰۃ و صدقات فنڈ", amount: 95000, iconName: "ShieldCheck" },
+          { id: "waqf", nameEn: "Rental Property Share", nameUr: "کرایہ جاتی آمدن حصہ", amount: 32000, iconName: "Store" },
+          { id: "mess", nameEn: "Girls Hostel Mess Fund", nameUr: "بنات ہاسٹل و طعام فنڈ", amount: 15000, iconName: "Utensils" },
+          { id: "books", nameEn: "Islamic Books & Hijabs", nameUr: "دینی کتب و حجاب سیٹ", amount: 7000, iconName: "BookOpen" },
+          { id: "other", nameEn: "Other Receipts", nameUr: "دیگر وصولیاں", amount: 5000, iconName: "Layers" },
+        ],
+        expenseCategories: [
+          { id: "salaries", nameEn: "Female Teachers & Staff", nameUr: "معلمات و عملہ بنات کی تنخواہیں", amount: 255000, iconName: "Users" },
+          { id: "utilities", nameEn: "Banat Campus Utilities", nameUr: "کیمپس بجلی، گیس و پانی", amount: 45000, iconName: "Zap" },
+          { id: "mess", nameEn: "Kitchen & Hostel Food", nameUr: "طعام و ہاسٹل راشن", amount: 42000, iconName: "Utensils" },
+          { id: "maintenance", nameEn: "Pardah & Building Maintenance", nameUr: "پردہ و عمارت کی دیکھ بھال", amount: 20000, iconName: "Wrench" },
+          { id: "stationery", nameEn: "Registers, Tests & Stationery", nameUr: "رجسٹرز و امتحانی کاغذ", amount: 10000, iconName: "FileText" },
+          { id: "welfare", nameEn: "Talibaat Health & Medical Aid", nameUr: "طالبات طبی و ویلفیئر فنڈ", amount: 5000, iconName: "HeartPulse" },
+          { id: "misc", nameEn: "Campus Security & Cleanliness", nameUr: "سیکیورٹی، صفائی و متفرق", amount: 6000, iconName: "MoreHorizontal" },
+        ],
+      },
+      daily: {
+        totalIncome: 22300,
+        totalExpenses: 6800,
+        incomeSources: [
+          { id: "fees", nameEn: "Counter Fees Collected", nameUr: "کاؤنٹر فیس وصولی", amount: 12500, iconName: "Banknote" },
+          { id: "donations", nameEn: "Female Donors Charity", nameUr: "خواتین عطیات و امداد", amount: 4200, iconName: "HeartHandshake" },
+          { id: "zakat", nameEn: "Talibaat Zakat Receipts", nameUr: "زکوٰۃ رسیدات", amount: 3500, iconName: "ShieldCheck" },
+          { id: "waqf", nameEn: "Daily Rent Share", nameUr: "یومیہ کرایہ حصہ", amount: 1100, iconName: "Store" },
+          { id: "mess", nameEn: "Hostel Meal Tokens", nameUr: "کھانا ٹوکن", amount: 500, iconName: "Utensils" },
+          { id: "books", nameEn: "Islamic Books Sold", nameUr: "کتب فروخت", amount: 300, iconName: "BookOpen" },
+          { id: "other", nameEn: "Misc Receipts", nameUr: "متفرق وصولی", amount: 200, iconName: "Layers" },
+        ],
+        expenseCategories: [
+          { id: "salaries", nameEn: "Daily Cleaning Staff Wages", nameUr: "صفائی عملہ یومیہ اجرت", amount: 1500, iconName: "Users" },
+          { id: "utilities", nameEn: "Gas & Backup Electricity", nameUr: "گیس سلنڈر و یو پی ایس ایندھن", amount: 1400, iconName: "Zap" },
+          { id: "mess", nameEn: "Fresh Milk & Vegetables", nameUr: "تازہ دودھ و سبزیاں", amount: 2400, iconName: "Utensils" },
+          { id: "maintenance", nameEn: "Door Latches & Locks", nameUr: "تالے و فوری مرمت", amount: 600, iconName: "Wrench" },
+          { id: "stationery", nameEn: "Daily Homework Copies", nameUr: "کاپیاں و پرنٹنگ", amount: 300, iconName: "FileText" },
+          { id: "welfare", nameEn: "Emergency First Aid", nameUr: "ہنگامی ادویات", amount: 300, iconName: "HeartPulse" },
+          { id: "misc", nameEn: "Daily Cleaning Chemicals", nameUr: "فنائل و صفائی سامان", amount: 300, iconName: "MoreHorizontal" },
+        ],
+      },
     },
     attendanceSummary: {
       avgRate: "94.0%",
@@ -592,33 +789,6 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
         { day: "Sun", dayUr: "اتوار", rate: 93 },
       ],
     },
-    quickActions: [
-      {
-        titleEn: "New Zainab Admission",
-        titleUr: "نیا داخلہ (زینب مدرسہ)",
-        to: "/admission/new",
-        search: { categoryId: "dars_nizami", variant: "madrassa-girls-general" },
-        icon: UserPlus,
-      },
-      {
-        titleEn: "Girls Madrassa Attendance",
-        titleUr: "طالبات حاضری",
-        to: "/madrassa/attendance",
-        icon: CalendarCheck2,
-      },
-      {
-        titleEn: "Receive Fees",
-        titleUr: "فیس وصولی",
-        to: "/madrassa/fees",
-        icon: Banknote,
-      },
-      {
-        titleEn: "Madrassa Classes",
-        titleUr: "درجات و کلاسز",
-        to: "/madrassa/categories",
-        icon: BookOpen,
-      },
-    ],
   },
 
   zainab_school: {
@@ -627,9 +797,9 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
     labelUr: "جامعہ زینب للبنات (شعبہ سکول)",
     shortNameEn: "Zainab School",
     shortNameUr: "زینب سکول",
-    descEn: "Formal school curriculum and support classes for girls.",
-    descUr: "طالبات کے لیے باقاعدہ سکول اور معاون تعلیمی کلاسز",
-    taglineEn: "Formal school education & support for girls",
+    descEn: "Formal education and curriculum for girls school.",
+    descUr: "طالبات کے لیے باقاعدہ سکول کی تعلیم و تربیت",
+    taglineEn: "Formal school education for girls",
     taglineUr: "طالبات کے لیے باقاعدہ سکول تعلیم",
     icon: School,
     color: "text-amber-600 dark:text-amber-400",
@@ -637,8 +807,8 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
     studentCount: 124,
     kpis: {
       totalStudents: "124",
-      studentsSublineEn: "Primary 76 · Pre-School 48",
-      studentsSublineUr: "پرائمری 76 · نرسری و کے جی 48",
+      studentsSublineEn: "124 Students · School Section",
+      studentsSublineUr: "124 طالبات · شعبہ سکول",
       attendanceRate: "91.9%",
       attendanceSublineEn: "114 Present · 10 Absent",
       attendanceSublineUr: "114 حاضر · 10 غیر حاضر",
@@ -649,38 +819,97 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
       arrearsSublineEn: "88% recovery rate",
       arrearsSublineUr: "88% وصولی کی شرح",
       teacherCount: 5,
-      teachersSublineEn: "Primary 3 · Pre-School 2",
-      teachersSublineUr: "پرائمری 3 · نرسری 2",
+      teachersSublineEn: "5 School Teachers",
+      teachersSublineUr: "5 معلمات سکول",
     },
     chartMeta: {
-      titleEn: "Jamia Zainab School — Grade Growth",
+      titleEn: "Jamia Zainab School — Enrollment Trend",
       titleUr: "جامعہ زینب (شعبہ سکول) — داخلوں کا رجحان",
-      subEn: "Monthly trend for Pre-School and Primary Classes (Last 12 Months)",
-      subUr: "نرسری اور پرائمری درجات میں ماہانہ داخلوں کی پیش رفت",
+      subEn: "Monthly enrollment growth for Girls School (Last 12 Months)",
+      subUr: "طالبات کے شعبہ سکول میں ماہانہ داخلوں کی مجموعی پیش رفت",
       lines: [
         {
           dataKey: "series1",
-          nameEn: "Primary (Class 1-5)",
-          nameUr: "پرائمری (جماعت 1-5)",
+          nameEn: "School Enrolled",
+          nameUr: "شعبہ سکول داخلے",
           color: "#f59e0b",
         },
         {
           dataKey: "series2",
-          nameEn: "Pre-School & KG",
-          nameUr: "نرسری و کے جی",
+          nameEn: "New Monthly Admissions",
+          nameUr: "نئے داخلے",
           color: "#eab308",
         },
       ],
     },
-    distributionMeta: {
-      titleEn: "Girls School Class Breakdown",
-      titleUr: "جامعہ زینب سکول — کلاس وار تقسیم",
-      subEn: "124 girls school students across grades",
-      subUr: "124 طالبات سکول کا کلاس وار تناسب",
-      data: [
-        { name: "Primary Classes", nameUr: "پرائمری سیکشن (جماعت 1-5)", value: 76, color: "#f59e0b" },
-        { name: "Pre-School / KG", nameUr: "نرسری و کے جی", value: 48, color: "#eab308" },
+    financialMeta: {
+      titleEn: "Girls School Fee Collection & Recovery",
+      titleUr: "جامعہ زینب سکول — فیس وصولی و بقایا جات",
+      subEn: "Current month fees and dues recovery for female school department",
+      subUr: "جامعہ زینب گرلز سکول کے فیس واجبات اور وصولی کی صورتحال",
+      target: 170000,
+      collected: 150000,
+      pending: 20000,
+      recoveryRate: "88.2%",
+      studentStatus: {
+        cleared: { count: 82, pct: "66%" },
+        partial: { count: 26, pct: "21%" },
+        unpaid: { count: 16, pct: "13%" },
+      },
+      monthlyHistory: [
+        { month: "May", monthUr: "مئی", collected: 136000, target: 155000 },
+        { month: "Jun", monthUr: "جون", collected: 141000, target: 160000 },
+        { month: "Jul", monthUr: "جولائی", collected: 145000, target: 164000 },
+        { month: "Aug", monthUr: "اگست", collected: 147000, target: 166000 },
+        { month: "Sep", monthUr: "ستمبر", collected: 148000, target: 168000 },
+        { month: "Oct", monthUr: "اکتوبر", collected: 150000, target: 170000 },
       ],
+    },
+    cashflowMeta: {
+      monthly: {
+        totalIncome: 266000,
+        totalExpenses: 183000,
+        incomeSources: [
+          { id: "fees", nameEn: "Girls School Monthly Fees", nameUr: "شعبہ سکول طالبات فیس", amount: 150000, iconName: "Banknote" },
+          { id: "donations", nameEn: "School Sponsors & Grants", nameUr: "سکول سپانسرز و عطیات", amount: 50000, iconName: "HeartHandshake" },
+          { id: "zakat", nameEn: "Girls Education Support", nameUr: "طالبات تعلیم امدادی فنڈ", amount: 35000, iconName: "ShieldCheck" },
+          { id: "waqf", nameEn: "Premises Rent Share", nameUr: "کرایہ جاتی آمدن حصہ", amount: 18000, iconName: "Store" },
+          { id: "mess", nameEn: "Activity & Refreshment Fund", nameUr: "سرگرمیاں و ریفریشمنٹ فنڈ", amount: 8000, iconName: "Utensils" },
+          { id: "books", nameEn: "Curriculum Books & Folders", nameUr: "درسی کتب و سٹیشنری", amount: 3000, iconName: "BookOpen" },
+          { id: "other", nameEn: "Admission Processing", nameUr: "داخلہ فارم فیس", amount: 2000, iconName: "Layers" },
+        ],
+        expenseCategories: [
+          { id: "salaries", nameEn: "School Mistresses & Staff", nameUr: "سکول ٹیچرز و ملازمین تنخواہیں", amount: 125000, iconName: "Users" },
+          { id: "utilities", nameEn: "Classroom Utilities", nameUr: "کلاس رومز بجلی و پانی بلز", amount: 20000, iconName: "Zap" },
+          { id: "mess", nameEn: "Refreshments & Events", nameUr: "طلبہ ریفریشمنٹ و کینٹین", amount: 18000, iconName: "Utensils" },
+          { id: "maintenance", nameEn: "Desks & Whiteboard Upkeep", nameUr: "بینچز و وائٹ بورڈ دیکھ بھال", amount: 10000, iconName: "Wrench" },
+          { id: "stationery", nameEn: "Question Papers & Folders", nameUr: "پرچہ جات، ٹیسٹ و پرنٹنگ", amount: 5000, iconName: "FileText" },
+          { id: "welfare", nameEn: "Student Books Assistance", nameUr: "ضرورت مند طالبات امداد", amount: 2000, iconName: "HeartPulse" },
+          { id: "misc", nameEn: "Office Supplies & Misc", nameUr: "دفتری سامان و متفرق", amount: 3000, iconName: "MoreHorizontal" },
+        ],
+      },
+      daily: {
+        totalIncome: 11300,
+        totalExpenses: 3800,
+        incomeSources: [
+          { id: "fees", nameEn: "Today's School Fee Receipts", nameUr: "آج کی فیس وصولی", amount: 7500, iconName: "Banknote" },
+          { id: "donations", nameEn: "Parent Voluntary Gifts", nameUr: "والدین کی طرف سے تعاون", amount: 1800, iconName: "HeartHandshake" },
+          { id: "zakat", nameEn: "Scholarship Receipts", nameUr: "وظیفہ فنڈ", amount: 1000, iconName: "ShieldCheck" },
+          { id: "waqf", nameEn: "Facility Rent", nameUr: "کرایہ حصہ", amount: 500, iconName: "Store" },
+          { id: "mess", nameEn: "Snack / Canteen Sales", nameUr: "کینٹین", amount: 200, iconName: "Utensils" },
+          { id: "books", nameEn: "Notebook Sales", nameUr: "کاپیاں", amount: 200, iconName: "BookOpen" },
+          { id: "other", nameEn: "Forms", nameUr: "فارمز", amount: 100, iconName: "Layers" },
+        ],
+        expenseCategories: [
+          { id: "salaries", nameEn: "Daily Attendant Wages", nameUr: "یومیہ اجرت", amount: 1000, iconName: "Users" },
+          { id: "utilities", nameEn: "Daily Power & Water", nameUr: "بجلی و پانی", amount: 800, iconName: "Zap" },
+          { id: "mess", nameEn: "Daily Refreshment", nameUr: "ریفریشمنٹ", amount: 1000, iconName: "Utensils" },
+          { id: "maintenance", nameEn: "Classroom Repairs", nameUr: "مرمت", amount: 400, iconName: "Wrench" },
+          { id: "stationery", nameEn: "Paper Photocopying", nameUr: "فوٹو کاپی", amount: 200, iconName: "FileText" },
+          { id: "welfare", nameEn: "Student Bandages & Aid", nameUr: "مرہم پٹی و دوا", amount: 200, iconName: "HeartPulse" },
+          { id: "misc", nameEn: "Tea & Cleaning", nameUr: "چائے و صفائی", amount: 200, iconName: "MoreHorizontal" },
+        ],
+      },
     },
     attendanceSummary: {
       avgRate: "91.9%",
@@ -696,33 +925,6 @@ const ENTITY_CONFIGS: Record<DashboardFilter, EntityConfig> = {
         { day: "Sun", dayUr: "اتوار", rate: 92 },
       ],
     },
-    quickActions: [
-      {
-        titleEn: "New Girls School Admission",
-        titleUr: "نیا داخلہ (شعبہ سکول)",
-        to: "/admission/new",
-        search: { variant: "school-girls-main" },
-        icon: UserPlus,
-      },
-      {
-        titleEn: "School Attendance",
-        titleUr: "سکول حاضری",
-        to: "/school/attendance",
-        icon: CalendarCheck2,
-      },
-      {
-        titleEn: "School Fees",
-        titleUr: "سکول فیس",
-        to: "/school/fees",
-        icon: Banknote,
-      },
-      {
-        titleEn: "School Classes",
-        titleUr: "سکول کلاسز",
-        to: "/school/classes",
-        icon: School,
-      },
-    ],
   },
 };
 
@@ -752,9 +954,8 @@ function getTrendDataForFilter(filter: DashboardFilter) {
   if (filter === "qasim_academy") {
     return MONTHS.map((month, i) => ({
       month,
-      series1: 125 + Math.round(i * 2.5 + Math.cos(i) * 4), // Primary
-      series2: 82 + Math.round(i * 1.4 + Math.sin(i) * 3), // Middle
-      series3: 53 + Math.round(i * 0.7 + Math.sin(i * 2) * 2), // High
+      series1: 260 + Math.round(i * 4.6 + Math.cos(i / 2) * 9), // School Enrolled
+      series2: 18 + Math.round(Math.sin(i) * 5 + i * 0.8), // New Admissions
     }));
   }
 
@@ -769,8 +970,8 @@ function getTrendDataForFilter(filter: DashboardFilter) {
   // zainab_school
   return MONTHS.map((month, i) => ({
     month,
-    series1: 56 + Math.round(i * 1.8 + Math.sin(i) * 2), // Primary
-    series2: 34 + Math.round(i * 1.2 + Math.cos(i) * 2), // Pre-School
+    series1: 90 + Math.round(i * 3.0 + Math.cos(i / 2 + 1) * 5), // School Enrolled
+    series2: 8 + Math.round(Math.sin(i) * 2 + i * 0.4), // New Admissions
   }));
 }
 
@@ -789,40 +990,10 @@ function DashboardPage() {
   const search = Route.useSearch();
   const [selectedFilter, setSelectedFilter] = useState<DashboardFilter>(search.filter || "all");
   const activeFilter: DashboardFilter = selectedFilter;
-
-  const [teachers, setTeachers] = useState<TeacherDashboardRow[]>([]);
-  const [loadingTeachers, setLoadingTeachers] = useState(true);
-
-  useEffect(() => {
-    if (!isLoading && !user) {
-      navigate({ to: "/login", search: { redirect: undefined } });
-    }
-  }, [user, isLoading, navigate]);
-
-  useEffect(() => {
-    let active = true;
-    setLoadingTeachers(true);
-    fetch("/api/teachers/dashboard", { credentials: "include" })
-      .then((response) => response.json())
-      .then((data) => {
-        if (active && Array.isArray(data)) setTeachers(data);
-      })
-      .catch(() => {
-        if (active) setTeachers([]);
-      })
-      .finally(() => {
-        if (active) setLoadingTeachers(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const setFilter = (next: DashboardFilter) => {
-    setSelectedFilter(next);
-    navigate({
-      to: "/dashboard",
-      search: { filter: next === "all" ? undefined : next },
+  const setFilter = (key: DashboardFilter) => {
+    setSelectedFilter(key);
+    void navigate({
+      search: (prev: any) => ({ ...prev, filter: key === "all" ? undefined : key }),
       replace: true,
     } as any);
   };
@@ -830,50 +1001,12 @@ function DashboardPage() {
   const activeConfig = ENTITY_CONFIGS[activeFilter] ?? ENTITY_CONFIGS.all;
   const trendData = useMemo(() => getTrendDataForFilter(activeFilter), [activeFilter]);
 
-  const filteredTeachers = useMemo(() => {
-    if (activeFilter === "all") return teachers;
-    if (activeFilter === "qasimia_madrassa") {
-      const matched = teachers.filter(
-        (t) =>
-          t.systemScope === "madrassa" ||
-          t.assignments.some((a) => a.system === "madrassa" || a.madrassaCategoryId),
-      );
-      return matched.length > 0 ? matched : teachers.slice(0, 17);
-    }
-    if (activeFilter === "qasim_academy") {
-      const matched = teachers.filter(
-        (t) =>
-          t.systemScope === "school" ||
-          t.assignments.some((a) => a.system === "school" || a.schoolClassId),
-      );
-      return matched.length > 0 ? matched : teachers.slice(0, 11);
-    }
-    if (activeFilter === "zainab_madrassa") {
-      const matched = teachers.filter(
-        (t) =>
-          t.systemScope === "madrassa" &&
-          (t.name.includes("عائشہ") ||
-            t.name.includes("فاطمہ") ||
-            t.name.includes("مریم") ||
-            t.designation.includes("معلمہ") ||
-            t.designation.includes("بنات")),
-      );
-      return matched.length > 0 ? matched : teachers.slice(0, 9);
-    }
-    if (activeFilter === "zainab_school") {
-      const matched = teachers.filter(
-        (t) =>
-          t.systemScope === "school" &&
-          (t.name.includes("عائشہ") ||
-            t.name.includes("فاطمہ") ||
-            t.name.includes("مریم") ||
-            t.designation.includes("معلمہ") ||
-            t.designation.includes("بنات")),
-      );
-      return matched.length > 0 ? matched : teachers.slice(0, 5);
-    }
-    return teachers;
-  }, [teachers, activeFilter]);
+  const [cashflowPeriod, setCashflowPeriod] = useState<"monthly" | "daily">("monthly");
+  const activeCashflow = activeConfig.cashflowMeta[cashflowPeriod];
+  const netSurplus = activeCashflow.totalIncome - activeCashflow.totalExpenses;
+  const surplusMargin = Math.round(
+    ((activeCashflow.totalIncome - activeCashflow.totalExpenses) / (activeCashflow.totalIncome || 1)) * 100,
+  );
 
   if (isLoading) {
     return <BookLoader text="Loading..." className="h-96" />;
@@ -1044,26 +1177,6 @@ function DashboardPage() {
         />
       </div>
 
-      {/* Quick actions for active filter */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-muted-foreground me-1">
-          {lang === "ur" ? "فوری اقدامات:" : "Quick Actions:"}
-        </span>
-        {activeConfig.quickActions.map((action, i) => {
-          const Icon = action.icon;
-          return (
-            <Button key={i} asChild variant="outline" size="sm" className="h-8 gap-2">
-              <Link to={action.to} search={action.search}>
-                <Icon className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-medium">
-                  {lang === "ur" ? action.titleUr : action.titleEn}
-                </span>
-              </Link>
-            </Button>
-          );
-        })}
-      </div>
-
       {/* Main Graph: Enrollment trend (broad details when 'all', specialized when filtered) */}
       <Card className="p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -1125,44 +1238,49 @@ function DashboardPage() {
         </div>
       </Card>
 
-      {/* Two column row: Attendance + Category Distribution */}
+      {/* Two column row: Attendance Summary & Monthly Fee Recovery Tracker */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Attendance Summary */}
-        <Card className="p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h3 className="font-heading font-semibold text-base">
-                {lang === "ur" ? "حاضری — گزشتہ 7 دن" : "Attendance — Last 7 Days"}
-              </h3>
-              <p className="font-urdu text-sm text-muted-foreground">
-                {lang === "ur"
-                  ? `${activeConfig.shortNameUr} کی ہفتہ وار حاضری کا جائزہ`
-                  : `Weekly attendance for ${activeConfig.shortNameEn}`}
-              </p>
-            </div>
-            <Badge variant="secondary" className="font-mono text-xs">
-              {activeConfig.attendanceSummary.avgRate}
-            </Badge>
-          </div>
-          <div className="grid grid-cols-7 gap-2">
-            {activeConfig.attendanceSummary.rates.map((d) => {
-              const intensity = Math.min(1, Math.max(0.2, d.rate / 100));
-              return (
-                <div key={d.day} className="flex flex-col items-center gap-2">
-                  <div
-                    className="aspect-square w-full rounded-lg border border-border/60 flex items-end justify-center p-1 text-[10px] text-primary-foreground font-semibold shadow-xs"
-                    style={{
-                      background: `color-mix(in oklab, var(--color-primary) ${Math.round(intensity * 100)}%, transparent)`,
-                    }}
-                  >
-                    {d.rate}%
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">
-                    {lang === "ur" ? d.dayUr : d.day}
-                  </span>
+        <Card className="p-5 flex flex-col justify-between">
+          <div>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <CalendarCheck2 className="h-4 w-4 text-primary" />
+                  <h3 className="font-heading font-semibold text-base">
+                    {lang === "ur" ? "حاضری — گزشتہ 7 دن" : "Attendance — Last 7 Days"}
+                  </h3>
                 </div>
-              );
-            })}
+                <p className="font-urdu text-sm text-muted-foreground mt-0.5">
+                  {lang === "ur"
+                    ? `${activeConfig.shortNameUr} کی ہفتہ وار حاضری کا جائزہ`
+                    : `Weekly attendance for ${activeConfig.shortNameEn}`}
+                </p>
+              </div>
+              <Badge variant="secondary" className="font-mono text-xs">
+                {activeConfig.attendanceSummary.avgRate}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+              {activeConfig.attendanceSummary.rates.map((d) => {
+                const intensity = Math.min(1, Math.max(0.2, d.rate / 100));
+                return (
+                  <div key={d.day} className="flex flex-col items-center gap-2">
+                    <div
+                      className="aspect-square w-full rounded-lg border border-border/60 flex items-end justify-center p-1 text-[10px] text-primary-foreground font-semibold shadow-xs"
+                      style={{
+                        background: `color-mix(in oklab, var(--color-primary) ${Math.round(intensity * 100)}%, transparent)`,
+                      }}
+                    >
+                      {d.rate}%
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">
+                      {lang === "ur" ? d.dayUr : d.day}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-3 mt-5">
             <div className="rounded-lg bg-muted/50 p-3">
@@ -1192,71 +1310,442 @@ function DashboardPage() {
           </div>
         </Card>
 
-        {/* Category / Grade Distribution */}
-        <Card className="p-5">
-          <div className="mb-4">
-            <h3 className="font-heading font-semibold text-base">
-              {lang === "ur"
-                ? activeConfig.distributionMeta.titleUr
-                : activeConfig.distributionMeta.titleEn}
-            </h3>
-            <p className="font-urdu text-sm text-muted-foreground">
-              {lang === "ur"
-                ? activeConfig.distributionMeta.subUr
-                : activeConfig.distributionMeta.subEn}
-            </p>
-          </div>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={activeConfig.distributionMeta.data}
-                  innerRadius={50}
-                  outerRadius={85}
-                  paddingAngle={3}
-                  dataKey="value"
-                  stroke="var(--color-card)"
-                  strokeWidth={2}
-                >
-                  {activeConfig.distributionMeta.data.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--color-popover)",
-                    border: "1px solid var(--color-border)",
-                    borderRadius: "var(--radius-lg)",
-                    fontSize: 12,
-                    fontFamily: "var(--font-urdu)",
-                  }}
-                  formatter={(value: any, _name: any, item: any) => [
-                    `${value} ${lang === "ur" ? "طلبہ" : "students"}`,
-                    lang === "ur" ? item.payload.nameUr : item.payload.name,
-                  ]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            {activeConfig.distributionMeta.data.map((c) => (
-              <div
-                key={c.name}
-                className="flex items-center gap-2 text-xs p-1.5 rounded-md bg-muted/40"
-              >
-                <span
-                  className="h-3 w-3 rounded-full shrink-0"
-                  style={{ background: c.color }}
-                />
-                <span className="font-urdu truncate flex-1">
-                  {lang === "ur" ? c.nameUr : c.name}
-                </span>
-                <span className="tabular-nums font-semibold text-muted-foreground">{c.value}</span>
+        {/* Monthly Fee Collection & Recovery Tracker (Replaced redundant distribution pie chart) */}
+        <Card className="p-5 flex flex-col justify-between">
+          <div>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Banknote className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <h3 className="font-heading font-semibold text-base">
+                    {lang === "ur"
+                      ? activeConfig.financialMeta.titleUr
+                      : activeConfig.financialMeta.titleEn}
+                  </h3>
+                </div>
+                <p className="font-urdu text-sm text-muted-foreground mt-0.5">
+                  {lang === "ur"
+                    ? activeConfig.financialMeta.subUr
+                    : activeConfig.financialMeta.subEn}
+                </p>
               </div>
-            ))}
+              <Badge
+                variant="outline"
+                className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold text-xs"
+              >
+                {activeConfig.financialMeta.recoveryRate} {lang === "ur" ? "وصولی" : "Recovery"}
+              </Badge>
+            </div>
+
+            {/* 3 Quick Financial Stat Chips */}
+            <div className="grid grid-cols-3 gap-2.5 mb-3">
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-2.5">
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {lang === "ur" ? "وصول شدہ فیس" : "Collected"}
+                </p>
+                <p className="font-heading text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  {formatPKR(activeConfig.financialMeta.collected)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-2.5">
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {lang === "ur" ? "بقایا جات" : "Pending Arrears"}
+                </p>
+                <p className="font-heading text-sm sm:text-base font-bold text-destructive tabular-nums">
+                  {formatPKR(activeConfig.financialMeta.pending)}
+                </p>
+              </div>
+              <div className="rounded-xl border border-border bg-muted/40 p-2.5">
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {lang === "ur" ? "ماہانہ ہدف" : "Target"}
+                </p>
+                <p className="font-heading text-sm sm:text-base font-bold tabular-nums">
+                  {formatPKR(activeConfig.financialMeta.target)}
+                </p>
+              </div>
+            </div>
+
+            {/* 6-Month Comparison BarChart */}
+            <div className="h-44 mt-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={activeConfig.financialMeta.monthlyHistory}
+                  margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    stroke="var(--color-border)"
+                    strokeDasharray="3 3"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fill: "var(--color-muted-foreground)", fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: "var(--color-muted-foreground)", fontSize: 10 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(val) => `${Math.round(val / 1000)}k`}
+                    width={34}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "var(--color-popover)",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "var(--radius-lg)",
+                      fontSize: 12,
+                    }}
+                    formatter={(val: any, name: any) => [
+                      formatPKR(Number(val)),
+                      name === "collected"
+                        ? lang === "ur"
+                          ? "وصول شدہ"
+                          : "Collected"
+                        : lang === "ur"
+                          ? "ہدف"
+                          : "Target",
+                    ]}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 6 }} />
+                  <Bar
+                    dataKey="collected"
+                    name={lang === "ur" ? "وصول شدہ فیس" : "Collected Fee"}
+                    fill="#10b981"
+                    radius={[3, 3, 0, 0]}
+                  />
+                  <Bar
+                    dataKey="target"
+                    name={lang === "ur" ? "ماہانہ ہدف" : "Monthly Target"}
+                    fill="#94a3b8"
+                    radius={[3, 3, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Student Payment Status Breakdown */}
+          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border text-center text-xs">
+            <div className="p-1.5 rounded-md bg-muted/40">
+              <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                {activeConfig.financialMeta.studentStatus.cleared.pct}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {lang === "ur" ? "مکمل ادا شدہ" : "Fully Paid"}
+              </p>
+            </div>
+            <div className="p-1.5 rounded-md bg-muted/40">
+              <p className="font-semibold text-amber-600 dark:text-amber-400">
+                {activeConfig.financialMeta.studentStatus.partial.pct}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {lang === "ur" ? "جزوی ادائیگی" : "Partial"}
+              </p>
+            </div>
+            <div className="p-1.5 rounded-md bg-muted/40">
+              <p className="font-semibold text-destructive">
+                {activeConfig.financialMeta.studentStatus.unpaid.pct}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {lang === "ur" ? "واجب الادا" : "Overdue"}
+              </p>
+            </div>
           </div>
         </Card>
       </div>
+
+      {/* Cashflow & Financial Health: Income Sources & Operational Expenses (Month / Daily toggle) */}
+      <Card className="p-5 overflow-hidden">
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/60">
+          <div>
+            <div className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-primary" />
+              <h3 className="font-heading font-semibold text-lg">
+                {lang === "ur" ? "آمدن کے تمام ذرائع اور اخراجات" : "Income Sources & Operational Expenses"}
+              </h3>
+            </div>
+            <p className="font-urdu text-sm text-muted-foreground mt-0.5">
+              {lang === "ur"
+                ? `${activeConfig.shortNameUr} کے تمام مالیاتی ذرائع اور شعبہ جاتی اخراجات کا تقابلی جائزہ (${cashflowPeriod === "monthly" ? "ماہانہ" : "روزانہ / آج"})`
+                : `Comprehensive breakdown of all revenue sources and expense heads for ${activeConfig.shortNameEn} (${cashflowPeriod === "monthly" ? "Monthly" : "Daily / Today"})`}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {/* Period Toggle */}
+            <div className="flex items-center gap-1 bg-muted/70 p-1 rounded-xl border border-border/70">
+              <button
+                type="button"
+                onClick={() => setCashflowPeriod("monthly")}
+                className={cn(
+                  "px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer",
+                  cashflowPeriod === "monthly"
+                    ? "bg-background text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground font-medium"
+                )}
+              >
+                <span>{lang === "ur" ? "اس ماہ (ماہانہ)" : "This Month (Monthly)"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setCashflowPeriod("daily")}
+                className={cn(
+                  "px-3 py-1.5 text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer",
+                  cashflowPeriod === "daily"
+                    ? "bg-background text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground font-medium"
+                )}
+              >
+                <span>{lang === "ur" ? "آج کا دن (روزانہ)" : "Today (Daily)"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 3 Top Summary Highlight Chips */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 my-4">
+          {/* Total Income */}
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">
+                {lang === "ur"
+                  ? cashflowPeriod === "monthly"
+                    ? "کل ماہانہ آمدن"
+                    : "آج کی کل آمدن"
+                  : cashflowPeriod === "monthly"
+                  ? "Total Monthly Income"
+                  : "Today's Total Income"}
+              </p>
+              <p className="font-heading text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums mt-1">
+                {formatPKR(activeCashflow.totalIncome)}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {activeCashflow.incomeSources.length}{" "}
+                {lang === "ur" ? "فعال ذرائع سے وصولی" : "active revenue streams"}
+              </p>
+            </div>
+            <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <ArrowDownLeft className="h-6 w-6" />
+            </div>
+          </div>
+
+          {/* Total Expenses */}
+          <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">
+                {lang === "ur"
+                  ? cashflowPeriod === "monthly"
+                    ? "کل ماہانہ اخراجات"
+                    : "آج کے کل اخراجات"
+                  : cashflowPeriod === "monthly"
+                  ? "Total Monthly Expenses"
+                  : "Today's Total Expenses"}
+              </p>
+              <p className="font-heading text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400 tabular-nums mt-1">
+                {formatPKR(activeCashflow.totalExpenses)}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {activeCashflow.expenseCategories.length}{" "}
+                {lang === "ur" ? "شعبہ جاتی مدات میں صرف" : "operational heads"}
+              </p>
+            </div>
+            <div className="h-11 w-11 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <ArrowUpRight className="h-6 w-6" />
+            </div>
+          </div>
+
+          {/* Net Cashflow / Surplus */}
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">
+                {lang === "ur"
+                  ? cashflowPeriod === "monthly"
+                    ? "خالص ماہانہ سرپلس / بچت"
+                    : "آج کی خالص بچت"
+                  : cashflowPeriod === "monthly"
+                  ? "Net Monthly Surplus"
+                  : "Today's Net Surplus"}
+              </p>
+              <p className="font-heading text-xl sm:text-2xl font-bold text-primary tabular-nums mt-1">
+                {formatPKR(netSurplus)}
+              </p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[10px] px-1.5 py-0 font-medium",
+                    netSurplus >= 0
+                      ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                      : "border-destructive text-destructive"
+                  )}
+                >
+                  {surplusMargin}% {lang === "ur" ? "سرپلس شرح" : "margin"}
+                </Badge>
+                <span className="text-[11px] text-muted-foreground">
+                  {lang === "ur" ? "آمدن منہا اخراجات" : "Income - Expense"}
+                </span>
+              </div>
+            </div>
+            <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Wallet className="h-6 w-6" />
+            </div>
+          </div>
+        </div>
+
+        {/* Detailed 2-Column Breakdown: Left = Income Sources, Right = Expense Categories */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
+          {/* Income Sources Column */}
+          <div className="rounded-xl border border-border p-4 bg-card/60 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <ArrowDownLeft className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <h4 className="font-heading font-semibold text-sm">
+                    {lang === "ur" ? "تمام ذرائع سے آمدنی" : "Income from All Sources"}
+                  </h4>
+                </div>
+                <Badge variant="outline" className="text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 bg-emerald-500/10">
+                  {activeCashflow.incomeSources.length} {lang === "ur" ? "ذرائع" : "Sources"}
+                </Badge>
+              </div>
+
+              <div className="space-y-3">
+                {activeCashflow.incomeSources.map((item) => {
+                  const Icon = getFinanceIcon(item.iconName);
+                  const pct = Math.round((item.amount / (activeCashflow.totalIncome || 1)) * 100);
+                  return (
+                    <div key={item.id} className="p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="h-7 w-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                            <Icon className="h-3.5 w-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate">
+                              {lang === "ur" ? item.nameUr : item.nameEn}
+                            </p>
+                            <p className="font-urdu text-[10px] text-muted-foreground truncate">
+                              {lang === "ur" ? item.nameEn : item.nameUr}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-end shrink-0">
+                          <p className="font-heading text-xs sm:text-sm font-semibold tabular-nums text-foreground">
+                            {formatPKR(item.amount)}
+                          </p>
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0 font-mono">
+                            {pct}%
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden mt-2">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, Math.max(3, pct))}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs">
+              <span className="font-medium text-muted-foreground">
+                {lang === "ur" ? "مجموعی موصولی آمدن:" : "Total Income Received:"}
+              </span>
+              <span className="font-heading font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
+                {formatPKR(activeCashflow.totalIncome)}
+              </span>
+            </div>
+          </div>
+
+          {/* Expense Categories Column */}
+          <div className="rounded-xl border border-border p-4 bg-card/60 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <ArrowUpRight className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                  <h4 className="font-heading font-semibold text-sm">
+                    {lang === "ur" ? "شعبہ جاتی اخراجات" : "Operational Expenses by Head"}
+                  </h4>
+                </div>
+                <Badge variant="outline" className="text-xs text-rose-600 dark:text-rose-400 border-rose-500/30 bg-rose-500/10">
+                  {activeCashflow.expenseCategories.length} {lang === "ur" ? "مدات" : "Heads"}
+                </Badge>
+              </div>
+
+              <div className="space-y-3">
+                {activeCashflow.expenseCategories.map((item) => {
+                  const Icon = getFinanceIcon(item.iconName);
+                  const pct = Math.round((item.amount / (activeCashflow.totalExpenses || 1)) * 100);
+                  return (
+                    <div key={item.id} className="p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="h-7 w-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                            <Icon className="h-3.5 w-3.5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate">
+                              {lang === "ur" ? item.nameUr : item.nameEn}
+                            </p>
+                            <p className="font-urdu text-[10px] text-muted-foreground truncate">
+                              {lang === "ur" ? item.nameEn : item.nameUr}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-end shrink-0">
+                          <p className="font-heading text-xs sm:text-sm font-semibold tabular-nums text-foreground">
+                            {formatPKR(item.amount)}
+                          </p>
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0 font-mono">
+                            {pct}%
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden mt-2">
+                        <div
+                          className="h-full bg-rose-500 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, Math.max(3, pct))}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs">
+              <span className="font-medium text-muted-foreground">
+                {lang === "ur" ? "مجموعی صرف شدہ اخراجات:" : "Total Expenses Disbursed:"}
+              </span>
+              <span className="font-heading font-bold text-sm text-rose-600 dark:text-rose-400 tabular-nums">
+                {formatPKR(activeCashflow.totalExpenses)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Navigation Link */}
+        <div className="mt-4 pt-3 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">
+            {lang === "ur"
+              ? "تفصیلی مالیاتی رجسٹر، عطیات واؤچرز اور واؤچر پرنٹنگ کے لیے مالیات سیکشن ملاحظہ فرمائیں۔"
+              : "For ledger entries, donor receipts, and financial voucher prints, visit the Finance module."}
+          </p>
+          <Link
+            to="/finance"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline shrink-0"
+          >
+            <span>{lang === "ur" ? "مالیات ڈیش بورڈ کھولیں" : "Open Finance Dashboard"}</span>
+            <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-0 rotate-180" />
+          </Link>
+        </div>
+      </Card>
 
       {/* Recent activity */}
       <Card className="overflow-hidden">
@@ -1329,100 +1818,6 @@ function DashboardPage() {
         </div>
       </Card>
 
-      {/* Teacher Timetable filtered by active scope */}
-      <Card className="p-5">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h3 className="font-heading font-semibold text-base">
-              {lang === "ur" ? "اساتذہ کا نظامِ اوقات" : "Teacher Timetable"}
-            </h3>
-            <p className="font-urdu text-sm text-muted-foreground">
-              {lang === "ur"
-                ? `${activeConfig.shortNameUr} کے اساتذہ کی کلاسوں کا نظام`
-                : `Class schedule for teachers in ${activeConfig.shortNameEn}`}
-            </p>
-          </div>
-          <Badge variant="secondary">
-            {filteredTeachers.length} {lang === "ur" ? "اساتذہ" : "teachers"}
-          </Badge>
-        </div>
-        {loadingTeachers ? (
-          <BookLoader text={lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading..."} className="h-48" />
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filteredTeachers.map((teacher) => {
-              const activeTimetable = teacher.timetable.filter((period) => period.active);
-              const todayDay = new Date().getDay();
-              const todayPeriods = activeTimetable.filter((period) => period.weekday === todayDay);
-              const totalClasses = new Set(
-                teacher.assignments.map(
-                  (a) => a.madrassaSubcategoryId ?? a.schoolClassId ?? a.id,
-                ),
-              ).size;
-
-              return (
-                <Card key={teacher.id} className="p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold">{teacher.name}</p>
-                      <p className="text-xs text-muted-foreground">{teacher.designation}</p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px]">
-                      {teacher.systemScope}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="rounded-md bg-muted/40 p-2 text-center">
-                      <p className="font-heading text-lg font-bold">{totalClasses}</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {lang === "ur" ? "کلاسز" : "Classes"}
-                      </p>
-                    </div>
-                    <div className="rounded-md bg-muted/40 p-2 text-center">
-                      <p className="font-heading text-lg font-bold">{activeTimetable.length}</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {lang === "ur" ? "پیریڈز" : "Periods"}
-                      </p>
-                    </div>
-                    <div className="rounded-md bg-muted/40 p-2 text-center">
-                      <p className="font-heading text-lg font-bold">{todayPeriods.length}</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {lang === "ur" ? "آج" : "Today"}
-                      </p>
-                    </div>
-                  </div>
-                  {activeTimetable.length > 0 && (
-                    <div className="mt-3 space-y-1">
-                      {activeTimetable.slice(0, 3).map((period) => (
-                        <div key={period.id} className="flex items-center justify-between text-xs">
-                          <span className="font-mono">
-                            {period.startTime} - {period.endTime}
-                          </span>
-                          <span className="text-muted-foreground truncate ms-2">
-                            {period.subjectName ??
-                              period.subjectNameUrdu ??
-                              (lang === "ur" ? "کوئی مضمون نہیں" : "No subject")}
-                          </span>
-                        </div>
-                      ))}
-                      {activeTimetable.length > 3 && (
-                        <p className="text-[10px] text-muted-foreground">
-                          +{activeTimetable.length - 3} more
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </Card>
-              );
-            })}
-            {filteredTeachers.length === 0 && (
-              <div className="col-span-full text-center text-sm text-muted-foreground py-8">
-                {lang === "ur" ? "کوئی استاد نہیں ملا" : "No teachers found"}
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
     </div>
   );
 }

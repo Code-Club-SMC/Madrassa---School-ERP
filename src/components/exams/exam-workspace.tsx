@@ -1,6 +1,30 @@
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BarChart3, Calendar, ClipboardList, FileText, Grid3x3, Plus, Printer, Trash2, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart3,
+  Calendar,
+  ClipboardList,
+  FileText,
+  Grid3x3,
+  Plus,
+  Printer,
+  Trash2,
+  Users,
+  Search,
+  School,
+  GraduationCap,
+  Award,
+  CheckCircle2,
+  LayoutGrid,
+  Table as TableIcon,
+  Layers,
+  BookOpen,
+  CalendarDays,
+  Eye,
+  X,
+  Filter,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   createExamSession,
@@ -35,6 +59,16 @@ import { formatDate } from "@/lib/format";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { useSystem } from "@/components/system-context";
+
+export function cleanExamName(name: string): string {
+  if (!name) return "";
+  return name
+    .replace(/\s*-\s*demo_[a-zA-Z0-9_-]+/gi, "")
+    .replace(/\s*-\s*sc_[a-zA-Z0-9_-]+/gi, "")
+    .replace(/\s*-\s*[A-Z]{2,4}_[a-zA-Z0-9_-]+/g, "")
+    .replace(/\s*-\s*none$/i, "")
+    .trim();
+}
 
 type InstitutionOption = {
   id: string;
@@ -384,6 +418,12 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   const [open, setOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ExamSession | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTerm, setSelectedTerm] = useState("all");
+  const [selectedClass, setSelectedClass] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+
   const [form, setForm] = useState({
     classId: "",
     sectionId: "",
@@ -432,6 +472,57 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const uniqueTerms = useMemo(() => {
+    return Array.from(new Set(exams.map((e) => cleanExamName(e.name)))).filter(Boolean);
+  }, [exams]);
+
+  const uniqueClasses = useMemo(() => {
+    return Array.from(new Set(exams.map((e) => e.groupLabel))).filter(Boolean);
+  }, [exams]);
+
+  const filteredExams = useMemo(() => {
+    return exams.filter((exam) => {
+      const cleanName = cleanExamName(exam.name).toLowerCase();
+      const rawName = exam.name.toLowerCase();
+      const urduName = (exam.nameUrdu || "").toLowerCase();
+      const groupLabel = (exam.groupLabel || "").toLowerCase();
+      const academicYear = (exam.academicYear || "").toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
+
+      if (q) {
+        const matches =
+          cleanName.includes(q) ||
+          rawName.includes(q) ||
+          urduName.includes(q) ||
+          groupLabel.includes(q) ||
+          academicYear.includes(q);
+        if (!matches) return false;
+      }
+
+      if (selectedTerm !== "all" && cleanExamName(exam.name) !== selectedTerm) {
+        return false;
+      }
+
+      if (selectedClass !== "all" && exam.groupLabel !== selectedClass) {
+        return false;
+      }
+
+      if (selectedStatus !== "all" && exam.status !== selectedStatus) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [exams, searchQuery, selectedTerm, selectedClass, selectedStatus]);
+
+  const stats = useMemo(() => {
+    const totalSessions = exams.length;
+    const totalStudents = exams.reduce((acc, curr) => acc + (curr.studentCount || 0), 0);
+    const publishedCount = exams.filter((e) => e.status === "published").length;
+    const totalClasses = new Set(exams.map((e) => e.groupLabel)).size;
+    return { totalSessions, totalStudents, publishedCount, totalClasses };
+  }, [exams]);
 
   async function handleCreate() {
     if (!form.name || !form.nameUrdu || !form.startDate || !form.endDate) {
@@ -517,28 +608,224 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   const titleUrdu = system === "school" ? "امتحانات — اسکول" : "امتحانات — مدرسہ";
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title={title}
         titleUrdu={titleUrdu}
         description="Internal exam sessions, subjects, marks, DMCs, seating plans, and published results."
         actions={
-          <Button size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
+          <Button size="sm" className="gap-1.5 shadow-xs" onClick={() => setOpen(true)}>
             <Plus className="h-4 w-4" />
             New Exam
           </Button>
         }
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {loading ? (
-          <Card className="p-5 text-sm text-muted-foreground">Loading exams...</Card>
-        ) : exams.length === 0 ? (
-          <Card className="p-5 text-sm text-muted-foreground">No exams have been created yet.</Card>
-        ) : (
-          exams.map((exam) => <ExamCard key={exam.id} exam={exam} onDelete={setDeleteTarget} />)
-        )}
+      {/* 4 Summary Metric Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="p-4 border border-border/70 bg-card/60 flex items-center justify-between shadow-xs">
+          <div>
+            <p className="text-xs text-muted-foreground font-medium">Exam Sessions</p>
+            <p className="font-heading text-xl font-bold mt-1 tabular-nums">{stats.totalSessions}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{stats.totalClasses} classes active</p>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+            <ClipboardList className="h-5 w-5" />
+          </div>
+        </Card>
+
+        <Card className="p-4 border border-border/70 bg-card/60 flex items-center justify-between shadow-xs">
+          <div>
+            <p className="text-xs text-muted-foreground font-medium">Total Examinees</p>
+            <p className="font-heading text-xl font-bold mt-1 text-primary tabular-nums">{stats.totalStudents}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Enrolled candidates</p>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+            <Users className="h-5 w-5" />
+          </div>
+        </Card>
+
+        <Card className="p-4 border border-border/70 bg-card/60 flex items-center justify-between shadow-xs">
+          <div>
+            <p className="text-xs text-muted-foreground font-medium">Published Status</p>
+            <p className="font-heading text-xl font-bold mt-1 text-emerald-600 dark:text-emerald-400 tabular-nums">
+              {stats.publishedCount} / {stats.totalSessions}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Results & DMCs ready</p>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+        </Card>
+
+        <Card className="p-4 border border-border/70 bg-card/60 flex items-center justify-between shadow-xs">
+          <div>
+            <p className="text-xs text-muted-foreground font-medium">Academic Terms</p>
+            <p className="font-heading text-xl font-bold mt-1 tabular-nums">{uniqueTerms.length}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">Evaluation cycles</p>
+          </div>
+          <div className="h-10 w-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
+            <Layers className="h-5 w-5" />
+          </div>
+        </Card>
       </div>
+
+      {/* Filter and Control Toolbar */}
+      <Card className="p-4 border border-border/70 bg-card/50 shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          {/* Search bar */}
+          <div className="relative flex-1 min-w-[220px]">
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by exam name, class, year..."
+              className="ps-9 pe-8 h-9 text-xs"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter selectors */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Term filter */}
+            <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+              <SelectTrigger className="h-9 text-xs w-[170px]">
+                <SelectValue placeholder="All Terms" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Exam Terms</SelectItem>
+                {uniqueTerms.map((term) => (
+                  <SelectItem key={term} value={term}>
+                    {term}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Class filter */}
+            <Select value={selectedClass} onValueChange={setSelectedClass}>
+              <SelectTrigger className="h-9 text-xs w-[140px]">
+                <SelectValue placeholder="All Classes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {uniqueClasses.map((cls) => (
+                  <SelectItem key={cls} value={cls}>
+                    {cls}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Status filter */}
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="h-9 text-xs w-[130px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="locked">Locked</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* View mode toggle */}
+            <div className="flex items-center border border-border rounded-lg p-0.5 bg-muted/30">
+              <Button
+                variant={viewMode === "grid" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 w-7 p-0 cursor-pointer"
+                onClick={() => setViewMode("grid")}
+                title="Grid View"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant={viewMode === "table" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 w-7 p-0 cursor-pointer"
+                onClick={() => setViewMode("table")}
+                title="Table View"
+              >
+                <TableIcon className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter badge indicators */}
+        {(searchQuery || selectedTerm !== "all" || selectedClass !== "all" || selectedStatus !== "all") && (
+          <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-border/50 text-xs">
+            <span className="text-muted-foreground">
+              Showing <strong className="text-foreground">{filteredExams.length}</strong> of{" "}
+              {exams.length} exams matching filters
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedTerm("all");
+                setSelectedClass("all");
+                setSelectedStatus("all");
+              }}
+              className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-medium"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear all filters
+            </button>
+          </div>
+        )}
+      </Card>
+
+      {/* Content area */}
+      {loading ? (
+        <Card className="p-12 text-center text-sm text-muted-foreground">
+          Loading examinations...
+        </Card>
+      ) : filteredExams.length === 0 ? (
+        <Card className="p-12 text-center border-dashed">
+          <GraduationCap className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+          <h4 className="font-semibold text-base">No examinations found</h4>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+            {exams.length === 0
+              ? "No exam sessions have been created yet. Click 'New Exam' to schedule one."
+              : "No exam sessions match your active search and filter criteria."}
+          </p>
+          {(searchQuery || selectedTerm !== "all" || selectedClass !== "all" || selectedStatus !== "all") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedTerm("all");
+                setSelectedClass("all");
+                setSelectedStatus("all");
+              }}
+              className="mt-4 text-xs"
+            >
+              Reset Filters
+            </Button>
+          )}
+        </Card>
+      ) : viewMode === "grid" ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filteredExams.map((exam) => (
+            <ExamCard key={exam.id} exam={exam} onDelete={setDeleteTarget} />
+          ))}
+        </div>
+      ) : (
+        <ExamTableView exams={filteredExams} onDelete={setDeleteTarget} />
+      )}
 
       <ResponsiveDialog
         title="Create Exam"
@@ -786,31 +1073,198 @@ export function ExamReportWorkspace() {
   );
 }
 
-function ExamCard({ exam, onDelete }: { exam: ExamSession; onDelete?: (exam: ExamSession) => void }) {
+function ExamTableView({
+  exams,
+  onDelete,
+}: {
+  exams: ExamSession[];
+  onDelete?: (exam: ExamSession) => void;
+}) {
   return (
-    <Card className="flex flex-col p-5">
+    <Card className="overflow-hidden border border-border/70 shadow-xs">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40">
+              <TableHead className="font-semibold text-xs">Exam Title</TableHead>
+              <TableHead className="font-semibold text-xs">Class / Group</TableHead>
+              <TableHead className="font-semibold text-xs">Academic Year</TableHead>
+              <TableHead className="font-semibold text-xs">Date Range</TableHead>
+              <TableHead className="font-semibold text-xs text-center">Subjects</TableHead>
+              <TableHead className="font-semibold text-xs text-center">Students</TableHead>
+              <TableHead className="font-semibold text-xs text-center">Status</TableHead>
+              <TableHead className="font-semibold text-xs text-end pe-4">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {exams.map((exam) => (
+              <TableRow key={exam.id} className="hover:bg-muted/30 transition-colors">
+                <TableCell>
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                      <GraduationCap className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-xs text-foreground">{cleanExamName(exam.name)}</p>
+                      <p className="font-urdu text-[11px] text-muted-foreground">{exam.nameUrdu}</p>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="gap-1 font-semibold text-xs py-0.5 px-2 bg-primary/10 text-primary border border-primary/20">
+                    <School className="h-3 w-3" />
+                    {exam.groupLabel}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">{exam.academicYear}</TableCell>
+                <TableCell className="text-xs whitespace-nowrap">
+                  {formatDate(exam.startDate)} – {formatDate(exam.endDate)}
+                </TableCell>
+                <TableCell className="text-center font-medium text-xs">
+                  {exam.subjects.length}
+                </TableCell>
+                <TableCell className="text-center font-semibold text-xs">
+                  {exam.studentCount}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge
+                    variant="outline"
+                    className={cn("capitalize text-[10px] font-medium px-2 py-0.5", statusTone[exam.status])}
+                  >
+                    {exam.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-end pe-4">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <ExamCardLinks exam={exam} />
+                    {onDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => onDelete(exam)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </Card>
+  );
+}
+
+function ExamCard({ exam, onDelete }: { exam: ExamSession; onDelete?: (exam: ExamSession) => void }) {
+  const cleanTitle = cleanExamName(exam.name);
+  return (
+    <Card className="flex flex-col p-5 border border-border/70 hover:border-primary/40 hover:shadow-md transition-all duration-200 group bg-card">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate font-semibold">{exam.name}</p>
-          <p className="font-urdu text-sm text-muted-foreground">{exam.nameUrdu}</p>
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+            <GraduationCap className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h4 className="font-semibold text-base tracking-tight truncate group-hover:text-primary transition-colors">
+              {cleanTitle}
+            </h4>
+            <p className="font-urdu text-xs text-muted-foreground mt-0.5 truncate">
+              {exam.nameUrdu}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className={cn("capitalize", statusTone[exam.status])}>{exam.status}</Badge>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Badge
+            variant="outline"
+            className={cn("capitalize text-[11px] font-medium px-2 py-0.5 flex items-center gap-1.5", statusTone[exam.status])}
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                exam.status === "published"
+                  ? "bg-emerald-500"
+                  : exam.status === "active"
+                  ? "bg-sky-500"
+                  : exam.status === "locked"
+                  ? "bg-amber-500"
+                  : "bg-slate-400",
+              )}
+            />
+            {exam.status}
+          </Badge>
           {onDelete && (
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => onDelete(exam)}>
-              <Trash2 className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
+              onClick={() => onDelete(exam)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
         </div>
       </div>
-      <div className="mt-4 flex-1 space-y-2 text-sm">
-        <Row label="Group" value={exam.groupLabel} />
-        <Row label="Academic Year" value={exam.academicYear} />
-        <Row label="Dates" value={`${formatDate(exam.startDate)} - ${formatDate(exam.endDate)}`} />
-        <Row label="Subjects" value={String(exam.subjects.length)} />
-        <Row label="Students" value={String(exam.studentCount)} />
+
+      <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border/60">
+        <Badge
+          variant="secondary"
+          className="gap-1 font-semibold text-xs py-0.5 px-2 bg-primary/10 text-primary border border-primary/20"
+        >
+          <School className="h-3 w-3" />
+          {exam.groupLabel}
+        </Badge>
+        <Badge variant="outline" className="text-xs text-muted-foreground py-0.5 px-2">
+          <Calendar className="h-3 w-3 me-1 opacity-70" />
+          {exam.academicYear}
+        </Badge>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-3">
+
+      <div className="grid grid-cols-2 gap-2 mt-3.5 text-xs">
+        <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40">
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <CalendarDays className="h-3 w-3" />
+            Schedule
+          </p>
+          <p className="font-medium text-foreground mt-0.5 truncate">
+            {formatDate(exam.startDate)} – {formatDate(exam.endDate)}
+          </p>
+        </div>
+
+        <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40">
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <Users className="h-3 w-3" />
+            Candidates
+          </p>
+          <p className="font-semibold text-foreground mt-0.5">
+            {exam.studentCount} Students
+          </p>
+        </div>
+
+        <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40">
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <BookOpen className="h-3 w-3" />
+            Subjects
+          </p>
+          <p className="font-semibold text-foreground mt-0.5">
+            {exam.subjects.length} Subjects
+          </p>
+        </div>
+
+        <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40">
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <Award className="h-3 w-3" />
+            Lock Status
+          </p>
+          <p className="font-medium text-foreground mt-0.5">
+            {exam.subjects.every((s) => s.locked) ? "Locked" : "Open for Marks"}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-border/60 grid grid-cols-3 gap-2">
         <ExamCardLinks exam={exam} />
       </div>
     </Card>
@@ -821,17 +1275,41 @@ function ExamCardLinks({ exam }: { exam: ExamSession }) {
   if (exam.system === "school") {
     return (
       <>
-        <Button asChild size="sm" variant="outline"><Link to="/school/exams/$id" params={{ id: exam.id }}>Detail</Link></Button>
-        <Button asChild size="sm" variant="outline"><Link to="/school/exams/$id/seating" params={{ id: exam.id }}>Seating</Link></Button>
-        <Button asChild size="sm" variant="outline"><Link to="/school/exams/$id/results" params={{ id: exam.id }}>Marks</Link></Button>
+        <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs h-8">
+          <Link to="/school/exams/$id" params={{ id: exam.id }}>
+            <Eye className="h-3.5 w-3.5" /> Detail
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs h-8">
+          <Link to="/school/exams/$id/seating" params={{ id: exam.id }}>
+            <Grid3x3 className="h-3.5 w-3.5" /> Seating
+          </Link>
+        </Button>
+        <Button asChild size="sm" className="gap-1.5 text-xs h-8 bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs">
+          <Link to="/school/exams/$id/results" params={{ id: exam.id }}>
+            <Award className="h-3.5 w-3.5" /> Marks
+          </Link>
+        </Button>
       </>
     );
   }
   return (
     <>
-      <Button asChild size="sm" variant="outline"><Link to="/madrassa/exams/$id" params={{ id: exam.id }}>Detail</Link></Button>
-      <Button asChild size="sm" variant="outline"><Link to="/madrassa/exams/$id/seating" params={{ id: exam.id }}>Seating</Link></Button>
-      <Button asChild size="sm" variant="outline"><Link to="/madrassa/exams/$id/marks" params={{ id: exam.id }}>Marks</Link></Button>
+      <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs h-8">
+        <Link to="/madrassa/exams/$id" params={{ id: exam.id }}>
+          <Eye className="h-3.5 w-3.5" /> Detail
+        </Link>
+      </Button>
+      <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs h-8">
+        <Link to="/madrassa/exams/$id/seating" params={{ id: exam.id }}>
+          <Grid3x3 className="h-3.5 w-3.5" /> Seating
+        </Link>
+      </Button>
+      <Button asChild size="sm" className="gap-1.5 text-xs h-8 bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs">
+        <Link to="/madrassa/exams/$id/marks" params={{ id: exam.id }}>
+          <Award className="h-3.5 w-3.5" /> Marks
+        </Link>
+      </Button>
     </>
   );
 }

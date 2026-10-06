@@ -189,12 +189,18 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
   const handleModuleChange = (newModule: "madrassa" | "school") => {
     setModule(newModule);
     if (newModule === "school" && pathname.startsWith("/madrassa")) {
-      const targetUrl = pathname.replace("/madrassa", "/school");
+      let targetUrl = pathname.replace("/madrassa", "/school");
+      if (targetUrl === "/school/categories" || targetUrl === "/school/hifz") {
+        targetUrl = "/school/classes";
+      }
       navigate({ to: targetUrl }).catch(() => {
         navigate({ to: "/school/students" });
       });
     } else if (newModule === "madrassa" && pathname.startsWith("/school")) {
-      const targetUrl = pathname.replace("/school", "/madrassa");
+      let targetUrl = pathname.replace("/school", "/madrassa");
+      if (targetUrl === "/madrassa/classes") {
+        targetUrl = "/madrassa/categories";
+      }
       navigate({ to: targetUrl }).catch(() => {
         navigate({ to: "/madrassa/students" });
       });

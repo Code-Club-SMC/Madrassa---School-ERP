@@ -59,6 +59,7 @@ import { Route as AuthenticatedReportsCategoryRouteImport } from './routes/_auth
 import { Route as AuthenticatedReportsExamsRouteImport } from './routes/_authenticated/reports/exams'
 import { Route as AuthenticatedReportsMonthlyRouteImport } from './routes/_authenticated/reports/monthly'
 import { Route as AuthenticatedSchoolAttendanceRouteImport } from './routes/_authenticated/school/attendance'
+import { Route as AuthenticatedSchoolCategoriesRouteImport } from './routes/_authenticated/school/categories'
 import { Route as AuthenticatedSchoolClassesRouteImport } from './routes/_authenticated/school/classes'
 import { Route as AuthenticatedSchoolExamsRouteImport } from './routes/_authenticated/school/exams'
 import { Route as AuthenticatedSchoolFeesRouteImport } from './routes/_authenticated/school/fees'
@@ -450,6 +451,12 @@ const AuthenticatedSchoolAttendanceRoute =
   AuthenticatedSchoolAttendanceRouteImport.update({
     id: '/attendance',
     path: '/attendance',
+    getParentRoute: () => AuthenticatedSchoolRoute,
+  } as any)
+const AuthenticatedSchoolCategoriesRoute =
+  AuthenticatedSchoolCategoriesRouteImport.update({
+    id: '/categories',
+    path: '/categories',
     getParentRoute: () => AuthenticatedSchoolRoute,
   } as any)
 const AuthenticatedSchoolClassesRoute =
@@ -1171,6 +1178,7 @@ export interface FileRoutesByFullPath {
   '/reports/exams': typeof AuthenticatedReportsExamsRoute
   '/reports/monthly': typeof AuthenticatedReportsMonthlyRoute
   '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
+  '/school/categories': typeof AuthenticatedSchoolCategoriesRoute
   '/school/classes': typeof AuthenticatedSchoolClassesRouteWithChildren
   '/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
   '/school/fees': typeof AuthenticatedSchoolFeesRoute
@@ -1334,6 +1342,7 @@ export interface FileRoutesByTo {
   '/reports/exams': typeof AuthenticatedReportsExamsRoute
   '/reports/monthly': typeof AuthenticatedReportsMonthlyRoute
   '/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
+  '/school/categories': typeof AuthenticatedSchoolCategoriesRoute
   '/school/classes': typeof AuthenticatedSchoolClassesRouteWithChildren
   '/school/fees': typeof AuthenticatedSchoolFeesRoute
   '/school/students': typeof AuthenticatedSchoolStudentsRoute
@@ -1506,6 +1515,7 @@ export interface FileRoutesById {
   '/_authenticated/reports/exams': typeof AuthenticatedReportsExamsRoute
   '/_authenticated/reports/monthly': typeof AuthenticatedReportsMonthlyRoute
   '/_authenticated/school/attendance': typeof AuthenticatedSchoolAttendanceRoute
+  '/_authenticated/school/categories': typeof AuthenticatedSchoolCategoriesRoute
   '/_authenticated/school/classes': typeof AuthenticatedSchoolClassesRouteWithChildren
   '/_authenticated/school/exams': typeof AuthenticatedSchoolExamsRouteWithChildren
   '/_authenticated/school/fees': typeof AuthenticatedSchoolFeesRoute
@@ -1679,6 +1689,7 @@ export interface FileRouteTypes {
     | '/reports/exams'
     | '/reports/monthly'
     | '/school/attendance'
+    | '/school/categories'
     | '/school/classes'
     | '/school/exams'
     | '/school/fees'
@@ -1842,6 +1853,7 @@ export interface FileRouteTypes {
     | '/reports/exams'
     | '/reports/monthly'
     | '/school/attendance'
+    | '/school/categories'
     | '/school/classes'
     | '/school/fees'
     | '/school/students'
@@ -2013,6 +2025,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports/exams'
     | '/_authenticated/reports/monthly'
     | '/_authenticated/school/attendance'
+    | '/_authenticated/school/categories'
     | '/_authenticated/school/classes'
     | '/_authenticated/school/exams'
     | '/_authenticated/school/fees'
@@ -2550,6 +2563,13 @@ declare module '@tanstack/react-router' {
       path: '/attendance'
       fullPath: '/school/attendance'
       preLoaderRoute: typeof AuthenticatedSchoolAttendanceRouteImport
+      parentRoute: typeof AuthenticatedSchoolRoute
+    }
+    '/_authenticated/school/categories': {
+      id: '/_authenticated/school/categories'
+      path: '/categories'
+      fullPath: '/school/categories'
+      preLoaderRoute: typeof AuthenticatedSchoolCategoriesRouteImport
       parentRoute: typeof AuthenticatedSchoolRoute
     }
     '/_authenticated/school/classes': {
@@ -3570,6 +3590,7 @@ const AuthenticatedSchoolExamsRouteWithChildren =
 
 interface AuthenticatedSchoolRouteChildren {
   AuthenticatedSchoolAttendanceRoute: typeof AuthenticatedSchoolAttendanceRoute
+  AuthenticatedSchoolCategoriesRoute: typeof AuthenticatedSchoolCategoriesRoute
   AuthenticatedSchoolClassesRoute: typeof AuthenticatedSchoolClassesRouteWithChildren
   AuthenticatedSchoolExamsRoute: typeof AuthenticatedSchoolExamsRouteWithChildren
   AuthenticatedSchoolFeesRoute: typeof AuthenticatedSchoolFeesRoute
@@ -3579,6 +3600,7 @@ interface AuthenticatedSchoolRouteChildren {
 
 const AuthenticatedSchoolRouteChildren: AuthenticatedSchoolRouteChildren = {
   AuthenticatedSchoolAttendanceRoute: AuthenticatedSchoolAttendanceRoute,
+  AuthenticatedSchoolCategoriesRoute: AuthenticatedSchoolCategoriesRoute,
   AuthenticatedSchoolClassesRoute: AuthenticatedSchoolClassesRouteWithChildren,
   AuthenticatedSchoolExamsRoute: AuthenticatedSchoolExamsRouteWithChildren,
   AuthenticatedSchoolFeesRoute: AuthenticatedSchoolFeesRoute,
