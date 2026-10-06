@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { eq, notInArray } from "drizzle-orm";
 import { madrassaCategories, madrassaSubcategories } from "@/db/schema/academic";
 
-const KEEP_CATEGORY_IDS = ["nazara_male", "hifiz_male", "alam_male", "nazara_female", "alam_female"];
+const KEEP_CATEGORY_IDS = ["dars_nizami", "hifz", "qaida_nazira"];
 
 async function main() {
   const orphanSubcategories = await db.select().from(madrassaSubcategories).where(notInArray(madrassaSubcategories.categoryId, KEEP_CATEGORY_IDS));
