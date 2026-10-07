@@ -2,6 +2,11 @@ import { MODULE_REGISTRY, type UserPermissions } from "./module-registry";
 
 export type DefaultableRole =
   | "admin"
+  | "admission_admin"
+  | "academic_admin"
+  | "finance_admin"
+  | "hr_admin"
+  | "reports_admin"
   | "principal"
   | "hr_manager"
   | "accountant"
@@ -45,6 +50,59 @@ export const ROLE_DEFAULTS: Record<DefaultableRole, UserPermissions> = {
     settings_holidays:       { view: true, create: true, edit: true, delete: true },
     settings_website:        { view: true, edit: true, manage: false },
     settings_audit:          { view: false },
+  },
+  admission_admin: {
+    dashboard:               { view: true },
+    admission_new:           { view: true, create: true },
+    admission_queue:         { view: true, approve: true, delete: false },
+    id_cards:                { view: true, print: true },
+    madrassa_students:       { view: true },
+    school_students:         { view: true },
+    reports_monthly:         { view: true },
+  },
+  academic_admin: {
+    dashboard:               { view: true },
+    madrassa_students:       { view: true, create: true, edit: true, delete: false, export: true, print: true },
+    madrassa_attendance:     { view: true, create: true, edit: true, export: true },
+    madrassa_categories:     { view: true, create: true, edit: true, delete: false },
+    madrassa_exams_internal: { view: true, create: true, edit: true, delete: false, mark_entry: true, print: true, export: true },
+    madrassa_exams_board:    { view: true, create: true, edit: true, export: true },
+    madrassa_timetable:      { view: true, create: true, edit: true, delete: true, print: true },
+    madrassa_hifz:           { view: true, create: true, edit: true },
+    school_students:         { view: true, create: true, edit: true, delete: false, export: true, print: true },
+    school_attendance:       { view: true, create: true, edit: true, export: true },
+    school_classes:          { view: true, create: true, edit: true, delete: false },
+    school_exams_internal:   { view: true, create: true, edit: true, delete: false, mark_entry: true, print: true, export: true },
+    school_exams_board:      { view: true, create: true, edit: true, export: true },
+    school_timetable:        { view: true, create: true, edit: true, delete: true, print: true },
+    teachers:                { view: true },
+    settings_academic_year:  { view: true, manage: true },
+    reports_results:         { view: true, export: true, print: true },
+  },
+  finance_admin: {
+    dashboard:               { view: true },
+    madrassa_fees:           { view: true, create: true, edit: true, export: true, print: true },
+    school_fees:             { view: true, create: true, edit: true, export: true, print: true },
+    finance:                 { view: true, create: true, edit: true, export: true, print: true },
+    inventory:               { view: true, create: true, edit: true, export: true },
+    reports_monthly:         { view: true, export: true, print: true },
+    reports_annual:          { view: true, export: true, print: true },
+  },
+  hr_admin: {
+    dashboard:               { view: true },
+    teachers:                { view: true, create: true, edit: true, print: true, export: true },
+    settings_holidays:       { view: true, create: true, edit: true, delete: true },
+    settings_website:        { view: true, edit: true },
+    reports_attendance:      { view: true, export: true, print: true },
+    reports_monthly:         { view: true, export: true },
+  },
+  reports_admin: {
+    dashboard:               { view: true },
+    reports_attendance:      { view: true, export: true, print: true },
+    reports_category:        { view: true, export: true, print: true },
+    reports_results:         { view: true, export: true, print: true },
+    reports_monthly:         { view: true, export: true, print: true },
+    reports_annual:          { view: true, export: true, print: true },
   },
   teacher: {
     dashboard:               { view: true },

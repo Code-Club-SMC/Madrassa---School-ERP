@@ -120,7 +120,7 @@ export function TeacherSidebar({ active, onChange }: Props) {
 
       <SidebarFooter className="border-t border-sidebar-border py-3">
         <div className="flex items-center gap-2.5 px-1 py-1">
-          <Avatar className="h-8 w-8">
+          <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary text-xs font-bold">
               {initials(user?.name ?? "T")}
             </AvatarFallback>
@@ -135,6 +135,17 @@ export function TeacherSidebar({ active, onChange }: Props) {
               </p>
             </div>
           )}
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+              window.location.href = "/login";
+            }}
+            title={lang === "ur" ? "لاگ آؤٹ" : "Sign Out"}
+            className="p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors shrink-0"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </SidebarFooter>
     </Sidebar>

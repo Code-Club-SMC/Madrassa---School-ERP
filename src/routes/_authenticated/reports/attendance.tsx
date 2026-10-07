@@ -34,12 +34,21 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AXIS_TICK, CHART_COLORS, TOOLTIP_STYLE } from "@/lib/chart-theme";
 import { downloadCsv, kpiHtml, printHtml, tableHtml } from "@/lib/export";
+import { useLanguage } from "@/components/language-context";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/reports/attendance")({
   component: AttendanceReport,
 });
 
-type ReportSystem = "both" | "school" | "madrassa";
+type ReportSystem =
+  | "both"
+  | "al_zainab_madrassa"
+  | "al_zainab_school"
+  | "al_qasmia_madrassa"
+  | "al_qasim_academy"
+  | "school"
+  | "madrassa";
 
 type AttendanceDailySummaryRow = {
   date: string;
@@ -112,6 +121,8 @@ const emptyReport: AttendanceDailySummaryPayload = {
 };
 
 function AttendanceReport() {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const [dateFrom, setDateFrom] = useState(() => formatLocalDate(daysAgo(29)));
   const [dateTo, setDateTo] = useState(() => formatLocalDate(new Date()));
   const [system, setSystem] = useState<ReportSystem>("both");
@@ -229,10 +240,10 @@ function AttendanceReport() {
       />
 
       <Card className="mb-4 p-4">
-        <div className="grid gap-3 md:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(180px,240px)]">
+        <div className="grid gap-3 md:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(200px,260px)]">
           <div>
             <Label htmlFor="attendance-date-from" className="mb-1.5 block text-xs text-muted-foreground">
-              Date from
+              {isUrdu ? "تاریخ از" : "Date from"}
             </Label>
             <Input
               id="attendance-date-from"
@@ -243,7 +254,7 @@ function AttendanceReport() {
           </div>
           <div>
             <Label htmlFor="attendance-date-to" className="mb-1.5 block text-xs text-muted-foreground">
-              Date to
+              {isUrdu ? "تاریخ تا" : "Date to"}
             </Label>
             <Input
               id="attendance-date-to"
@@ -253,15 +264,21 @@ function AttendanceReport() {
             />
           </div>
           <div>
-            <Label className="mb-1.5 block text-xs text-muted-foreground">System</Label>
+            <Label className="mb-1.5 block text-xs text-muted-foreground">
+              {isUrdu ? "نظام / ادارہ" : "System / Institution"}
+            </Label>
             <Select value={system} onValueChange={(value) => setSystem(value as ReportSystem)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="both">Both systems</SelectItem>
-                <SelectItem value="school">School</SelectItem>
-                <SelectItem value="madrassa">Madrassa</SelectItem>
+                <SelectItem value="both">{isUrdu ? "تمام نظام و ادارے" : "All Systems & Institutions"}</SelectItem>
+                <SelectItem value="al_zainab_madrassa">{isUrdu ? "الزینب مدرسہ" : "Al-Zainab Madrassa"}</SelectItem>
+                <SelectItem value="al_zainab_school">{isUrdu ? "الزینب سکول" : "Al-Zainab School"}</SelectItem>
+                <SelectItem value="al_qasmia_madrassa">{isUrdu ? "القاسمیہ مدرسہ" : "Al-Qasmia Madrassa"}</SelectItem>
+                <SelectItem value="al_qasim_academy">{isUrdu ? "القاسم اکیڈمی" : "Al-Qasmian Academy"}</SelectItem>
+                <SelectItem value="school">{isUrdu ? "تمام سکول" : "All Schools"}</SelectItem>
+                <SelectItem value="madrassa">{isUrdu ? "تمام مدارس" : "All Madrassas"}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -342,40 +359,47 @@ function AttendanceReport() {
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-2 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-sm font-semibold">Daily Placement Breakdown</h3>
-            <p dir="rtl" lang="ur" className="font-urdu text-sm text-muted-foreground">
-              روزانہ درجہ وار حاضری
-            </p>
+            <h3 className={cn("text-sm font-semibold", isUrdu ? "font-urdu text-base" : "font-heading")}>
+              {isUrdu ? "روزانہ درجہ وار حاضری" : "Daily Placement Breakdown"}
+            </h3>
           </div>
-          <Badge variant="outline">{reportQuery.isFetching ? "Loading..." : `${tableRows.length} rows`}</Badge>
+          <Badge variant="outline">
+            {reportQuery.isFetching
+              ? isUrdu
+                ? "لوڈ ہو رہا ہے..."
+                : "Loading..."
+              : isUrdu
+              ? `${tableRows.length} قطاریں`
+              : `${tableRows.length} rows`}
+          </Badge>
         </div>
 
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead>Date</TableHead>
-                <TableHead>System</TableHead>
-                <TableHead>Institution</TableHead>
-                <TableHead>Placement</TableHead>
-                <TableHead className="text-right">Present</TableHead>
-                <TableHead className="text-right">Late</TableHead>
-                <TableHead className="text-right">Absent</TableHead>
-                <TableHead className="text-right">Leave</TableHead>
-                <TableHead className="text-right">Rate</TableHead>
+                <TableHead>{isUrdu ? "تاریخ" : "Date"}</TableHead>
+                <TableHead>{isUrdu ? "نظام" : "System"}</TableHead>
+                <TableHead>{isUrdu ? "ادارہ" : "Institution"}</TableHead>
+                <TableHead>{isUrdu ? "درجہ" : "Placement"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "حاضر" : "Present"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "تاخیر" : "Late"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "غیر حاضر" : "Absent"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "رخصت" : "Leave"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "شرح" : "Rate"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {reportQuery.isLoading ? (
                 <TableRow>
                   <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
-                    Loading attendance report...
+                    {isUrdu ? "حاضری رپورٹ لوڈ ہو رہی ہے..." : "Loading attendance report..."}
                   </TableCell>
                 </TableRow>
               ) : tableRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
-                    No attendance records found for this range.
+                    {isUrdu ? "اس تاریخ کے لیے کوئی ریکارڈ نہیں ملا۔" : "No attendance records found for this range."}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -384,19 +408,17 @@ function AttendanceReport() {
                     <TableCell className="font-mono text-xs">{row.date}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">
-                        {row.system}
+                        {row.system === "madrassa" ? (isUrdu ? "مدرسہ" : "madrassa") : (isUrdu ? "سکول" : "school")}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{row.institutionName}</div>
-                      <div dir="rtl" lang="ur" className="font-urdu text-xs text-muted-foreground">
-                        {row.institutionNameUrdu}
+                      <div className={cn("text-sm", isUrdu && "font-urdu")}>
+                        {isUrdu ? (row.institutionNameUrdu || row.institutionName) : row.institutionName}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{row.placementLabel}</div>
-                      <div dir="rtl" lang="ur" className="font-urdu text-xs text-muted-foreground">
-                        {row.programNameUrdu}
+                      <div className={cn("text-sm", isUrdu && "font-urdu")}>
+                        {isUrdu ? (row.programNameUrdu || row.placementLabel) : row.placementLabel}
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-mono text-chart-1">{row.summary.present}</TableCell>
@@ -534,10 +556,14 @@ function reportTableCells(row: AttendanceDailySummaryRow) {
   ];
 }
 
-function systemLabel(system: ReportSystem | "school" | "madrassa") {
-  if (system === "school") return "School";
-  if (system === "madrassa") return "Madrassa";
-  return "Both systems";
+function systemLabel(system: ReportSystem | "school" | "madrassa", isUrdu = false) {
+  if (system === "al_zainab_madrassa") return isUrdu ? "الزینب مدرسہ" : "Al-Zainab Madrassa";
+  if (system === "al_zainab_school") return isUrdu ? "الزینب سکول" : "Al-Zainab School";
+  if (system === "al_qasmia_madrassa") return isUrdu ? "القاسمیہ مدرسہ" : "Al-Qasmia Madrassa";
+  if (system === "al_qasim_academy") return isUrdu ? "القاسم اکیڈمی" : "Al-Qasmian Academy";
+  if (system === "school") return isUrdu ? "تمام سکول" : "School";
+  if (system === "madrassa") return isUrdu ? "تمام مدارس" : "Madrassa";
+  return isUrdu ? "تمام نظام" : "Both systems";
 }
 
 function formatPercent(value: number) {

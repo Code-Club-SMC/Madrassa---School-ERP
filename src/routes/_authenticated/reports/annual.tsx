@@ -12,12 +12,16 @@ import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 import { madrassaCategories, students, enrollmentTrend } from "@/mock";
 import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
+import { useLanguage } from "@/components/language-context";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/reports/annual")({
   component: AnnualReport,
 });
 
 function AnnualReport() {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const months = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
   const finance = months.map((m, i) => {
     const collection = 410000 + i * 18000 + (i % 3) * 7000;
@@ -164,17 +168,18 @@ function AnnualReport() {
 
       <Card className="p-5 mb-4">
         <div className="mb-3">
-          <h3 className="font-heading font-semibold text-sm">Month-by-Month Finance</h3>
-          <p dir="rtl" lang="ur" className="font-urdu text-sm text-muted-foreground leading-tight">ماہ بہ ماہ مالی صورت حال</p>
+          <h3 className={cn("font-semibold text-sm", isUrdu ? "font-urdu text-base" : "font-heading")}>
+            {isUrdu ? "ماہ بہ ماہ مالی صورت حال" : "Month-by-Month Finance"}
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Month</TableHead>
-                <TableHead className="text-right">Collection</TableHead>
-                <TableHead className="text-right">Expenses</TableHead>
-                <TableHead className="text-right">Surplus</TableHead>
+                <TableHead>{isUrdu ? "مہینہ" : "Month"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "وصولی" : "Collection"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "اخراجات" : "Expenses"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "بچت / خسارہ" : "Surplus"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -192,13 +197,25 @@ function AnnualReport() {
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-heading font-semibold text-sm mb-1">Insights</h3>
-        <p dir="rtl" lang="ur" className="font-urdu text-sm text-muted-foreground mb-3">اہم نکات</p>
-        <ul className="text-sm space-y-2 list-disc ps-5 text-muted-foreground">
-          <li>Year-on-year enrollment growth: <span className="font-semibold text-foreground">{yoyGrowth}%</span>.</li>
-          <li>Operating surplus of <span className="font-semibold text-foreground">PKR {surplus.toLocaleString()}</span> ({Math.round((surplus / totalCollection) * 100)}% margin) — financial position remains healthy.</li>
-          <li>Best performing subject: <span className="font-semibold text-foreground">{[...academicOutcomes].sort((a, b) => b.pass - a.pass)[0].subject}</span> ({[...academicOutcomes].sort((a, b) => b.pass - a.pass)[0].pass}% pass).</li>
-          <li>Largest category gain: <span className="font-semibold text-foreground">{[...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].name}</span> (+{[...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].current - [...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].previous} students).</li>
+        <h3 className={cn("font-semibold text-sm mb-3", isUrdu ? "font-urdu text-base" : "font-heading")}>
+          {isUrdu ? "اہم نکات" : "Insights"}
+        </h3>
+        <ul className={cn("text-sm space-y-2 list-disc ps-5 text-muted-foreground", isUrdu && "font-urdu")}>
+          {isUrdu ? (
+            <>
+              <li>سال بہ سال داخلوں میں شرح نمو: <span className="font-semibold text-foreground">{yoyGrowth}%</span>۔</li>
+              <li>آپریٹنگ بچت: <span className="font-semibold text-foreground">PKR {surplus.toLocaleString()}</span> ({Math.round((surplus / totalCollection) * 100)}% مارجن) — مالی پوزیشن مستحکم ہے۔</li>
+              <li>بہترین کارکردگی والا مضمون: <span className="font-semibold text-foreground">{[...academicOutcomes].sort((a, b) => b.pass - a.pass)[0].subject}</span> ({[...academicOutcomes].sort((a, b) => b.pass - a.pass)[0].pass}% کامیابی)۔</li>
+              <li>سب سے زیادہ ترقی والا شعبہ: <span className="font-semibold text-foreground">{[...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].name}</span> (+{[...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].current - [...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].previous} طلبہ)۔</li>
+            </>
+          ) : (
+            <>
+              <li>Year-on-year enrollment growth: <span className="font-semibold text-foreground">{yoyGrowth}%</span>.</li>
+              <li>Operating surplus of <span className="font-semibold text-foreground">PKR {surplus.toLocaleString()}</span> ({Math.round((surplus / totalCollection) * 100)}% margin) — financial position remains healthy.</li>
+              <li>Best performing subject: <span className="font-semibold text-foreground">{[...academicOutcomes].sort((a, b) => b.pass - a.pass)[0].subject}</span> ({[...academicOutcomes].sort((a, b) => b.pass - a.pass)[0].pass}% pass).</li>
+              <li>Largest category gain: <span className="font-semibold text-foreground">{[...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].name}</span> (+{[...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].current - [...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].previous} students).</li>
+            </>
+          )}
         </ul>
       </Card>
     </div>

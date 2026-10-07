@@ -4,7 +4,6 @@ import {
   Users2,
   CalendarCheck,
   Banknote,
-  Layers,
   BookOpen,
   CalendarClock,
   GraduationCap,
@@ -48,62 +47,89 @@ export type NavItem = {
   group: "global" | "madrassa" | "school" | "shared" | "admin";
 };
 
-const ANY_STAFF: UserRole[] = ["super_admin", "admin", "teacher"];
+const SUPER_ADMINS: UserRole[] = ["super_admin"];
 const ADMINS: UserRole[] = ["super_admin", "admin"];
-const TEACHER_MANAGERS: UserRole[] = ["super_admin", "admin", "principal", "hr_manager"];
+const ADMISSION_ROLES: UserRole[] = ["super_admin", "admin", "admission_admin"];
+const ACADEMIC_ROLES: UserRole[] = ["super_admin", "admin", "academic_admin", "principal"];
+const FINANCE_ROLES: UserRole[] = ["super_admin", "admin", "finance_admin", "accountant"];
+const HR_ROLES: UserRole[] = ["super_admin", "admin", "hr_admin", "hr_manager", "principal"];
+const REPORTS_ROLES: UserRole[] = [
+  "super_admin",
+  "admin",
+  "reports_admin",
+  "academic_admin",
+  "finance_admin",
+  "hr_admin",
+  "principal",
+  "teacher",
+];
+const TEACHER_MANAGERS: UserRole[] = ["super_admin", "admin", "hr_admin", "principal", "hr_manager"];
+const ANY_STAFF: UserRole[] = [
+  "super_admin",
+  "admin",
+  "admission_admin",
+  "academic_admin",
+  "finance_admin",
+  "hr_admin",
+  "reports_admin",
+  "principal",
+  "hr_manager",
+  "accountant",
+  "teacher",
+  "staff",
+];
 const PARENT_SAFE: UserRole[] = ["super_admin", "admin", "parent"];
-const NOTIFICATION_ROLES: UserRole[] = ["super_admin", "admin", "teacher", "parent"];
+const NOTIFICATION_ROLES: UserRole[] = [...ANY_STAFF, "parent"];
 
 export const navItems: NavItem[] = [
   // ---------- GLOBAL ----------
   { group: "global", url: "/dashboard", icon: LayoutDashboard, en: "Dashboard", ur: "ڈیش بورڈ", roles: [...ANY_STAFF, "parent"] },
-  { group: "global", url: "/admission", icon: FileSignature, en: "Admission", ur: "داخلہ", roles: ADMINS },
-  { group: "global", url: "/admission/new", icon: UserPlus, en: "New Admission", ur: "نیا داخلہ", roles: ADMINS },
-  { group: "global", url: "/admission/queue", icon: ListChecks, en: "Application Queue", ur: "درخواستوں کی قطار", roles: ADMINS },
-  { group: "global", url: "/admission/interviews", icon: UserRoundCheck, en: "Interviews", ur: "انٹرویو", roles: ADMINS },
+  { group: "global", url: "/admission", icon: FileSignature, en: "Admission", ur: "داخلہ", roles: ADMISSION_ROLES },
+  { group: "global", url: "/admission/new", icon: UserPlus, en: "New Admission", ur: "نیا داخلہ", roles: ADMISSION_ROLES },
+  { group: "global", url: "/admission/queue", icon: ListChecks, en: "Application Queue", ur: "درخواستوں کی قطار", roles: ADMISSION_ROLES },
+  { group: "global", url: "/admission/interviews", icon: UserRoundCheck, en: "Interviews", ur: "انٹرویو", roles: ADMISSION_ROLES },
 
   // ---------- MADRASSA ----------
-  { group: "madrassa", url: "/madrassa/students", icon: Users2, en: "Students", ur: "طلبہ", roles: ANY_STAFF },
-  { group: "madrassa", url: "/madrassa/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
-  { group: "madrassa", url: "/madrassa/categories", icon: BookOpen, en: "Categories", ur: "زمرے", roles: ADMINS },
-  { group: "madrassa", url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
-  { group: "madrassa", url: "/madrassa/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
+  { group: "madrassa", url: "/madrassa/students", icon: Users2, en: "Students", ur: "طلبہ", roles: [...ACADEMIC_ROLES, "teacher"] },
+  { group: "madrassa", url: "/madrassa/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: [...FINANCE_ROLES, ...ACADEMIC_ROLES] },
+  { group: "madrassa", url: "/madrassa/categories", icon: BookOpen, en: "Categories", ur: "زمرے", roles: ACADEMIC_ROLES },
+  { group: "madrassa", url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: [...ACADEMIC_ROLES, "teacher"] },
+  { group: "madrassa", url: "/madrassa/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: [...ACADEMIC_ROLES, "teacher"] },
 
   // ---------- SCHOOL ----------
-  { group: "school", url: "/school/students", icon: Users2, en: "Students", ur: "طلبہ", roles: ANY_STAFF },
-  { group: "school", url: "/school/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
-  { group: "school", url: "/school/classes", icon: School, en: "Classes", ur: "جماعتیں", roles: ADMINS },
-  { group: "school", url: "/school/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
-  { group: "school", url: "/school/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
+  { group: "school", url: "/school/students", icon: Users2, en: "Students", ur: "طلبہ", roles: [...ACADEMIC_ROLES, "teacher"] },
+  { group: "school", url: "/school/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: [...FINANCE_ROLES, ...ACADEMIC_ROLES] },
+  { group: "school", url: "/school/classes", icon: School, en: "Classes", ur: "جماعتیں", roles: ACADEMIC_ROLES },
+  { group: "school", url: "/school/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: [...ACADEMIC_ROLES, "teacher"] },
+  { group: "school", url: "/school/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: [...ACADEMIC_ROLES, "teacher"] },
 
   // ---------- SHARED ----------
-  { group: "shared", url: "/id-cards", icon: IdCard, en: "ID Cards", ur: "شناختی کارڈ", roles: ADMINS },
-  { group: "shared", url: "/reports", icon: BarChart3, en: "Reports", ur: "رپورٹس", roles: ANY_STAFF },
-  { group: "shared", url: "/reports/monthly", icon: CalendarDays, en: "Monthly Report", ur: "ماہانہ رپورٹ", roles: ANY_STAFF },
-  { group: "shared", url: "/reports/annual", icon: CalendarRange, en: "Annual Report", ur: "سالانہ رپورٹ", roles: ANY_STAFF },
-  { group: "shared", url: "/reports/exams", icon: GraduationCap, en: "Exam Report", ur: "امتحانی رپورٹ", roles: ANY_STAFF },
-  { group: "shared", url: "/reports/attendance", icon: CalendarCheck, en: "Attendance Report", ur: "حاضری رپورٹ", roles: ANY_STAFF },
-  { group: "shared", url: "/reports/category", icon: Layers, en: "Category Report", ur: "زمرہ رپورٹ", roles: ANY_STAFF },
-  { group: "shared", url: "/reports/admin", icon: Gauge, en: "Admin Report", ur: "ایڈمن رپورٹ", roles: ANY_STAFF },
-  { group: "shared", url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: ADMINS },
-  { group: "shared", url: "/finance", icon: Wallet, en: "Finance", ur: "مالیات", roles: ADMINS },
-  { group: "shared", url: "/finance/reports", icon: BarChart3, en: "Finance Reports", ur: "مالی رپورٹس", roles: ADMINS },
-  { group: "shared", url: "/finance/donations", icon: Receipt, en: "Donation Receipts", ur: "عطیات کی رسیدیں", roles: ADMINS },
-  { group: "shared", url: "/settings/concessions", icon: HandCoins, en: "Fee Concessions", ur: "رعایات", roles: ADMINS },
+  { group: "shared", url: "/id-cards", icon: IdCard, en: "ID Cards", ur: "شناختی کارڈ", roles: [...ADMISSION_ROLES, ...ACADEMIC_ROLES] },
+  { group: "shared", url: "/reports", icon: BarChart3, en: "Reports", ur: "رپورٹس", roles: REPORTS_ROLES },
+  { group: "shared", url: "/reports/monthly", icon: CalendarDays, en: "Monthly Report", ur: "ماہانہ رپورٹ", roles: REPORTS_ROLES },
+  { group: "shared", url: "/reports/annual", icon: CalendarRange, en: "Annual Report", ur: "سالانہ رپورٹ", roles: REPORTS_ROLES },
+  { group: "shared", url: "/reports/exams", icon: GraduationCap, en: "Exam Report", ur: "امتحانی رپورٹ", roles: REPORTS_ROLES },
+  { group: "shared", url: "/reports/attendance", icon: CalendarCheck, en: "Attendance Report", ur: "حاضری رپورٹ", roles: REPORTS_ROLES },
+  { group: "shared", url: "/reports/admin", icon: Gauge, en: "Admin Report", ur: "ایڈمن رپورٹ", roles: REPORTS_ROLES },
+  { group: "shared", url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: FINANCE_ROLES },
+  { group: "shared", url: "/finance", icon: Wallet, en: "Finance", ur: "مالیات", roles: FINANCE_ROLES },
+  { group: "shared", url: "/finance/reports", icon: BarChart3, en: "Finance Reports", ur: "مالی رپورٹس", roles: FINANCE_ROLES },
+  { group: "shared", url: "/finance/donations", icon: Receipt, en: "Donation Receipts", ur: "عطیات کی رسیدیں", roles: FINANCE_ROLES },
+  { group: "shared", url: "/settings/concessions", icon: HandCoins, en: "Fee Concessions", ur: "رعایات", roles: FINANCE_ROLES },
   { group: "shared", url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین", roles: PARENT_SAFE },
   { group: "shared", url: "/notifications", icon: Bell, en: "Notifications", ur: "اعلانات", roles: NOTIFICATION_ROLES },
-  { group: "shared", url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
+  { group: "shared", url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ACADEMIC_ROLES },
 
-  // ---------- HR MANAGEMENT (unified: Staff + Teachers + Users + Admin Operations) ----------
-  { group: "shared", url: "/hr", icon: UsersRound, en: "HR Management", ur: "انسانی وسائل", roles: ADMINS },
+  // ---------- HR MANAGEMENT ----------
+  { group: "shared", url: "/hr", icon: UsersRound, en: "HR Management", ur: "انسانی وسائل", roles: HR_ROLES },
   { group: "shared", url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: TEACHER_MANAGERS },
   { group: "shared", url: "/teachers/salary", icon: Banknote, en: "Salary Slips", ur: "تنخواہ سلپ", roles: TEACHER_MANAGERS },
-  { group: "shared", url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: ["super_admin"] },
-  { group: "shared", url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: ADMINS },
-  { group: "shared", url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: ADMINS },
-  { group: "shared", url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },
-  { group: "shared", url: "/settings/templates", icon: MessageSquareText, en: "SMS & Msg Templates", ur: "پیغام و ایس ایم ایس", roles: ADMINS },
-  { group: "shared", url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: ADMINS },
+  { group: "shared", url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: SUPER_ADMINS },
+  { group: "shared", url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: HR_ROLES },
+  { group: "shared", url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: HR_ROLES },
+  { group: "shared", url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: HR_ROLES },
+  { group: "shared", url: "/settings/templates", icon: MessageSquareText, en: "SMS & Msg Templates", ur: "پیغام و ایس ایم ایس", roles: HR_ROLES },
+  { group: "shared", url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: [...SUPER_ADMINS, "admin"] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -135,21 +161,21 @@ export type NavParent = {
 };
 
 const MADRASSA_CHILDREN: NavChild[] = [
-  { url: "/madrassa/students", icon: Users2, en: "Students", ur: "طلبہ", roles: ANY_STAFF },
-  { url: "/madrassa/categories", icon: BookOpen, en: "Categories", ur: "زمرے", roles: ADMINS },
-  { url: "/madrassa/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
-  { url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
-  { url: "/madrassa/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
-  { url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
+  { url: "/madrassa/students", icon: Users2, en: "Students", ur: "طلبہ", roles: [...ACADEMIC_ROLES, "teacher"] },
+  { url: "/madrassa/categories", icon: BookOpen, en: "Categories", ur: "زمرے", roles: ACADEMIC_ROLES },
+  { url: "/madrassa/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: [...FINANCE_ROLES, ...ACADEMIC_ROLES] },
+  { url: "/madrassa/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: [...ACADEMIC_ROLES, "teacher"] },
+  { url: "/madrassa/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: [...ACADEMIC_ROLES, "teacher"] },
+  { url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ACADEMIC_ROLES },
 ];
 
 const SCHOOL_CHILDREN: NavChild[] = [
-  { url: "/school/students", icon: Users2, en: "Students", ur: "طلبہ", roles: ANY_STAFF },
-  { url: "/school/classes", icon: School, en: "Classes", ur: "جماعتیں", roles: ADMINS },
-  { url: "/school/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: ADMINS },
-  { url: "/school/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: ANY_STAFF },
-  { url: "/school/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: ANY_STAFF },
-  { url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ADMINS },
+  { url: "/school/students", icon: Users2, en: "Students", ur: "طلبہ", roles: [...ACADEMIC_ROLES, "teacher"] },
+  { url: "/school/classes", icon: School, en: "Classes", ur: "جماعتیں", roles: ACADEMIC_ROLES },
+  { url: "/school/fees", icon: Banknote, en: "Fees", ur: "فیس", roles: [...FINANCE_ROLES, ...ACADEMIC_ROLES] },
+  { url: "/school/timetable", icon: CalendarClock, en: "Timetable", ur: "نظامِ اوقات", roles: [...ACADEMIC_ROLES, "teacher"] },
+  { url: "/school/exams", icon: GraduationCap, en: "Examinations", ur: "امتحانات", roles: [...ACADEMIC_ROLES, "teacher"] },
+  { url: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", roles: ACADEMIC_ROLES },
 ];
 
 export const navParents: NavParent[] = [
@@ -167,12 +193,12 @@ export const navParents: NavParent[] = [
     en: "Admission",
     ur: "داخلہ",
     url: "/admission",
-    roles: ADMINS,
+    roles: ADMISSION_ROLES,
     children: [
-      { url: "/admission", icon: FileSignature, en: "Overview", ur: "جائزہ", roles: ADMINS },
-      { url: "/admission/new", icon: UserPlus, en: "New Admission", ur: "نیا داخلہ", roles: ADMINS },
-      { url: "/admission/queue", icon: ListChecks, en: "Application Queue", ur: "درخواستوں کی قطار", roles: ADMINS },
-      { url: "/admission/interviews", icon: UserRoundCheck, en: "Interviews", ur: "انٹرویو", roles: ADMINS },
+      { url: "/admission", icon: FileSignature, en: "Overview", ur: "جائزہ", roles: ADMISSION_ROLES },
+      { url: "/admission/new", icon: UserPlus, en: "New Admission", ur: "نیا داخلہ", roles: ADMISSION_ROLES },
+      { url: "/admission/queue", icon: ListChecks, en: "Application Queue", ur: "درخواستوں کی قطار", roles: ADMISSION_ROLES },
+      { url: "/admission/interviews", icon: UserRoundCheck, en: "Interviews", ur: "انٹرویو", roles: ADMISSION_ROLES },
     ],
   },
   {
@@ -181,19 +207,20 @@ export const navParents: NavParent[] = [
     en: "Academic",
     ur: "تعلیمی",
     moduleScoped: true,
+    roles: [...ACADEMIC_ROLES, "teacher"],
   },
   {
     key: "finance",
     icon: Wallet,
     en: "Finance",
     ur: "مالیات",
-    roles: ADMINS,
+    roles: FINANCE_ROLES,
     children: [
-      { url: "/finance", icon: Wallet, en: "Overview", ur: "جائزہ", roles: ADMINS },
-      { url: "/finance/reports", icon: BarChart3, en: "Finance Reports", ur: "مالی رپورٹس", roles: ADMINS },
-      { url: "/finance/donations", icon: Receipt, en: "Donation Receipts", ur: "عطیات کی رسیدیں", roles: ADMINS },
-      { url: "/settings/concessions", icon: HandCoins, en: "Fee Concessions", ur: "رعایات", roles: ADMINS },
-      { url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: ADMINS },
+      { url: "/finance", icon: Wallet, en: "Overview", ur: "جائزہ", roles: FINANCE_ROLES },
+      { url: "/finance/reports", icon: BarChart3, en: "Finance Reports", ur: "مالی رپورٹس", roles: FINANCE_ROLES },
+      { url: "/finance/donations", icon: Receipt, en: "Donation Receipts", ur: "عطیات کی رسیدیں", roles: FINANCE_ROLES },
+      { url: "/settings/concessions", icon: HandCoins, en: "Fee Concessions", ur: "رعایات", roles: FINANCE_ROLES },
+      { url: "/inventory", icon: Package, en: "Inventory", ur: "انوینٹری", roles: FINANCE_ROLES },
     ],
   },
   {
@@ -201,17 +228,17 @@ export const navParents: NavParent[] = [
     icon: UsersRound,
     en: "HR",
     ur: "انسانی وسائل",
-    roles: ADMINS,
+    roles: HR_ROLES,
     children: [
-      { url: "/hr", icon: UsersRound, en: "Overview", ur: "جائزہ", roles: ADMINS },
-      { url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: ADMINS },
-      { url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: ADMINS },
+      { url: "/hr", icon: UsersRound, en: "Overview", ur: "جائزہ", roles: HR_ROLES },
+      { url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: HR_ROLES },
+      { url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: HR_ROLES },
       { url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: TEACHER_MANAGERS },
       { url: "/teachers/salary", icon: Banknote, en: "Salary Slips", ur: "تنخواہ سلپ", roles: TEACHER_MANAGERS },
-      { url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: ["super_admin"] },
-      { url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: ADMINS },
-      { url: "/settings/templates", icon: MessageSquareText, en: "SMS & Msg Templates", ur: "پیغام و ایس ایم ایس", roles: ADMINS },
-      { url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: ADMINS },
+      { url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: SUPER_ADMINS },
+      { url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: HR_ROLES },
+      { url: "/settings/templates", icon: MessageSquareText, en: "SMS & Msg Templates", ur: "پیغام و ایس ایم ایس", roles: HR_ROLES },
+      { url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: [...SUPER_ADMINS, "admin"] },
     ],
   },
   {
@@ -219,15 +246,14 @@ export const navParents: NavParent[] = [
     icon: BarChart3,
     en: "Reports",
     ur: "رپورٹس",
-    roles: ANY_STAFF,
+    roles: REPORTS_ROLES,
     children: [
-      { url: "/reports", icon: BarChart3, en: "Overview", ur: "جائزہ", roles: ANY_STAFF },
-      { url: "/reports/monthly", icon: CalendarDays, en: "Monthly", ur: "ماہانہ", roles: ANY_STAFF },
-      { url: "/reports/annual", icon: CalendarRange, en: "Annual", ur: "سالانہ", roles: ANY_STAFF },
-      { url: "/reports/exams", icon: GraduationCap, en: "Exams", ur: "امتحانات", roles: ANY_STAFF },
-      { url: "/reports/attendance", icon: CalendarCheck, en: "Attendance Report", ur: "حاضری رپورٹ", roles: ANY_STAFF },
-      { url: "/reports/category", icon: Layers, en: "Category", ur: "زمرہ", roles: ANY_STAFF },
-      { url: "/reports/admin", icon: Gauge, en: "Admin", ur: "ایڈمن", roles: ANY_STAFF },
+      { url: "/reports", icon: BarChart3, en: "Overview", ur: "جائزہ", roles: REPORTS_ROLES },
+      { url: "/reports/monthly", icon: CalendarDays, en: "Monthly", ur: "ماہانہ", roles: REPORTS_ROLES },
+      { url: "/reports/annual", icon: CalendarRange, en: "Annual", ur: "سالانہ", roles: REPORTS_ROLES },
+      { url: "/reports/exams", icon: GraduationCap, en: "Exams", ur: "امتحانات", roles: REPORTS_ROLES },
+      { url: "/reports/attendance", icon: CalendarCheck, en: "Attendance Report", ur: "حاضری رپورٹ", roles: REPORTS_ROLES },
+      { url: "/reports/admin", icon: Gauge, en: "Admin", ur: "ایڈمن", roles: REPORTS_ROLES },
     ],
   },
   {

@@ -1,7 +1,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { AlertCircle, Loader2, School, UserRound, UsersRound } from "lucide-react";
+import { AlertCircle, Loader2, School, KeyRound } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,13 +11,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
   component: LoginPage,
 });
-
-type LoginMode = "staff" | "parent";
 
 const institutionUnits = [
   "جامعہ قاسمیہ للبنین",
@@ -31,24 +29,21 @@ function LoginPage() {
   const { lang, setLang } = useLanguage();
   const auth = useAuth();
   const { redirect } = Route.useSearch();
-  const [mode, setMode] = useState<LoginMode>("staff");
-  const [staffEmail, setStaffEmail] = useState("");
-  const [parentUsername, setParentUsername] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const identifier = mode === "staff" ? staffEmail.trim() : parentUsername.trim().toLowerCase();
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
 
-    if (!identifier || !password) {
+    const trimmed = identifier.trim();
+    if (!trimmed || !password) {
       setError(
         lang === "ur"
           ? "براہِ کرم لاگ اِن معلومات اور پاس ورڈ درج کریں"
-          : "Please enter your login credentials and password",
+          : "Please enter your username/email and password",
       );
       return;
     }
@@ -56,29 +51,23 @@ function LoginPage() {
     setSubmitting(true);
     try {
       const user = await auth.login({
-        identifier: identifier,
+        identifier: trimmed,
         password,
       });
 
       const role = user.role;
-
-      if (mode === "parent" && role !== "parent") {
-        await auth.logout();
-        setError(lang === "ur" ? "یہ والدین کا اکاؤنٹ نہیں ہے" : "This is not a parent account");
-        return;
+      let destination = redirect;
+      if (!destination) {
+        if (role === "parent") destination = "/parents";
+        else if (role === "teacher") destination = "/dashboard";
+        else if (role === "admission_admin") destination = "/admission";
+        else if (role === "academic_admin") destination = "/madrassa/students";
+        else if (role === "finance_admin" || role === "accountant") destination = "/finance";
+        else if (role === "hr_admin" || role === "hr_manager") destination = "/hr";
+        else if (role === "reports_admin") destination = "/reports";
+        else destination = "/dashboard";
       }
 
-      if (mode === "staff" && role === "parent") {
-        await auth.logout();
-        setError(
-          lang === "ur"
-            ? "والدین کے لیے والدین والا لاگ اِن استعمال کریں"
-            : "Use the parent login for parent accounts",
-        );
-        return;
-      }
-
-      const destination = redirect ?? (role === "parent" ? "/parents" : "/dashboard");
       navigate({ to: destination });
     } catch (err) {
       setError(
@@ -86,7 +75,7 @@ function LoginPage() {
           ? err.message
           : lang === "ur"
             ? "لاگ اِن نہیں ہو سکا، دوبارہ کوشش کریں"
-            : "Login failed, please try again",
+            : "Login failed, please check your credentials and try again",
       );
     } finally {
       setSubmitting(false);
@@ -111,31 +100,10 @@ function LoginPage() {
               </p>
               <p className={cn("text-sm text-muted-foreground", lang === "ur" ? "font-urdu" : "")}>
                 {lang === "ur"
-                  ? "اپنے اکاؤنٹ میں داخل ہونے کے لیے درست طریقہ منتخب کریں"
-                  : "Select the correct method to log into your account"}
+                  ? "اپنے اکاؤنٹ (ایڈمن، استاد، یا سرپرست) میں داخل ہونے کے لیے معلومات درج کریں"
+                  : "Sign in with your username/email and password (Admin, Teacher, or Parent)"}
               </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-background p-1.5 shadow-sm">
-            <ModeButton
-              active={mode === "staff"}
-              icon={UsersRound}
-              label={lang === "ur" ? "عملہ" : "Staff"}
-              onClick={() => {
-                setMode("staff");
-                setError(null);
-              }}
-            />
-            <ModeButton
-              active={mode === "parent"}
-              icon={UserRound}
-              label={lang === "ur" ? "والدین" : "Parents"}
-              onClick={() => {
-                setMode("parent");
-                setError(null);
-              }}
-            />
           </div>
 
           <form
@@ -144,31 +112,16 @@ function LoginPage() {
           >
             <div className="space-y-2 text-start">
               <label htmlFor="identifier" className={cn("text-sm font-medium", lang === "ur" ? "font-urdu" : "")}>
-                {mode === "staff"
-                  ? lang === "ur"
-                    ? "ای میل یا یوزر نیم"
-                    : "Email or Username"
-                  : lang === "ur"
-                    ? "لاگ اِن آئی ڈی"
-                    : "Login ID"}
+                {lang === "ur" ? "ای میل یا یوزر نیم" : "Email or Username"}
               </label>
               <Input
                 id="identifier"
                 dir="ltr"
                 type="text"
-                inputMode={mode === "staff" ? "text" : "text"}
-                autoComplete={mode === "staff" ? "username" : "username"}
-                placeholder={
-                  mode === "staff"
-                    ? (lang === "ur" ? "admin@example.com یا یوزر نیم" : "admin@example.com or username")
-                    : "muhammad.yousaf4821"
-                }
-                value={mode === "staff" ? staffEmail : parentUsername}
-                onChange={(event) =>
-                  mode === "staff"
-                    ? setStaffEmail(event.target.value)
-                    : setParentUsername(event.target.value)
-                }
+                autoComplete="username"
+                placeholder={lang === "ur" ? "admin, teacher1@demo.local, parent1@demo.local" : "admin, teacher1@demo.local, parent1@demo.local"}
+                value={identifier}
+                onChange={(event) => setIdentifier(event.target.value)}
                 className="h-11 text-left"
               />
             </div>
@@ -204,6 +157,15 @@ function LoginPage() {
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {lang === "ur" ? "داخل ہوں" : "Sign In"}
             </Button>
+
+            <div className="pt-2 border-t border-border/60">
+              <Link
+                to="/very/secret/data"
+                className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-1.5"
+              >
+                <span>{lang === "ur" ? "🔑 ٹیسٹنگ اکاؤنٹس اور پاس ورڈز (/very/secret/data)" : "🔑 View All Test Accounts & Passwords (/very/secret/data)"}</span>
+              </Link>
+            </div>
           </form>
 
           <div className="space-y-4 text-center">
@@ -212,12 +174,21 @@ function LoginPage() {
                 ? "پاس ورڈ بھولنے پر دفتر یا منتظم سے رابطہ کریں"
                 : "Contact the office or administrator if you forgot your password"}
             </p>
-            <Link
-              to="/apply"
-              className={cn("text-sm font-medium text-primary underline-offset-4 hover:underline", lang === "ur" ? "font-urdu" : "")}
-            >
-              {lang === "ur" ? "آن لائن داخلہ درخواست" : "Online Admission Application"}
-            </Link>
+            <div className="flex items-center justify-center gap-4 text-sm">
+              <Link
+                to="/apply"
+                className={cn("font-medium text-primary underline-offset-4 hover:underline", lang === "ur" ? "font-urdu" : "")}
+              >
+                {lang === "ur" ? "آن لائن داخلہ درخواست" : "Online Admission Application"}
+              </Link>
+              <span className="text-muted-foreground">·</span>
+              <Link
+                to="/"
+                className={cn("text-muted-foreground hover:text-foreground underline-offset-4 hover:underline", lang === "ur" ? "font-urdu" : "")}
+              >
+                {lang === "ur" ? "مرکزی ویب سائٹ" : "Public Website"}
+              </Link>
+            </div>
           </div>
         </div>
       </main>
@@ -266,33 +237,5 @@ function LoginPage() {
       </aside>
       <DraggableLanguageToggle className="fixed bottom-4 end-4 z-40" />
     </div>
-  );
-}
-
-function ModeButton({
-  active,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  icon: typeof UsersRound;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "flex h-11 items-center justify-center gap-2 rounded-lg font-urdu text-sm transition-colors",
-        active
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-muted-foreground hover:bg-muted",
-      ].join(" ")}
-    >
-      <Icon className="h-4 w-4" />
-      {label}
-    </button>
   );
 }

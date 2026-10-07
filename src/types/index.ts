@@ -17,6 +17,11 @@ export type StudentStatus =
 export type UserRole =
   | "super_admin"
   | "admin"
+  | "admission_admin"
+  | "academic_admin"
+  | "finance_admin"
+  | "hr_admin"
+  | "reports_admin"
   | "principal"
   | "hr_manager"
   | "accountant"

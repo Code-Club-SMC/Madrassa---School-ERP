@@ -12,18 +12,24 @@ type Props = {
   bodyClassName?: string;
 };
 
-/** Card wrapper for charts with bilingual header (English + Urdu RTL). */
+import { useLanguage } from "@/components/language-context";
+
+/** Card wrapper for charts with single-language header based on active language. */
 export function ChartCard({ title, titleUrdu, description, actions, children, className, bodyClassName }: Props) {
+  const { lang } = useLanguage();
   return (
     <Card className={cn("p-6 flex flex-col gap-4", className)}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 dir="rtl" lang="ur" className="font-urdu text-lg font-bold text-foreground leading-tight">
-            {titleUrdu}
-          </h3>
-          <p className="font-heading text-[11px] uppercase tracking-wider text-muted-foreground mt-1">
-            {title}
-          </p>
+          {lang === "ur" ? (
+            <h3 dir="rtl" lang="ur" className="font-urdu text-lg font-bold text-foreground leading-tight">
+              {titleUrdu}
+            </h3>
+          ) : (
+            <h3 className="font-heading text-lg font-bold text-foreground leading-tight">
+              {title}
+            </h3>
+          )}
           {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
         </div>
         {actions && <div className="shrink-0">{actions}</div>}
@@ -32,8 +38,6 @@ export function ChartCard({ title, titleUrdu, description, actions, children, cl
     </Card>
   );
 }
-
-import { useLanguage } from "@/components/language-context";
 
 type KpiProps = {
   label: string;

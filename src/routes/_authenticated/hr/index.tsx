@@ -50,6 +50,7 @@ import { formatPKR } from "@/lib/format";
 import { useLanguage } from "@/components/language-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getUserDisplayName } from "@/lib/user-names";
 import { useMemo, useState, useEffect, type FormEvent } from "react";
 
 export const Route = createFileRoute("/_authenticated/hr/")({
@@ -62,7 +63,9 @@ type ModCard = {
   urdu: string;
   english: string;
   description: string;
+  descriptionUrdu: string;
   count: string;
+  countUrdu: string;
   accent: string;
 };
 
@@ -166,7 +169,9 @@ function HRHub() {
       urdu: "اساتذہ",
       english: "Teachers",
       description: "Academic staff across Madrassa and School systems.",
+      descriptionUrdu: "مدرسہ اور اسکول کا تعلیمی و تدریسی عملہ۔",
       count: `${activeTeachers} active`,
+      countUrdu: `${activeTeachers} فعال`,
       accent: "from-emerald-500/15 to-emerald-500/0 text-emerald-600",
     },
     {
@@ -175,7 +180,9 @@ function HRHub() {
       urdu: "صارف اکاؤنٹس",
       english: "User Accounts & Permissions",
       description: "Login accounts, roles, granular module permissions.",
+      descriptionUrdu: "صارفین کے لاگ ان اکاؤنٹس، کردار اور ماڈیول کی تفصیلی اجازتیں۔",
       count: `${activeUsers} active`,
+      countUrdu: `${activeUsers} فعال`,
       accent: "from-violet-500/15 to-violet-500/0 text-violet-600",
     },
     {
@@ -183,8 +190,10 @@ function HRHub() {
       icon: CalendarDays,
       urdu: "حاضری عملہ",
       english: "Staff Attendance",
-      description: "Daily check-in/out, leave-aware attendance log.",
+      description: "Daily bulk entry, present, absent and leave log.",
+      descriptionUrdu: "یومیہ بلک اندراج، حاضری، غیر حاضری اور رخصت کا ریکارڈ۔",
       count: `${staff.length} tracked`,
+      countUrdu: `${staff.length} عملہ`,
       accent: "from-cyan-500/15 to-cyan-500/0 text-cyan-600",
     },
     {
@@ -193,7 +202,9 @@ function HRHub() {
       urdu: "چھٹیاں",
       english: "Leave Management",
       description: "Leave requests, approvals, and balances.",
+      descriptionUrdu: "چھٹیوں کی درخواستیں، منظوریاں اور بیلنس۔",
       count: `${pendingLeaves} pending`,
+      countUrdu: `${pendingLeaves} زیر التواء`,
       accent: "from-rose-500/15 to-rose-500/0 text-rose-600",
     },
     {
@@ -202,7 +213,9 @@ function HRHub() {
       urdu: "تعطیلات",
       english: "Holidays & Vacations",
       description: "Institutional holiday calendar and seasonal vacation dates.",
+      descriptionUrdu: "ادارے کی تعطیلات اور موسمی چھٹیوں کا کیلنڈر۔",
       count: "Calendar",
+      countUrdu: "کیلنڈر",
       accent: "from-blue-500/15 to-blue-500/0 text-blue-600",
     },
     {
@@ -211,7 +224,9 @@ function HRHub() {
       urdu: "پیغام و ایس ایم ایس",
       english: "SMS & Msg Templates",
       description: "Automated SMS, WhatsApp and portal messaging templates.",
+      descriptionUrdu: "خودکار ایس ایم ایس، واٹس ایپ اور پورٹل میسجنگ ٹیمپلیٹس۔",
       count: "Templates",
+      countUrdu: "ٹیمپلیٹس",
       accent: "from-amber-500/15 to-amber-500/0 text-amber-600",
     },
     {
@@ -220,7 +235,9 @@ function HRHub() {
       urdu: "ویب سائٹ",
       english: "Website CMS",
       description: "Public portal content, admission banners, and announcements.",
+      descriptionUrdu: "عوامی پورٹل کا مواد، داخلہ بینرز اور اعلانات۔",
       count: "CMS",
+      countUrdu: "سی ایم ایس",
       accent: "from-teal-500/15 to-teal-500/0 text-teal-600",
     },
   ];
@@ -232,6 +249,7 @@ function HRHub() {
       value: staff.length + activeTeachers,
       icon: UsersIcon,
       hint: `${activeStaff + activeTeachers} active`,
+      hintUrdu: `${activeStaff + activeTeachers} فعال`,
     },
     {
       label: "Teaching Faculty",
@@ -239,6 +257,7 @@ function HRHub() {
       value: activeTeachers,
       icon: GraduationCap,
       hint: `${allTeachers.length} registered`,
+      hintUrdu: `${allTeachers.length} رجسٹرڈ`,
     },
     {
       label: "User Accounts",
@@ -246,6 +265,7 @@ function HRHub() {
       value: allUsers.length,
       icon: ShieldUser,
       hint: `${activeUsers} active`,
+      hintUrdu: `${activeUsers} فعال`,
     },
     {
       label: "Pending Leaves",
@@ -253,6 +273,7 @@ function HRHub() {
       value: pendingLeaves,
       icon: TrendingUp,
       hint: `${leaves.length} total`,
+      hintUrdu: `${leaves.length} کل`,
     },
   ];
 
@@ -390,14 +411,19 @@ function HRHub() {
           <Card key={k.label} className="p-4 relative overflow-hidden">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-urdu text-sm text-muted-foreground leading-tight" dir="rtl" lang="ur">
-                  {k.urdu}
+                {lang === "ur" ? (
+                  <p className="font-urdu text-sm font-medium text-muted-foreground leading-tight" dir="rtl" lang="ur">
+                    {k.urdu}
+                  </p>
+                ) : (
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-1">
+                    {k.label}
+                  </p>
+                )}
+                <p className="font-heading text-2xl font-bold truncate mt-1">{k.value}</p>
+                <p className={cn("text-[11px] text-muted-foreground mt-1", lang === "ur" && "font-urdu")}>
+                  {lang === "ur" ? k.hintUrdu : k.hint}
                 </p>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/70 mb-1">
-                  {k.label}
-                </p>
-                <p className="font-heading text-2xl font-bold truncate">{k.value}</p>
-                <p className="text-[11px] text-muted-foreground mt-1">{k.hint}</p>
               </div>
               <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <k.icon className="h-5 w-5" />
@@ -411,13 +437,12 @@ function HRHub() {
       <div>
         <div className="mb-3 flex items-end justify-between">
           <div>
-            <p className="font-urdu text-lg font-semibold" dir="rtl" lang="ur">
-              شعبے
-            </p>
-            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Modules</p>
+            <h2 className={cn("text-lg font-semibold", lang === "ur" ? "font-urdu text-xl" : "font-heading")}>
+              {lang === "ur" ? "شعبہ جات" : "Modules"}
+            </h2>
           </div>
-          <Badge variant="outline" className="text-[10px]">
-            {modules.length} modules
+          <Badge variant="outline" className={cn("text-[10px]", lang === "ur" && "font-urdu")}>
+            {lang === "ur" ? `${modules.length} شعبے` : `${modules.length} modules`}
           </Badge>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -436,18 +461,15 @@ function HRHub() {
                 <ArrowLeft className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:-translate-x-0.5 transition rtl:rotate-180" />
               </div>
               <div>
-                <p className="font-urdu text-lg font-semibold leading-tight" dir="rtl" lang="ur">
-                  {m.urdu}
-                </p>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-0.5">
-                  {m.english}
+                <p className={cn("text-base font-semibold leading-tight", lang === "ur" ? "font-urdu text-lg" : "font-heading")}>
+                  {lang === "ur" ? m.urdu : m.english}
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                {m.description}
+              <p className={cn("text-xs text-muted-foreground leading-relaxed line-clamp-2", lang === "ur" && "font-urdu")}>
+                {lang === "ur" ? m.descriptionUrdu : m.description}
               </p>
-              <Badge variant="secondary" className="self-start text-[10px] font-mono mt-auto">
-                {m.count}
+              <Badge variant="secondary" className={cn("self-start text-[10px] mt-auto", lang === "ur" ? "font-urdu" : "font-mono")}>
+                {lang === "ur" ? m.countUrdu : m.count}
               </Badge>
             </Link>
           ))}
@@ -574,7 +596,9 @@ function HRHub() {
                   <div>
                     <div className="mb-3 flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate">{teacher.name}</p>
+                        <p className={cn("text-sm font-semibold truncate", lang === "ur" && "font-urdu")}>
+                          {getUserDisplayName({ name: teacher.name }, lang) || teacher.name}
+                        </p>
                         <p className="text-xs text-muted-foreground truncate">{teacher.designation}</p>
                       </div>
                       <Badge
@@ -586,7 +610,13 @@ function HRHub() {
                             : "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
                         )}
                       >
-                        {teacher.systemScope}
+                        {teacher.systemScope === "madrassa"
+                          ? lang === "ur"
+                            ? "مدرسہ"
+                            : "Madrassa"
+                          : lang === "ur"
+                          ? "سکول"
+                          : "School"}
                       </Badge>
                     </div>
 

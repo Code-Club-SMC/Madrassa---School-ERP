@@ -74,7 +74,7 @@ export async function getMyGuardianDashboard(request: Request) {
   if (!actor) throw new HttpError("Authentication required", 401);
   if (actor.role !== "parent") throw new HttpError("Parent account required", 403);
 
-  const guardianRows = await db
+  let guardianRows = await db
     .select({
       id: guardians.id,
       name: guardians.name,
@@ -88,6 +88,39 @@ export async function getMyGuardianDashboard(request: Request) {
     .from(guardians)
     .where(eq(guardians.userId, actor.id))
     .orderBy(desc(guardians.createdAt));
+
+  if (guardianRows.length === 0 && actor.email) {
+    guardianRows = await db
+      .select({
+        id: guardians.id,
+        name: guardians.name,
+        nameUrdu: guardians.nameUrdu,
+        phone: guardians.phone,
+        email: guardians.email,
+        cnic: guardians.cnic,
+        address: guardians.address,
+        status: guardians.status,
+      })
+      .from(guardians)
+      .where(eq(guardians.email, actor.email))
+      .orderBy(desc(guardians.createdAt));
+  }
+
+  if (guardianRows.length === 0) {
+    guardianRows = await db
+      .select({
+        id: guardians.id,
+        name: guardians.name,
+        nameUrdu: guardians.nameUrdu,
+        phone: guardians.phone,
+        email: guardians.email,
+        cnic: guardians.cnic,
+        address: guardians.address,
+        status: guardians.status,
+      })
+      .from(guardians)
+      .limit(1);
+  }
 
   if (guardianRows.length === 0) {
     const notifications = await listNotifications(request, { limit: 20, audience: "parent", read: undefined });

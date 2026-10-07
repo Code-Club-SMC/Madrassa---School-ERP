@@ -87,6 +87,11 @@ function UsersPage() {
     const roles: { role: UserRole; urdu: string; en: string }[] = [
       { role: "super_admin", urdu: "سپر ایڈمن", en: "Super Admin" },
       { role: "admin", urdu: "ایڈمن", en: "Admin" },
+      { role: "admission_admin", urdu: "داخلہ ایڈمن", en: "Admission Admin" },
+      { role: "academic_admin", urdu: "تعلیمی ایڈمن", en: "Academic Admin" },
+      { role: "finance_admin", urdu: "مالی ایڈمن", en: "Finance Admin" },
+      { role: "hr_admin", urdu: "ایچ آر ایڈمن", en: "HR Admin" },
+      { role: "reports_admin", urdu: "رپورٹس ایڈمن", en: "Reports Admin" },
       { role: "principal", urdu: "پرنسپل", en: "Principal" },
       { role: "hr_manager", urdu: "ایچ آر منیجر", en: "HR Manager" },
       { role: "accountant", urdu: "اکاؤنٹنٹ", en: "Accountant" },

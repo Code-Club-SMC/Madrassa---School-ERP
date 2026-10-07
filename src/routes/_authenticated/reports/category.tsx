@@ -12,12 +12,16 @@ import { madrassaCategories, students, feeRecords } from "@/mock";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
+import { useLanguage } from "@/components/language-context";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/reports/category")({
   component: CategoryReport,
 });
 
 function CategoryReport() {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const byCategory = madrassaCategories.map((c, i) => {
     const total = c.subcategories.reduce((a, b) => a + b.count, 0);
     const inSystem = students.filter((s) => s.categoryId === c.id);
@@ -149,30 +153,33 @@ function CategoryReport() {
 
       <Card className="p-5 mb-4">
         <div className="mb-3">
-          <h3 className="font-heading font-semibold text-sm">Subcategory Breakdown</h3>
-          <p dir="rtl" lang="ur" className="font-urdu text-sm text-muted-foreground leading-tight">ذیلی زمرے کی تفصیل</p>
+          <h3 className={cn("font-semibold text-sm", isUrdu ? "font-urdu text-base" : "font-heading")}>
+            {isUrdu ? "ذیلی زمرے کی تفصیل" : "Subcategory Breakdown"}
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Category</TableHead>
-                <TableHead>Subcategory</TableHead>
-                <TableHead>Roll Prefix</TableHead>
-                <TableHead className="text-right">Students</TableHead>
-                <TableHead className="text-right">% of Total</TableHead>
+                <TableHead>{isUrdu ? "زمرہ" : "Category"}</TableHead>
+                <TableHead>{isUrdu ? "ذیلی زمرہ" : "Subcategory"}</TableHead>
+                <TableHead>{isUrdu ? "رول نمبر سابقہ" : "Roll Prefix"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "طلبہ" : "Students"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "کل کا فیصد" : "% of Total"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {subBreakdown.map((s) => (
                 <TableRow key={`${s.category}-${s.name}`}>
                   <TableCell>
-                    <div className="text-sm">{s.category}</div>
-                    <div dir="rtl" lang="ur" className="font-urdu text-xs text-muted-foreground">{s.categoryUrdu}</div>
+                    <div className={cn("text-sm", isUrdu && "font-urdu")}>
+                      {isUrdu ? s.categoryUrdu : s.category}
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{s.name}</div>
-                    <div dir="rtl" lang="ur" className="font-urdu text-xs text-muted-foreground">{s.nameUrdu}</div>
+                    <div className={cn("text-sm", isUrdu && "font-urdu")}>
+                      {isUrdu ? s.nameUrdu : s.name}
+                    </div>
                   </TableCell>
                   <TableCell className="font-mono text-xs">{s.rollPrefix}</TableCell>
                   <TableCell className="text-right font-mono">{s.count}</TableCell>
@@ -185,12 +192,23 @@ function CategoryReport() {
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-heading font-semibold text-sm mb-1">Insights</h3>
-        <p dir="rtl" lang="ur" className="font-urdu text-sm text-muted-foreground mb-3">اہم نکات</p>
-        <ul className="text-sm space-y-2 list-disc ps-5 text-muted-foreground">
-          <li><span className="font-semibold text-foreground">{top?.name}</span> ({top?.nameUrdu}) is the largest category with {top?.value} students — {Math.round(((top?.value ?? 0) / grandTotal) * 100)}% of total enrollment.</li>
-          <li>Average category size is <span className="font-semibold text-foreground">{Math.round(grandTotal / byCategory.length)}</span> students.</li>
-          <li>Smallest category <span className="font-semibold text-foreground">{[...byCategory].sort((a, b) => a.value - b.value)[0]?.name}</span> may need recruitment focus.</li>
+        <h3 className={cn("font-semibold text-sm mb-3", isUrdu ? "font-urdu text-base" : "font-heading")}>
+          {isUrdu ? "اہم نکات" : "Insights"}
+        </h3>
+        <ul className={cn("text-sm space-y-2 list-disc ps-5 text-muted-foreground", isUrdu && "font-urdu")}>
+          {isUrdu ? (
+            <>
+              <li><span className="font-semibold text-foreground">{top?.nameUrdu}</span> سب سے بڑا زمرہ ہے جس میں {top?.value} طلبہ ہیں — کل داخلوں کا {Math.round(((top?.value ?? 0) / grandTotal) * 100)}%۔</li>
+              <li>اوسط زمرے کا حجم <span className="font-semibold text-foreground">{Math.round(grandTotal / byCategory.length)}</span> طلبہ ہے۔</li>
+              <li>سب سے چھوٹا زمرہ <span className="font-semibold text-foreground">{[...byCategory].sort((a, b) => a.value - b.value)[0]?.nameUrdu}</span> میں داخلوں کی مہم کی ضرورت ہو سکتی ہے۔</li>
+            </>
+          ) : (
+            <>
+              <li><span className="font-semibold text-foreground">{top?.name}</span> ({top?.nameUrdu}) is the largest category with {top?.value} students — {Math.round(((top?.value ?? 0) / grandTotal) * 100)}% of total enrollment.</li>
+              <li>Average category size is <span className="font-semibold text-foreground">{Math.round(grandTotal / byCategory.length)}</span> students.</li>
+              <li>Smallest category <span className="font-semibold text-foreground">{[...byCategory].sort((a, b) => a.value - b.value)[0]?.name}</span> may need recruitment focus.</li>
+            </>
+          )}
         </ul>
       </Card>
     </div>

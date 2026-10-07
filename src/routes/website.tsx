@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
-import { School, Globe, Image as ImgIcon, Phone, FileSignature } from "lucide-react";
+import { School, Globe, Image as ImgIcon, Phone, FileSignature, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DraggableLanguageToggle } from "@/components/app/draggable-language-toggle";
 import { useLanguage } from "@/components/language-context";
@@ -16,7 +16,7 @@ function WebsiteShell() {
     <div className="min-h-dvh flex flex-col bg-background">
       <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4">
-          <Link to="/website" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
               <School className="h-4 w-4 text-primary" />
             </div>
@@ -27,9 +27,9 @@ function WebsiteShell() {
               </p>
             </div>
           </Link>
-          <nav className="ms-auto flex items-center gap-1 text-sm">
+          <nav className="ms-auto flex items-center gap-1.5 text-sm">
             <Link
-              to="/website"
+              to="/"
               className="px-3 py-1.5 rounded-md hover:bg-accent flex items-center gap-1.5"
             >
               <Globe className="h-3.5 w-3.5" />
@@ -50,9 +50,15 @@ function WebsiteShell() {
               {lang === "ur" ? "رابطہ" : "Contact"}
             </Link>
             <Link to="/apply">
-              <Button size="sm" className="ms-2 gap-1.5">
+              <Button size="sm" variant="outline" className="ms-1 gap-1.5">
                 <FileSignature className="h-3.5 w-3.5" />
-                {lang === "ur" ? "آن لائن درخواست دیں" : "Apply Online"}
+                {lang === "ur" ? "آن لائن درخواست" : "Apply Online"}
+              </Button>
+            </Link>
+            <Link to="/login">
+              <Button size="sm" className="gap-1.5 font-medium shadow-sm">
+                <LogIn className="h-3.5 w-3.5" />
+                {lang === "ur" ? "پورٹل لاگ ان" : "Portal Login"}
               </Button>
             </Link>
           </nav>

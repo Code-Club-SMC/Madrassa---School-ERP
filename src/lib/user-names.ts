@@ -38,6 +38,17 @@ export const KNOWN_URDU_NAMES: Record<string, string> = {
   "Hafiz Junaid": "حافظ جنید",
   "Dr. Saeed Ahmed": "ڈاکٹر سعید احمد",
   "Nadia Pervaiz": "نادیہ پرویز",
+  "Muhammad Saeed Khan": "محمد سعید خان",
+  "Abdul Rehman Siddiqui": "عبدالرحمٰن صدیقی",
+  "Fatima Zahra": "فاطمہ زہرا",
+  "Ayesha Tariq": "عائشہ طارق",
+  "Khalid Mahmood": "خالد محمود",
+  "Saima Malik": "صائمہ ملک",
+  "Imran Hassan Qureshi": "عمران حسن قریشی",
+  "Nadia Raza": "نادیہ رضا",
+  "Tariq Iqbal": "طارق اقبال",
+  "Usman Awan": "عثمان اعوان",
+  "Rashid Sheikh": "راشد شیخ",
 };
 
 export const KNOWN_EN_NAMES: Record<string, string> = Object.fromEntries(
@@ -81,6 +92,11 @@ export function getUserInitials(
 export const ROLE_LABELS: Record<UserRole, { en: string; ur: string }> = {
   super_admin: { en: "Super Admin", ur: "سپر ایڈمن" },
   admin: { en: "Admin", ur: "ایڈمن" },
+  admission_admin: { en: "Admission Admin", ur: "داخلہ ایڈمن" },
+  academic_admin: { en: "Academic Admin", ur: "تعلیمی ایڈمن" },
+  finance_admin: { en: "Finance Admin", ur: "مالی ایڈمن" },
+  hr_admin: { en: "HR Admin", ur: "ایچ آر ایڈمن" },
+  reports_admin: { en: "Reports Admin", ur: "رپورٹس ایڈمن" },
   principal: { en: "Principal", ur: "پرنسپل" },
   hr_manager: { en: "HR Manager", ur: "ایچ آر منیجر" },
   accountant: { en: "Accountant", ur: "اکاؤنٹنٹ" },

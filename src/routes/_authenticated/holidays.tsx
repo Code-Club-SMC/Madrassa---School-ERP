@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { holidays as seedHolidays } from "@/mock/holidays";
 import type { Holiday } from "@/types";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-context";
 
 export const Route = createFileRoute("/_authenticated/holidays")({
   component: HolidaysPage,
@@ -38,13 +39,22 @@ function toISO(y: number, m: number, d: number) {
 }
 
 function HolidaysPage() {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [items, setItems] = useState<Holiday[]>(seedHolidays);
   const [weeklyOff, setWeeklyOff] = useState<number[]>([5]); // Fri default (madrassa)
 
-  const monthLabel = useMemo(() => new Date(year, month, 1).toLocaleString("en-US", { month: "long", year: "numeric" }), [year, month]);
+  const monthLabel = useMemo(
+    () =>
+      new Date(year, month, 1).toLocaleString(isUrdu ? "ur-PK" : "en-US", {
+        month: "long",
+        year: "numeric",
+      }),
+    [year, month, isUrdu],
+  );
 
   const days = useMemo(() => {
     const first = new Date(year, month, 1);
@@ -76,10 +86,10 @@ function HolidaysPage() {
     setItems((prev) => {
       const existing = prev.find((h) => h.date === date);
       if (existing) {
-        toast.success("Holiday updated");
+        toast.success(isUrdu ? "چھٹی تبدیل کر دی گئی" : "Holiday updated");
         return prev.map((h) => h.date === date ? { ...h, ...partial } : h);
       }
-      toast.success("Holiday added");
+      toast.success(isUrdu ? "چھٹی شامل کر دی گئی" : "Holiday added");
       return [...prev, {
         id: `h-${Date.now()}`,
         date,
@@ -93,7 +103,7 @@ function HolidaysPage() {
 
   function remove(date: string) {
     setItems((prev) => prev.filter((h) => h.date !== date));
-    toast.success("Holiday removed");
+    toast.success(isUrdu ? "چھٹی حذف کر دی گئی" : "Holiday removed");
   }
 
   function toggleWeekly(d: number) {
@@ -113,6 +123,7 @@ function HolidaysPage() {
         title="Holiday & Vacation Calendar"
         titleUrdu="چھٹیوں کا کیلنڈر"
         description="National, religious and institutional holidays. Marked dates are excluded from attendance automatically."
+        descriptionUrdu="قومی، اسلامی اور ادارہ جاتی چھٹیاں۔ نشان زدہ تاریخیں خود بخود حاضری سے خارج ہو جاتی ہیں۔"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
@@ -124,14 +135,13 @@ function HolidaysPage() {
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navMonth(1)} aria-label="Next month"><ChevronRight className="h-4 w-4 rtl:rotate-180" /></Button>
               <p className="font-heading text-lg font-bold ms-2">{monthLabel}</p>
             </div>
-            <Button size="sm" variant="outline" onClick={() => { const d = new Date(); setYear(d.getFullYear()); setMonth(d.getMonth()); }}>Today</Button>
+            <Button size="sm" variant="outline" onClick={() => { const d = new Date(); setYear(d.getFullYear()); setMonth(d.getMonth()); }}>{isUrdu ? "آج" : "Today"}</Button>
           </div>
 
           <div className="grid grid-cols-7 gap-1 mb-1">
             {WEEKDAYS_EN.map((w, i) => (
               <div key={w} className={cn("text-center text-[10px] uppercase tracking-wide py-1", weeklyOff.includes(i) ? "text-amber-600 dark:text-amber-400 font-semibold" : "text-muted-foreground")}>
-                <div>{w}</div>
-                <div className="font-urdu text-[10px]" dir="rtl">{WEEKDAYS_UR[i]}</div>
+                <div className={isUrdu ? "font-urdu text-xs" : ""}>{isUrdu ? WEEKDAYS_UR[i] : w}</div>
               </div>
             ))}
           </div>
@@ -157,13 +167,21 @@ function HolidaysPage() {
                         <span className="font-mono text-sm font-semibold">{cell.d}</span>
                         {meta && <span className={cn("h-1.5 w-1.5 rounded-full mt-1", meta.dot)} />}
                       </div>
-                      {h && <p className="font-urdu text-[10px] mt-1 truncate" dir="rtl">{h.nameUrdu}</p>}
+                      {h && (
+                        <p
+                          className={cn("text-[10px] mt-1 truncate", isUrdu ? "font-urdu" : "")}
+                          dir={isUrdu ? "rtl" : "ltr"}
+                        >
+                          {isUrdu ? h.nameUrdu : h.nameEnglish}
+                        </p>
+                      )}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-72" align="start">
                     <DayEditor
                       date={cell.iso}
                       holiday={h}
+                      isUrdu={isUrdu}
                       onSave={(p) => upsert(cell.iso!, p)}
                       onDelete={() => remove(cell.iso!)}
                     />
@@ -178,7 +196,7 @@ function HolidaysPage() {
             {Object.entries(TYPE_META).map(([k, m]) => (
               <span key={k} className={cn("inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px]", m.tone)}>
                 <span className={cn("h-1.5 w-1.5 rounded-full", m.dot)} />
-                {m.label} <span className="font-urdu" dir="rtl">· {m.urdu}</span>
+                <span className={isUrdu ? "font-urdu" : ""}>{isUrdu ? m.urdu : m.label}</span>
               </span>
             ))}
           </div>
@@ -187,23 +205,34 @@ function HolidaysPage() {
         {/* Side panel */}
         <div className="space-y-4">
           <Card className="p-4">
-            <p className="font-heading text-sm font-bold mb-2">Weekly Off Days · ہفتہ وار چھٹی</p>
-            <p className="text-xs text-muted-foreground mb-3">School: Sunday. Madrassa: Friday. Configure your institution's days off.</p>
+            <p className="font-heading text-sm font-bold mb-2">
+              {isUrdu ? "ہفتہ وار چھٹی کے دن" : "Weekly Off Days"}
+            </p>
+            <p className="text-xs text-muted-foreground mb-3">
+              {isUrdu
+                ? "سکول: اتوار۔ مدرسہ: جمعہ۔ اپنے ادارے کے چھٹی کے دن منتخب کریں۔"
+                : "School: Sunday. Madrassa: Friday. Configure your institution's days off."}
+            </p>
             <div className="space-y-1.5">
               {WEEKDAYS_EN.map((w, i) => (
                 <label key={w} className="flex items-center gap-2 p-1.5 rounded hover:bg-accent cursor-pointer">
                   <Checkbox checked={weeklyOff.includes(i)} onCheckedChange={() => toggleWeekly(i)} />
-                  <span className="text-sm flex-1">{w}</span>
-                  <span className="font-urdu text-xs text-muted-foreground" dir="rtl">{WEEKDAYS_UR[i]}</span>
+                  <span className={cn("text-sm flex-1", isUrdu ? "font-urdu" : "")}>
+                    {isUrdu ? WEEKDAYS_UR[i] : w}
+                  </span>
                 </label>
               ))}
             </div>
           </Card>
 
           <Card className="p-4">
-            <p className="font-heading text-sm font-bold mb-2">Holidays this month · اس ماہ کی چھٹیاں</p>
+            <p className="font-heading text-sm font-bold mb-2">
+              {isUrdu ? "اس ماہ کی چھٹیاں" : "Holidays this month"}
+            </p>
             {monthHolidays.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4 text-center">No holidays this month.</p>
+              <p className="text-xs text-muted-foreground py-4 text-center">
+                {isUrdu ? "اس ماہ کوئی چھٹی نہیں ہے۔" : "No holidays this month."}
+              </p>
             ) : (
               <ul className="space-y-2">
                 {monthHolidays.map((h) => {
@@ -212,10 +241,11 @@ function HolidaysPage() {
                     <li key={h.id} className="flex items-start gap-2 text-xs">
                       <span className={cn("h-1.5 w-1.5 rounded-full mt-1.5 shrink-0", m.dot)} />
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{h.nameEnglish}</p>
-                        <p className="font-urdu text-muted-foreground truncate" dir="rtl">{h.nameUrdu}</p>
+                        <p className={cn("font-medium truncate", isUrdu ? "font-urdu" : "")} dir={isUrdu ? "rtl" : "ltr"}>
+                          {isUrdu ? h.nameUrdu : h.nameEnglish}
+                        </p>
                       </div>
-                      <span className="font-mono text-[10px] text-muted-foreground shrink-0">{h.date.slice(8)} {new Date(h.date).toLocaleString("en-US", { weekday: "short" })}</span>
+                      <span className="font-mono text-[10px] text-muted-foreground shrink-0">{h.date.slice(8)} {new Date(h.date).toLocaleString(isUrdu ? "ur-PK" : "en-US", { weekday: "short" })}</span>
                     </li>
                   );
                 })}
@@ -228,7 +258,19 @@ function HolidaysPage() {
   );
 }
 
-function DayEditor({ date, holiday, onSave, onDelete }: { date: string; holiday: Holiday | undefined; onSave: (p: Partial<Holiday>) => void; onDelete: () => void }) {
+function DayEditor({
+  date,
+  holiday,
+  isUrdu = false,
+  onSave,
+  onDelete,
+}: {
+  date: string;
+  holiday: Holiday | undefined;
+  isUrdu?: boolean;
+  onSave: (p: Partial<Holiday>) => void;
+  onDelete: () => void;
+}) {
   const [name, setName] = useState(holiday?.nameEnglish ?? "");
   const [urdu, setUrdu] = useState(holiday?.nameUrdu ?? "");
   const [type, setType] = useState<Holiday["type"]>(holiday?.type ?? "institutional");
@@ -237,39 +279,53 @@ function DayEditor({ date, holiday, onSave, onDelete }: { date: string; holiday:
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">{new Date(date).toDateString()}</p>
-        {holiday && <Badge variant="outline" className="text-[10px]">existing</Badge>}
+        {holiday && <Badge variant="outline" className="text-[10px]">{isUrdu ? "موجودہ" : "existing"}</Badge>}
       </div>
       <div className="grid gap-2">
         <div>
-          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Name</Label>
+          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {isUrdu ? "انگریزی نام" : "Name"}
+          </Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Independence Day" className="h-8" />
         </div>
         <div>
-          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground font-urdu" dir="rtl">اردو نام</Label>
+          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground font-urdu" dir="rtl">
+            {isUrdu ? "اردو نام" : "Urdu Name"}
+          </Label>
           <Input value={urdu} onChange={(e) => setUrdu(e.target.value)} dir="rtl" className="h-8 font-urdu" />
         </div>
         <div>
-          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Type</Label>
+          <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {isUrdu ? "قسم" : "Type"}
+          </Label>
           <Select value={type} onValueChange={(v) => setType(v as Holiday["type"])}>
             <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="national">Public · سرکاری</SelectItem>
-              <SelectItem value="religious">Islamic · اسلامی</SelectItem>
-              <SelectItem value="institutional">Institutional · ادارہ</SelectItem>
+              <SelectItem value="national">{isUrdu ? "سرکاری چھٹی" : "Public"}</SelectItem>
+              <SelectItem value="religious">{isUrdu ? "اسلامی تہوار" : "Islamic"}</SelectItem>
+              <SelectItem value="institutional">{isUrdu ? "ادارہ جاتی" : "Institutional"}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <label className="flex items-center gap-2 text-xs cursor-pointer">
           <Checkbox checked={recurring} onCheckedChange={(v) => setRecurring(!!v)} />
-          Recurring each year · ہر سال
+          <span>{isUrdu ? "ہر سال دہرائیں" : "Recurring each year"}</span>
         </label>
       </div>
       <div className="flex gap-2 pt-2 border-t border-border">
-        {holiday && <Button variant="outline" size="sm" className="gap-1 text-destructive" onClick={onDelete}><Trash2 className="h-3 w-3" />Remove</Button>}
+        {holiday && (
+          <Button variant="outline" size="sm" className="gap-1 text-destructive" onClick={onDelete}>
+            <Trash2 className="h-3 w-3" />
+            {isUrdu ? "حذف کریں" : "Remove"}
+          </Button>
+        )}
         <Button size="sm" className="ms-auto gap-1" onClick={() => {
-          if (!name.trim()) { toast.error("Name required"); return; }
+          if (!name.trim()) { toast.error(isUrdu ? "نام درکار ہے" : "Name required"); return; }
           onSave({ nameEnglish: name, nameUrdu: urdu || name, type, recurring });
-        }}><Plus className="h-3 w-3" />{holiday ? "Update" : "Add"}</Button>
+        }}>
+          <Plus className="h-3 w-3" />
+          {holiday ? (isUrdu ? "تبدیل کریں" : "Update") : (isUrdu ? "شامل کریں" : "Add")}
+        </Button>
       </div>
     </div>
   );

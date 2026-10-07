@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, Loader2, ShieldCheck, GraduationCap, Users as UsersIcon, Crown, Briefcase, Calculator, Library as LibraryIcon, Phone, HardHat } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, Eye, EyeOff, Loader2, ShieldCheck, GraduationCap, Users as UsersIcon, Crown, Briefcase, Calculator, Library as LibraryIcon, Phone, HardHat, FileSignature, FileText } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,15 +38,20 @@ type Props = {
 };
 
 const ROLE_OPTIONS: { value: StepperRole; urdu: string; english: string; tagline: string; icon: typeof ShieldCheck }[] = [
-  { value: "admin",        urdu: "منتظم",        english: "Admin",         tagline: "Manages all institutional operations",     icon: ShieldCheck },
-  { value: "principal",    urdu: "پرنسپل",       english: "Principal",     tagline: "Oversight of academics, exams & reports",   icon: Crown },
-  { value: "hr_manager",   urdu: "ایچ آر منیجر", english: "HR Manager",     tagline: "Staff, leave & departments",                icon: Briefcase },
-  { value: "accountant",   urdu: "اکاؤنٹنٹ",     english: "Accountant",    tagline: "Fees, finance, donations & ledgers",        icon: Calculator },
-  { value: "librarian",    urdu: "لائبریرین",    english: "Librarian",     tagline: "Library inventory & book issuance",         icon: LibraryIcon },
-  { value: "receptionist", urdu: "استقبالیہ",    english: "Receptionist",  tagline: "Front-desk, admissions intake, ID cards",   icon: Phone },
-  { value: "teacher",      urdu: "استاد",         english: "Teacher",       tagline: "Access to assigned subjects and classes",   icon: GraduationCap },
-  { value: "staff",        urdu: "عملہ",          english: "General Staff", tagline: "Basic dashboard access for support staff",  icon: HardHat },
-  { value: "parent",       urdu: "والدین",        english: "Parent",        tagline: "Parent portal access only",                 icon: UsersIcon },
+  { value: "admin",           urdu: "منتظم",        english: "Admin",           tagline: "Manages all institutional operations",     icon: ShieldCheck },
+  { value: "admission_admin", urdu: "داخلہ ایڈمن",   english: "Admission Admin", tagline: "Admissions queue, interviews & intake",   icon: FileSignature as unknown as typeof ShieldCheck },
+  { value: "academic_admin",  urdu: "تعلیمی ایڈمن",   english: "Academic Admin",  tagline: "Classes, syllabus, timetable & exams",     icon: GraduationCap },
+  { value: "finance_admin",   urdu: "مالی ایڈمن",    english: "Finance Admin",   tagline: "Fee billing, vouchers & donations",        icon: Calculator },
+  { value: "hr_admin",        urdu: "ایچ آر ایڈمن",  english: "HR Admin",        tagline: "Staff attendance, leaves & holidays",      icon: Briefcase },
+  { value: "reports_admin",   urdu: "رپورٹس ایڈمن",  english: "Reports Admin",   tagline: "Attendance, exams & operational reports",   icon: FileText as unknown as typeof ShieldCheck },
+  { value: "principal",       urdu: "پرنسپل",       english: "Principal",       tagline: "Oversight of academics, exams & reports",   icon: Crown },
+  { value: "hr_manager",      urdu: "ایچ آر منیجر", english: "HR Manager",       tagline: "Staff, leave & departments",                icon: Briefcase },
+  { value: "accountant",      urdu: "اکاؤنٹنٹ",     english: "Accountant",      tagline: "Fees, finance, donations & ledgers",        icon: Calculator },
+  { value: "librarian",       urdu: "لائبریرین",    english: "Librarian",       tagline: "Library inventory & book issuance",         icon: LibraryIcon },
+  { value: "receptionist",    urdu: "استقبالیہ",    english: "Receptionist",    tagline: "Front-desk, admissions intake, ID cards",   icon: Phone },
+  { value: "teacher",         urdu: "استاد",         english: "Teacher",         tagline: "Access to assigned subjects and classes",   icon: GraduationCap },
+  { value: "staff",           urdu: "عملہ",          english: "General Staff",   tagline: "Basic dashboard access for support staff",  icon: HardHat },
+  { value: "parent",          urdu: "والدین",        english: "Parent",          tagline: "Parent portal access only",                 icon: UsersIcon },
 ];
 
 export function CreateUserStepper({ open, onOpenChange, mode = "create", initial, prefill, onCreate, onUpdate }: Props) {

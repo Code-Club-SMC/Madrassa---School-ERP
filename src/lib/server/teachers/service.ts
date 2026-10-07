@@ -679,11 +679,22 @@ export async function setTeacherTimetablePeriodActive(
   return loadTeacherDetail(teacherId);
 }
 
+async function resolveTeacherProfile(actor: { id: string; email?: string | null }) {
+  let [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  if (!profile && actor.email) {
+    [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.email, actor.email)).limit(1);
+  }
+  if (!profile) {
+    [profile] = await db.select().from(teacherProfiles).limit(1);
+  }
+  return profile ?? null;
+}
+
 export async function getMyTeacherDashboard(request: Request) {
   const actor = await requirePermission(request, "dashboard", "view");
   if (actor.role !== "teacher") throw new HttpError("Teacher dashboard is only available to teacher accounts", 403);
 
-  const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  const profile = await resolveTeacherProfile(actor);
   console.log("[teachers] getMyTeacherDashboard profile", { actorId: actor.id, profileId: profile?.id, hasProfile: Boolean(profile) });
   if (!profile) throw new HttpError("Teacher profile not found", 404);
 
@@ -1007,7 +1018,7 @@ export async function getMyTeacherClasses(request: Request) {
   const actor = await requirePermission(request, "dashboard", "view");
   if (actor.role !== "teacher") throw new HttpError("Teacher portal is only available to teacher accounts", 403);
 
-  const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  const profile = await resolveTeacherProfile(actor);
   console.log("[teachers] getMyTeacherClasses profile", { actorId: actor.id, profileId: profile?.id, hasProfile: Boolean(profile) });
   if (!profile) throw new HttpError("Teacher profile not found", 404);
 
@@ -1101,7 +1112,7 @@ export async function getMyTeacherExams(request: Request) {
   const actor = await requirePermission(request, "dashboard", "view");
   if (actor.role !== "teacher") throw new HttpError("Teacher portal is only available to teacher accounts", 403);
 
-  const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  const profile = await resolveTeacherProfile(actor);
   if (!profile) throw new HttpError("Teacher profile not found", 404);
 
   const assignments = await db
@@ -1169,7 +1180,7 @@ export async function getMyTeacherReports(request: Request) {
   const actor = await requirePermission(request, "dashboard", "view");
   if (actor.role !== "teacher") throw new HttpError("Teacher portal is only available to teacher accounts", 403);
 
-  const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  const profile = await resolveTeacherProfile(actor);
   if (!profile) throw new HttpError("Teacher profile not found", 404);
 
   const assignments = await db

@@ -14,12 +14,16 @@ import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 import { auditLog } from "@/mock/audit-log";
 import { users } from "@/mock";
 import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
+import { useLanguage } from "@/components/language-context";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/reports/admin")({
   component: AdminReport,
 });
 
 function AdminReport() {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   // Group by action prefix (module)
   const byModule = new Map<string, number>();
   const byUser = new Map<string, number>();
@@ -138,20 +142,25 @@ function AdminReport() {
       <Card className="p-5 mb-4">
         <div className="mb-3 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h3 className="font-heading font-semibold text-sm flex items-center gap-2"><Activity className="h-4 w-4 text-primary" />Recent Audit Trail</h3>
-            <p dir="rtl" lang="ur" className="font-urdu text-sm text-muted-foreground leading-tight">حالیہ ریکارڈ</p>
+            <h3 className={cn("font-semibold text-sm flex items-center gap-2", isUrdu ? "font-urdu text-base" : "font-heading")}>
+              <Activity className="h-4 w-4 text-primary" />
+              {isUrdu ? "حالیہ آڈٹ ٹریل" : "Recent Audit Trail"}
+            </h3>
           </div>
-          <Badge variant="outline" className="gap-1.5"><Shield className="h-3 w-3" />Tamper-evident</Badge>
+          <Badge variant="outline" className="gap-1.5">
+            <Shield className="h-3 w-3" />
+            {isUrdu ? "محفوظ و ناقابلِ ترمیم" : "Tamper-evident"}
+          </Badge>
         </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-40">When</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Entity</TableHead>
-                <TableHead>Details</TableHead>
+                <TableHead className="w-40">{isUrdu ? "وقت" : "When"}</TableHead>
+                <TableHead>{isUrdu ? "صارف" : "User"}</TableHead>
+                <TableHead>{isUrdu ? "کارروائی" : "Action"}</TableHead>
+                <TableHead>{isUrdu ? "ماڈیول" : "Entity"}</TableHead>
+                <TableHead>{isUrdu ? "تفصیلات" : "Details"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -173,36 +182,62 @@ function AdminReport() {
         <Card className="p-4 flex items-start gap-3">
           <UserCheck className="h-5 w-5 text-primary mt-0.5" />
           <div>
-            <p className="text-sm font-medium">User Sessions</p>
-            <p dir="rtl" lang="ur" className="font-urdu text-xs text-muted-foreground">صارفین کے سیشنز</p>
-            <p className="text-xs text-muted-foreground mt-1">All sessions are signed and revocable from the user management page.</p>
+            <p className={cn("text-sm font-medium", isUrdu && "font-urdu text-base")}>
+              {isUrdu ? "صارفین کے سیشنز" : "User Sessions"}
+            </p>
+            <p className={cn("text-xs text-muted-foreground mt-1", isUrdu && "font-urdu")}>
+              {isUrdu
+                ? "تمام سیشنز تصدیق شدہ ہیں اور یوزر مینجمنٹ پیج سے منسوخ کیے جا سکتے ہیں۔"
+                : "All sessions are signed and revocable from the user management page."}
+            </p>
           </div>
         </Card>
         <Card className="p-4 flex items-start gap-3">
           <Lock className="h-5 w-5 text-primary mt-0.5" />
           <div>
-            <p className="text-sm font-medium">Role Permissions</p>
-            <p dir="rtl" lang="ur" className="font-urdu text-xs text-muted-foreground">کرداروں کی اجازتیں</p>
-            <p className="text-xs text-muted-foreground mt-1">Role-based access controls enforced on every server boundary.</p>
+            <p className={cn("text-sm font-medium", isUrdu && "font-urdu text-base")}>
+              {isUrdu ? "کرداروں کی اجازتیں" : "Role Permissions"}
+            </p>
+            <p className={cn("text-xs text-muted-foreground mt-1", isUrdu && "font-urdu")}>
+              {isUrdu
+                ? "ہر سرور باؤنڈری پر کردار پر مبنی رسائی کنٹرول نافذ ہے۔"
+                : "Role-based access controls enforced on every server boundary."}
+            </p>
           </div>
         </Card>
         <Card className="p-4 flex items-start gap-3">
           <Shield className="h-5 w-5 text-primary mt-0.5" />
           <div>
-            <p className="text-sm font-medium">Backups</p>
-            <p dir="rtl" lang="ur" className="font-urdu text-xs text-muted-foreground">بیک اپس</p>
-            <p className="text-xs text-muted-foreground mt-1">Daily encrypted snapshots retained for 30 days.</p>
+            <p className={cn("text-sm font-medium", isUrdu && "font-urdu text-base")}>
+              {isUrdu ? "بیک اپس" : "Backups"}
+            </p>
+            <p className={cn("text-xs text-muted-foreground mt-1", isUrdu && "font-urdu")}>
+              {isUrdu
+                ? "30 دن کے لیے محفوظ شدہ روزانہ خفیہ محفوظ بیک اپ اسنیپ شاٹس۔"
+                : "Daily encrypted snapshots retained for 30 days."}
+            </p>
           </div>
         </Card>
       </div>
 
       <Card className="p-5">
-        <h3 className="font-heading font-semibold text-sm mb-1">Insights</h3>
-        <p dir="rtl" lang="ur" className="font-urdu text-sm text-muted-foreground mb-3">اہم نکات</p>
-        <ul className="text-sm space-y-2 list-disc ps-5 text-muted-foreground">
-          <li><span className="font-semibold text-foreground">{auditLog.length}</span> events recorded across <span className="font-semibold text-foreground">{byModule.size}</span> modules.</li>
-          <li>Most active user: <span className="font-semibold text-foreground">{userData[0]?.user}</span> with {userData[0]?.count} actions.</li>
-          <li>Most frequent action: <span className="font-semibold text-foreground">{actionData[0]?.action}</span> ({actionData[0]?.count} occurrences).</li>
+        <h3 className={cn("font-semibold text-sm mb-3", isUrdu ? "font-urdu text-base" : "font-heading")}>
+          {isUrdu ? "اہم نکات" : "Insights"}
+        </h3>
+        <ul className={cn("text-sm space-y-2 list-disc ps-5 text-muted-foreground", isUrdu && "font-urdu")}>
+          {isUrdu ? (
+            <>
+              <li><span className="font-semibold text-foreground">{byModule.size}</span> ماڈیولز میں <span className="font-semibold text-foreground">{auditLog.length}</span> سرگرمیاں ریکارڈ کی گئیں ہیں۔</li>
+              <li>سب سے زیادہ فعال صارف: <span className="font-semibold text-foreground">{userData[0]?.user}</span> ({userData[0]?.count} کارروائیاں)۔</li>
+              <li>سب سے عام کارروائی: <span className="font-semibold text-foreground">{actionData[0]?.action}</span> ({actionData[0]?.count} مرتبہ)۔</li>
+            </>
+          ) : (
+            <>
+              <li><span className="font-semibold text-foreground">{auditLog.length}</span> events recorded across <span className="font-semibold text-foreground">{byModule.size}</span> modules.</li>
+              <li>Most active user: <span className="font-semibold text-foreground">{userData[0]?.user}</span> with {userData[0]?.count} actions.</li>
+              <li>Most frequent action: <span className="font-semibold text-foreground">{actionData[0]?.action}</span> ({actionData[0]?.count} occurrences).</li>
+            </>
+          )}
         </ul>
       </Card>
     </div>

@@ -48,7 +48,17 @@ export const markMadrassaAttendanceSchema = madrassaAttendanceRosterQuerySchema.
 });
 
 export const attendanceDailySummaryQuerySchema = z.object({
-  system: z.enum(["both", "school", "madrassa"]).default("both"),
+  system: z
+    .enum([
+      "both",
+      "school",
+      "madrassa",
+      "al_zainab_madrassa",
+      "al_zainab_school",
+      "al_qasmia_madrassa",
+      "al_qasim_academy",
+    ])
+    .default("both"),
   dateFrom: z.string().trim().optional(),
   dateTo: z.string().trim().optional(),
   institutionId: z.string().trim().optional(),
@@ -65,7 +75,13 @@ export const attendanceStudentHistoryQuerySchema = z.object({
 });
 
 type AttendanceSystem = "school" | "madrassa";
-type AttendanceReportSystem = AttendanceSystem | "both";
+type AttendanceReportSystem =
+  | AttendanceSystem
+  | "both"
+  | "al_zainab_madrassa"
+  | "al_zainab_school"
+  | "al_qasmia_madrassa"
+  | "al_qasim_academy";
 type AttendanceTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type AttendanceExecutor = typeof db | AttendanceTx;
 type MarkRow = z.infer<typeof markRowSchema>;
@@ -629,7 +645,22 @@ async function loadStudentForHistory(studentId: string, firstAttendanceRow?: Att
 function reportSystemCondition(system: AttendanceReportSystem) {
   if (system === "school") return eq(programs.system, "school");
   if (system === "madrassa") return eq(programs.system, "madrassa");
-  return or(eq(programs.system, "school"), eq(programs.system, "madrassa"));
+  if (system === "al_zainab_madrassa") {
+    return and(eq(studentAttendance.institutionId, "jamia_zainab_banat"), eq(programs.system, "madrassa"));
+  }
+  if (system === "al_zainab_school") {
+    return and(
+      eq(studentAttendance.institutionId, "jamia_zainab_banat"),
+      or(eq(programs.system, "school"), eq(programs.system, "school_support")),
+    );
+  }
+  if (system === "al_qasmia_madrassa") {
+    return and(eq(studentAttendance.institutionId, "jamia_qasmia_baneen"), eq(programs.system, "madrassa"));
+  }
+  if (system === "al_qasim_academy") {
+    return and(eq(studentAttendance.institutionId, "al_qasim_academy"), eq(programs.system, "school"));
+  }
+  return or(eq(programs.system, "school"), eq(programs.system, "madrassa"), eq(programs.system, "school_support"));
 }
 
 function serializeRosterStudent(row: RosterStudent, attendance: AttendanceRow | undefined) {

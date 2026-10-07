@@ -13,12 +13,16 @@ import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 import { students, applications, feeRecords, recentActivity } from "@/mock";
 import { generateAttendance } from "@/mock/attendance";
 import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
+import { useLanguage } from "@/components/language-context";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/reports/monthly")({
   component: MonthlyReport,
 });
 
 function MonthlyReport() {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const now = new Date();
   const monthLabel = now.toLocaleString("en-US", { month: "long", year: "numeric" });
   const URDU_MONTHS = ["جنوری", "فروری", "مارچ", "اپریل", "مئی", "جون", "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر"];
@@ -143,16 +147,17 @@ function MonthlyReport() {
 
       <Card className="p-5 mb-4">
         <div className="mb-3">
-          <h3 className="font-heading font-semibold text-sm">Recent Activity</h3>
-          <p dir="rtl" lang="ur" className="font-urdu text-sm text-muted-foreground leading-tight">حالیہ سرگرمیاں</p>
+          <h3 className={cn("font-semibold text-sm", isUrdu ? "font-urdu text-base" : "font-heading")}>
+            {isUrdu ? "حالیہ سرگرمیاں" : "Recent Activity"}
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Activity</TableHead>
-                <TableHead className="text-right">When</TableHead>
+                <TableHead>{isUrdu ? "قسم" : "Type"}</TableHead>
+                <TableHead>{isUrdu ? "سرگرمی" : "Activity"}</TableHead>
+                <TableHead className="text-right">{isUrdu ? "وقت" : "When"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -160,8 +165,7 @@ function MonthlyReport() {
                 <TableRow key={e.id}>
                   <TableCell className="capitalize text-xs">{e.type}</TableCell>
                   <TableCell>
-                    <div className="text-sm">{e.title}</div>
-                    <div dir="rtl" lang="ur" className="font-urdu text-xs text-muted-foreground">{e.titleUrdu}</div>
+                    <div className={cn("text-sm", isUrdu && "font-urdu")}>{isUrdu ? e.titleUrdu : e.title}</div>
                   </TableCell>
                   <TableCell className="text-right text-xs text-muted-foreground">{new Date(e.at).toLocaleString()}</TableCell>
                 </TableRow>
@@ -172,12 +176,23 @@ function MonthlyReport() {
       </Card>
 
       <Card className="p-5">
-        <h3 className="font-heading font-semibold text-sm mb-1">Insights</h3>
-        <p dir="rtl" lang="ur" className="font-urdu text-sm text-muted-foreground mb-3">اہم نکات</p>
-        <ul className="text-sm space-y-2 list-disc ps-5 text-muted-foreground">
-          <li><span className="font-semibold text-foreground">PKR {collected.toLocaleString()}</span> of <span className="font-semibold text-foreground">PKR {expected.toLocaleString()}</span> collected ({rate}% collection efficiency).</li>
-          <li><span className="font-semibold text-foreground">{unpaid}</span> students remain unpaid this month — follow-up notices recommended.</li>
-          <li><span className="font-semibold text-foreground">{admissions}</span> admissions confirmed vs <span className="font-semibold text-foreground">{withdrawals}</span> withdrawals — net growth of {admissions - withdrawals}.</li>
+        <h3 className={cn("font-semibold text-sm mb-3", isUrdu ? "font-urdu text-base" : "font-heading")}>
+          {isUrdu ? "اہم نکات" : "Insights"}
+        </h3>
+        <ul className={cn("text-sm space-y-2 list-disc ps-5 text-muted-foreground", isUrdu && "font-urdu")}>
+          {isUrdu ? (
+            <>
+              <li>متوقع فیس <span className="font-semibold text-foreground">PKR {expected.toLocaleString()}</span> میں سے <span className="font-semibold text-foreground">PKR {collected.toLocaleString()}</span> وصول ہوئے ({rate}% کارکردگی)۔</li>
+              <li>اس ماہ <span className="font-semibold text-foreground">{unpaid}</span> طلبہ کی فیس واجب الادا ہے — یاد دہانی نوٹس جاری کرنے کی سفارش کی جاتی ہے۔</li>
+              <li><span className="font-semibold text-foreground">{admissions}</span> داخلوں کی تصدیق بمقابلہ <span className="font-semibold text-foreground">{withdrawals}</span> خارج طلبہ — خالص ترقی: {admissions - withdrawals}۔</li>
+            </>
+          ) : (
+            <>
+              <li><span className="font-semibold text-foreground">PKR {collected.toLocaleString()}</span> of <span className="font-semibold text-foreground">PKR {expected.toLocaleString()}</span> collected ({rate}% collection efficiency).</li>
+              <li><span className="font-semibold text-foreground">{unpaid}</span> students remain unpaid this month — follow-up notices recommended.</li>
+              <li><span className="font-semibold text-foreground">{admissions}</span> admissions confirmed vs <span className="font-semibold text-foreground">{withdrawals}</span> withdrawals — net growth of {admissions - withdrawals}.</li>
+            </>
+          )}
         </ul>
       </Card>
     </div>
