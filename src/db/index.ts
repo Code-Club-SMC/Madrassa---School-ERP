@@ -14,9 +14,19 @@ import * as timetableSchema from "@/db/schema/timetable";
 
 const connectionString = process.env.DATABASE_URL;
 
+const isSsl =
+  process.env.DATABASE_SSL === "true" ||
+  Boolean(
+    connectionString &&
+      (connectionString.includes("sslmode=require") ||
+        connectionString.includes("neon.tech") ||
+        connectionString.includes("supabase.co") ||
+        connectionString.includes("pooler.supabase.com")),
+  );
+
 export const pool = new Pool({
   connectionString,
-  ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : undefined,
+  ssl: isSsl ? { rejectUnauthorized: false } : undefined,
 });
 
 export const db = drizzle(pool, {

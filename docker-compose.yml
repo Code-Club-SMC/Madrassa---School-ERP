@@ -32,6 +32,23 @@ services:
       retries: 5
       start_period: 15s
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: msmis/erp:latest
+    container_name: msmis-erp
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/msmis"
+      NODE_ENV: "production"
+      SESSION_SECRET: "msmis_erp_fallback_secret_key_2026_super_secure"
+      PORT: "3000"
 
 volumes:
   postgres-data:

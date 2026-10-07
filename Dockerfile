@@ -1,14 +1,18 @@
-FROM node:24-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
-COPY package.json ./
+RUN apk add --no-cache libc6-compat python3 make g++
+
+COPY package.json package-lock.json* ./
 
 RUN npm install
 
 COPY . .
 
-RUN NITRO_PRESET=node-server npm run build
+ENV NODE_ENV=production
+ENV NITRO_PRESET=node-server
+RUN npm run build
 
 RUN chmod +x docker-entrypoint.sh
 
@@ -18,4 +22,4 @@ ENV DATABASE_URL="postgres://postgres:postgres@postgres:5432/msmis"
 ENV PORT="3000"
 ENV NODE_ENV="production"
 
-CMD ["./docker-entrypoint.sh"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
