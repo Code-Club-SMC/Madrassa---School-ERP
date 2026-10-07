@@ -25,6 +25,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/components/language-context";
 import { DraggableLanguageToggle } from "@/components/app/draggable-language-toggle";
+import { PublicHeader } from "@/components/website/public-header";
+import { PublicFooter } from "@/components/website/public-footer";
 import { institution } from "@/mock";
 
 export const Route = createFileRoute("/")({
@@ -174,72 +176,7 @@ function PublicRootWebsite() {
         </p>
       </div>
 
-      {/* Main Header / Navigation */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <School className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-urdu font-bold text-base leading-tight text-primary">
-                {institution.nameUrdu}
-              </p>
-              <p className="text-[10px] uppercase font-medium tracking-wider text-muted-foreground">
-                {institution.nameEnglish}
-              </p>
-            </div>
-          </Link>
-
-          <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
-            <Link
-              to="/"
-              className="px-3 py-1.5 rounded-lg hover:bg-accent text-foreground transition-colors"
-            >
-              {isUr ? "ہوم" : "Home"}
-            </Link>
-            <a
-              href="#campuses"
-              className="px-3 py-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {isUr ? "شاخیں اور کیمپسز" : "Campuses"}
-            </a>
-            <a
-              href="#portals"
-              className="px-3 py-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {isUr ? "پورٹلز" : "Portals"}
-            </a>
-            <Link
-              to="/website/gallery"
-              className="px-3 py-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {isUr ? "گیلری" : "Gallery"}
-            </Link>
-            <Link
-              to="/website/contact"
-              className="px-3 py-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {isUr ? "رابطہ" : "Contact"}
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <Link to="/apply">
-              <Button size="sm" variant="outline" className="hidden sm:inline-flex gap-1.5">
-                <FileSignature className="h-3.5 w-3.5" />
-                {isUr ? "آن لائن داخلہ" : "Apply Online"}
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button size="sm" className="gap-1.5 font-medium shadow-sm">
-                <LogIn className="h-3.5 w-3.5" />
-                {isUr ? "پورٹل لاگ ان" : "Portal Login"}
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-primary/10 via-background to-background py-16 md:py-24">
@@ -267,19 +204,19 @@ function PublicRootWebsite() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/login">
-              <Button size="lg" className="gap-2 font-medium shadow-md">
+            <Button asChild size="lg" className="gap-2 font-medium shadow-md">
+              <Link to="/login">
                 <LogIn className="h-4 w-4" />
-                {isUr ? "پورٹل لاگ ان کریں" : "Login to Portal"}
-              </Button>
-            </Link>
-            <Link to="/apply">
-              <Button size="lg" variant="outline" className="gap-2">
+                <span>{isUr ? "پورٹل لاگ ان کریں" : "Login to Portal"}</span>
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="gap-2">
+              <Link to="/apply">
                 <FileSignature className="h-4 w-4" />
-                {isUr ? "آن لائن داخلہ فارم" : "Online Admission"}
+                <span>{isUr ? "آن لائن داخلہ فارم" : "Online Admission"}</span>
                 <ArrowRight className="h-4 w-4 rtl:rotate-180" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
 
           {/* Quick Metrics */}
@@ -470,129 +407,28 @@ function PublicRootWebsite() {
               Complete the digital admission form online in 3 simple steps, or visit our administration office for walk-in guidance.
             </p>
             <div className="mt-6 flex flex-wrap gap-3 justify-center">
-              <Link to="/apply">
-                <Button size="lg" variant="secondary" className="gap-2 font-medium">
+              <Button asChild size="lg" variant="secondary" className="gap-2 font-medium">
+                <Link to="/apply">
                   <FileSignature className="h-4 w-4" />
-                  {isUr ? "آن لائن درخواست فارم پُر کریں" : "Apply Online Now"}
-                </Button>
-              </Link>
-              <Link to="/website/contact">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/20"
-                >
-                  {isUr ? "دفتری معلومات اور رابطہ" : "Contact Admissions Office"}
-                </Button>
-              </Link>
+                  <span>{isUr ? "آن لائن درخواست فارم پُر کریں" : "Apply Online Now"}</span>
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="bg-primary-foreground/10 text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/20"
+              >
+                <Link to="/website/contact">
+                  <span>{isUr ? "دفتری معلومات اور رابطہ" : "Contact Admissions Office"}</span>
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                  <School className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="font-urdu font-semibold text-sm leading-none">{institution.nameUrdu}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase">{institution.nameEnglish}</p>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Excellence in Islamic scholarship and modern BISE curriculum under one administrative umbrella.
-              </p>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                {isUr ? "شاخیں" : "Campuses"}
-              </p>
-              <ul className="space-y-2 text-xs">
-                <li>
-                  <a href="#campuses" className="hover:text-primary transition-colors">
-                    Jamia Qasmia Baneen (Madrassa)
-                  </a>
-                </li>
-                <li>
-                  <a href="#campuses" className="hover:text-primary transition-colors">
-                    Jamia Zainab Banat (Madrassa)
-                  </a>
-                </li>
-                <li>
-                  <a href="#campuses" className="hover:text-primary transition-colors">
-                    Al-Qasim Academy (School)
-                  </a>
-                </li>
-                <li>
-                  <a href="#campuses" className="hover:text-primary transition-colors">
-                    Al-Zainab School (School)
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                {isUr ? "رسائی و پورٹلز" : "Portals & Links"}
-              </p>
-              <ul className="space-y-2 text-xs">
-                <li>
-                  <Link to="/login" className="hover:text-primary font-medium transition-colors">
-                    Portal Login (All Roles)
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/apply" className="hover:text-primary transition-colors">
-                    Online Admission Application
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/website/gallery" className="hover:text-primary transition-colors">
-                    Photo & Campus Gallery
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                {isUr ? "رابطہ کریں" : "Contact"}
-              </p>
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <p className="flex items-center gap-2">
-                  <Phone className="h-3.5 w-3.5 text-primary" />
-                  +92-300-1234567
-                </p>
-                <p className="flex items-center gap-2">
-                  <Mail className="h-3.5 w-3.5 text-primary" />
-                  info@msmis.edu.pk
-                </p>
-                <p className="flex items-center gap-2">
-                  <MapPin className="h-3.5 w-3.5 text-primary" />
-                  Tal Thall / Township Campus
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-12 pt-6 border-t border-border flex flex-wrap items-center justify-between gap-4 text-xs text-muted-foreground">
-            <p>
-              © {new Date().getFullYear()} {institution.nameEnglish} • {institution.nameUrdu}. All rights reserved.
-            </p>
-            <div className="flex items-center gap-3">
-              <Link to="/login" className="hover:text-primary">
-                Login
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
 
       <DraggableLanguageToggle />
     </div>

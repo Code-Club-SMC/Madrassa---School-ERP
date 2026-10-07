@@ -1,7 +1,7 @@
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { AlertCircle, Loader2, School, KeyRound } from "lucide-react";
+import { AlertCircle, Loader2, School, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,8 +31,14 @@ function LoginPage() {
   const { redirect } = Route.useSearch();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [idFocused, setIdFocused] = useState(false);
+  const [pwFocused, setPwFocused] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const idFloating = idFocused || identifier.length > 0;
+  const pwFloating = pwFocused || password.length > 0;
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -91,9 +97,11 @@ function LoginPage() {
       >
         <div className="w-full max-w-[430px] space-y-8">
           <div className="space-y-3 text-start">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
-              <School className="h-6 w-6" />
-            </div>
+            <Link to="/" className="inline-block group" title="Back to Home">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                <School className="h-6 w-6" />
+              </div>
+            </Link>
             <div className="space-y-1">
               <p className={cn("text-3xl font-bold", lang === "ur" ? "font-urdu leading-loose" : "")}>
                 {lang === "ur" ? "خوش آمدید" : "Welcome"}
@@ -110,36 +118,99 @@ function LoginPage() {
             onSubmit={onSubmit}
             className="space-y-5 rounded-xl border border-border bg-background p-6 shadow-sm"
           >
-            <div className="space-y-2 text-start">
-              <label htmlFor="identifier" className={cn("text-sm font-medium", lang === "ur" ? "font-urdu" : "")}>
-                {lang === "ur" ? "ای میل یا یوزر نیم" : "Email or Username"}
-              </label>
+            {/* Floating Label: Identifier */}
+            <div className="relative text-start">
               <Input
                 id="identifier"
                 dir="ltr"
                 type="text"
                 autoComplete="username"
-                placeholder={lang === "ur" ? "admin, teacher1@demo.local, parent1@demo.local" : "admin, teacher1@demo.local, parent1@demo.local"}
+                placeholder=" "
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
-                className="h-11 text-left"
+                onFocus={() => setIdFocused(true)}
+                onBlur={() => setIdFocused(false)}
+                className={cn(
+                  "peer h-14 w-full rounded-lg border border-input bg-background px-3.5 pt-5 pb-1.5 text-base md:text-sm text-foreground shadow-sm transition-all text-left",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary",
+                )}
               />
+              <label
+                htmlFor="identifier"
+                className={cn(
+                  "pointer-events-none absolute select-none transition-all duration-200 ease-out",
+                  lang === "ur" ? "font-urdu right-3.5" : "font-medium left-3.5",
+                  idFloating
+                    ? cn(
+                        lang === "ur" ? "top-1.5 text-xs" : "top-2 text-[11px]",
+                        "leading-tight font-semibold",
+                        idFocused ? "text-primary" : "text-muted-foreground",
+                      )
+                    : "top-1/2 -translate-y-1/2 text-sm text-muted-foreground",
+                  "peer-focus:top-2 peer-focus:translate-y-0 peer-focus:text-[11px] peer-focus:font-semibold peer-focus:text-primary",
+                  "peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:font-medium",
+                )}
+              >
+                {lang === "ur" ? "ای میل یا یوزر نیم" : "Email or Username"}
+              </label>
             </div>
 
-            <div className="space-y-2 text-start">
-              <label htmlFor="password" className={cn("text-sm font-medium", lang === "ur" ? "font-urdu" : "")}>
-                {lang === "ur" ? "پاس ورڈ" : "Password"}
-              </label>
+            {/* Floating Label: Password */}
+            <div className="relative text-start">
               <Input
                 id="password"
                 dir="ltr"
-                type="password"
-                placeholder="••••••••"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder=" "
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-                className="h-11 text-left"
+                onFocus={() => setPwFocused(true)}
+                onBlur={() => setPwFocused(false)}
+                className={cn(
+                  "peer h-14 w-full rounded-lg border border-input bg-background pt-5 pb-1.5 text-base md:text-sm text-foreground shadow-sm transition-all text-left",
+                  lang === "ur" ? "pl-11 pr-3.5" : "pr-11 pl-3.5",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary",
+                )}
               />
+              <label
+                htmlFor="password"
+                className={cn(
+                  "pointer-events-none absolute select-none transition-all duration-200 ease-out",
+                  lang === "ur" ? "font-urdu right-3.5" : "font-medium left-3.5",
+                  pwFloating
+                    ? cn(
+                        lang === "ur" ? "top-1.5 text-xs" : "top-2 text-[11px]",
+                        "leading-tight font-semibold",
+                        pwFocused ? "text-primary" : "text-muted-foreground",
+                      )
+                    : "top-1/2 -translate-y-1/2 text-sm text-muted-foreground",
+                  "peer-focus:top-2 peer-focus:translate-y-0 peer-focus:text-[11px] peer-focus:font-semibold peer-focus:text-primary",
+                  "peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:font-medium",
+                )}
+              >
+                {lang === "ur" ? "پاس ورڈ" : "Password"}
+              </label>
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => setShowPassword((prev) => !prev)}
+                className={cn(
+                  "absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  lang === "ur" ? "left-2" : "right-2",
+                )}
+                aria-label={
+                  showPassword
+                    ? lang === "ur"
+                      ? "پاس ورڈ چھپائیں"
+                      : "Hide password"
+                    : lang === "ur"
+                      ? "پاس ورڈ دکھائیں"
+                      : "Show password"
+                }
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
 
             {error && (

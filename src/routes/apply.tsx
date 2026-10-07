@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { z } from "zod";
-import { ChevronLeft, School } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,8 +13,9 @@ import {
   type AdmissionCategoryKey,
   type AdmissionSectionKey,
 } from "@/lib/admission-variants";
-import { institution } from "@/mock";
-import { useMemo } from "react";
+import { PublicHeader } from "@/components/website/public-header";
+import { PublicFooter } from "@/components/website/public-footer";
+import { DraggableLanguageToggle } from "@/components/app/draggable-language-toggle";
 
 const searchSchema = z.object({ variant: z.string().optional() });
 
@@ -32,15 +33,15 @@ function PublicApply() {
   const { variant: variantKey } = Route.useSearch();
   const navigate = Route.useNavigate();
   const variant = getVariant(variantKey);
-  const [institution, setInstitution] = useState<AdmissionCategoryKey | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<AdmissionCategoryKey | null>(null);
 
   const variants = useMemo(() => {
-    if (!institution) return [];
-    return ADMISSION_VARIANTS.filter((v) => v.category === institution);
-  }, [institution]);
+    if (!selectedCategory) return [];
+    return ADMISSION_VARIANTS.filter((v) => v.category === selectedCategory);
+  }, [selectedCategory]);
 
   const sections = useMemo(() => {
-    if (!institution) return [];
+    if (!selectedCategory) return [];
     const grouped = new Map<AdmissionSectionKey, typeof variants>();
     for (const v of variants) {
       const arr = grouped.get(v.section) ?? [];
@@ -48,22 +49,13 @@ function PublicApply() {
       grouped.set(v.section, arr);
     }
     return Array.from(grouped.entries()).map(([key, items]) => ({ key, items }));
-  }, [institution, variants]);
+  }, [selectedCategory, variants]);
 
   return (
-    <div className="min-h-dvh bg-muted/30">
-      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
-        <div className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <School className="h-4 w-4 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <p className="font-urdu text-sm leading-none">{institution.nameUrdu}</p>
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Online Admission · آن لائن داخلہ</p>
-          </div>
-        </div>
-      </header>
-      <main className="max-w-4xl mx-auto p-6">
+    <div className="min-h-dvh flex flex-col bg-muted/20">
+      <PublicHeader />
+
+      <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 my-6">
         {variant ? (
           <>
             <div className="flex items-center justify-between mb-4">
@@ -80,8 +72,8 @@ function PublicApply() {
             </div>
             <PdfFormRenderer variant={variant} isPublic />
           </>
-        ) : !institution ? (
-          <Card className="p-6">
+        ) : !selectedCategory ? (
+          <Card className="p-6 sm:p-8">
             <h2 className="font-urdu text-2xl font-semibold text-end leading-loose mb-6" dir="rtl" lang="ur">
               شعبہ منتخب کریں
             </h2>
@@ -90,7 +82,7 @@ function PublicApply() {
                 <button
                   key={c.key}
                   type="button"
-                  onClick={() => setInstitution(c.key)}
+                  onClick={() => setSelectedCategory(c.key)}
                   className={cn(
                     "group rounded-2xl border-2 border-border p-6 text-center transition-all",
                     "hover:border-primary/60 hover:bg-primary/5",
@@ -104,12 +96,12 @@ function PublicApply() {
             </div>
           </Card>
         ) : (
-          <Card className="p-6">
+          <Card className="p-6 sm:p-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-urdu text-2xl font-semibold text-end leading-loose" dir="rtl" lang="ur">
                 فارم منتخب کریں
               </h2>
-              <Button variant="ghost" size="sm" onClick={() => setInstitution(null)}>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedCategory(null)}>
                 <span className="font-urdu">واپس</span>
               </Button>
             </div>
@@ -147,10 +139,10 @@ function PublicApply() {
             </div>
           </Card>
         )}
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          {institution.nameEnglish} · <span className="font-urdu">{institution.nameUrdu}</span> · Powered by MSMIS
-        </p>
       </main>
+
+      <PublicFooter />
+      <DraggableLanguageToggle />
     </div>
   );
 }
