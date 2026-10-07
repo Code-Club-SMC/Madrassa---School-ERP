@@ -67,6 +67,7 @@ import { Route as AuthenticatedSchoolTimetableRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedSettingsAcademicYearRouteImport } from './routes/_authenticated/settings/academic-year'
 import { Route as AuthenticatedSettingsConcessionsRouteImport } from './routes/_authenticated/settings/concessions'
+import { Route as AuthenticatedSettingsStudentLifecycleRouteImport } from './routes/_authenticated/settings/student-lifecycle'
 import { Route as AuthenticatedSettingsTemplatesRouteImport } from './routes/_authenticated/settings/templates'
 import { Route as AuthenticatedSettingsWebsiteRouteImport } from './routes/_authenticated/settings/website'
 import { Route as AuthenticatedStudentsIdRouteImport } from './routes/_authenticated/students/$id'
@@ -114,6 +115,8 @@ import { Route as ApiAcademicMadrassaSubcategoriesRouteImport } from './routes/a
 import { Route as ApiAcademicMadrassaTimetableRouteImport } from './routes/api/academic/madrassa/timetable'
 import { Route as ApiAcademicSchoolClassesRouteImport } from './routes/api/academic/school/classes'
 import { Route as ApiAcademicSchoolTimetableRouteImport } from './routes/api/academic/school/timetable'
+import { Route as ApiAdminStudentLifecycleIndexRouteImport } from './routes/api/admin/student-lifecycle/index'
+import { Route as ApiAdminStudentLifecycleIdRouteImport } from './routes/api/admin/student-lifecycle/$id'
 import { Route as ApiAdmissionApplicationsIdRouteImport } from './routes/api/admission/applications/$id'
 import { Route as ApiAttendanceMadrassaMarkRouteImport } from './routes/api/attendance/madrassa/mark'
 import { Route as ApiAttendanceMadrassaRosterRouteImport } from './routes/api/attendance/madrassa/roster'
@@ -501,6 +504,12 @@ const AuthenticatedSettingsConcessionsRoute =
     path: '/concessions',
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsStudentLifecycleRoute =
+  AuthenticatedSettingsStudentLifecycleRouteImport.update({
+    id: '/student-lifecycle',
+    path: '/student-lifecycle',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedSettingsTemplatesRoute =
   AuthenticatedSettingsTemplatesRouteImport.update({
     id: '/templates',
@@ -754,6 +763,18 @@ const ApiAcademicSchoolTimetableRoute =
   ApiAcademicSchoolTimetableRouteImport.update({
     id: '/api/academic/school/timetable',
     path: '/api/academic/school/timetable',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAdminStudentLifecycleIndexRoute =
+  ApiAdminStudentLifecycleIndexRouteImport.update({
+    id: '/api/admin/student-lifecycle/',
+    path: '/api/admin/student-lifecycle/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAdminStudentLifecycleIdRoute =
+  ApiAdminStudentLifecycleIdRouteImport.update({
+    id: '/api/admin/student-lifecycle/$id',
+    path: '/api/admin/student-lifecycle/$id',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiAdmissionApplicationsIdRoute =
@@ -1185,6 +1206,7 @@ export interface FileRoutesByFullPath {
   '/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
   '/settings/concessions': typeof AuthenticatedSettingsConcessionsRoute
+  '/settings/student-lifecycle': typeof AuthenticatedSettingsStudentLifecycleRoute
   '/settings/templates': typeof AuthenticatedSettingsTemplatesRoute
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
@@ -1234,6 +1256,7 @@ export interface FileRoutesByFullPath {
   '/api/academic/madrassa/timetable': typeof ApiAcademicMadrassaTimetableRouteWithChildren
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
   '/api/academic/school/timetable': typeof ApiAcademicSchoolTimetableRouteWithChildren
+  '/api/admin/student-lifecycle/$id': typeof ApiAdminStudentLifecycleIdRoute
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
   '/api/attendance/madrassa/roster': typeof ApiAttendanceMadrassaRosterRoute
@@ -1268,6 +1291,7 @@ export interface FileRoutesByFullPath {
   '/madrassa/categories/': typeof AuthenticatedMadrassaCategoriesIndexRoute
   '/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
   '/school/exams/': typeof AuthenticatedSchoolExamsIndexRoute
+  '/api/admin/student-lifecycle/': typeof ApiAdminStudentLifecycleIndexRoute
   '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
   '/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
   '/madrassa/exams/$id/seating': typeof AuthenticatedMadrassaExamsIdSeatingRoute
@@ -1348,6 +1372,7 @@ export interface FileRoutesByTo {
   '/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
   '/settings/concessions': typeof AuthenticatedSettingsConcessionsRoute
+  '/settings/student-lifecycle': typeof AuthenticatedSettingsStudentLifecycleRoute
   '/settings/templates': typeof AuthenticatedSettingsTemplatesRoute
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
@@ -1397,6 +1422,7 @@ export interface FileRoutesByTo {
   '/api/academic/madrassa/timetable': typeof ApiAcademicMadrassaTimetableRouteWithChildren
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
   '/api/academic/school/timetable': typeof ApiAcademicSchoolTimetableRouteWithChildren
+  '/api/admin/student-lifecycle/$id': typeof ApiAdminStudentLifecycleIdRoute
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
   '/api/attendance/madrassa/roster': typeof ApiAttendanceMadrassaRosterRoute
@@ -1431,6 +1457,7 @@ export interface FileRoutesByTo {
   '/madrassa/categories': typeof AuthenticatedMadrassaCategoriesIndexRoute
   '/madrassa/exams': typeof AuthenticatedMadrassaExamsIndexRoute
   '/school/exams': typeof AuthenticatedSchoolExamsIndexRoute
+  '/api/admin/student-lifecycle': typeof ApiAdminStudentLifecycleIndexRoute
   '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
   '/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
   '/madrassa/exams/$id/seating': typeof AuthenticatedMadrassaExamsIdSeatingRoute
@@ -1522,6 +1549,7 @@ export interface FileRoutesById {
   '/_authenticated/school/timetable': typeof AuthenticatedSchoolTimetableRoute
   '/_authenticated/settings/academic-year': typeof AuthenticatedSettingsAcademicYearRoute
   '/_authenticated/settings/concessions': typeof AuthenticatedSettingsConcessionsRoute
+  '/_authenticated/settings/student-lifecycle': typeof AuthenticatedSettingsStudentLifecycleRoute
   '/_authenticated/settings/templates': typeof AuthenticatedSettingsTemplatesRoute
   '/_authenticated/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/_authenticated/students/$id': typeof AuthenticatedStudentsIdRoute
@@ -1571,6 +1599,7 @@ export interface FileRoutesById {
   '/api/academic/madrassa/timetable': typeof ApiAcademicMadrassaTimetableRouteWithChildren
   '/api/academic/school/classes': typeof ApiAcademicSchoolClassesRouteWithChildren
   '/api/academic/school/timetable': typeof ApiAcademicSchoolTimetableRouteWithChildren
+  '/api/admin/student-lifecycle/$id': typeof ApiAdminStudentLifecycleIdRoute
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
   '/api/attendance/madrassa/roster': typeof ApiAttendanceMadrassaRosterRoute
@@ -1605,6 +1634,7 @@ export interface FileRoutesById {
   '/_authenticated/madrassa/categories/': typeof AuthenticatedMadrassaCategoriesIndexRoute
   '/_authenticated/madrassa/exams/': typeof AuthenticatedMadrassaExamsIndexRoute
   '/_authenticated/school/exams/': typeof AuthenticatedSchoolExamsIndexRoute
+  '/api/admin/student-lifecycle/': typeof ApiAdminStudentLifecycleIndexRoute
   '/_authenticated/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
   '/_authenticated/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
   '/_authenticated/madrassa/exams/$id/seating': typeof AuthenticatedMadrassaExamsIdSeatingRoute
@@ -1696,6 +1726,7 @@ export interface FileRouteTypes {
     | '/school/timetable'
     | '/settings/academic-year'
     | '/settings/concessions'
+    | '/settings/student-lifecycle'
     | '/settings/templates'
     | '/settings/website'
     | '/students/$id'
@@ -1745,6 +1776,7 @@ export interface FileRouteTypes {
     | '/api/academic/madrassa/timetable'
     | '/api/academic/school/classes'
     | '/api/academic/school/timetable'
+    | '/api/admin/student-lifecycle/$id'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
     | '/api/attendance/madrassa/roster'
@@ -1779,6 +1811,7 @@ export interface FileRouteTypes {
     | '/madrassa/categories/'
     | '/madrassa/exams/'
     | '/school/exams/'
+    | '/api/admin/student-lifecycle/'
     | '/madrassa/exams/$id/marks'
     | '/madrassa/exams/$id/results'
     | '/madrassa/exams/$id/seating'
@@ -1859,6 +1892,7 @@ export interface FileRouteTypes {
     | '/school/timetable'
     | '/settings/academic-year'
     | '/settings/concessions'
+    | '/settings/student-lifecycle'
     | '/settings/templates'
     | '/settings/website'
     | '/students/$id'
@@ -1908,6 +1942,7 @@ export interface FileRouteTypes {
     | '/api/academic/madrassa/timetable'
     | '/api/academic/school/classes'
     | '/api/academic/school/timetable'
+    | '/api/admin/student-lifecycle/$id'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
     | '/api/attendance/madrassa/roster'
@@ -1942,6 +1977,7 @@ export interface FileRouteTypes {
     | '/madrassa/categories'
     | '/madrassa/exams'
     | '/school/exams'
+    | '/api/admin/student-lifecycle'
     | '/madrassa/exams/$id/marks'
     | '/madrassa/exams/$id/results'
     | '/madrassa/exams/$id/seating'
@@ -2032,6 +2068,7 @@ export interface FileRouteTypes {
     | '/_authenticated/school/timetable'
     | '/_authenticated/settings/academic-year'
     | '/_authenticated/settings/concessions'
+    | '/_authenticated/settings/student-lifecycle'
     | '/_authenticated/settings/templates'
     | '/_authenticated/settings/website'
     | '/_authenticated/students/$id'
@@ -2081,6 +2118,7 @@ export interface FileRouteTypes {
     | '/api/academic/madrassa/timetable'
     | '/api/academic/school/classes'
     | '/api/academic/school/timetable'
+    | '/api/admin/student-lifecycle/$id'
     | '/api/admission/applications/$id'
     | '/api/attendance/madrassa/mark'
     | '/api/attendance/madrassa/roster'
@@ -2115,6 +2153,7 @@ export interface FileRouteTypes {
     | '/_authenticated/madrassa/categories/'
     | '/_authenticated/madrassa/exams/'
     | '/_authenticated/school/exams/'
+    | '/api/admin/student-lifecycle/'
     | '/_authenticated/madrassa/exams/$id/marks'
     | '/_authenticated/madrassa/exams/$id/results'
     | '/_authenticated/madrassa/exams/$id/seating'
@@ -2191,6 +2230,7 @@ export interface RootRouteChildren {
   ApiAcademicMadrassaTimetableRoute: typeof ApiAcademicMadrassaTimetableRouteWithChildren
   ApiAcademicSchoolClassesRoute: typeof ApiAcademicSchoolClassesRouteWithChildren
   ApiAcademicSchoolTimetableRoute: typeof ApiAcademicSchoolTimetableRouteWithChildren
+  ApiAdminStudentLifecycleIdRoute: typeof ApiAdminStudentLifecycleIdRoute
   ApiAttendanceMadrassaMarkRoute: typeof ApiAttendanceMadrassaMarkRoute
   ApiAttendanceMadrassaRosterRoute: typeof ApiAttendanceMadrassaRosterRoute
   ApiAttendanceReportsDailySummaryRoute: typeof ApiAttendanceReportsDailySummaryRoute
@@ -2211,6 +2251,7 @@ export interface RootRouteChildren {
   ApiTeachersMeDashboardRoute: typeof ApiTeachersMeDashboardRoute
   ApiTeachersMeExamsRoute: typeof ApiTeachersMeExamsRoute
   ApiTeachersMeReportsRoute: typeof ApiTeachersMeReportsRoute
+  ApiAdminStudentLifecycleIndexRoute: typeof ApiAdminStudentLifecycleIndexRoute
   ApiExamsStudentsStudentIdTranscriptRoute: typeof ApiExamsStudentsStudentIdTranscriptRoute
 }
 
@@ -2622,6 +2663,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsConcessionsRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    '/_authenticated/settings/student-lifecycle': {
+      id: '/_authenticated/settings/student-lifecycle'
+      path: '/student-lifecycle'
+      fullPath: '/settings/student-lifecycle'
+      preLoaderRoute: typeof AuthenticatedSettingsStudentLifecycleRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/_authenticated/settings/templates': {
       id: '/_authenticated/settings/templates'
       path: '/templates'
@@ -2949,6 +2997,20 @@ declare module '@tanstack/react-router' {
       path: '/api/academic/school/timetable'
       fullPath: '/api/academic/school/timetable'
       preLoaderRoute: typeof ApiAcademicSchoolTimetableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/student-lifecycle/': {
+      id: '/api/admin/student-lifecycle/'
+      path: '/api/admin/student-lifecycle'
+      fullPath: '/api/admin/student-lifecycle/'
+      preLoaderRoute: typeof ApiAdminStudentLifecycleIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/student-lifecycle/$id': {
+      id: '/api/admin/student-lifecycle/$id'
+      path: '/api/admin/student-lifecycle/$id'
+      fullPath: '/api/admin/student-lifecycle/$id'
+      preLoaderRoute: typeof ApiAdminStudentLifecycleIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admission/applications/$id': {
@@ -3613,6 +3675,7 @@ const AuthenticatedSchoolRouteWithChildren =
 interface AuthenticatedSettingsRouteChildren {
   AuthenticatedSettingsAcademicYearRoute: typeof AuthenticatedSettingsAcademicYearRoute
   AuthenticatedSettingsConcessionsRoute: typeof AuthenticatedSettingsConcessionsRoute
+  AuthenticatedSettingsStudentLifecycleRoute: typeof AuthenticatedSettingsStudentLifecycleRoute
   AuthenticatedSettingsTemplatesRoute: typeof AuthenticatedSettingsTemplatesRoute
   AuthenticatedSettingsWebsiteRoute: typeof AuthenticatedSettingsWebsiteRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
@@ -3622,6 +3685,8 @@ const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
   AuthenticatedSettingsAcademicYearRoute:
     AuthenticatedSettingsAcademicYearRoute,
   AuthenticatedSettingsConcessionsRoute: AuthenticatedSettingsConcessionsRoute,
+  AuthenticatedSettingsStudentLifecycleRoute:
+    AuthenticatedSettingsStudentLifecycleRoute,
   AuthenticatedSettingsTemplatesRoute: AuthenticatedSettingsTemplatesRoute,
   AuthenticatedSettingsWebsiteRoute: AuthenticatedSettingsWebsiteRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
@@ -4134,6 +4199,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiAcademicMadrassaTimetableRouteWithChildren,
   ApiAcademicSchoolClassesRoute: ApiAcademicSchoolClassesRouteWithChildren,
   ApiAcademicSchoolTimetableRoute: ApiAcademicSchoolTimetableRouteWithChildren,
+  ApiAdminStudentLifecycleIdRoute: ApiAdminStudentLifecycleIdRoute,
   ApiAttendanceMadrassaMarkRoute: ApiAttendanceMadrassaMarkRoute,
   ApiAttendanceMadrassaRosterRoute: ApiAttendanceMadrassaRosterRoute,
   ApiAttendanceReportsDailySummaryRoute: ApiAttendanceReportsDailySummaryRoute,
@@ -4156,6 +4222,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTeachersMeDashboardRoute: ApiTeachersMeDashboardRoute,
   ApiTeachersMeExamsRoute: ApiTeachersMeExamsRoute,
   ApiTeachersMeReportsRoute: ApiTeachersMeReportsRoute,
+  ApiAdminStudentLifecycleIndexRoute: ApiAdminStudentLifecycleIndexRoute,
   ApiExamsStudentsStudentIdTranscriptRoute:
     ApiExamsStudentsStudentIdTranscriptRoute,
 }

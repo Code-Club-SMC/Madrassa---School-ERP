@@ -157,15 +157,6 @@ function LoginPage() {
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {lang === "ur" ? "داخل ہوں" : "Sign In"}
             </Button>
-
-            <div className="pt-2 border-t border-border/60">
-              <Link
-                to="/very/secret/data"
-                className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-1.5"
-              >
-                <span>{lang === "ur" ? "🔑 ٹیسٹنگ اکاؤنٹس اور پاس ورڈز (/very/secret/data)" : "🔑 View All Test Accounts & Passwords (/very/secret/data)"}</span>
-              </Link>
-            </div>
           </form>
 
           <div className="space-y-4 text-center">

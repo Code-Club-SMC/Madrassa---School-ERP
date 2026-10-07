@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, ArrowRightLeft, BookOpen, Calendar, ClipboardList, FileText, IdCard, MapPin, Phone, Printer, User, Users2 } from "lucide-react";
+import { ArrowLeft, ArrowRightLeft, BookOpen, Calendar, ClipboardList, FileText, GraduationCap, IdCard, MapPin, Phone, Printer, User, Users2 } from "lucide-react";
 import { getTranscript } from "@/components/exams/exam-api";
 import { TranscriptView } from "@/components/exams/transcript-view";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
@@ -106,6 +106,12 @@ function StudentProfile() {
         description={`Roll ${student.rollNo} · ${student.groupEnglish}`}
         actions={
           <div className="flex flex-wrap gap-2">
+            <Link to="/settings/student-lifecycle" search={{ studentId: student.id }}>
+              <Button variant="outline" size="sm" className="gap-1.5 border-primary/40 hover:bg-primary/10">
+                <GraduationCap className="h-3.5 w-3.5 text-primary" />
+                Life Archive
+              </Button>
+            </Link>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setMoveOpen(true)}>
               <ArrowRightLeft className="h-3.5 w-3.5" />
               Move Enrollment

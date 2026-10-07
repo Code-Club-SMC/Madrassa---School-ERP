@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   CalendarRange, HandCoins, Globe, MessageSquareText,
-  Receipt, Banknote, Users2, type LucideIcon,
+  Receipt, Banknote, Users2, GraduationCap, type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ export const Route = createFileRoute("/_authenticated/settings/")({
 type Tile = { to: string; icon: LucideIcon; en: string; ur: string; desc: string };
 
 const TILES: Tile[] = [
+  { to: "/settings/student-lifecycle", icon: GraduationCap, en: "Student Life Archive", ur: "مکمل تعلیمی زندگی کا ریکارڈ", desc: "Inspect complete student tenure: start/end dates, progressions, transcripts, attendance, fees, and printable official dossier." },
   { to: "/settings/academic-year", icon: CalendarRange, en: "Academic Year", ur: "تعلیمی سال", desc: "Current year, terms, and key milestones." },
   { to: "/settings/concessions", icon: HandCoins, en: "Fee Concessions", ur: "فیس رعایات", desc: "Orphan, hardship, merit and sibling discounts." },
   { to: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", desc: "Hero, announcements, gallery & theme." },

@@ -130,6 +130,7 @@ export const navItems: NavItem[] = [
   { group: "shared", url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: HR_ROLES },
   { group: "shared", url: "/settings/templates", icon: MessageSquareText, en: "SMS & Msg Templates", ur: "پیغام و ایس ایم ایس", roles: HR_ROLES },
   { group: "shared", url: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", roles: [...SUPER_ADMINS, "admin"] },
+  { group: "shared", url: "/settings/student-lifecycle", icon: GraduationCap, en: "Student Life Archive", ur: "سوانحِ تعلیمی", roles: [...SUPER_ADMINS, "admin"] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -264,6 +265,7 @@ export const navParents: NavParent[] = [
     roles: [...PARENT_SAFE, "teacher"],
     children: [
       { url: "/id-cards", icon: IdCard, en: "ID Cards", ur: "شناختی کارڈ", roles: ADMINS },
+      { url: "/settings/student-lifecycle", icon: GraduationCap, en: "Student Life Archive", ur: "سوانحِ تعلیمی", roles: [...SUPER_ADMINS, "admin"] },
       { url: "/parents", icon: HeartHandshake, en: "Parents Portal", ur: "والدین", roles: PARENT_SAFE },
       { url: "/notifications", icon: Bell, en: "Notifications", ur: "اعلانات", roles: NOTIFICATION_ROLES },
     ],
@@ -352,7 +354,7 @@ export function findParentForPath(
   if (pathname.startsWith("/admission")) {
     return parents.find((p) => p.key === "admission");
   }
-  if (pathname.startsWith("/id-cards") || pathname.startsWith("/parents") || pathname.startsWith("/notifications")) {
+  if (pathname.startsWith("/id-cards") || pathname.startsWith("/settings/student-lifecycle") || pathname.startsWith("/parents") || pathname.startsWith("/notifications")) {
     return parents.find((p) => p.key === "records");
   }
 
@@ -374,5 +376,6 @@ Object.assign(PAGE_TITLES, {
   "/settings/templates": { en: "SMS & Msg Templates", ur: "پیغام و ایس ایم ایس" },
   "/settings/website": { en: "Website CMS", ur: "ویب سائٹ" },
   "/settings/academic-year": { en: "Academic Year", ur: "تعلیمی سال" },
+  "/settings/student-lifecycle": { en: "Student Life Archive", ur: "مکمل تعلیمی زندگی کا ریکارڈ" },
   "/reports/attendance": { en: "Attendance Report", ur: "حاضری رپورٹ" },
 });

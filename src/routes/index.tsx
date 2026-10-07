@@ -15,7 +15,6 @@ import {
   Mail,
   MapPin,
   Sparkles,
-  KeyRound,
   ExternalLink,
   Award,
   Clock,
@@ -223,13 +222,6 @@ function PublicRootWebsite() {
             >
               {isUr ? "رابطہ" : "Contact"}
             </Link>
-            <Link
-              to="/very/secret/data"
-              className="px-3 py-1.5 rounded-lg hover:bg-accent text-amber-600 dark:text-amber-400 font-semibold transition-colors flex items-center gap-1"
-            >
-              <KeyRound className="h-3.5 w-3.5" />
-              {isUr ? "ٹیسٹ لاگ ان ڈیٹا" : "Test Credentials"}
-            </Link>
           </nav>
 
           <div className="flex items-center gap-2">
@@ -286,12 +278,6 @@ function PublicRootWebsite() {
                 <FileSignature className="h-4 w-4" />
                 {isUr ? "آن لائن داخلہ فارم" : "Online Admission"}
                 <ArrowRight className="h-4 w-4 rtl:rotate-180" />
-              </Button>
-            </Link>
-            <Link to="/very/secret/data">
-              <Button size="lg" variant="ghost" className="text-amber-600 dark:text-amber-400 gap-2 border border-amber-500/20">
-                <KeyRound className="h-4 w-4" />
-                {isUr ? "تمام ٹیسٹ پاسورڈز" : "Test Credentials"}
               </Button>
             </Link>
           </div>
@@ -472,32 +458,6 @@ function PublicRootWebsite() {
         </div>
       </section>
 
-      {/* Secret Test Credentials Direct Callout */}
-      <section className="py-12 bg-amber-50/60 dark:bg-amber-950/20 border-b border-amber-200/50 dark:border-amber-900/30">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 mb-3">
-            <KeyRound className="h-3.5 w-3.5" />
-            {isUr ? "ٹیسٹنگ اور جانچ کے لیے آسان رسائی" : "Testing & Evaluation Directory"}
-          </Badge>
-          <h3 className="font-heading text-2xl font-bold">
-            {isUr ? "تمام کرداروں کے ٹیسٹ اکاؤنٹس اور پاسورڈز" : "Test Credentials Available for All Roles"}
-          </h3>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-2 max-w-xl mx-auto">
-            {isUr
-              ? "سپر ایڈمن، ایڈمشن ایڈمن، فنانس ایڈمن، ایچ آر ایڈمن، اساتذہ اور والدین کے ای میل اور پاسورڈز براہ راست دیکھنے اور ایک کلک پر لاگ ان کرنے کے لیے ٹیسٹ پیج وزٹ کریں۔"
-              : "Review login credentials for Super Admin, Sub-Admins, 13 Teachers, and 5 Parents with one-click instant login buttons."}
-          </p>
-          <div className="mt-4">
-            <Link to="/very/secret/data">
-              <Button size="default" className="bg-amber-600 hover:bg-amber-700 text-white gap-2 font-medium">
-                <KeyRound className="h-4 w-4" />
-                {isUr ? "ٹیسٹ اسناد کا صفحہ کھولیں" : "View All Test Logins (/very/secret/data)"}
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Online Admission CTA Banner */}
       <section className="py-16 max-w-5xl mx-auto px-4 sm:px-6">
         <div className="rounded-3xl bg-primary text-primary-foreground p-8 sm:p-12 text-center relative overflow-hidden shadow-lg">
@@ -597,11 +557,6 @@ function PublicRootWebsite() {
                     Photo & Campus Gallery
                   </Link>
                 </li>
-                <li>
-                  <Link to="/very/secret/data" className="text-amber-600 dark:text-amber-400 font-medium hover:underline">
-                    Test Credentials Directory
-                  </Link>
-                </li>
               </ul>
             </div>
 
@@ -631,10 +586,6 @@ function PublicRootWebsite() {
               © {new Date().getFullYear()} {institution.nameEnglish} • {institution.nameUrdu}. All rights reserved.
             </p>
             <div className="flex items-center gap-3">
-              <Link to="/very/secret/data" className="text-amber-600 hover:underline">
-                Secret Data
-              </Link>
-              <span>•</span>
               <Link to="/login" className="hover:text-primary">
                 Login
               </Link>
