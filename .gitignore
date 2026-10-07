@@ -19,6 +19,7 @@ Finanace Details
 .nitro
 .env
 *.local
+.vercel/
 
 
 # Wrangler / Cloudflare
@@ -39,3 +40,4 @@ Finanace Details
 .codex
 .lovable
 .tanstack
+.vercel
