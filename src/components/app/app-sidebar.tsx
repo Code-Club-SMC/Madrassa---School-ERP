@@ -690,26 +690,49 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
                 </Tooltip>
               </div>
 
-              {/* User Profile & Account Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
+              {/* User Profile & Account Link */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    to="/settings/account"
                     className={cn(
-                      "w-full flex items-center gap-2.5 rounded-xl p-1.5 transition-colors hover:bg-sidebar-accent/60 text-start",
+                      "w-full flex items-center gap-2.5 rounded-xl p-1.5 transition-all text-start group/user",
+                      pathname === "/settings/account"
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground ring-1 ring-sidebar-ring/30 shadow-sm"
+                        : "hover:bg-sidebar-accent/60 text-sidebar-foreground",
                       !isRailVisuallyExpanded && "justify-center",
                     )}
+                    aria-label={isUrdu ? "اکاؤنٹ کی ترتیبات" : "Account Settings"}
                   >
-                    <Avatar className="h-9 w-9 shrink-0 ring-1 ring-sidebar-border">
-                      <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary text-xs font-bold">
+                    <Avatar
+                      className={cn(
+                        "h-9 w-9 shrink-0 ring-1 transition-transform group-hover/user:scale-105",
+                        pathname === "/settings/account"
+                          ? "ring-primary shadow-sm"
+                          : "ring-sidebar-border",
+                      )}
+                    >
+                      <AvatarFallback
+                        className={cn(
+                          "text-xs font-bold transition-colors",
+                          pathname === "/settings/account"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-sidebar-primary/20 text-sidebar-primary",
+                        )}
+                      >
                         {initials(user?.name ?? "MSMIS")}
                       </AvatarFallback>
                     </Avatar>
                     {isRailVisuallyExpanded && (
                       <div className="min-w-0 flex-1 leading-tight">
-                        <p className="text-xs font-medium truncate text-sidebar-foreground">
-                          {user?.name ?? "Signed in"}
-                        </p>
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs font-medium truncate text-sidebar-foreground">
+                            {user?.name ?? (isUrdu ? "میرا اکاؤنٹ" : "My Account")}
+                          </p>
+                          <span className="text-[9px] uppercase font-mono px-1 py-0.2 rounded bg-sidebar-primary/10 text-sidebar-primary shrink-0">
+                            {role}
+                          </span>
+                        </div>
                         <p
                           className="font-urdu text-[11px] text-sidebar-foreground/55 truncate mt-0.5"
                           dir="rtl"
@@ -719,49 +742,17 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
                         </p>
                       </div>
                     )}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side={isRailVisuallyExpanded ? "top" : (isUrdu ? "left" : "right")}
-                  align="start"
-                  className="w-56 z-50"
-                >
-                  <DropdownMenuLabel>
-                    <div>
-                      <p className="text-sm font-medium">
-                        {user?.name ?? (isUrdu ? "لاگ ان صارف" : "Signed in user")}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {user?.email ?? ""}
-                      </p>
-                      <span className="inline-block mt-1 text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-sidebar-primary/10 text-sidebar-primary">
-                        {role}
-                      </span>
+                  </Link>
+                </TooltipTrigger>
+                {!isRailVisuallyExpanded && (
+                  <TooltipContent side={isUrdu ? "left" : "right"} className="text-xs">
+                    <div className="text-center">
+                      <p className="font-medium">{user?.name ?? (isUrdu ? "میرا اکاؤنٹ" : "My Account")}</p>
+                      <p className="text-[10px] text-muted-foreground">{isUrdu ? "اکاؤنٹ کی ترتیبات" : "Account Settings"}</p>
                     </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings" className="gap-2">
-                      <SettingsIcon className="h-4 w-4 opacity-70" />
-                      <span>{isUrdu ? "ترتیبات و پروفائل" : "Settings & Profile"}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/change-password" className="gap-2">
-                      <KeyRound className="h-4 w-4 opacity-70" />
-                      <span>{isUrdu ? "پاس ورڈ تبدیل کریں" : "Change password"}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive gap-2"
-                    onClick={() => void logout()}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>{isUrdu ? "لاگ آؤٹ" : "Sign out"}</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </TooltipContent>
+                )}
+              </Tooltip>
             </div>
           </aside>
         </div>
@@ -1125,26 +1116,30 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
 
           {/* Mobile Footer */}
           <div className="p-3 border-t border-sidebar-border/70 flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              <Avatar className="h-8 w-8">
+            <Link
+              to="/settings/account"
+              onClick={() => setOpenMobile(false)}
+              className="flex items-center gap-2 min-w-0 hover:opacity-85 transition-opacity"
+            >
+              <Avatar className="h-8 w-8 shrink-0 ring-1 ring-sidebar-border">
                 <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-primary text-xs font-bold">
                   {initials(user?.name ?? "MSMIS")}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <p className="text-xs font-medium truncate">{user?.name}</p>
+                <p className="text-xs font-medium truncate">{user?.name ?? (isUrdu ? "میرا اکاؤنٹ" : "My Account")}</p>
                 <p className="text-[10px] text-sidebar-foreground/50 truncate">
-                  {role}
+                  {role} · {isUrdu ? "اکاؤنٹ کی ترتیبات" : "Account Settings"}
                 </p>
               </div>
-            </div>
+            </Link>
             <Button
               variant="ghost"
               size="sm"
               className="text-xs text-destructive hover:bg-destructive/10 gap-1.5"
-              onClick={() => {
+              onClick={async () => {
                 setOpenMobile(false);
-                void logout();
+                await logout();
               }}
             >
               <LogOut className="h-3.5 w-3.5" />

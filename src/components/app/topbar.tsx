@@ -218,28 +218,28 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to="/settings">
+              <Link to="/settings/account">
                 {lang === "ur" ? (
                   <>
-                    <span className="font-urdu text-sm">پروفائل</span>
-                    <span className="ms-auto text-xs text-muted-foreground">Profile</span>
+                    <span className="font-urdu text-sm">اکاؤنٹ کی ترتیبات</span>
+                    <span className="ms-auto text-xs text-muted-foreground">Account</span>
                   </>
                 ) : (
                   <>
-                    <span className="text-sm">Profile</span>
+                    <span className="text-sm">Account Settings</span>
                     <span
                       className="ms-auto text-xs text-muted-foreground font-urdu"
                       dir="rtl"
                       lang="ur"
                     >
-                      پروفائل
+                      اکاؤنٹ ترتیبات
                     </span>
                   </>
                 )}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/change-password">
+              <Link to="/settings/account" search={{ tab: "security" } as never}>
                 {lang === "ur" ? "پاس ورڈ تبدیل کریں" : "Change password"}
               </Link>
             </DropdownMenuItem>

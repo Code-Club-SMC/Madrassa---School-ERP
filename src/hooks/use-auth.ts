@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { loginServer, logoutServer, getUserServer } from "@/lib/auth.server";
+import {
+  loginServer,
+  logoutServer,
+  getUserServer,
+  changePasswordServer,
+  updateProfileServer,
+} from "@/lib/auth.server";
 import type { User, UserRole } from "@/types";
 
 type AuthState = {
@@ -49,9 +55,51 @@ export function useAuth() {
   }, []);
 
   const logout = useCallback(async () => {
-    await logoutServer();
-    setState({ user: null, isLoading: false });
+    try {
+      await logoutServer();
+    } catch (err) {
+      console.error("logout error:", err);
+    } finally {
+      setState({ user: null, isLoading: false });
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+    }
   }, []);
+
+  const changePassword = useCallback(
+    async (data: { currentPassword: string; newPassword: string }) => {
+      const response = await changePasswordServer({ data });
+      const res =
+        response && typeof (response as { json?: unknown }).json === "function"
+          ? await (response as Response).json()
+          : (response as { success?: boolean; error?: string; message?: string } | null);
+      if (!res || res.error) {
+        throw new Error(res?.error ?? "Failed to change password");
+      }
+      return res;
+    },
+    [],
+  );
+
+  const updateProfile = useCallback(
+    async (data: { name: string; nameUrdu?: string; phone?: string; cnic?: string }) => {
+      const response = await updateProfileServer({ data });
+      const res =
+        response && typeof (response as { json?: unknown }).json === "function"
+          ? await (response as Response).json()
+          : (response as { success?: boolean; error?: string; user?: User } | null);
+      if (!res || res.error) {
+        throw new Error(res?.error ?? "Failed to update profile");
+      }
+      if (res.user) {
+        const updated = { ...res.user, role: res.user.role as UserRole };
+        setState((prev) => ({ ...prev, user: updated }));
+      }
+      return res;
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -63,5 +111,5 @@ export function useAuth() {
     };
   }, [getUser]);
 
-  return { ...state, login, logout, getUser };
+  return { ...state, login, logout, getUser, changePassword, updateProfile };
 }
