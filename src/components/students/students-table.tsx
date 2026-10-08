@@ -4,6 +4,7 @@ import {
   Download,
   Eye,
   Filter,
+  Loader2,
   LogOut,
   MoreHorizontal,
   Search,
@@ -499,8 +500,9 @@ export function StudentsTable({ system, section, institutionId }: Props) {
           <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-            {deleting ? "Deleting..." : "Delete Student"}
+          <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="gap-2">
+            {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
+            <span>{deleting ? "Deleting..." : "Delete Student"}</span>
           </Button>
         </div>
       </ResponsiveDialog>
@@ -547,6 +549,7 @@ function StatusDialog({
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not update student status");
       toast.success(`${student.name} marked as ${choice}`);
+      setReason("");
       await onSaved();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not update student status");
@@ -586,11 +589,12 @@ function StatusDialog({
         />
       </div>
       <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button variant="ghost" onClick={onClose}>
+        <Button variant="ghost" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button onClick={save} disabled={pending}>
-          {pending ? "Saving..." : "Save"}
+        <Button onClick={save} disabled={pending} className="gap-2">
+          {pending && <Loader2 className="h-4 w-4 animate-spin" />}
+          <span>{pending ? "Saving..." : "Save"}</span>
         </Button>
       </div>
     </ResponsiveDialog>

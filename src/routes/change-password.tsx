@@ -56,6 +56,9 @@ function ChangePassword() {
     try {
       await changePassword({ currentPassword: currentPw, newPassword: pw });
       toast.success("Password updated successfully");
+      setCurrentPw("");
+      setPw("");
+      setConfirm("");
       navigate({ to: "/settings/account" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to update password";

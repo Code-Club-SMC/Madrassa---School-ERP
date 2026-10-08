@@ -1,3 +1,4 @@
+import { useLanguage } from "@/components/language-context";
 import { cn } from "@/lib/utils";
 
 export type StatusKey =
@@ -15,6 +16,11 @@ export type StatusKey =
   | "transferred"
   | "super_admin"
   | "admin"
+  | "admission_admin"
+  | "academic_admin"
+  | "finance_admin"
+  | "hr_admin"
+  | "reports_admin"
   | "principal"
   | "hr_manager"
   | "accountant"
@@ -22,9 +28,11 @@ export type StatusKey =
   | "receptionist"
   | "staff"
   | "teacher"
-  | "parent";
+  | "parent"
+  | "user"
+  | string;
 
-const VARIANTS: Record<StatusKey, { label: string; urdu: string; className: string }> = {
+const VARIANTS: Record<string, { label: string; urdu: string; className: string }> = {
   active: { label: "Active", urdu: "فعال", className: "bg-chart-1/15 text-chart-5 border-chart-2/40 dark:text-chart-1" },
   inactive: { label: "Inactive", urdu: "غیر فعال", className: "bg-muted text-muted-foreground border-border" },
   pending: { label: "Pending", urdu: "زیر غور", className: "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400" },
@@ -39,6 +47,11 @@ const VARIANTS: Record<StatusKey, { label: string; urdu: string; className: stri
   transferred: { label: "Transferred", urdu: "منتقل", className: "bg-blue-500/10 text-blue-700 border-blue-300/40 dark:text-blue-400" },
   super_admin: { label: "Super Admin", urdu: "سپر ایڈمن", className: "bg-purple-500/10 text-purple-700 border-purple-300/40 dark:text-purple-400" },
   admin: { label: "Admin", urdu: "ایڈمن", className: "bg-primary/10 text-primary border-primary/25" },
+  admission_admin: { label: "Admission Admin", urdu: "داخلہ ایڈمن", className: "bg-blue-500/10 text-blue-700 border-blue-300/40 dark:text-blue-400" },
+  academic_admin: { label: "Academic Admin", urdu: "تعلیمی ایڈمن", className: "bg-emerald-500/10 text-emerald-700 border-emerald-300/40 dark:text-emerald-400" },
+  finance_admin: { label: "Finance Admin", urdu: "مالی ایڈمن", className: "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400" },
+  hr_admin: { label: "HR Admin", urdu: "ایچ آر ایڈمن", className: "bg-fuchsia-500/10 text-fuchsia-700 border-fuchsia-300/40 dark:text-fuchsia-400" },
+  reports_admin: { label: "Reports Admin", urdu: "رپورٹس ایڈمن", className: "bg-cyan-500/10 text-cyan-700 border-cyan-300/40 dark:text-cyan-400" },
   principal: { label: "Principal", urdu: "پرنسپل", className: "bg-indigo-500/10 text-indigo-700 border-indigo-300/40 dark:text-indigo-400" },
   hr_manager: { label: "HR Manager", urdu: "ایچ آر منیجر", className: "bg-fuchsia-500/10 text-fuchsia-700 border-fuchsia-300/40 dark:text-fuchsia-400" },
   accountant: { label: "Accountant", urdu: "اکاؤنٹنٹ", className: "bg-emerald-500/10 text-emerald-700 border-emerald-300/40 dark:text-emerald-400" },
@@ -47,16 +60,21 @@ const VARIANTS: Record<StatusKey, { label: string; urdu: string; className: stri
   staff: { label: "Staff", urdu: "عملہ", className: "bg-slate-500/10 text-slate-700 border-slate-300/40 dark:text-slate-400" },
   teacher: { label: "Teacher", urdu: "استاد", className: "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400" },
   parent: { label: "Parent", urdu: "والدین", className: "bg-teal-500/10 text-teal-700 border-teal-300/40 dark:text-teal-400" },
+  user: { label: "User", urdu: "صارف", className: "bg-muted text-muted-foreground border-border" },
 };
 
-import { useLanguage } from "@/components/language-context";
-
-type Props = { status: StatusKey; showUrdu?: boolean };
+type Props = { status?: StatusKey | null; showUrdu?: boolean };
 
 export function StatusBadge({ status, showUrdu }: Props) {
   const { lang } = useLanguage();
   const isUrdu = showUrdu !== undefined ? showUrdu : lang === "ur";
-  const v = VARIANTS[status];
+  const rawKey = status ? String(status).toLowerCase().trim() : "";
+  const v = (rawKey ? VARIANTS[rawKey] : null) || {
+    label: rawKey ? rawKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—",
+    urdu: rawKey ? rawKey.replace(/_/g, " ") : "—",
+    className: "bg-muted text-muted-foreground border-border",
+  };
+
   return (
     <span
       className={cn(

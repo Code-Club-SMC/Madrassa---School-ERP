@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useHR } from "@/stores/hr-store";
 import { useLanguage } from "@/components/language-context";
 import { getUserDisplayName } from "@/lib/user-names";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/hr/leave")({ component: LeavePage });
@@ -34,6 +36,8 @@ function LeavePage() {
     if (!s) return id;
     return getUserDisplayName({ name: s.fullName }, isUrdu ? "ur" : "en") || s.fullName;
   };
+
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
@@ -86,21 +90,35 @@ function LeavePage() {
                       <>
                         <Button
                           size="sm"
+                          disabled={processingId === l.id}
                           onClick={() => {
-                            approveLeave(l.id);
-                            toast.success(isUrdu ? "چھٹی منظور کر لی گئی" : "Leave approved");
+                            setProcessingId(l.id);
+                            try {
+                              approveLeave(l.id);
+                              toast.success(isUrdu ? "چھٹی منظور کر لی گئی" : "Leave approved");
+                            } finally {
+                              setProcessingId(null);
+                            }
                           }}
                         >
+                          {processingId === l.id && <Loader2 className="h-3 w-3 animate-spin me-1" />}
                           {isUrdu ? "منظور کریں" : "Approve"}
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
+                          disabled={processingId === l.id}
                           onClick={() => {
-                            rejectLeave(l.id);
-                            toast.success(isUrdu ? "چھٹی مسترد کر دی گئی" : "Leave rejected");
+                            setProcessingId(l.id);
+                            try {
+                              rejectLeave(l.id);
+                              toast.success(isUrdu ? "چھٹی مسترد کر دی گئی" : "Leave rejected");
+                            } finally {
+                              setProcessingId(null);
+                            }
                           }}
                         >
+                          {processingId === l.id && <Loader2 className="h-3 w-3 animate-spin me-1" />}
                           {isUrdu ? "مسترد کریں" : "Reject"}
                         </Button>
                       </>

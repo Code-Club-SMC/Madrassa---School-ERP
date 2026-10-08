@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, Printer, ReceiptText, RotateCcw, Undo2, WalletCards } from "lucide-react";
+import { Banknote, Loader2, Printer, ReceiptText, RotateCcw, Undo2, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import {
@@ -137,6 +137,13 @@ export function ChargeDialog({
         toast.success("Fee charge created");
       }
 
+      setAmount("");
+      setLabel("");
+      setNotes("");
+      setDueDate("");
+      setPeriod("");
+      setPayerName("");
+      setPayerPhone("");
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -275,7 +282,7 @@ export function ChargeDialog({
         >
           {pending ? (
             <>
-              <span className="animate-spin">⏳</span>
+              <Loader2 className="h-4 w-4 animate-spin" />
               Saving...
             </>
           ) : collectNow ? (
@@ -366,6 +373,10 @@ export function CollectPaymentDialog({
         notes: notes.trim() || undefined,
       });
       toast.success("Payment collected");
+      setPayerName("");
+      setPayerPhone("");
+      setNotes("");
+      setAmountByCharge({});
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -513,7 +524,7 @@ export function CollectPaymentDialog({
         >
           {pending ? (
             <>
-              <span className="animate-spin">⏳</span>
+              <Loader2 className="h-4 w-4 animate-spin" />
               Collecting...
             </>
           ) : (
@@ -551,6 +562,7 @@ export function ReverseDialog({
       if (target.kind === "charge") await reverseCharge(target.id, reason.trim());
       else await reversePayment(target.id, reason.trim());
       toast.success(target.kind === "charge" ? "Charge reversed" : "Payment reversed");
+      setReason("");
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -598,7 +610,7 @@ export function ReverseDialog({
           >
             {pending ? (
               <>
-                <span className="animate-spin">⏳</span>
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Reversing...
               </>
             ) : (
@@ -651,6 +663,8 @@ export function RefundDialog({
     try {
       await refundPayment(payment.id, { amountPaisa, method, reason: reason.trim() });
       toast.success("Refund recorded");
+      setAmount("");
+      setReason("");
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -721,7 +735,7 @@ export function RefundDialog({
           >
             {pending ? (
               <>
-                <span className="animate-spin">⏳</span>
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Recording...
               </>
             ) : (
@@ -935,6 +949,9 @@ export function BulkCollectDialog({
 
       await Promise.all(promises.filter(Boolean));
       toast.success(`Fee collected for ${students.length} student${students.length > 1 ? "s" : ""}`);
+      setPayerName("");
+      setPayerPhone("");
+      setNotes("");
       onSuccess();
       onOpenChange(false);
     } catch (error) {
@@ -1023,10 +1040,11 @@ export function BulkCollectDialog({
         </Field>
 
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={pending}>
+          <Button onClick={handleSubmit} disabled={pending} className="gap-2">
+            {pending && <Loader2 className="h-4 w-4 animate-spin" />}
             {pending ? "Collecting..." : `Collect ${formatPKR(totalOutstanding)}`}
           </Button>
         </div>

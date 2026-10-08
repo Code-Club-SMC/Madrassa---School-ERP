@@ -156,6 +156,8 @@ export const loginServer = createServerFn({ method: "POST" })
 
 export const logoutServer = createServerFn({ method: "POST" }).handler(async () => {
   deleteCookie(SESSION_COOKIE, { path: "/" });
+  deleteCookie("better-auth.session_token", { path: "/" });
+  deleteCookie("better-auth.session_data", { path: "/" });
   return { success: true };
 });
 

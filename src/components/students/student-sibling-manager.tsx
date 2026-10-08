@@ -82,7 +82,9 @@ export function StudentSiblingManager({ profile, onChanged }: Props) {
       if (!response.ok) throw new Error(payload.error || "Could not link sibling");
 
       toast.success("Sibling linked");
-      setResults((current) => current.filter((student) => student.id !== siblingStudentId));
+      setQuery("");
+      setResults([]);
+      setSearchOpen(false);
       await onChanged();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not link sibling");

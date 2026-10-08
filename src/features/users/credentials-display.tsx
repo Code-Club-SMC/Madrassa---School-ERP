@@ -89,7 +89,7 @@ export function CredentialsOverlay({
               <p className="text-[10px] uppercase text-muted-foreground tracking-wider">
                 {isUrdu ? "پاس ورڈ" : "Password"}
               </p>
-              <p className="font-mono text-sm break-all">{reveal ? creds.password : "•".repeat(creds.password.length)}</p>
+              <p className="font-mono text-sm break-all">{reveal ? (creds.password || "") : "•".repeat(creds.password ? creds.password.length : 8)}</p>
             </div>
             <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setReveal((v) => !v)} aria-label="Toggle password">
               {reveal ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}

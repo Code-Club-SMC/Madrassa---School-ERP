@@ -560,13 +560,13 @@ function IncomeReportView({
           </Badge>
         </div>
 
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted/40">
-              <TableHead>Account Head · عنوان کھاتہ</TableHead>
-              <TableHead className="text-center">Vouchers</TableHead>
-              <TableHead className="text-end">Amount (PKR)</TableHead>
-              <TableHead className="text-end">Share</TableHead>
+              <TableHead className="w-[44%] text-start">Account Head · عنوان کھاتہ</TableHead>
+              <TableHead className="w-[16%] text-center">Vouchers</TableHead>
+              <TableHead className="w-[24%] text-end">Amount (PKR)</TableHead>
+              <TableHead className="w-[16%] text-end">Share</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -579,7 +579,7 @@ function IncomeReportView({
             ) : (
               categories.map((c) => (
                 <TableRow key={c.label}>
-                  <TableCell className="font-medium text-sm">
+                  <TableCell className="font-medium text-sm text-start">
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${c.tone}`}>
                         {c.label}
@@ -587,7 +587,11 @@ function IncomeReportView({
                       <span className="text-xs text-muted-foreground font-urdu">{c.labelUrdu}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-center text-xs font-mono">{c.count}</TableCell>
+                  <TableCell className="text-center text-xs font-mono">
+                    <div className="flex items-center justify-center">
+                      <span>{c.count}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-end font-mono font-semibold text-sm">
                     {formatRupees(c.total)}
                   </TableCell>
@@ -608,13 +612,13 @@ function IncomeReportView({
             <h3 className="font-semibold text-sm">12-Month Annual Inflow Progression</h3>
             <p className="text-xs text-muted-foreground">Month-by-month revenue collection trajectory</p>
           </div>
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow className="bg-muted/40">
-                <TableHead>Month</TableHead>
-                <TableHead className="text-center">Receipts</TableHead>
-                <TableHead className="text-end">Total Inflow (PKR)</TableHead>
-                <TableHead className="text-end">Annual Share</TableHead>
+                <TableHead className="w-[44%] text-start">Month</TableHead>
+                <TableHead className="w-[16%] text-center">Receipts</TableHead>
+                <TableHead className="w-[24%] text-end">Total Inflow (PKR)</TableHead>
+                <TableHead className="w-[16%] text-end">Annual Share</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -622,10 +626,14 @@ function IncomeReportView({
                 const share = totalIncome > 0 ? Math.round((m.total / totalIncome) * 100) : 0;
                 return (
                   <TableRow key={m.monthNumber}>
-                    <TableCell className="text-xs font-medium">
+                    <TableCell className="text-xs font-medium text-start">
                       {m.monthName} <span className="text-muted-foreground font-urdu ms-1">({m.monthNameUrdu})</span>
                     </TableCell>
-                    <TableCell className="text-center text-xs font-mono">{m.count}</TableCell>
+                    <TableCell className="text-center text-xs font-mono">
+                      <div className="flex items-center justify-center">
+                        <span>{m.count}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-end font-mono text-xs font-semibold">
                       {formatRupees(m.total)}
                     </TableCell>
@@ -648,35 +656,41 @@ function IncomeReportView({
           <span className="text-xs text-muted-foreground font-mono">{transactions.length} rows</span>
         </div>
 
-        <Table>
+        <Table className="table-fixed min-w-[760px]">
           <TableHeader>
             <TableRow className="bg-muted/40">
-              <TableHead>Voucher No</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Account Head</TableHead>
-              <TableHead>Party / Donor / Student</TableHead>
-              <TableHead>Campus</TableHead>
-              <TableHead>Method</TableHead>
-              <TableHead className="text-end">Amount</TableHead>
+              <TableHead className="w-[18%] text-start">Voucher No</TableHead>
+              <TableHead className="w-[12%] text-start">Date</TableHead>
+              <TableHead className="w-[16%] text-start">Account Head</TableHead>
+              <TableHead className="w-[22%] text-start">Party / Donor / Student</TableHead>
+              <TableHead className="w-[11%] text-center">Campus</TableHead>
+              <TableHead className="w-[9%] text-center">Method</TableHead>
+              <TableHead className="w-[12%] text-end">Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {transactions.slice(0, 50).map((tx) => (
               <TableRow key={tx.id}>
-                <TableCell className="font-mono text-xs font-semibold text-primary">{tx.voucherNo}</TableCell>
-                <TableCell className="text-xs font-mono">{tx.date}</TableCell>
-                <TableCell className="text-xs">
+                <TableCell className="font-mono text-xs font-semibold text-primary text-start">{tx.voucherNo}</TableCell>
+                <TableCell className="text-xs font-mono text-start">{tx.date}</TableCell>
+                <TableCell className="text-xs text-start">
                   <span className="font-medium">{tx.categoryLabel}</span>
                 </TableCell>
-                <TableCell className="text-xs">
-                  <div className="font-medium">{tx.partyName}</div>
+                <TableCell className="text-xs text-start">
+                  <div className="font-medium truncate">{tx.partyName}</div>
                   <span className="text-[10px] text-muted-foreground">{tx.partyRole}</span>
                 </TableCell>
-                <TableCell className="text-xs">{tx.systemLabel}</TableCell>
-                <TableCell className="text-xs">
-                  <Badge variant="outline" className="text-[10px] uppercase font-mono">
-                    {tx.paymentMethod}
-                  </Badge>
+                <TableCell className="text-xs text-center">
+                  <div className="flex items-center justify-center">
+                    <span>{tx.systemLabel}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-xs text-center">
+                  <div className="flex items-center justify-center">
+                    <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                      {tx.paymentMethod}
+                    </Badge>
+                  </div>
                 </TableCell>
                 <TableCell className="text-end font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300">
                   {formatRupees(tx.amount)}
@@ -788,13 +802,13 @@ function ExpenseReportView({
           </Badge>
         </div>
 
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted/40">
-              <TableHead>Expense Head · مد خرچ</TableHead>
-              <TableHead className="text-center">Vouchers</TableHead>
-              <TableHead className="text-end">Amount (PKR)</TableHead>
-              <TableHead className="text-end">Share</TableHead>
+              <TableHead className="w-[44%] text-start">Expense Head · مد خرچ</TableHead>
+              <TableHead className="w-[16%] text-center">Vouchers</TableHead>
+              <TableHead className="w-[24%] text-end">Amount (PKR)</TableHead>
+              <TableHead className="w-[16%] text-end">Share</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -807,7 +821,7 @@ function ExpenseReportView({
             ) : (
               categories.map((c) => (
                 <TableRow key={c.label}>
-                  <TableCell className="font-medium text-sm">
+                  <TableCell className="font-medium text-sm text-start">
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${c.tone}`}>
                         {c.label}
@@ -815,7 +829,11 @@ function ExpenseReportView({
                       <span className="text-xs text-muted-foreground font-urdu">{c.labelUrdu}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-center text-xs font-mono">{c.count}</TableCell>
+                  <TableCell className="text-center text-xs font-mono">
+                    <div className="flex items-center justify-center">
+                      <span>{c.count}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-end font-mono font-semibold text-sm">
                     {formatRupees(c.total)}
                   </TableCell>
@@ -836,13 +854,13 @@ function ExpenseReportView({
             <h3 className="font-semibold text-sm">12-Month Annual Expense Outflow</h3>
             <p className="text-xs text-muted-foreground">Monthly expense distribution across calendar year</p>
           </div>
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow className="bg-muted/40">
-                <TableHead>Month</TableHead>
-                <TableHead className="text-center">Vouchers</TableHead>
-                <TableHead className="text-end">Total Outflow (PKR)</TableHead>
-                <TableHead className="text-end">Annual Share</TableHead>
+                <TableHead className="w-[44%] text-start">Month</TableHead>
+                <TableHead className="w-[16%] text-center">Vouchers</TableHead>
+                <TableHead className="w-[24%] text-end">Total Outflow (PKR)</TableHead>
+                <TableHead className="w-[16%] text-end">Annual Share</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -850,10 +868,14 @@ function ExpenseReportView({
                 const share = totalExpense > 0 ? Math.round((m.total / totalExpense) * 100) : 0;
                 return (
                   <TableRow key={m.monthNumber}>
-                    <TableCell className="text-xs font-medium">
+                    <TableCell className="text-xs font-medium text-start">
                       {m.monthName} <span className="text-muted-foreground font-urdu ms-1">({m.monthNameUrdu})</span>
                     </TableCell>
-                    <TableCell className="text-center text-xs font-mono">{m.count}</TableCell>
+                    <TableCell className="text-center text-xs font-mono">
+                      <div className="flex items-center justify-center">
+                        <span>{m.count}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-end font-mono text-xs font-semibold">
                       {formatRupees(m.total)}
                     </TableCell>
@@ -876,33 +898,39 @@ function ExpenseReportView({
           <span className="text-xs text-muted-foreground font-mono">{transactions.length} rows</span>
         </div>
 
-        <Table>
+        <Table className="table-fixed min-w-[760px]">
           <TableHeader>
             <TableRow className="bg-muted/40">
-              <TableHead>Voucher No</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Expense Head</TableHead>
-              <TableHead>Payee / Vendor / Staff</TableHead>
-              <TableHead>Campus</TableHead>
-              <TableHead>Method</TableHead>
-              <TableHead className="text-end">Amount</TableHead>
+              <TableHead className="w-[18%] text-start">Voucher No</TableHead>
+              <TableHead className="w-[12%] text-start">Date</TableHead>
+              <TableHead className="w-[16%] text-start">Expense Head</TableHead>
+              <TableHead className="w-[22%] text-start">Payee / Vendor / Staff</TableHead>
+              <TableHead className="w-[11%] text-center">Campus</TableHead>
+              <TableHead className="w-[9%] text-center">Method</TableHead>
+              <TableHead className="w-[12%] text-end">Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {transactions.slice(0, 50).map((tx) => (
               <TableRow key={tx.id}>
-                <TableCell className="font-mono text-xs font-semibold text-primary">{tx.voucherNo}</TableCell>
-                <TableCell className="text-xs font-mono">{tx.date}</TableCell>
-                <TableCell className="text-xs font-medium">{tx.categoryLabel}</TableCell>
-                <TableCell className="text-xs">
-                  <div className="font-medium">{tx.partyName}</div>
+                <TableCell className="font-mono text-xs font-semibold text-primary text-start">{tx.voucherNo}</TableCell>
+                <TableCell className="text-xs font-mono text-start">{tx.date}</TableCell>
+                <TableCell className="text-xs font-medium text-start">{tx.categoryLabel}</TableCell>
+                <TableCell className="text-xs text-start">
+                  <div className="font-medium truncate">{tx.partyName}</div>
                   <span className="text-[10px] text-muted-foreground">{tx.description}</span>
                 </TableCell>
-                <TableCell className="text-xs">{tx.systemLabel}</TableCell>
-                <TableCell className="text-xs">
-                  <Badge variant="outline" className="text-[10px] uppercase font-mono">
-                    {tx.paymentMethod}
-                  </Badge>
+                <TableCell className="text-xs text-center">
+                  <div className="flex items-center justify-center">
+                    <span>{tx.systemLabel}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-xs text-center">
+                  <div className="flex items-center justify-center">
+                    <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                      {tx.paymentMethod}
+                    </Badge>
+                  </div>
                 </TableCell>
                 <TableCell className="text-end font-mono text-xs font-bold text-rose-700 dark:text-rose-300">
                   {formatRupees(tx.amount)}

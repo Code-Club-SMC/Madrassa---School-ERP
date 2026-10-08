@@ -11,7 +11,6 @@ import {
   Search,
   Moon,
   Sun,
-  Bell,
   ArrowLeftRight,
   Check,
   Settings as SettingsIcon,
@@ -33,14 +32,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useSystem } from "@/components/system-context";
 import { useLanguage } from "@/components/language-context";
 import { useTheme } from "@/components/theme-provider";
@@ -66,12 +57,6 @@ function initials(name: string) {
     .join("")
     .toUpperCase();
 }
-
-const NOTIFICATIONS = [
-  { t: "5 fee payments due today", u: "آج 5 فیسیں واجب الادا", tone: "text-amber-600 dark:text-amber-400" },
-  { t: "New admission application", u: "نئی داخلہ درخواست", tone: "text-blue-600 dark:text-blue-400" },
-  { t: "Inventory low: Notebooks", u: "نوٹ بک کم", tone: "text-destructive" },
-];
 
 type AppSidebarProps = {
   onOpenPalette?: () => void;
@@ -100,25 +85,30 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
     currentParent?.key ?? "dashboard",
   );
 
+  const isAccountPage = pathname === "/settings/account" || pathname === "/change-password";
+
   // Synchronize selected parent with route transitions
   useEffect(() => {
-    if (currentParent) {
+    if (isAccountPage) {
+      setSelectedParentKey("account");
+    } else if (currentParent) {
       setSelectedParentKey(currentParent.key);
     }
-  }, [currentParent]);
+  }, [currentParent, isAccountPage]);
 
   const activeParent = useMemo(() => {
+    if (isAccountPage || selectedParentKey === "account") return null;
     return (
       filteredParents.find((p) => p.key === selectedParentKey) ??
       currentParent ??
       filteredParents[0]
     );
-  }, [filteredParents, selectedParentKey, currentParent]);
+  }, [filteredParents, selectedParentKey, currentParent, isAccountPage]);
 
   const activeChildren = useMemo(() => {
-    if (!activeParent) return [];
+    if (!activeParent || isAccountPage) return [];
     return childrenFor(activeParent, module, role);
-  }, [activeParent, module, role]);
+  }, [activeParent, module, role, isAccountPage]);
 
   const isSingleSidebarRole =
     role === "finance_admin" ||
@@ -129,7 +119,7 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
     role === "reports_admin";
 
   const hasChildren = activeChildren.length > 0;
-  const isChildOpen = !isSingleSidebarRole && hasChildren;
+  const isChildOpen = !isSingleSidebarRole && hasChildren && !isAccountPage;
 
   const singleSidebarItems = useMemo(() => {
     if (!isSingleSidebarRole) return [];
@@ -598,97 +588,48 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
                 </Tooltip>
               )}
 
-              {/* Utility Row: Notifications + Theme */}
-              <div
-                className={cn(
-                  "flex items-center gap-1",
-                  isRailVisuallyExpanded ? "justify-between px-1" : "flex-col",
-                )}
-              >
-                {/* Notifications Dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className={cn(
-                        "relative flex items-center rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground transition-colors",
-                        isRailVisuallyExpanded
-                          ? "px-2.5 py-1.5 gap-2 text-xs"
-                          : "h-10 w-12 justify-center mx-auto",
-                      )}
-                      aria-label="Notifications"
-                    >
-                      <Bell className="h-4 w-4 shrink-0" />
-                      <span className="absolute top-1.5 end-2 w-2 h-2 rounded-full bg-destructive" />
-                      {isRailVisuallyExpanded && (
-                        <span className="truncate">
-                          {isUrdu ? "اعلانات" : "Alerts"}
-                        </span>
-                      )}
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    side={isRailVisuallyExpanded ? "top" : (isUrdu ? "left" : "right")}
-                    align="start"
-                    className="w-72 z-50"
+              {/* Theme Toggle Button */}
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className={cn(
+                      "flex items-center rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground transition-colors",
+                      isRailVisuallyExpanded
+                        ? "w-full px-2.5 py-1.5 gap-2 text-xs"
+                        : "h-10 w-12 justify-center mx-auto",
+                    )}
+                    aria-label="Toggle theme"
                   >
-                    <DropdownMenuLabel className="flex items-center justify-between text-xs">
-                      <span>{isUrdu ? "اعلانات" : "Notifications"}</span>
-                      <Link
-                        to="/notifications"
-                        className="text-[10px] text-muted-foreground hover:text-foreground"
-                      >
-                        {isUrdu ? "سب دیکھیں" : "View all"}
-                      </Link>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {NOTIFICATIONS.map((n, i) => (
-                      <DropdownMenuItem key={i} className="flex-col items-start gap-0.5">
-                        <span className={cn("text-xs", n.tone)}>
-                          {isUrdu ? n.u : n.t}
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Theme Toggle Button */}
-                <Tooltip delayDuration={100}>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={toggleTheme}
-                      className={cn(
-                        "flex items-center rounded-xl text-sidebar-foreground/70 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground transition-colors",
-                        isRailVisuallyExpanded
-                          ? "px-2.5 py-1.5 gap-2 text-xs"
-                          : "h-10 w-12 justify-center mx-auto",
-                      )}
-                      aria-label="Toggle theme"
-                    >
-                      {theme === "dark" ? (
-                        <Sun className="h-4 w-4 shrink-0 text-amber-400" />
-                      ) : (
-                        <Moon className="h-4 w-4 shrink-0" />
-                      )}
-                      {isRailVisuallyExpanded && (
-                        <span className="truncate">
-                          {theme === "dark"
-                            ? isUrdu
-                              ? "روشن موڈ"
-                              : "Light"
-                            : isUrdu
-                              ? "تاریک موڈ"
-                              : "Dark"}
-                        </span>
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side={isUrdu ? "left" : "right"} className="text-xs">
-                    {theme === "dark" ? "Switch to Light mode" : "Switch to Dark mode"}
-                  </TooltipContent>
-                </Tooltip>
-              </div>
+                    {theme === "dark" ? (
+                      <Sun className="h-4 w-4 shrink-0 text-amber-400" />
+                    ) : (
+                      <Moon className="h-4 w-4 shrink-0" />
+                    )}
+                    {isRailVisuallyExpanded && (
+                      <span className="truncate">
+                        {theme === "dark"
+                          ? isUrdu
+                            ? "روشن موڈ"
+                            : "Light Mode"
+                          : isUrdu
+                            ? "تاریک موڈ"
+                            : "Dark Mode"}
+                      </span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side={isUrdu ? "left" : "right"} className="text-xs">
+                  {theme === "dark"
+                    ? isUrdu
+                      ? "روشن موڈ میں تبدیل کریں"
+                      : "Switch to Light mode"
+                    : isUrdu
+                      ? "تاریک موڈ میں تبدیل کریں"
+                      : "Switch to Dark mode"}
+                </TooltipContent>
+              </Tooltip>
 
               {/* User Profile & Account Link */}
               <Tooltip>

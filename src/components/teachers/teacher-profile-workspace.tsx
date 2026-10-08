@@ -50,7 +50,6 @@ import { getTeacher, setTeacherActive, updateTeacher } from "./teacher-api";
 import { TeacherTimetableManager } from "./teacher-timetable-manager";
 import type {
   TeacherDetail,
-  TeacherPaymentMethod,
   TeacherSystemScope,
 } from "./teacher-types";
 
@@ -271,12 +270,9 @@ export function TeacherProfileWorkspace() {
                 Edit
               </Button>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <Info label="Base monthly salary" value={formatPKR(teacher.profile.baseMonthlySalaryPaisa)} mono />
-              <Info label="Payment method" value={teacher.profile.paymentMethod} />
               <Info label="Salary effective date" value={teacher.profile.salaryEffectiveDate ? formatDate(teacher.profile.salaryEffectiveDate) : "-"} />
-              <Info label="Bank name" value={fallback(teacher.profile.bankName)} />
-              <Info label="Bank account / IBAN" value={fallback(teacher.profile.bankAccount)} mono wide />
               <Info label="Salary notes" value={fallback(teacher.profile.salaryNotes)} wide />
             </div>
           </Card>
@@ -330,7 +326,8 @@ export function TeacherProfileWorkspace() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submittingStatus}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void confirmStatusChange()} disabled={submittingStatus}>
+            <AlertDialogAction onClick={() => void confirmStatusChange()} disabled={submittingStatus} className="gap-2">
+              {submittingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
               {submittingStatus ? "Saving..." : "Confirm"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -352,7 +349,6 @@ function TeacherEditSheet({
   onUpdated: (teacher: TeacherDetail) => void;
 }) {
   const [systemScope, setSystemScope] = useState<TeacherSystemScope>(teacher.profile.systemScope);
-  const [paymentMethod, setPaymentMethod] = useState<TeacherPaymentMethod>(teacher.profile.paymentMethod);
   const [gender, setGender] = useState(teacher.profile.gender ?? "none");
   const [submitting, setSubmitting] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -360,10 +356,9 @@ function TeacherEditSheet({
   useEffect(() => {
     if (!open) return;
     setSystemScope(teacher.profile.systemScope);
-    setPaymentMethod(teacher.profile.paymentMethod);
     setGender(teacher.profile.gender ?? "none");
     setDirty(false);
-  }, [open, teacher.profile.gender, teacher.profile.paymentMethod, teacher.profile.systemScope]);
+  }, [open, teacher.profile.gender, teacher.profile.systemScope]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -380,9 +375,6 @@ function TeacherEditSheet({
         address: optional(form.get("address")),
         joinedAt: String(form.get("joinedAt") ?? ""),
         baseMonthlySalaryPaisa: Math.round((Number.isFinite(salaryRupees) ? salaryRupees : 0) * 100),
-        bankName: optional(form.get("bankName")),
-        bankAccount: optional(form.get("bankAccount")),
-        paymentMethod,
         salaryEffectiveDate: optional(form.get("salaryEffectiveDate")),
         salaryNotes: optional(form.get("salaryNotes")),
         notes: optional(form.get("notes")),
@@ -486,29 +478,6 @@ function TeacherEditSheet({
               step={1}
               defaultValue={Math.round(teacher.profile.baseMonthlySalaryPaisa / 100)}
             />
-          </Field>
-          <Field label="Payment method">
-            <Select
-              value={paymentMethod}
-              onValueChange={(value) => {
-                setPaymentMethod(value as TeacherPaymentMethod);
-                setDirty(true);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="bank">Bank transfer</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Bank name">
-            <Input name="bankName" defaultValue={teacher.profile.bankName ?? ""} />
-          </Field>
-          <Field label="Bank account / IBAN">
-            <Input name="bankAccount" defaultValue={teacher.profile.bankAccount ?? ""} />
           </Field>
           <Field label="Salary effective date">
             <Input name="salaryEffectiveDate" type="date" defaultValue={teacher.profile.salaryEffectiveDate ?? ""} />

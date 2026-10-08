@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Package, AlertTriangle, PackagePlus, Pencil, History, Trash2, X } from "lucide-react";
+import { Search, Package, AlertTriangle, PackagePlus, Pencil, History, Trash2, X, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -210,7 +210,25 @@ function InventoryPage() {
 
 function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; onOpenChange: (v: boolean) => void; initial: InventoryItem | null; onSave: (i: InventoryItem) => void }) {
   const [f, setF] = useState<InventoryItem>({ id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 });
-  useEffect(() => { if (open) setF(initial ?? { id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 }); }, [open, initial]);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => { 
+    if (open) setF(initial ?? { id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 }); 
+  }, [open, initial]);
+
+  const handleSubmit = async () => {
+    if (submitting) return;
+    if (!f.name.trim()) { toast.error("Name is required"); return; }
+    setSubmitting(true);
+    try {
+      await onSave({ ...f, id: f.id || `inv-${Date.now()}` });
+      setF({ id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 });
+      onOpenChange(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -223,21 +241,21 @@ function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; on
         <div className="grid gap-3">
           <div className="grid grid-cols-2 gap-2">
             <BilingualLabel urdu="نام (انگریزی)" english="Item Name" required>
-              <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+              <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} disabled={submitting} />
             </BilingualLabel>
             <BilingualLabel urdu="نام (اردو)" english="Urdu Name" required>
-              <Input className="font-urdu" dir="rtl" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} />
+              <Input className="font-urdu" dir="rtl" value={f.nameUrdu} onChange={(e) => setF({ ...f, nameUrdu: e.target.value })} disabled={submitting} />
             </BilingualLabel>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <BilingualLabel urdu="زمرہ" english="Category">
-              <Select value={f.category} onValueChange={(v) => setF({ ...f, category: v })}>
+              <Select value={f.category} onValueChange={(v) => setF({ ...f, category: v })} disabled={submitting}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{["Books", "Stationery", "Mosque", "Classroom", "Electronics", "Other"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </BilingualLabel>
             <BilingualLabel urdu="قسم" english="Type" required>
-              <Select value={f.type} onValueChange={(v) => setF({ ...f, type: v as InventoryItem["type"] })}>
+              <Select value={f.type} onValueChange={(v) => setF({ ...f, type: v as InventoryItem["type"] })} disabled={submitting}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="purchased">Purchased</SelectItem><SelectItem value="donated">Donated</SelectItem><SelectItem value="gift">Gift</SelectItem></SelectContent>
               </Select>
@@ -245,25 +263,25 @@ function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; on
           </div>
           <div className="grid grid-cols-3 gap-2">
             <BilingualLabel urdu="مقدار" english="Quantity">
-              <Input type="number" value={f.quantity} onChange={(e) => setF({ ...f, quantity: +e.target.value })} />
+              <Input type="number" value={f.quantity} onChange={(e) => setF({ ...f, quantity: +e.target.value })} disabled={submitting} />
             </BilingualLabel>
             <BilingualLabel urdu="اکائی" english="Unit">
-              <Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} />
+              <Input value={f.unit} onChange={(e) => setF({ ...f, unit: e.target.value })} disabled={submitting} />
             </BilingualLabel>
             <BilingualLabel urdu="کم اسٹاک" english="Low @">
-              <Input type="number" value={f.lowStockThreshold} onChange={(e) => setF({ ...f, lowStockThreshold: +e.target.value })} />
+              <Input type="number" value={f.lowStockThreshold} onChange={(e) => setF({ ...f, lowStockThreshold: +e.target.value })} disabled={submitting} />
             </BilingualLabel>
           </div>
           <BilingualLabel urdu="مالیت (روپے)" english="Value (PKR)">
-            <Input type="number" value={f.value} onChange={(e) => setF({ ...f, value: +e.target.value })} />
+            <Input type="number" value={f.value} onChange={(e) => setF({ ...f, value: +e.target.value })} disabled={submitting} />
           </BilingualLabel>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => {
-            if (!f.name.trim()) { toast.error("Name is required"); return; }
-            onSave({ ...f, id: f.id || `inv-${Date.now()}` });
-          }}>Save</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={submitting} className="gap-2">
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            Save
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, Printer, Receipt, HandCoins } from "lucide-react";
+import { Plus, Printer, Receipt, HandCoins, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -137,21 +137,49 @@ function RecordDialog({ open, onOpenChange, onSave }: { open: boolean; onOpenCha
   const [purpose, setPurpose] = useState("");
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<"cash" | "bank" | "online">("cash");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleIssue = async () => {
+    if (submitting || !donor || !amount) return;
+    setSubmitting(true);
+    try {
+      await onSave({
+        date: new Date().toISOString().slice(0, 10),
+        donor,
+        donorUrdu: donorUrdu || donor,
+        phone,
+        cnic,
+        type,
+        purpose,
+        amountPaisa: Number(amount) * 100,
+        method,
+      });
+      setDonor("");
+      setDonorUrdu("");
+      setPhone("");
+      setCnic("");
+      setPurpose("");
+      setAmount("");
+      onOpenChange(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!submitting) onOpenChange(v); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-heading">Record Donation <span className="font-urdu text-base text-muted-foreground ms-2">عطیہ درج کریں</span></DialogTitle>
           <DialogDescription>An auto-numbered receipt (DR-YYYY-####) will be created and printable.</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3 py-2">
-          <BilingualLabel urdu="نام عطیہ دہندہ" english="Donor Name" required><Input value={donor} onChange={(e) => setDonor(e.target.value)} placeholder="Haji…" /></BilingualLabel>
-          <BilingualLabel urdu="اردو نام" english="Urdu Name"><Input value={donorUrdu} onChange={(e) => setDonorUrdu(e.target.value)} className="font-urdu text-right" dir="rtl" /></BilingualLabel>
-          <BilingualLabel urdu="فون" english="Phone"><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0300-…" /></BilingualLabel>
-          <BilingualLabel urdu="شناختی کارڈ" english="CNIC"><Input value={cnic} onChange={(e) => setCnic(e.target.value)} placeholder="35202-…" /></BilingualLabel>
+          <BilingualLabel urdu="نام عطیہ دہندہ" english="Donor Name" required><Input value={donor} onChange={(e) => setDonor(e.target.value)} placeholder="Haji…" disabled={submitting} /></BilingualLabel>
+          <BilingualLabel urdu="اردو نام" english="Urdu Name"><Input value={donorUrdu} onChange={(e) => setDonorUrdu(e.target.value)} className="font-urdu text-right" dir="rtl" disabled={submitting} /></BilingualLabel>
+          <BilingualLabel urdu="فون" english="Phone"><Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0300-…" disabled={submitting} /></BilingualLabel>
+          <BilingualLabel urdu="شناختی کارڈ" english="CNIC"><Input value={cnic} onChange={(e) => setCnic(e.target.value)} placeholder="35202-…" disabled={submitting} /></BilingualLabel>
           <BilingualLabel urdu="قسم" english="Type" required>
-            <Select value={type} onValueChange={(v) => setType(v as DonationType)}>
+            <Select value={type} onValueChange={(v) => setType(v as DonationType)} disabled={submitting}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="zakat">Zakat · زکوٰۃ</SelectItem>
@@ -163,17 +191,20 @@ function RecordDialog({ open, onOpenChange, onSave }: { open: boolean; onOpenCha
             </Select>
           </BilingualLabel>
           <BilingualLabel urdu="طریقہ ادائیگی" english="Method">
-            <Select value={method} onValueChange={(v) => setMethod(v as "cash" | "bank" | "online")}>
+            <Select value={method} onValueChange={(v) => setMethod(v as "cash" | "bank" | "online")} disabled={submitting}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="cash">Cash</SelectItem><SelectItem value="bank">Bank</SelectItem><SelectItem value="online">Online</SelectItem></SelectContent>
             </Select>
           </BilingualLabel>
-          <BilingualLabel urdu="رقم (PKR)" english="Amount (PKR)" required><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50000" /></BilingualLabel>
-          <div className="col-span-2"><BilingualLabel urdu="مقصد" english="Purpose"><Textarea value={purpose} onChange={(e) => setPurpose(e.target.value)} rows={2} placeholder="Orphan fees, building fund, books…" /></BilingualLabel></div>
+          <BilingualLabel urdu="رقم (PKR)" english="Amount (PKR)" required><Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="50000" disabled={submitting} /></BilingualLabel>
+          <div className="col-span-2"><BilingualLabel urdu="مقصد" english="Purpose"><Textarea value={purpose} onChange={(e) => setPurpose(e.target.value)} rows={2} placeholder="Orphan fees, building fund, books…" disabled={submitting} /></BilingualLabel></div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button disabled={!donor || !amount} onClick={() => { onSave({ date: new Date().toISOString().slice(0, 10), donor, donorUrdu: donorUrdu || donor, phone, cnic, type, purpose, amountPaisa: Number(amount) * 100, method }); onOpenChange(false); setDonor(""); setDonorUrdu(""); setPhone(""); setCnic(""); setPurpose(""); setAmount(""); }}>Issue Receipt</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancel</Button>
+          <Button disabled={!donor || !amount || submitting} onClick={handleIssue} className="gap-2">
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            <span>{submitting ? "Issuing..." : "Issue Receipt"}</span>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

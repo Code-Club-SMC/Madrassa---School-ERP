@@ -1,4 +1,3 @@
-import { notInArray, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   institutions,
@@ -6,8 +5,6 @@ import {
   madrassaSubcategories,
   programs,
 } from "@/db/schema/academic";
-import { studentEnrollments } from "@/db/schema/students";
-import { admissionApplications } from "@/db/schema/admission";
 import { buildMadrassaCategories } from "@/lib/madrassa-grade-catalog";
 
 export const ACADEMIC_INSTITUTIONS = [
@@ -216,11 +213,9 @@ export async function seedAcademicCatalog() {
   }
 
   const catalogCategories = buildMadrassaCategories();
-  const validSubcategoryIds: string[] = [];
 
   for (const cat of catalogCategories) {
     for (const sub of cat.subcategories) {
-      validSubcategoryIds.push(sub.id);
       await db
         .insert(madrassaSubcategories)
         .values({
@@ -253,30 +248,6 @@ export async function seedAcademicCatalog() {
         });
     }
   }
-
-  const allowedCategoryIds = CANONICAL_CATEGORIES.map((c) => c.id);
-  try {
-    if (validSubcategoryIds.length > 0) {
-      await db
-        .update(studentEnrollments)
-        .set({ madrassaSubcategoryId: "bn-dars-ula" })
-        .where(notInArray(studentEnrollments.madrassaSubcategoryId, validSubcategoryIds));
-
-      await db
-        .update(admissionApplications)
-        .set({ madrassaSubcategoryId: "bn-dars-ula" })
-        .where(notInArray(admissionApplications.madrassaSubcategoryId, validSubcategoryIds));
-
-      await db
-        .delete(madrassaSubcategories)
-        .where(notInArray(madrassaSubcategories.id, validSubcategoryIds));
-    }
-
-    await db
-      .delete(madrassaCategories)
-      .where(notInArray(madrassaCategories.id, allowedCategoryIds));
-  } catch (err) {
-    console.warn("Madrassa categories cleanup notice:", err);
-  }
 }
+
 

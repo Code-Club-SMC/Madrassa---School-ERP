@@ -183,15 +183,9 @@
     text-align: left;
   }
 
-  /* Tables: Ensure table headers and cells align properly */
-  html[dir="rtl"] th,
-  html[dir="rtl"] td {
-    text-align: right;
-  }
-
-  html[dir="ltr"] th,
-  html[dir="ltr"] td {
-    text-align: left;
+  /* Tables: Ensure table headers and cells default to logical start alignment */
+  :where(th, td) {
+    text-align: start;
   }
 
   /* Global override for containers that had static dir="rtl" when English is active */
@@ -209,8 +203,7 @@
   code,
   kbd,
   [data-preserve-dir] {
-    direction: ltr !important;
-    text-align: left !important;
+    direction: ltr;
     unicode-bidi: plaintext;
   }
 
@@ -259,9 +252,6 @@
   /* ID Card — CR80 credit-card */
   .id-card-print { width: 85.6mm; height: 53.98mm; border: 1px solid #000; border-radius: 3mm; overflow: hidden; }
 
-  /* Salary slip — A5 */
-  .salary-slip { width: 148mm; min-height: 210mm; padding: 12mm; }
-
   /* Seating grid */
   .seating-grid-print { display: grid; gap: 4mm; page-break-inside: avoid; }
 
@@ -273,9 +263,6 @@
 
   /* Donation receipt — A5 landscape on A4 */
   .donation-receipt-print { width: 210mm; min-height: 148mm; }
-
-  /* Salary slip wrapper */
-  .salary-slip-print { width: 210mm; min-height: 297mm; }
 
   /* Override Tailwind .hidden so print-target contents become visible */
   .print-target.hidden { display: block !important; }

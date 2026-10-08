@@ -447,8 +447,9 @@ export function TeacherAssignmentManager({ teacher, onChange }: Props) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void confirmRemove()} disabled={submitting}>
-              {submitting ? "Removing..." : "Remove"}
+            <AlertDialogAction onClick={() => void confirmRemove()} disabled={submitting} className="gap-2">
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              <span>{submitting ? "Removing..." : "Remove"}</span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

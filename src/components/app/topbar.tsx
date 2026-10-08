@@ -197,80 +197,19 @@ export function Topbar({ onOpenPalette }: TopbarProps) {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div>
-                <p className="text-sm font-medium">
-                  {user?.name ?? (lang === "ur" ? "لاگ ان صارف" : "Signed in user")}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">{user?.email ?? ""}</p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/settings/account">
-                {lang === "ur" ? (
-                  <>
-                    <span className="font-urdu text-sm">اکاؤنٹ کی ترتیبات</span>
-                    <span className="ms-auto text-xs text-muted-foreground">Account</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-sm">Account Settings</span>
-                    <span
-                      className="ms-auto text-xs text-muted-foreground font-urdu"
-                      dir="rtl"
-                      lang="ur"
-                    >
-                      اکاؤنٹ ترتیبات
-                    </span>
-                  </>
-                )}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/settings/account" search={{ tab: "security" } as never}>
-                {lang === "ur" ? "پاس ورڈ تبدیل کریں" : "Change password"}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setLang(lang === "ur" ? "en" : "ur")}>
-              <Languages className="h-4 w-4 me-2 opacity-70" />
-              <span>{lang === "ur" ? "زبان تبدیل کریں" : "Switch language"}</span>
-              <span className="ms-auto text-xs font-semibold px-2 py-0.5 rounded bg-muted">
-                {lang === "ur" ? "English" : "اردو"}
-              </span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => void logout()}
-            >
-              {lang === "ur" ? (
-                <>
-                  <span className="font-urdu text-sm">سائن آؤٹ</span>
-                  <span className="ms-auto text-xs">Sign out</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-sm">Sign out</span>
-                  <span className="ms-auto text-xs font-urdu" dir="rtl" lang="ur">
-                    سائن آؤٹ
-                  </span>
-                </>
-              )}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button variant="ghost" size="icon" className="rounded-full" asChild>
+          <Link
+            to="/settings/account"
+            aria-label={lang === "ur" ? "اکاؤنٹ کی ترتیبات" : "Account Settings"}
+            title={lang === "ur" ? "اکاؤنٹ کی ترتیبات اور سیکیورٹی" : "Account Settings & Security"}
+          >
+            <Avatar className="h-8 w-8 ring-1 ring-border transition-transform hover:scale-105">
+              <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+        </Button>
       </div>
     </header>
   );

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createTeacher } from "./teacher-api";
-import type { TeacherCredentials, TeacherPaymentMethod, TeacherSystemScope } from "./teacher-types";
+import type { TeacherCredentials, TeacherSystemScope } from "./teacher-types";
 
 type Props = {
   open: boolean;
@@ -31,12 +31,13 @@ function optional(value: FormDataEntryValue | null) {
 
 export function AddTeacherDialog({ open, onOpenChange, onCreated }: Props) {
   const [systemScope, setSystemScope] = useState<TeacherSystemScope>("school");
-  const [paymentMethod, setPaymentMethod] = useState<TeacherPaymentMethod>("cash");
   const [gender, setGender] = useState<"male" | "female" | "none">("none");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) return;
+    const formElement = event.currentTarget;
     setSubmitting(true);
 
     try {
@@ -56,9 +57,6 @@ export function AddTeacherDialog({ open, onOpenChange, onCreated }: Props) {
         address: optional(form.get("address")),
         joinedAt: String(form.get("joinedAt") ?? ""),
         baseMonthlySalaryPaisa: Math.round((Number.isFinite(salaryRupees) ? salaryRupees : 0) * 100),
-        bankName: optional(form.get("bankName")),
-        bankAccount: optional(form.get("bankAccount")),
-        paymentMethod,
         salaryEffectiveDate: optional(form.get("salaryEffectiveDate")),
         salaryNotes: optional(form.get("salaryNotes")),
         notes: optional(form.get("notes")),
@@ -67,9 +65,8 @@ export function AddTeacherDialog({ open, onOpenChange, onCreated }: Props) {
       const result = await createTeacher(payload);
       toast.success("Teacher created");
       onCreated(result.credentials);
-      event.currentTarget.reset();
+      formElement.reset();
       setSystemScope("school");
-      setPaymentMethod("cash");
       setGender("none");
       onOpenChange(false);
     } catch (error) {
@@ -202,26 +199,6 @@ export function AddTeacherDialog({ open, onOpenChange, onCreated }: Props) {
               placeholder="45000"
               disabled={submitting}
             />
-          </Field>
-          <Field label="Payment method">
-            <Select
-              value={paymentMethod}
-              onValueChange={(value) => setPaymentMethod(value as TeacherPaymentMethod)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="bank">Bank transfer</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Bank name">
-            <Input name="bankName" placeholder="Bank Alfalah" disabled={submitting} />
-          </Field>
-          <Field label="Bank account / IBAN">
-            <Input name="bankAccount" placeholder="PK00..." disabled={submitting} />
           </Field>
           <Field label="Salary effective date">
             <Input name="salaryEffectiveDate" type="date" disabled={submitting} />

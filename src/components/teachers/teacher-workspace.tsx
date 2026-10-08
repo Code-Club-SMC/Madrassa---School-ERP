@@ -398,7 +398,8 @@ export function TeacherWorkspace() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submittingStatus}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void confirmStatusChange()} disabled={submittingStatus}>
+            <AlertDialogAction onClick={() => void confirmStatusChange()} disabled={submittingStatus} className="gap-2">
+              {submittingStatus && <Loader2 className="h-4 w-4 animate-spin" />}
               {submittingStatus ? "Saving..." : "Confirm"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -415,7 +416,8 @@ export function TeacherWorkspace() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void confirmDelete()} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={() => void confirmDelete()} disabled={deleting} className="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
               {deleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>

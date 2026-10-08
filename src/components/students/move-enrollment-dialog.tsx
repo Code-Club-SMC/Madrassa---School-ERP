@@ -212,6 +212,7 @@ export function MoveEnrollmentDialog({ profile, open, onOpenChange, onMoved }: P
       if (!response.ok) throw new Error(payload.error || "Could not move enrollment");
 
       toast.success("Enrollment moved", { description: "Academic placement updated." });
+      setReason("");
       await onMoved();
       onOpenChange(false);
     } catch (error) {
@@ -358,7 +359,7 @@ export function MoveEnrollmentDialog({ profile, open, onOpenChange, onMoved }: P
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>
-          <Button onClick={submitMove} disabled={!canSubmit}>
+          <Button onClick={submitMove} disabled={!canSubmit || submitting}>
             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitting ? "Moving..." : "Move Enrollment"}
           </Button>

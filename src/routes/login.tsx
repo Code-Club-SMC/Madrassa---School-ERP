@@ -74,6 +74,8 @@ function LoginPage() {
         else destination = "/dashboard";
       }
 
+      setIdentifier("");
+      setPassword("");
       navigate({ to: destination });
     } catch (err) {
       setError(

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BookMarked, Save, TrendingUp, Award, Printer } from "lucide-react";
+import { BookMarked, Save, TrendingUp, Award, Printer, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -156,6 +156,20 @@ function KhatmDialog({ student }: { student: { id: string; name: string; nameUrd
 function UpdateDialog({ student, initial, onSave }: { student: string; initial: { sabaq: string; sabqi: string; manzil: string; juz: number }; onSave: (d: typeof initial) => void }) {
   const [open, setOpen] = useState(false);
   const [d, setD] = useState(initial);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSave = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await onSave(d);
+      setD({ sabaq: "", sabqi: "", manzil: "", juz: 0 });
+      setOpen(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button size="sm" variant="outline" className="gap-1.5"><Save className="h-3.5 w-3.5" />Log</Button></DialogTrigger>
@@ -164,27 +178,30 @@ function UpdateDialog({ student, initial, onSave }: { student: string; initial: 
         <div className="space-y-3 text-sm">
           <div>
             <label className="text-xs text-muted-foreground">Juz Completed · پارے مکمل</label>
-            <Select value={String(d.juz)} onValueChange={(v) => setD({ ...d, juz: +v })}>
+            <Select value={String(d.juz)} onValueChange={(v) => setD({ ...d, juz: +v })} disabled={submitting}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{Array.from({ length: 31 }).map((_, i) => <SelectItem key={i} value={String(i)}>{i} / 30</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Sabaq · سبق</label>
-            <Textarea className="font-urdu" value={d.sabaq} onChange={(e) => setD({ ...d, sabaq: e.target.value })} rows={2} />
+            <Textarea className="font-urdu" value={d.sabaq} onChange={(e) => setD({ ...d, sabaq: e.target.value })} rows={2} disabled={submitting} />
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Sabqi · سبقی</label>
-            <Input className="font-urdu" value={d.sabqi} onChange={(e) => setD({ ...d, sabqi: e.target.value })} />
+            <Input className="font-urdu" value={d.sabqi} onChange={(e) => setD({ ...d, sabqi: e.target.value })} disabled={submitting} />
           </div>
           <div>
             <label className="text-xs text-muted-foreground">Manzil · منزل</label>
-            <Input className="font-urdu" value={d.manzil} onChange={(e) => setD({ ...d, manzil: e.target.value })} />
+            <Input className="font-urdu" value={d.manzil} onChange={(e) => setD({ ...d, manzil: e.target.value })} disabled={submitting} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={() => { onSave(d); setOpen(false); }} className="gap-1.5"><TrendingUp className="h-3.5 w-3.5" />Save Log</Button>
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button>
+          <Button onClick={handleSave} disabled={submitting} className="gap-1.5">
+            {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <TrendingUp className="h-3.5 w-3.5" />}
+            Save Log
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -282,6 +282,7 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
     setTimeout(() => {
       const ref = isPublic ? `APP-${Math.floor(Math.random() * 9000 + 1000)}` : `QAD-${Math.floor(Math.random() * 900 + 100)}`;
       setDoneRef(ref);
+      setForm(init);
       setSubmitting(false);
       toast.success(`${t.successTitle} — ${ref} assigned`);
       onComplete?.(ref);

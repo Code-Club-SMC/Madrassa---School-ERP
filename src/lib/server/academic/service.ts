@@ -58,7 +58,7 @@ export const madrassaSubcategoryInputSchema = z.object({
   durationYears: z.coerce.number().int().positive().nullable().optional(),
   fee: z.coerce.number().int().nonnegative().nullable().optional(),
   active: z.boolean().optional(),
-  section: z.enum(["male", "female"]).optional(),
+  section: z.enum(["male", "female", "both"]).optional(),
 });
 
 export const madrassaSubcategoryUpdateSchema = madrassaSubcategoryInputSchema.partial().refine(hasAnyKey, {
@@ -377,7 +377,7 @@ export async function createMadrassaSubcategory(
   const [category] = await db.select({ id: madrassaCategories.id, section: madrassaCategories.section }).from(madrassaCategories).where(eq(madrassaCategories.id, categoryId)).limit(1);
   if (!category) throw new HttpError("Madrassa category not found", 404);
 
-  const rollPrefix = input.rollPrefix ?? input.name.slice(0, 3).toUpperCase();
+  const rollPrefix = input.rollPrefix?.trim() || (await generateMadrassaRollPrefix(categoryId, input.name));
   await assertUniqueMadrassaRollPrefix(categoryId, rollPrefix);
 
   const [created] = await db
@@ -394,7 +394,7 @@ export async function createMadrassaSubcategory(
       fee: input.fee ?? null,
       displayOrder: await nextMadrassaSubcategoryOrder(categoryId),
       active: input.active ?? true,
-      section: input.section ?? category.section,
+      section: input.section ?? category.section ?? "male",
     })
     .returning();
 
@@ -532,6 +532,30 @@ async function assertUniqueMadrassaRollPrefix(categoryId: string, rollPrefix: st
   if (existing) {
     throw new HttpError(`Roll prefix "${rollPrefix}" is already used in this category`, 409);
   }
+}
+
+async function generateMadrassaRollPrefix(categoryId: string, name: string) {
+  const asciiOnly = name.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const basePrefix =
+    asciiOnly.length >= 2
+      ? asciiOnly.slice(0, 3)
+      : (categoryId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase() || "CLS");
+
+  const existingRows = await db
+    .select({ rollPrefix: madrassaSubcategories.rollPrefix })
+    .from(madrassaSubcategories)
+    .where(eq(madrassaSubcategories.categoryId, categoryId));
+  const existingPrefixes = new Set(existingRows.map((r) => r.rollPrefix));
+
+  if (!existingPrefixes.has(basePrefix)) {
+    return basePrefix;
+  }
+
+  let counter = 1;
+  while (existingPrefixes.has(`${basePrefix}${counter}`)) {
+    counter++;
+  }
+  return `${basePrefix}${counter}`;
 }
 
 async function assertNoActiveMadrassaSubcategoryEnrollments(subcategoryId: string) {

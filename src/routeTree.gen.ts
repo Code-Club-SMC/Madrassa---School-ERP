@@ -74,7 +74,6 @@ import { Route as AuthenticatedSettingsWebsiteRouteImport } from './routes/_auth
 import { Route as AuthenticatedStudentsIdRouteImport } from './routes/_authenticated/students/$id'
 import { Route as AuthenticatedTeachersIndexRouteImport } from './routes/_authenticated/teachers/index'
 import { Route as AuthenticatedTeachersIdRouteImport } from './routes/_authenticated/teachers/$id'
-import { Route as AuthenticatedTeachersSalaryRouteImport } from './routes/_authenticated/teachers/salary'
 import { Route as ApiAcademicYearsIndexRouteImport } from './routes/api/academic-years/index'
 import { Route as ApiAcademicYearsIdRouteImport } from './routes/api/academic-years/$id'
 import { Route as ApiAcademicYearsBackfillRouteImport } from './routes/api/academic-years/backfill'
@@ -545,12 +544,6 @@ const AuthenticatedTeachersIdRoute = AuthenticatedTeachersIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedTeachersRoute,
 } as any)
-const AuthenticatedTeachersSalaryRoute =
-  AuthenticatedTeachersSalaryRouteImport.update({
-    id: '/salary',
-    path: '/salary',
-    getParentRoute: () => AuthenticatedTeachersRoute,
-  } as any)
 const ApiAcademicYearsIndexRoute = ApiAcademicYearsIndexRouteImport.update({
   id: '/api/academic-years/',
   path: '/api/academic-years/',
@@ -1219,7 +1212,6 @@ export interface FileRoutesByFullPath {
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
-  '/teachers/salary': typeof AuthenticatedTeachersSalaryRoute
   '/api/academic-years/$id': typeof ApiAcademicYearsIdRouteWithChildren
   '/api/academic-years/backfill': typeof ApiAcademicYearsBackfillRoute
   '/api/academic/institutions': typeof ApiAcademicInstitutionsRoute
@@ -1386,7 +1378,6 @@ export interface FileRoutesByTo {
   '/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/students/$id': typeof AuthenticatedStudentsIdRoute
   '/teachers/$id': typeof AuthenticatedTeachersIdRoute
-  '/teachers/salary': typeof AuthenticatedTeachersSalaryRoute
   '/api/academic-years/$id': typeof ApiAcademicYearsIdRouteWithChildren
   '/api/academic-years/backfill': typeof ApiAcademicYearsBackfillRoute
   '/api/academic/institutions': typeof ApiAcademicInstitutionsRoute
@@ -1564,7 +1555,6 @@ export interface FileRoutesById {
   '/_authenticated/settings/website': typeof AuthenticatedSettingsWebsiteRoute
   '/_authenticated/students/$id': typeof AuthenticatedStudentsIdRoute
   '/_authenticated/teachers/$id': typeof AuthenticatedTeachersIdRoute
-  '/_authenticated/teachers/salary': typeof AuthenticatedTeachersSalaryRoute
   '/api/academic-years/$id': typeof ApiAcademicYearsIdRouteWithChildren
   '/api/academic-years/backfill': typeof ApiAcademicYearsBackfillRoute
   '/api/academic/institutions': typeof ApiAcademicInstitutionsRoute
@@ -1742,7 +1732,6 @@ export interface FileRouteTypes {
     | '/settings/website'
     | '/students/$id'
     | '/teachers/$id'
-    | '/teachers/salary'
     | '/api/academic-years/$id'
     | '/api/academic-years/backfill'
     | '/api/academic/institutions'
@@ -1909,7 +1898,6 @@ export interface FileRouteTypes {
     | '/settings/website'
     | '/students/$id'
     | '/teachers/$id'
-    | '/teachers/salary'
     | '/api/academic-years/$id'
     | '/api/academic-years/backfill'
     | '/api/academic/institutions'
@@ -2086,7 +2074,6 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/website'
     | '/_authenticated/students/$id'
     | '/_authenticated/teachers/$id'
-    | '/_authenticated/teachers/salary'
     | '/api/academic-years/$id'
     | '/api/academic-years/backfill'
     | '/api/academic/institutions'
@@ -2723,13 +2710,6 @@ declare module '@tanstack/react-router' {
       path: '/$id'
       fullPath: '/teachers/$id'
       preLoaderRoute: typeof AuthenticatedTeachersIdRouteImport
-      parentRoute: typeof AuthenticatedTeachersRoute
-    }
-    '/_authenticated/teachers/salary': {
-      id: '/_authenticated/teachers/salary'
-      path: '/salary'
-      fullPath: '/teachers/salary'
-      preLoaderRoute: typeof AuthenticatedTeachersSalaryRouteImport
       parentRoute: typeof AuthenticatedTeachersRoute
     }
     '/api/academic-years/': {
@@ -3721,13 +3701,11 @@ const AuthenticatedSettingsRouteWithChildren =
 
 interface AuthenticatedTeachersRouteChildren {
   AuthenticatedTeachersIdRoute: typeof AuthenticatedTeachersIdRoute
-  AuthenticatedTeachersSalaryRoute: typeof AuthenticatedTeachersSalaryRoute
   AuthenticatedTeachersIndexRoute: typeof AuthenticatedTeachersIndexRoute
 }
 
 const AuthenticatedTeachersRouteChildren: AuthenticatedTeachersRouteChildren = {
   AuthenticatedTeachersIdRoute: AuthenticatedTeachersIdRoute,
-  AuthenticatedTeachersSalaryRoute: AuthenticatedTeachersSalaryRoute,
   AuthenticatedTeachersIndexRoute: AuthenticatedTeachersIndexRoute,
 }
 

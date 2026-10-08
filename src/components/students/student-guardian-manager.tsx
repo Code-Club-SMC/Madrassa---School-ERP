@@ -120,6 +120,7 @@ export function StudentGuardianManager({ profile, onChanged, onParentCredentials
 
       toast.success(isAdding ? "سرپرست شامل ہو گیا" : "سرپرست کی معلومات محفوظ ہو گئیں");
       await onChanged();
+      setForm(emptyGuardianForm);
       setEditing(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : isAdding ? "سرپرست شامل نہیں ہو سکا" : "سرپرست کی معلومات محفوظ نہیں ہو سکیں");

@@ -20,6 +20,7 @@ import {
   CalendarX,
   MessageSquareText,
   Globe,
+  Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -371,6 +372,9 @@ function HRHub() {
 
       toast.success(lang === "ur" ? "پیریڈ کامیابی سے شیڈول کر دیا گیا!" : "Timetable period added successfully!");
       setFormRoom("");
+      setFormAssignmentId("");
+      setFormStartTime("08:00");
+      setFormEndTime("08:45");
       setManageTab("schedule");
       await fetchTeachers();
     } catch (err: any) {
@@ -975,15 +979,18 @@ function HRHub() {
                       type="submit"
                       size="sm"
                       disabled={submitting || activeManageTeacher.assignments.length === 0}
-                      className="text-xs h-8"
+                      className="text-xs h-8 gap-1.5"
                     >
-                      {submitting
-                        ? lang === "ur"
-                          ? "محفوظ ہو رہا ہے..."
-                          : "Saving..."
-                        : lang === "ur"
-                        ? "پیریڈ محفوظ کریں"
-                        : "Save Period"}
+                      {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      <span>
+                        {submitting
+                          ? lang === "ur"
+                            ? "محفوظ ہو رہا ہے..."
+                            : "Saving..."
+                          : lang === "ur"
+                          ? "پیریڈ محفوظ کریں"
+                          : "Save Period"}
+                      </span>
                     </Button>
                   </div>
                 </form>

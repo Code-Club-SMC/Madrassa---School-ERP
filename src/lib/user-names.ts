@@ -64,8 +64,8 @@ export function getUserDisplayName(
   lang: "ur" | "en" = "en",
 ): string {
   if (!u) return "";
-  const name = u.name?.trim() ?? "";
-  const nameUrdu = u.nameUrdu?.trim() ?? "";
+  const name = (typeof u.name === "string" ? u.name.trim() : "") || "";
+  const nameUrdu = (typeof u.nameUrdu === "string" ? u.nameUrdu.trim() : "") || "";
 
   if (lang === "ur") {
     if (nameUrdu) return nameUrdu;
@@ -89,7 +89,7 @@ export function getUserInitials(
   return display.slice(0, 2);
 }
 
-export const ROLE_LABELS: Record<UserRole, { en: string; ur: string }> = {
+export const ROLE_LABELS: Record<string, { en: string; ur: string }> = {
   super_admin: { en: "Super Admin", ur: "سپر ایڈمن" },
   admin: { en: "Admin", ur: "ایڈمن" },
   admission_admin: { en: "Admission Admin", ur: "داخلہ ایڈمن" },
@@ -105,6 +105,7 @@ export const ROLE_LABELS: Record<UserRole, { en: string; ur: string }> = {
   teacher: { en: "Teacher", ur: "استاد" },
   staff: { en: "Staff", ur: "عملہ" },
   parent: { en: "Parent", ur: "والدین" },
+  user: { en: "User", ur: "صارف" },
 };
 
 export const ACCESS_LABELS: Record<string, { en: string; ur: string }> = {

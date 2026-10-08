@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { BookOpen, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { BookLoader } from "@/components/shared/book-loader";
@@ -66,7 +66,7 @@ function CategoriesPage() {
 
   const [categories, setCategories] = useState<MadrassaCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>("dars_nizami");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -77,6 +77,7 @@ function CategoriesPage() {
   const [formRollPrefix, setFormRollPrefix] = useState("");
   const [formDarja, setFormDarja] = useState("");
   const [formFee, setFormFee] = useState("");
+  const [formSection, setFormSection] = useState<string>("male");
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
@@ -105,7 +106,8 @@ function CategoriesPage() {
     setFormRollPrefix("");
     setFormDarja("");
     setFormFee("");
-  }, []);
+    setFormSection(gender);
+  }, [gender]);
 
   useEffect(() => {
     void loadCategories();
@@ -135,7 +137,12 @@ function CategoriesPage() {
           : c.section === "banat" || c.section === "female"
             ? "female"
             : c.section;
-      return dbSection === gender || (c.subcategories && c.subcategories.length > 0);
+      return (
+        c.section === "both" ||
+        c.section === "all" ||
+        dbSection === gender ||
+        Boolean(c.subcategories && c.subcategories.length > 0)
+      );
     })
     .sort((a, b) => {
       const order: Record<string, number> = {
@@ -188,6 +195,13 @@ function CategoriesPage() {
       return;
     }
 
+    const effectiveSection =
+      selectedCategory.section === "male"
+        ? "male"
+        : selectedCategory.section === "female"
+          ? "female"
+          : (formSection || gender);
+
     setSubmitting(true);
     try {
       const response = await fetch(`/api/academic/madrassa/categories/${selectedCategoryId}/subcategories`, {
@@ -200,7 +214,7 @@ function CategoriesPage() {
           rollPrefix: formRollPrefix.trim() || undefined,
           darja: formDarja.trim() || null,
           fee: formFee ? Number(formFee) : null,
-          section: selectedCategory.section === "banat" || selectedCategory.section === "female" ? "female" : "male",
+          section: effectiveSection,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -273,7 +287,14 @@ function CategoriesPage() {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-[10px]">{selectedSubcategories.length} classes</Badge>
-              <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  setFormSection(selectedCategory.section === "both" ? "both" : (selectedCategory.section || gender));
+                  setAddOpen(true);
+                }}
+              >
                 <Plus className="h-3.5 w-3.5" />
                 Add Class
               </Button>
@@ -290,7 +311,18 @@ function CategoriesPage() {
                       className="flex-1 min-w-0 cursor-pointer"
                       onClick={() => openClass(sub.id)}
                     >
-                      <p className="text-sm font-medium">{sub.nameUrdu || sub.name}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-sm font-medium">{sub.nameUrdu || sub.name}</p>
+                        {selectedCategory.section === "both" && (
+                          <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 font-normal">
+                            {sub.section === "female" || sub.section === "banat"
+                              ? t("Banat", "بنات")
+                              : sub.section === "male" || sub.section === "baneen"
+                                ? t("Baneen", "بنین")
+                                : t("Both", "مشترکہ")}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-[11px] text-muted-foreground mt-1">{sub.name || sub.nameUrdu}</p>
                       {sub.rollPrefix && <p className="text-[10px] text-muted-foreground mt-1">Roll: {sub.rollPrefix}</p>}
                     </div>
@@ -359,6 +391,20 @@ function CategoriesPage() {
               placeholder="Hifz Year 1"
             />
           </BilingualLabel>
+          {selectedCategory?.section === "both" && (
+            <BilingualLabel urdu="کیمپس / سیکشن" english="Campus / Section" lang={lang}>
+              <Select value={formSection} onValueChange={setFormSection}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t("Select Campus", "کیمپس منتخب کریں")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="both">{t("Both Campuses (Boys & Girls)", "دونوں کیمپس (بنین اور بنات)")}</SelectItem>
+                  <SelectItem value="male">{t("Baneen Campus (Boys)", "جامعہ قاسمیہ - بنین")}</SelectItem>
+                  <SelectItem value="female">{t("Banat Campus (Girls)", "جامعہ زینب - بنات")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </BilingualLabel>
+          )}
           <BilingualLabel urdu="رول پریفکس" english="Roll Prefix" lang={lang}>
             <Input
               value={formRollPrefix}
@@ -387,8 +433,9 @@ function CategoriesPage() {
           <Button variant="outline" onClick={() => setAddOpen(false)} disabled={submitting}>
             {t("Cancel", "منسوخ کریں")}
           </Button>
-          <Button onClick={handleAddClass} disabled={submitting}>
-            {submitting ? t("Adding...", "شامل ہو رہا ہے...") : t("Add Class", "کلاس شامل کریں")}
+          <Button onClick={handleAddClass} disabled={submitting} className="gap-1.5">
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            <span>{submitting ? t("Adding...", "شامل ہو رہا ہے...") : t("Add Class", "کلاس شامل کریں")}</span>
           </Button>
         </div>
       </ResponsiveDialog>

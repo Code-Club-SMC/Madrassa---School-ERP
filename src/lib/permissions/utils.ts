@@ -17,7 +17,8 @@ export function getAccessibleModules(permissions: UserPermissions): ModuleKey[] 
   return MODULE_REGISTRY.filter((mod) => can(permissions, mod.key, "view")).map((mod) => mod.key);
 }
 
-export function countCustomizations(current: UserPermissions, defaults: UserPermissions): number {
+export function countCustomizations(current?: UserPermissions | null, defaults?: UserPermissions | null): number {
+  if (!current || !defaults) return 0;
   let diff = 0;
   const keys = new Set<string>([...Object.keys(current), ...Object.keys(defaults)]);
   for (const k of keys) {
@@ -33,7 +34,8 @@ export function countCustomizations(current: UserPermissions, defaults: UserPerm
   return diff;
 }
 
-export function totalGrantedActions(perms: UserPermissions): number {
+export function totalGrantedActions(perms?: UserPermissions | null): number {
+  if (!perms) return 0;
   let n = 0;
   for (const mod of Object.values(perms)) {
     if (!mod) continue;

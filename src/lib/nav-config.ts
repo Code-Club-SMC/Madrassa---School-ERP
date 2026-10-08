@@ -123,7 +123,6 @@ export const navItems: NavItem[] = [
   // ---------- HR MANAGEMENT ----------
   { group: "shared", url: "/hr", icon: UsersRound, en: "HR Management", ur: "انسانی وسائل", roles: HR_ROLES },
   { group: "shared", url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: TEACHER_MANAGERS },
-  { group: "shared", url: "/teachers/salary", icon: Banknote, en: "Salary Slips", ur: "تنخواہ سلپ", roles: TEACHER_MANAGERS },
   { group: "shared", url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: SUPER_ADMINS },
   { group: "shared", url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: HR_ROLES },
   { group: "shared", url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: HR_ROLES },
@@ -235,7 +234,6 @@ export const navParents: NavParent[] = [
       { url: "/hr/attendance", icon: CalendarDays, en: "Staff Attendance", ur: "حاضری عملہ", roles: HR_ROLES },
       { url: "/hr/leave", icon: PlaneTakeoff, en: "Leave Mgmt", ur: "چھٹیاں", roles: HR_ROLES },
       { url: "/teachers", icon: GraduationCap, en: "Teachers", ur: "اساتذہ", roles: TEACHER_MANAGERS },
-      { url: "/teachers/salary", icon: Banknote, en: "Salary Slips", ur: "تنخواہ سلپ", roles: TEACHER_MANAGERS },
       { url: "/users", icon: ShieldUser, en: "User Accounts", ur: "صارفین", roles: SUPER_ADMINS },
       { url: "/holidays", icon: CalendarX, en: "Holidays", ur: "تعطیلات", roles: HR_ROLES },
       { url: "/settings/templates", icon: MessageSquareText, en: "SMS & Msg Templates", ur: "پیغام و ایس ایم ایس", roles: HR_ROLES },
@@ -384,7 +382,6 @@ Object.assign(PAGE_TITLES, {
   "/admission/new": { en: "New Admission", ur: "نیا داخلہ" },
   "/admission/queue": { en: "Application Queue", ur: "درخواستوں کی قطار" },
   "/admission/interviews": { en: "Interviews & Waitlist", ur: "انٹرویو" },
-  "/teachers/salary": { en: "Salary Slips", ur: "تنخواہ سلپ" },
   "/finance/reports": { en: "Finance Reports", ur: "مالی رپورٹس" },
   "/finance/donations": { en: "Donation Receipts", ur: "عطیات کی رسیدیں" },
   "/settings/concessions": { en: "Fee Concessions", ur: "رعایات" },
@@ -393,4 +390,6 @@ Object.assign(PAGE_TITLES, {
   "/settings/academic-year": { en: "Academic Year", ur: "تعلیمی سال" },
   "/settings/student-lifecycle": { en: "Student Life Archive", ur: "مکمل تعلیمی زندگی کا ریکارڈ" },
   "/reports/attendance": { en: "Attendance Report", ur: "حاضری رپورٹ" },
+  "/settings/account": { en: "Account & Security", ur: "اکاؤنٹ اور سیکیورٹی" },
+  "/change-password": { en: "Change Password", ur: "پاس ورڈ تبدیل کریں" },
 });

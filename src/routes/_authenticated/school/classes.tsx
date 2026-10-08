@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, Outlet, useMatches } from "@tanstack/react-router";
-import { Plus, Power, PowerOff, Trash2 } from "lucide-react";
+import { Loader2, Plus, Power, PowerOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { useLanguage } from "@/components/language-context";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +57,8 @@ function ClassesPage() {
   const matches = useMatches();
   const isDetailPage = matches.some((m) => m.routeId === "/_authenticated/school/classes/$classId");
   const { gender } = useSystem();
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const institutionId = gender === "male" ? "al_qasim_academy" : "jamia_zainab_banat";
   const [classes, setClasses] = useState<Klass[]>([]);
   const [loading, setLoading] = useState(true);
@@ -200,46 +203,54 @@ function ClassesPage() {
 
       <div className="rounded-lg border border-border">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[560px] text-sm table-fixed">
             <thead>
               <tr className="border-b border-border bg-muted/40">
-                <th className="text-start p-3 font-medium">Class · جماعت</th>
-                <th className="text-end p-3 font-medium">Subjects</th>
-                <th className="text-end p-3 font-medium">Students</th>
-                <th className="text-end p-3 font-medium">Actions</th>
+                <th className="text-start p-3.5 font-medium w-[36%]">{isUrdu ? "جماعت" : "Class · جماعت"}</th>
+                <th className="text-center p-3.5 font-medium w-[20%]">{isUrdu ? "مضامین" : "Subjects · مضامین"}</th>
+                <th className="text-center p-3.5 font-medium w-[20%]">{isUrdu ? "طلبہ" : "Students · طلبہ"}</th>
+                <th className="text-center p-3.5 font-medium w-[24%]">{isUrdu ? "اقدامات" : "Actions · اقدامات"}</th>
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
                   <td colSpan={4} className="p-6 text-center text-muted-foreground">
-                    Loading classes...
+                    {isUrdu ? "کلاسز لوڈ ہو رہی ہیں..." : "Loading classes..."}
                   </td>
                 </tr>
               )}
               {!loading && classes.length === 0 && (
                 <tr>
                   <td colSpan={4} className="p-6 text-center text-muted-foreground">
-                    No classes configured.
+                    {isUrdu ? "کوئی کلاس نہیں مل سکی۔" : "No classes configured."}
                   </td>
                 </tr>
               )}
               {classes.map((c) => (
                 <tr
                   key={c.id}
-                  className="border-b border-border last:border-0 hover:bg-muted/40 cursor-pointer"
+                  className="border-b border-border last:border-0 hover:bg-muted/40 cursor-pointer transition-colors"
                   onClick={() => navigate({ to: "/school/classes/$classId", params: { classId: c.id } })}
                 >
-                  <td className="p-3">
-                    <div>
-                      <p className="font-urdu text-sm font-medium">{c.nameUrdu}</p>
-                      <p className="text-xs text-muted-foreground">{c.name}</p>
+                  <td className="p-3.5 text-start align-middle">
+                    <div className="flex flex-col justify-center">
+                      <p className="font-urdu text-sm font-medium leading-tight">{c.nameUrdu}</p>
+                      <p className="text-xs text-muted-foreground leading-tight mt-0.5">{c.name}</p>
                     </div>
                   </td>
-                  <td className="p-3 text-end font-mono">{c.subjectCount}</td>
-                  <td className="p-3 text-end font-mono">{c.enrollmentCount}</td>
-                  <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-end gap-2">
+                  <td className="p-3.5 text-center align-middle font-medium text-sm">
+                    <div className="flex items-center justify-center">
+                      <span className="font-mono font-medium">{c.subjectCount}</span>
+                    </div>
+                  </td>
+                  <td className="p-3.5 text-center align-middle font-medium text-sm">
+                    <div className="flex items-center justify-center">
+                      <span className="font-mono font-medium">{c.enrollmentCount}</span>
+                    </div>
+                  </td>
+                  <td className="p-3.5 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-2">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -266,7 +277,7 @@ function ClassesPage() {
                         ) : (
                           <Power className="h-3.5 w-3.5" />
                         )}
-                        {c.active ? "Deactivate" : "Reactivate"}
+                        {c.active ? (isUrdu ? "غیر فعال کریں" : "Deactivate") : (isUrdu ? "فعال کریں" : "Reactivate")}
                       </Button>
                     </div>
                   </td>
@@ -325,10 +336,11 @@ function ClassesPage() {
         </div>
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => setClassOpen(false)}>
-            Cancel
+            {isUrdu ? "منسوخ کریں" : "Cancel"}
           </Button>
-          <Button onClick={addClass} disabled={pending}>
-            {pending ? "Adding..." : "Add"}
+          <Button onClick={addClass} disabled={pending} className="gap-1.5">
+            {pending && <Loader2 className="h-4 w-4 animate-spin" />}
+            <span>{pending ? (isUrdu ? "شامل ہو رہا ہے..." : "Adding...") : (isUrdu ? "شامل کریں" : "Add")}</span>
           </Button>
         </div>
       </ResponsiveDialog>
@@ -340,9 +352,10 @@ function ClassesPage() {
             <AlertDialogDescription>{confirmDescription}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={applyActiveChange} disabled={pending}>
-              {pending ? "Saving..." : confirmAction?.nextActive ? "Reactivate" : "Deactivate"}
+            <AlertDialogCancel disabled={pending}>{isUrdu ? "منسوخ کریں" : "Cancel"}</AlertDialogCancel>
+            <AlertDialogAction onClick={applyActiveChange} disabled={pending} className="gap-1.5">
+              {pending && <Loader2 className="h-4 w-4 animate-spin" />}
+              <span>{pending ? (isUrdu ? "محفوظ ہو رہا ہے..." : "Saving...") : confirmAction?.nextActive ? (isUrdu ? "فعال کریں" : "Reactivate") : (isUrdu ? "غیر فعال کریں" : "Deactivate")}</span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -351,15 +364,16 @@ function ClassesPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete class?</AlertDialogTitle>
+            <AlertDialogTitle>{isUrdu ? "کلاس حذف کریں؟" : "Delete class?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this class. This action cannot be undone.
+              {isUrdu ? "یہ کلاس مستقل طور پر حذف ہو جائے گی۔ اس عمل کو واپس نہیں لایا جا سکتا۔" : "This will permanently delete this class. This action cannot be undone."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleting ? "Deleting..." : "Delete"}
+            <AlertDialogCancel disabled={deleting}>{isUrdu ? "منسوخ کریں" : "Cancel"}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1.5">
+              {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
+              <span>{deleting ? (isUrdu ? "حذف ہو رہا ہے..." : "Deleting...") : (isUrdu ? "حذف کریں" : "Delete")}</span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

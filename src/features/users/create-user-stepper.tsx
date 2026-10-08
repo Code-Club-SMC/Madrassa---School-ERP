@@ -79,13 +79,13 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
 
   // Step 3
   const [permissions, setPermissions] = useState<UserPermissions>(
-    initial?.permissions ?? (role === "parent" ? {} : ROLE_DEFAULTS[role]),
+    initial?.permissions ?? (role === "parent" ? {} : (ROLE_DEFAULTS[role] ?? {})),
   );
 
   // Reset permissions when role changes (create mode only)
   useEffect(() => {
     if (isEdit) return;
-    setPermissions(role === "parent" ? {} : ROLE_DEFAULTS[role]);
+    setPermissions(role === "parent" ? {} : (ROLE_DEFAULTS[role] ?? {}));
   }, [role, isEdit]);
 
   // Generate password once per dialog open
@@ -96,8 +96,21 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
 
   // Reset state when dialog re-opens
   useEffect(() => {
-    if (open) setStep(1);
-  }, [open]);
+    if (open) {
+      setStep(1);
+      if (!isEdit) {
+        setNameUrdu(prefill?.nameUrdu ?? "");
+        setNameEnglish(prefill?.name ?? "");
+        setEmail("");
+        setPhone("");
+        setCnic("");
+        setRole(prefill?.role ?? "teacher");
+        setSystemAccess("both");
+        setMustChange(true);
+        setLinkedTeacherId(prefill?.linkedTeacherId);
+      }
+    }
+  }, [open, isEdit, prefill]);
 
   const isParent = role === "parent";
   const totalSteps = isParent ? 3 : 4;
@@ -105,7 +118,7 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
   const stepIdx = stepOrder.indexOf(step);
 
   const customizations = useMemo(
-    () => (isParent ? 0 : countCustomizations(permissions, ROLE_DEFAULTS[role])),
+    () => (isParent ? 0 : countCustomizations(permissions, ROLE_DEFAULTS[role] ?? {})),
     [permissions, role, isParent],
   );
 
@@ -123,6 +136,7 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
   }
 
   async function submit() {
+    if (submitting) return;
     setSubmitting(true);
     try {
       if (isEdit && initial) {
@@ -162,6 +176,16 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
         };
         await onCreate?.(created);
       }
+      // Reset inputs so form is empty after submission
+      setNameUrdu("");
+      setNameEnglish("");
+      setEmail("");
+      setPhone("");
+      setCnic("");
+      setRole("teacher");
+      setSystemAccess("both");
+      setMustChange(true);
+      setStep(1);
       onOpenChange(false);
     } finally {
       setSubmitting(false);

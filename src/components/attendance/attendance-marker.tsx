@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { CalendarMinus, Check, Clock, Lock, Save, ShieldAlert, X, type LucideIcon } from "lucide-react";
+import { CalendarMinus, Check, Clock, Loader2, Lock, Save, ShieldAlert, X, type LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -153,8 +153,8 @@ export function AttendanceMarker({
               disabled={!roster || saving || !canMark}
               onClick={onSave}
             >
-              <Save className="h-4 w-4" />
-              {saving ? (isUrdu ? "محفوظ ہو رہا ہے..." : "Saving...") : (isUrdu ? "حاضری محفوظ کریں" : "Save Attendance")}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <span>{saving ? (isUrdu ? "محفوظ ہو رہا ہے..." : "Saving...") : (isUrdu ? "حاضری محفوظ کریں" : "Save Attendance")}</span>
             </Button>
           </div>
         </div>

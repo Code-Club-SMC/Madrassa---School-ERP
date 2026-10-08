@@ -19,7 +19,6 @@ const TILES: Tile[] = [
   { to: "/settings/concessions", icon: HandCoins, en: "Fee Concessions", ur: "فیس رعایات", desc: "Orphan, hardship, merit and sibling discounts." },
   { to: "/settings/website", icon: Globe, en: "Website CMS", ur: "ویب سائٹ", desc: "Hero, announcements, gallery & theme." },
   { to: "/settings/templates", icon: MessageSquareText, en: "SMS / WhatsApp Templates", ur: "پیغام سانچے", desc: "Bilingual templates for fees, absence & results." },
-  { to: "/teachers/salary", icon: Banknote, en: "Salary Slips", ur: "تنخواہ سلپ", desc: "Generate and print monthly teacher salary slips." },
   { to: "/finance/donations", icon: Receipt, en: "Donation Receipts", ur: "عطیات کی رسیدیں", desc: "Issue zakat / sadqa / general donation receipts." },
   { to: "/users", icon: Users2, en: "User Accounts", ur: "صارفین", desc: "Create admins, teachers and parent logins." },
 ];

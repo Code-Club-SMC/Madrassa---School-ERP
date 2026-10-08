@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -106,6 +107,8 @@ const TEXT = {
     step3: "دفتری معلومات",
     next: "اگلا",
     prev: "پچھلا",
+    sameAsCurrentAddress: "مستقل پتہ موجودہ پتہ جیسا ہے",
+    sameAsCurrentAddressHint: "(Same as Current Address)",
   },
   en: {
     successTitle: "Admission Successful",
@@ -169,6 +172,8 @@ const TEXT = {
     step3: "Office Info",
     next: "Next",
     prev: "Previous",
+    sameAsCurrentAddress: "Same as Current Address",
+    sameAsCurrentAddressHint: "(مستقل پتہ موجودہ پتہ جیسا ہے)",
   },
 };
 
@@ -237,7 +242,45 @@ export function PdfFormRenderer({
       .finally(() => setLoadingCls(false));
   }, [variant.section, variant.category]);
 
-  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const [sameAsCurrentAddress, setSameAsCurrentAddress] = useState(false);
+
+  const handleSameAddressToggle = (checked: boolean) => {
+    setSameAsCurrentAddress(checked);
+    if (checked) {
+      setForm((prev) => ({
+        ...prev,
+        perm_village: prev.curr_village ?? "",
+        perm_po: prev.curr_po ?? "",
+        perm_tehsil: prev.curr_tehsil ?? "",
+        perm_district: prev.curr_district ?? "",
+        perm_phone: prev.curr_phone ?? prev.phone ?? "",
+        perm_address: prev.curr_address ?? "",
+      }));
+    }
+  };
+
+  const set = (k: string, v: string) => {
+    setForm((f) => {
+      const next = { ...f, [k]: v };
+      if (sameAsCurrentAddress) {
+        if (k === "curr_village") next.perm_village = v;
+        if (k === "curr_po") next.perm_po = v;
+        if (k === "curr_tehsil") next.perm_tehsil = v;
+        if (k === "curr_district") next.perm_district = v;
+        if (k === "curr_phone") next.perm_phone = v;
+        if (k === "curr_address") next.perm_address = v;
+      }
+      return next;
+    });
+  };
+
+  const onPermFieldChange = (k: string, v: string) => {
+    if (sameAsCurrentAddress) {
+      setSameAsCurrentAddress(false);
+    }
+    setForm((f) => ({ ...f, [k]: v }));
+  };
+
   const val = (k: string) => form[k] ?? "";
   const requestedGradeOptions = gradeOptionsForVariant(variant);
 
@@ -356,6 +399,7 @@ export function PdfFormRenderer({
       }
       return next;
     });
+    setSameAsCurrentAddress(true);
     setSavedPrintForm(null);
     toast.success("خالی خانوں میں نمونہ ڈیٹا بھر دیا گیا");
   };
@@ -428,6 +472,10 @@ export function PdfFormRenderer({
       setRefNo(
         payload.student?.rollNo ?? payload.application?.refNo ?? payload.application?.id ?? null,
       );
+      setForm({});
+      setSameAsCurrentAddress(false);
+      setDeclaration(false);
+      setPhoto(null);
       setSubmitting(false);
       toast.success(
         isPublic
@@ -632,7 +680,7 @@ export function PdfFormRenderer({
       </Card>
 
       {/* Photo block — only for variants that allow */}
-      {variant.allowPhoto && (+
+      {variant.allowPhoto && (
         <Card>
           <CardContent className="py-6">
             <label className="border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer flex flex-col items-center gap-2 hover:border-primary/50 transition-colors">
@@ -677,6 +725,9 @@ export function PdfFormRenderer({
           t={t}
           step={step}
           shobaOptions={shobaOptions}
+          sameAsCurrentAddress={sameAsCurrentAddress}
+          onToggleSameAddress={handleSameAddressToggle}
+          onPermChange={onPermFieldChange}
         />
       )}
       {variant.layout === "madrassa-long" && (
@@ -688,6 +739,9 @@ export function PdfFormRenderer({
           lang={lang}
           t={t}
           step={step}
+          sameAsCurrentAddress={sameAsCurrentAddress}
+          onToggleSameAddress={handleSameAddressToggle}
+          onPermChange={onPermFieldChange}
         />
       )}
 
@@ -775,7 +829,17 @@ function Section({
   );
 }
 
-type FieldProps = { form: State; set: (k: string, v: string) => void; lang: "ur" | "en"; t: typeof TEXT["ur"]; variant: AdmissionVariant; step?: number };
+type FieldProps = {
+  form: State;
+  set: (k: string, v: string) => void;
+  lang: "ur" | "en";
+  t: (typeof TEXT)["ur"];
+  variant: AdmissionVariant;
+  step?: number;
+  sameAsCurrentAddress?: boolean;
+  onToggleSameAddress?: (checked: boolean) => void;
+  onPermChange?: (k: string, v: string) => void;
+};
 
 function gradeOptionsForVariant(variant: AdmissionVariant) {
   const section = variant.category === "female" ? "banat" : "baneen";
@@ -1109,6 +1173,9 @@ function MadrassaShortFields({
   t,
   step = 1,
   shobaOptions,
+  sameAsCurrentAddress = false,
+  onToggleSameAddress,
+  onPermChange = set,
 }: FieldProps & { variant: AdmissionVariant; isGirls: boolean; step?: number; shobaOptions?: GradeSelectOption[] | null }) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
@@ -1221,6 +1288,33 @@ function MadrassaShortFields({
               />
             </BilingualLabel>
           </div>
+          <div className="md:col-span-2 py-1">
+            <div
+              className={`flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer ${
+                isRtl ? "flex-row-reverse text-right" : "text-left"
+              }`}
+              onClick={() => onToggleSameAddress?.(!sameAsCurrentAddress)}
+            >
+              <Checkbox
+                id="same_as_curr_address_short"
+                checked={sameAsCurrentAddress}
+                onCheckedChange={(checked) => onToggleSameAddress?.(checked === true)}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Label
+                htmlFor="same_as_curr_address_short"
+                className="text-sm font-medium cursor-pointer select-none text-foreground flex items-center gap-2 flex-wrap"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className={isRtl ? "font-urdu text-base" : "font-heading"}>
+                  {t.sameAsCurrentAddress}
+                </span>
+                <span className="text-xs text-muted-foreground font-normal">
+                  {t.sameAsCurrentAddressHint}
+                </span>
+              </Label>
+            </div>
+          </div>
           <div className="md:col-span-2">
             <BilingualLabel urdu="مستقل پتہ" english="Permanent Address" htmlFor="perm_address" lang={lang}>
               <Textarea
@@ -1229,7 +1323,7 @@ function MadrassaShortFields({
                 autoComplete="street-address"
                 className="font-urdu"
                 value={val("perm_address")}
-                onChange={(e) => set("perm_address", e.target.value)}
+                onChange={(e) => onPermChange("perm_address", e.target.value)}
               />
             </BilingualLabel>
           </div>
@@ -1321,6 +1415,9 @@ function MadrassaLongFields({
   lang,
   t,
   step = 1,
+  sameAsCurrentAddress = false,
+  onToggleSameAddress,
+  onPermChange = set,
 }: FieldProps & { variant: AdmissionVariant; isGirls: boolean; step?: number }) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
@@ -1442,38 +1539,74 @@ function MadrassaLongFields({
             </div>
           </div>
 
+          {/* Same as Current Address Checkbox */}
+          <div className="md:col-span-2 py-1">
+            <div
+              className={`flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors cursor-pointer ${
+                isRtl ? "flex-row-reverse text-right" : "text-left"
+              }`}
+              onClick={() => onToggleSameAddress?.(!sameAsCurrentAddress)}
+            >
+              <Checkbox
+                id="same_as_curr_address_long"
+                checked={sameAsCurrentAddress}
+                onCheckedChange={(checked) => onToggleSameAddress?.(checked === true)}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Label
+                htmlFor="same_as_curr_address_long"
+                className="text-sm font-medium cursor-pointer select-none text-foreground flex items-center gap-2 flex-wrap"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className={isRtl ? "font-urdu text-base" : "font-heading"}>
+                  {t.sameAsCurrentAddress}
+                </span>
+                <span className="text-xs text-muted-foreground font-normal">
+                  {t.sameAsCurrentAddressHint}
+                </span>
+              </Label>
+            </div>
+          </div>
+
           {/* Permanent address */}
           <div className="md:col-span-2 rounded-xl border border-border p-4 space-y-3">
-            <p className={`text-sm font-semibold ${isRtl ? "text-end font-urdu" : "text-start font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
-              {isRtl ? "مستقل پتہ" : "Permanent Address"}
-            </p>
+            <div className="flex items-center justify-between">
+              <p className={`text-sm font-semibold ${isRtl ? "text-end font-urdu" : "text-start font-heading"}`} dir={isRtl ? "rtl" : "ltr"} lang={lang}>
+                {isRtl ? "مستقل پتہ" : "Permanent Address"}
+              </p>
+              {sameAsCurrentAddress && (
+                <span className="text-xs font-medium text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                  {isRtl ? "موجودہ پتہ سے خودکار بھرا ہوا" : "Synced with Current Address"}
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <BilingualLabel urdu="گاؤں / محلہ" english="Village / Locality" lang={lang}>
                 <Input
                   className="font-urdu"
                   value={val("perm_village")}
-                  onChange={(e) => set("perm_village", e.target.value)}
+                  onChange={(e) => onPermChange("perm_village", e.target.value)}
                 />
               </BilingualLabel>
               <BilingualLabel urdu="ڈاکخانہ / علاقہ" english="Post Office / Area" lang={lang}>
                 <Input
                   className="font-urdu"
                   value={val("perm_po")}
-                  onChange={(e) => set("perm_po", e.target.value)}
+                  onChange={(e) => onPermChange("perm_po", e.target.value)}
                 />
               </BilingualLabel>
               <BilingualLabel urdu="تحصیل" english="Tehsil" lang={lang}>
                 <Input
                   className="font-urdu"
                   value={val("perm_tehsil")}
-                  onChange={(e) => set("perm_tehsil", e.target.value)}
+                  onChange={(e) => onPermChange("perm_tehsil", e.target.value)}
                 />
               </BilingualLabel>
               <BilingualLabel urdu="ضلع" english="District" lang={lang}>
                 <Input
                   className="font-urdu"
                   value={val("perm_district")}
-                  onChange={(e) => set("perm_district", e.target.value)}
+                  onChange={(e) => onPermChange("perm_district", e.target.value)}
                 />
               </BilingualLabel>
               <BilingualLabel urdu="فون نمبر" english="Phone No." htmlFor="perm_phone" lang={lang}>
@@ -1484,7 +1617,7 @@ function MadrassaLongFields({
                   inputMode="tel"
                   autoComplete="tel"
                   value={val("perm_phone")}
-                  onChange={(e) => set("perm_phone", e.target.value)}
+                  onChange={(e) => onPermChange("perm_phone", e.target.value)}
                 />
               </BilingualLabel>
             </div>

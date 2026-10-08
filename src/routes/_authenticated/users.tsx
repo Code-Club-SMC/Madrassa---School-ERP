@@ -53,35 +53,43 @@ function UsersPage() {
   const [resetUser, setResetUser] = useState<User | null>(null);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(false);
   const [creds, setCreds] = useState<{ nameUrdu: string; nameEnglish: string; email: string; role: string; password: string } | null>(null);
 
   const filtered = useMemo(
     () =>
-      list.filter((u) => {
-        const displayName = getUserDisplayName(u, lang).toLowerCase();
-        const query = q.toLowerCase();
+      (list ?? []).filter((u) => {
+        if (!u) return false;
+        const displayName = (getUserDisplayName(u, lang) || "").toLowerCase();
+        const query = (q || "").toLowerCase().trim();
+        const uName = (u.name || "").toLowerCase();
+        const uNameUrdu = (u.nameUrdu || "").toLowerCase();
+        const uEmail = (u.email || "").toLowerCase();
+        const uRole = u.role || "teacher";
+        const uStatus = u.status || "active";
         return (
-          (roleFilter === "all" || u.role === roleFilter) &&
-          (statusFilter === "all" || u.status === statusFilter) &&
-          (!q ||
-            u.name.toLowerCase().includes(query) ||
-            (u.nameUrdu ?? "").toLowerCase().includes(query) ||
+          (roleFilter === "all" || uRole === roleFilter) &&
+          (statusFilter === "all" || uStatus === statusFilter) &&
+          (!query ||
+            uName.includes(query) ||
+            uNameUrdu.includes(query) ||
             displayName.includes(query) ||
-            u.email.toLowerCase().includes(query))
+            uEmail.includes(query))
         );
       }),
     [list, q, roleFilter, statusFilter, lang],
   );
 
-  const stats = useMemo(
-    () => ({
-      total: list.filter((u) => u.status === "active").length,
-      admins: list.filter((u) => u.role === "admin" || u.role === "super_admin").length,
-      teachers: list.filter((u) => u.role === "teacher").length,
-      neverLogged: list.filter((u) => !u.lastLoginAt).length,
-    }),
-    [list],
-  );
+  const stats = useMemo(() => {
+    const items = list ?? [];
+    return {
+      total: items.filter((u) => (u?.status || "active") === "active").length,
+      admins: items.filter((u) => u?.role === "admin" || u?.role === "super_admin").length,
+      teachers: items.filter((u) => u?.role === "teacher").length,
+      neverLogged: items.filter((u) => !u?.lastLoginAt).length,
+    };
+  }, [list]);
 
   const roleBreakdown = useMemo(() => {
     const roles: { role: UserRole; urdu: string; en: string }[] = [
@@ -101,7 +109,8 @@ function UsersPage() {
       { role: "staff", urdu: "عملہ", en: "Staff" },
       { role: "parent", urdu: "والدین", en: "Parent" },
     ];
-    return roles.map((r) => ({ ...r, count: list.filter((u) => u.role === r.role).length }));
+    const items = list ?? [];
+    return roles.map((r) => ({ ...r, count: items.filter((u) => u?.role === r.role).length }));
   }, [list]);
 
   useEffect(() => {
@@ -113,11 +122,13 @@ function UsersPage() {
     api<{ users: User[] }>("/api/users")
       .then((result) => {
         if (!active) return;
-        setList(result.users);
+        if (Array.isArray(result?.users)) {
+          setList(result.users);
+        }
       })
       .catch((error) => {
         if (!active) return;
-        toast.error(error.message ?? "Could not load users");
+        toast.error(error?.message ?? "Could not load users");
       })
       .finally(() => {
         if (active) setLoadingUsers(false);
@@ -153,10 +164,10 @@ function UsersPage() {
 
       setList((l) => [savedUser, ...l]);
       setCreds({
-        nameUrdu: savedUser.nameUrdu ?? savedUser.name,
-        nameEnglish: savedUser.name,
-        email: savedUser.email,
-        role: savedUser.role,
+        nameUrdu: savedUser.nameUrdu ?? savedUser.name ?? "",
+        nameEnglish: savedUser.name ?? "",
+        email: savedUser.email ?? "",
+        role: savedUser.role ?? "teacher",
         password: _password,
       });
     } catch (error) {
@@ -213,13 +224,14 @@ function UsersPage() {
   }
 
   async function confirmReset() {
-    if (!resetUser) return;
+    if (!resetUser || resettingPassword) return;
     if (resetUser.role === "super_admin") {
       toast.error("Use the super admin recovery API for this account");
       setResetUser(null);
       return;
     }
 
+    setResettingPassword(true);
     const pwd = generateSecurePassword();
     try {
       await api(`/api/users/${resetUser.id}`, {
@@ -230,18 +242,20 @@ function UsersPage() {
 
       setList((l) => l.map((x) => (x.id === resetUser.id ? { ...x, mustChangePassword: true } : x)));
       setCreds({
-        nameUrdu: resetUser.nameUrdu ?? resetUser.name,
-        nameEnglish: resetUser.name,
-        email: resetUser.email,
-        role: resetUser.role,
+        nameUrdu: resetUser.nameUrdu ?? resetUser.name ?? "",
+        nameEnglish: resetUser.name ?? "",
+        email: resetUser.email ?? "",
+        role: resetUser.role ?? "teacher",
         password: pwd,
       });
       setResetUser(null);
-    } catch {}
+    } catch {} finally {
+      setResettingPassword(false);
+    }
   }
 
   async function confirmDelete() {
-    if (!deleteUser || deleteConfirm !== deleteUser.email) return;
+    if (!deleteUser || deleteConfirm !== deleteUser.email || deletingUser) return;
     if (deleteUser.role === "super_admin") {
       toast.error("The super admin cannot be deleted");
       setDeleteUser(null);
@@ -249,13 +263,16 @@ function UsersPage() {
       return;
     }
 
+    setDeletingUser(true);
     try {
       await api(`/api/users/${deleteUser.id}`, { method: "DELETE" });
       setList((l) => l.filter((x) => x.id !== deleteUser.id));
       toast.success(isUrdu ? "صارف حذف کر دیا گیا" : "User deleted");
       setDeleteUser(null);
       setDeleteConfirm("");
-    } catch {}
+    } catch {} finally {
+      setDeletingUser(false);
+    }
   }
 
   const accessLabel = (acc?: string) => {
@@ -409,8 +426,8 @@ function UsersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((u) => (
-                <TableRow key={u.id} className={u.status === "inactive" ? "opacity-60" : ""}>
+              filtered.map((u, idx) => (
+                <TableRow key={u.id || `u-${idx}`} className={(u.status || "active") === "inactive" ? "opacity-60" : ""}>
                   <TableCell>
                     <button className="flex items-center gap-3 text-start" onClick={() => setDetailUser(u)}>
                       <Avatar className="h-9 w-9">
@@ -424,20 +441,20 @@ function UsersPage() {
                           dir={isUrdu ? "rtl" : "ltr"}
                           lang={lang}
                         >
-                          {getUserDisplayName(u, lang)}
+                          {getUserDisplayName(u, lang) || u.name || "—"}
                         </p>
-                        <p className="text-[11px] text-muted-foreground">{u.email}</p>
+                        <p className="text-[11px] text-muted-foreground">{u.email || "—"}</p>
                       </div>
                     </button>
                   </TableCell>
-                  <TableCell><StatusBadge status={u.role} /></TableCell>
+                  <TableCell><StatusBadge status={u.role || "teacher"} /></TableCell>
                   <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                     {accessLabel(u.systemAccess)}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
                     {u.lastLoginAt ? formatDate(u.lastLoginAt) : <span className="italic">{isUrdu ? "کبھی نہیں" : "Never"}</span>}
                   </TableCell>
-                  <TableCell><StatusBadge status={u.status} /></TableCell>
+                  <TableCell><StatusBadge status={u.status || "active"} /></TableCell>
                   <TableCell className="text-end">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -523,10 +540,11 @@ function UsersPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setResetUser(null)}>
+            <Button variant="outline" onClick={() => setResetUser(null)} disabled={resettingPassword}>
               {isUrdu ? "منسوخ" : "Cancel"}
             </Button>
-            <Button onClick={confirmReset}>
+            <Button onClick={confirmReset} disabled={resettingPassword} className="gap-2">
+              {resettingPassword && <Loader2 className="h-4 w-4 animate-spin" />}
               {isUrdu ? "ری سیٹ کریں" : "Reset Password"}
             </Button>
           </DialogFooter>
@@ -548,23 +566,26 @@ function UsersPage() {
           </DialogHeader>
           {deleteUser && (
             <div className="space-y-3">
-              <p className="text-sm font-mono bg-muted/40 rounded p-2">{deleteUser.email}</p>
+              <p className="text-sm font-mono bg-muted/40 rounded p-2">{deleteUser.email || "—"}</p>
               <Input
                 value={deleteConfirm}
                 onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder={deleteUser.email}
+                placeholder={deleteUser.email || ""}
+                disabled={deletingUser}
               />
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteUser(null)}>
+            <Button variant="outline" onClick={() => setDeleteUser(null)} disabled={deletingUser}>
               {isUrdu ? "منسوخ" : "Cancel"}
             </Button>
             <Button
               variant="destructive"
-              disabled={!deleteUser || deleteConfirm !== deleteUser.email}
+              disabled={deletingUser || !deleteUser || !deleteUser.email || deleteConfirm !== deleteUser.email}
               onClick={confirmDelete}
+              className="gap-2"
             >
+              {deletingUser && <Loader2 className="h-4 w-4 animate-spin" />}
               {isUrdu ? "مستقل حذف کریں" : "Permanently Delete"}
             </Button>
           </DialogFooter>

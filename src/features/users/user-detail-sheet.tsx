@@ -39,8 +39,8 @@ export function UserDetailSheet({ user, onClose }: Props) {
                 </span>
               </SheetTitle>
               <div className="flex flex-wrap gap-2 mt-2">
-                <StatusBadge status={user.role} />
-                <StatusBadge status={user.status} />
+                <StatusBadge status={user.role || "teacher"} />
+                <StatusBadge status={user.status || "active"} />
                 {user.systemAccess && (
                   <Badge variant="outline">
                     {isUrdu ? ACCESS_LABELS[user.systemAccess]?.ur ?? user.systemAccess : ACCESS_LABELS[user.systemAccess]?.en ?? user.systemAccess}
@@ -59,13 +59,13 @@ export function UserDetailSheet({ user, onClose }: Props) {
 
           <TabsContent value="details" className="mt-4">
             <dl className="divide-y divide-border border border-border rounded-xl">
-              <Row urdu="ای میل" en="Email" value={user.email} />
+              <Row urdu="ای میل" en="Email" value={user.email || "—"} />
               <Row urdu="فون" en="Phone" value={user.phone ?? "—"} />
               <Row urdu="شناختی کارڈ" en="CNIC" value={maskCnic(user.cnic)} />
               <Row
                 urdu="کردار"
                 en="Role"
-                value={isUrdu ? ROLE_LABELS[user.role]?.ur ?? user.role : ROLE_LABELS[user.role]?.en ?? user.role}
+                value={(isUrdu ? ROLE_LABELS[user.role]?.ur : ROLE_LABELS[user.role]?.en) ?? user.role ?? "—"}
               />
               <Row
                 urdu="سسٹم رسائی"
@@ -80,12 +80,12 @@ export function UserDetailSheet({ user, onClose }: Props) {
               <Row
                 urdu="بنانے والا"
                 en="Created By"
-                value={user.createdBy ? `${user.createdBy} · ${formatDate(user.createdAt)}` : "—"}
+                value={user.createdBy ? `${user.createdBy} · ${formatDate(user.createdAt)}` : (user.createdAt ? formatDate(user.createdAt) : "—")}
               />
               <Row
                 urdu="کیفیت"
                 en="Status"
-                value={isUrdu ? STATUS_LABELS[user.status]?.ur ?? user.status : STATUS_LABELS[user.status]?.en ?? user.status}
+                value={(isUrdu ? STATUS_LABELS[user.status ?? ""]?.ur : STATUS_LABELS[user.status ?? ""]?.en) ?? user.status ?? "—"}
               />
             </dl>
           </TabsContent>
@@ -117,6 +117,7 @@ function Row({ urdu, en, value }: { urdu: string; en: string; value: string }) {
 
 function maskCnic(c?: string) {
   if (!c) return "—";
-  const last = c.slice(-1);
+  const str = String(c);
+  const last = str.slice(-1);
   return `XXXXX-XXXXXXX-${last}`;
 }

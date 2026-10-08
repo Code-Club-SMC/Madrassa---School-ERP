@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, FileText, Lock, Printer, Save, Send } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Lock, Printer, Save, Send } from "lucide-react";
 import { toast } from "sonner";
 import { DmcView } from "@/components/exams/dmc-view";
 import {
@@ -230,8 +230,8 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
                 disabled={!subject || subject.locked || saving || (isTeacher && teacherAllowedSubjects.length === 0)}
                 onClick={() => void handleSave()}
               >
-                <Save className="mr-1.5 h-3.5 w-3.5" />
-                {saving ? (isUrdu ? "محفوظ ہو رہا ہے..." : "Saving...") : (isUrdu ? "محفوظ کریں" : "Save")}
+                {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+                <span>{saving ? (isUrdu ? "محفوظ ہو رہا ہے..." : "Saving...") : (isUrdu ? "محفوظ کریں" : "Save")}</span>
               </Button>
               <Button
                 size="sm"
