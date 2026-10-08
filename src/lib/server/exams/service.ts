@@ -24,6 +24,7 @@ import {
   type ExamSystem,
 } from "@/db/schema/exams";
 import { studentEnrollments, students } from "@/db/schema/students";
+import { teacherAssignments, teacherProfiles } from "@/db/schema/teachers";
 import type { ModuleKey, PermissionAction } from "@/lib/permissions/module-registry";
 import { getRequestUser, requirePermission } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
@@ -628,10 +629,57 @@ export async function deleteExamSession(request: Request, id: string) {
   return { success: true };
 }
 
+export async function assertTeacherCanAccessExamSubject(
+  actorUserId: string,
+  exam: ExamDetailRow,
+  subjectId: string,
+) {
+  const [profile] = await db
+    .select({ id: teacherProfiles.id })
+    .from(teacherProfiles)
+    .where(and(eq(teacherProfiles.userId, actorUserId), eq(teacherProfiles.employmentStatus, "active")))
+    .limit(1);
+
+  if (!profile) {
+    throw new HttpError("Active teacher profile not found", 403);
+  }
+
+  const clauses = [
+    eq(teacherAssignments.teacherProfileId, profile.id),
+    eq(teacherAssignments.active, true),
+    eq(teacherAssignments.subjectId, subjectId),
+    exam.system === "school" && exam.schoolClassId
+      ? eq(teacherAssignments.schoolClassId, exam.schoolClassId)
+      : undefined,
+    exam.system === "madrassa" && exam.madrassaSubcategoryId
+      ? eq(teacherAssignments.madrassaSubcategoryId, exam.madrassaSubcategoryId)
+      : undefined,
+  ].filter(Boolean) as SQL[];
+
+  const [assignment] = await db
+    .select({ id: teacherAssignments.id })
+    .from(teacherAssignments)
+    .where(and(...clauses))
+    .limit(1);
+
+  if (!assignment) {
+    throw new HttpError(
+      "You are only authorized to enter marks for your assigned subjects.",
+      403,
+    );
+  }
+}
+
 export async function getMarksEntry(request: Request, examId: string, examSubjectId: string) {
   const exam = await loadExamDetail(examId);
   await requireExamPermission(request, exam.system, "view");
   const examSubject = await loadExamSubject(examId, examSubjectId);
+
+  const actor = await getRequestUser(request);
+  if (actor?.role === "teacher") {
+    await assertTeacherCanAccessExamSubject(actor.id, exam, examSubject.subjectId);
+  }
+
   const roster = await loadExamRoster(exam);
   const marks = await loadMarksForSubject(db, examSubjectId, roster.map((row) => row.enrollmentId));
   const marksByEnrollment = new Map(marks.map((mark) => [mark.enrollmentId, mark]));
@@ -649,6 +697,10 @@ export async function saveExamMarks(request: Request, examId: string, input: z.i
   if (exam.status === "published") throw new HttpError("Published exam marks cannot be changed", 400);
   const examSubject = await loadExamSubject(examId, input.examSubjectId);
   if (examSubject.locked) throw new HttpError("This subject is locked", 400);
+
+  if (actor.role === "teacher") {
+    await assertTeacherCanAccessExamSubject(actor.id, exam, examSubject.subjectId);
+  }
 
   const roster = await loadExamRoster(exam);
   const rosterByKey = new Map(roster.map((row) => [rosterKey(row), row]));

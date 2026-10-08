@@ -7,13 +7,15 @@ import { AppSidebar } from "@/components/app/app-sidebar";
 import { CommandPalette } from "@/components/app/command-palette";
 import { MobileBottomNav } from "@/components/app/mobile-bottom-nav";
 import { useSystem } from "@/components/system-context";
+import { useLanguage } from "@/components/language-context";
 import { HRProvider } from "@/stores/hr-store";
 import { useAuth } from "@/hooks/use-auth";
 import { BookLoader } from "@/components/shared/book-loader";
 import { TeacherPortal } from "@/components/teachers/teacher-portal";
 import { ParentPortal } from "@/components/parents/parent-portal";
 import { Button } from "@/components/ui/button";
-import { School, LogOut } from "lucide-react";
+import { School, LogOut, Languages } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { institution } from "@/mock";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -46,6 +48,8 @@ function AuthenticatedLayout() {
     return null;
   }
 
+  const { lang, setLang } = useLanguage();
+  const isUrdu = lang === "ur";
   const isTeacher = user?.role === "teacher";
   const isParent = user?.role === "parent";
 
@@ -57,9 +61,52 @@ function AuthenticatedLayout() {
             { "--sidebar-width": "17.5rem", "--sidebar-width-icon": "3.25rem" } as React.CSSProperties
           }
         >
-          <div className="min-h-dvh flex w-full bg-background">
+          <div className="min-h-dvh flex flex-col w-full bg-background">
+            <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                  <School className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className={cn("text-sm leading-normal", isUrdu && "font-urdu")} dir={isUrdu ? "rtl" : "ltr"}>
+                    {isUrdu ? institution.nameUrdu : institution.nameEnglish}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {isUrdu ? "استاد پورٹل" : "Teacher Portal"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-end hidden sm:block pe-1">
+                  <p className="text-xs font-medium">{user.name}</p>
+                  <p className="text-[10px] text-muted-foreground">{user.email}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLang(isUrdu ? "en" : "ur")}
+                  className="gap-1.5 text-xs h-8"
+                  title={isUrdu ? "Switch to English" : "اردو میں دیکھیں"}
+                >
+                  <Languages className="h-3.5 w-3.5" />
+                  <span>{isUrdu ? "English" : "اردو"}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    await logout();
+                    navigate({ to: "/login" });
+                  }}
+                  className="gap-1.5 text-xs h-8"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{isUrdu ? "لاگ آؤٹ" : "Sign Out"}</span>
+                </Button>
+              </div>
+            </header>
             <SidebarInset className="flex-1 min-w-0">
-              <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-[1600px] w-full mx-auto">
+              <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 max-w-[1600px] w-full mx-auto">
                 <TeacherPortal />
               </main>
             </SidebarInset>
@@ -74,21 +121,33 @@ function AuthenticatedLayout() {
       <div className="min-h-dvh flex flex-col bg-background">
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
               <School className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="font-urdu text-sm leading-none">{institution.nameUrdu}</p>
+              <p className={cn("text-sm leading-normal", isUrdu && "font-urdu")} dir={isUrdu ? "rtl" : "ltr"}>
+                {isUrdu ? institution.nameUrdu : institution.nameEnglish}
+              </p>
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                {institution.nameEnglish} • Parent Portal
+                {isUrdu ? "والدین پورٹل" : "Parent Portal"}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-end hidden sm:block">
+          <div className="flex items-center gap-2">
+            <div className="text-end hidden sm:block pe-1">
               <p className="text-xs font-medium">{user.name}</p>
               <p className="text-[10px] text-muted-foreground">{user.email}</p>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLang(isUrdu ? "en" : "ur")}
+              className="gap-1.5 text-xs h-8"
+              title={isUrdu ? "Switch to English" : "اردو میں دیکھیں"}
+            >
+              <Languages className="h-3.5 w-3.5" />
+              <span>{isUrdu ? "English" : "اردو"}</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -96,10 +155,10 @@ function AuthenticatedLayout() {
                 await logout();
                 navigate({ to: "/login" });
               }}
-              className="gap-1.5 text-xs"
+              className="gap-1.5 text-xs h-8"
             >
               <LogOut className="h-3.5 w-3.5" />
-              Sign Out
+              <span className="hidden sm:inline">{isUrdu ? "لاگ آؤٹ" : "Sign Out"}</span>
             </Button>
           </div>
         </header>

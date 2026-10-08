@@ -1,29 +1,110 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { School, LogIn, FileSignature, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/components/language-context";
+import { cn } from "@/lib/utils";
 import { institution } from "@/mock";
 
 export function PublicHeader() {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [activeSection, setActiveSection] = useState<string>("home");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
-    { to: "/", labelEn: "Home", labelUr: "ہوم", isHash: false },
-    { to: "/#campuses", labelEn: "Campuses", labelUr: "شعبہ جات", isHash: true },
-    { to: "/#portals", labelEn: "Portals", labelUr: "پورٹلز", isHash: true },
-    { to: "/website/gallery", labelEn: "Gallery", labelUr: "گیلری", isHash: false },
-    { to: "/website/contact", labelEn: "Contact", labelUr: "رابطہ", isHash: false },
+    { id: "home", to: "/", labelEn: "Home", labelUr: "ہوم" },
+    { id: "campuses", to: "/#campuses", labelEn: "Campuses", labelUr: "شعبہ جات" },
+    { id: "portals", to: "/#portals", labelEn: "Portals", labelUr: "پورٹلز" },
+    { id: "gallery", to: "/website/gallery", labelEn: "Gallery", labelUr: "گیلری" },
+    { id: "contact", to: "/website/contact", labelEn: "Contact", labelUr: "رابطہ" },
   ];
+
+  // Track active section when on the homepage via scroll position and hash
+  useEffect(() => {
+    if (pathname !== "/") {
+      return;
+    }
+
+    const checkHashAndScroll = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (hash === "campuses" || hash === "portals") {
+        setActiveSection(hash);
+        return;
+      }
+
+      const scrollY = window.scrollY;
+      const campusesEl = document.getElementById("campuses");
+      const portalsEl = document.getElementById("portals");
+
+      const campusesTop = campusesEl ? campusesEl.offsetTop - 140 : 99999;
+      const portalsTop = portalsEl ? portalsEl.offsetTop - 140 : 99999;
+
+      if (portalsEl && scrollY >= portalsTop) {
+        setActiveSection("portals");
+      } else if (campusesEl && scrollY >= campusesTop) {
+        setActiveSection("campuses");
+      } else {
+        setActiveSection("home");
+      }
+    };
+
+    checkHashAndScroll();
+    window.addEventListener("scroll", checkHashAndScroll, { passive: true });
+    window.addEventListener("hashchange", checkHashAndScroll);
+
+    return () => {
+      window.removeEventListener("scroll", checkHashAndScroll);
+      window.removeEventListener("hashchange", checkHashAndScroll);
+    };
+  }, [pathname]);
+
+  const isLinkActive = (id: string) => {
+    if (pathname === "/") {
+      return activeSection === id;
+    }
+    if (id === "gallery") {
+      return pathname === "/website/gallery" || pathname.startsWith("/website/gallery/");
+    }
+    if (id === "contact") {
+      return pathname === "/website/contact" || pathname.startsWith("/website/contact/");
+    }
+    return false;
+  };
+
+  const handleNavClick = (id: string, e: React.MouseEvent) => {
+    setMobileMenuOpen(false);
+
+    if (id === "home") {
+      if (pathname === "/") {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.history.replaceState(null, "", "/");
+        setActiveSection("home");
+      }
+    } else if (id === "campuses" || id === "portals") {
+      if (pathname === "/") {
+        e.preventDefault();
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth" });
+          window.history.replaceState(null, "", `#${id}`);
+          setActiveSection(id);
+        }
+      }
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo & Title */}
-        <Link to="/" className="flex items-center gap-3 shrink-0">
+        <Link
+          to="/"
+          onClick={(e) => handleNavClick("home", e)}
+          className="flex items-center gap-3 shrink-0"
+        >
           <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-xs">
             <School className="h-5 w-5" />
           </div>
@@ -40,29 +121,30 @@ export function PublicHeader() {
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
           {navLinks.map((item) => {
-            const isActive =
-              !item.isHash &&
-              (item.to === "/"
-                ? pathname === "/"
-                : pathname === item.to || pathname.startsWith(item.to + "/"));
+            const active = isLinkActive(item.id);
+            const activeClasses = active
+              ? "bg-primary/10 text-primary font-semibold shadow-2xs"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground";
 
-            return item.isHash ? (
-              <a
-                key={item.to}
-                href={item.to}
-                className="px-3 py-1.5 rounded-lg hover:bg-accent hover:text-foreground text-muted-foreground transition-colors"
-              >
-                {isUrdu ? item.labelUr : item.labelEn}
-              </a>
-            ) : (
+            if (item.id === "campuses" || item.id === "portals") {
+              return (
+                <a
+                  key={item.id}
+                  href={`/#${item.id}`}
+                  onClick={(e) => handleNavClick(item.id, e)}
+                  className={`px-3 py-1.5 rounded-lg transition-colors ${activeClasses}`}
+                >
+                  {isUrdu ? item.labelUr : item.labelEn}
+                </a>
+              );
+            }
+
+            return (
               <Link
-                key={item.to}
+                key={item.id}
                 to={item.to as never}
-                className={`px-3 py-1.5 rounded-lg transition-colors ${
-                  isActive
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "hover:bg-accent text-muted-foreground hover:text-foreground"
-                }`}
+                onClick={(e) => handleNavClick(item.id, e)}
+                className={`px-3 py-1.5 rounded-lg transition-colors ${activeClasses}`}
               >
                 {isUrdu ? item.labelUr : item.labelEn}
               </Link>
@@ -72,14 +154,24 @@ export function PublicHeader() {
 
         {/* Desktop Action Buttons */}
         <div className="hidden sm:flex items-center gap-2.5">
-          <Button asChild size="sm" variant="outline" className="gap-1.5 border-primary/30">
+          <Button
+            asChild
+            size="sm"
+            variant={pathname === "/apply" ? "default" : "outline"}
+            className={cn("gap-1.5", pathname !== "/apply" && "border-primary/30")}
+          >
             <Link to="/apply">
               <FileSignature className="h-3.5 w-3.5" />
               <span>{isUrdu ? "آن لائن داخلہ" : "Apply Online"}</span>
             </Link>
           </Button>
 
-          <Button asChild size="sm" className="gap-1.5 shadow-sm">
+          <Button
+            asChild
+            size="sm"
+            variant={pathname === "/login" ? "secondary" : "default"}
+            className="gap-1.5 shadow-sm"
+          >
             <Link to="/login">
               <LogIn className="h-3.5 w-3.5" />
               <span>{isUrdu ? "پورٹل لاگ ان" : "Portal Login"}</span>
@@ -112,41 +204,56 @@ export function PublicHeader() {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-border bg-background/98 px-4 pt-3 pb-5 space-y-2.5 animate-in slide-in-from-top-2 duration-200">
           <div className="grid gap-1">
-            {navLinks.map((item) => (
-              item.isHash ? (
-                <a
-                  key={item.to}
-                  href={item.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-accent text-foreground"
-                >
-                  {isUrdu ? item.labelUr : item.labelEn}
-                </a>
-              ) : (
+            {navLinks.map((item) => {
+              const active = isLinkActive(item.id);
+              const activeClasses = active
+                ? "bg-primary/10 text-primary font-semibold"
+                : "text-foreground hover:bg-accent";
+
+              if (item.id === "campuses" || item.id === "portals") {
+                return (
+                  <a
+                    key={item.id}
+                    href={`/#${item.id}`}
+                    onClick={(e) => handleNavClick(item.id, e)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeClasses}`}
+                  >
+                    {isUrdu ? item.labelUr : item.labelEn}
+                  </a>
+                );
+              }
+
+              return (
                 <Link
-                  key={item.to}
+                  key={item.id}
                   to={item.to as never}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium ${
-                    pathname === item.to
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "hover:bg-accent text-foreground"
-                  }`}
+                  onClick={(e) => handleNavClick(item.id, e)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeClasses}`}
                 >
                   {isUrdu ? item.labelUr : item.labelEn}
                 </Link>
-              )
-            ))}
+              );
+            })}
           </div>
 
           <div className="pt-2 border-t border-border grid grid-cols-2 gap-2">
-            <Button asChild variant="outline" size="sm" className="w-full gap-1.5 text-xs">
+            <Button
+              asChild
+              variant={pathname === "/apply" ? "default" : "outline"}
+              size="sm"
+              className="w-full gap-1.5 text-xs"
+            >
               <Link to="/apply" onClick={() => setMobileMenuOpen(false)}>
                 <FileSignature className="h-3.5 w-3.5" />
                 {isUrdu ? "آن لائن داخلہ" : "Apply Online"}
               </Link>
             </Button>
-            <Button asChild size="sm" className="w-full gap-1.5 text-xs">
+            <Button
+              asChild
+              variant={pathname === "/login" ? "secondary" : "default"}
+              size="sm"
+              className="w-full gap-1.5 text-xs"
+            >
               <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
                 <LogIn className="h-3.5 w-3.5" />
                 {isUrdu ? "پورٹل لاگ ان" : "Portal Login"}

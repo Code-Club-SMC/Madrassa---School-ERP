@@ -35,10 +35,20 @@ export type AttendanceRosterStudent = {
   } | null;
 };
 
+export type AttendancePolicy = {
+  isAlreadyMarked: boolean;
+  markedByUserId: string | null;
+  markedByName: string | null;
+  designatedTeacherName: string | null;
+  canMark: boolean;
+  lockReason: string | null;
+};
+
 export type AttendanceRosterPayload = {
   date: string;
   students: AttendanceRosterStudent[];
   summary: AttendanceSummary;
+  attendancePolicy?: AttendancePolicy;
 };
 
 export type AttendanceMarkRow = {

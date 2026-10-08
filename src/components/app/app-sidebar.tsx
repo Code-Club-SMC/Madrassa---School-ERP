@@ -120,8 +120,47 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
     return childrenFor(activeParent, module, role);
   }, [activeParent, module, role]);
 
+  const isSingleSidebarRole =
+    role === "finance_admin" ||
+    role === "accountant" ||
+    role === "admission_admin" ||
+    role === "hr_admin" ||
+    role === "hr_manager" ||
+    role === "reports_admin";
+
   const hasChildren = activeChildren.length > 0;
-  const isChildOpen = hasChildren;
+  const isChildOpen = !isSingleSidebarRole && hasChildren;
+
+  const singleSidebarItems = useMemo(() => {
+    if (!isSingleSidebarRole) return [];
+    const items: Array<{ url: string; icon: any; en: string; ur: string }> = [];
+    const seenUrls = new Set<string>();
+
+    for (const parent of filteredParents) {
+      if (parent.url && !seenUrls.has(parent.url)) {
+        seenUrls.add(parent.url);
+        items.push({
+          url: parent.url,
+          icon: parent.icon,
+          en: parent.en,
+          ur: parent.ur,
+        });
+      }
+      const children = childrenFor(parent, module, role);
+      for (const child of children) {
+        if (!seenUrls.has(child.url)) {
+          seenUrls.add(child.url);
+          items.push({
+            url: child.url,
+            icon: child.icon,
+            en: child.en,
+            ur: child.ur,
+          });
+        }
+      }
+    }
+    return items;
+  }, [isSingleSidebarRole, filteredParents, module, role]);
 
   // Hover state for the thin rail: expands to original size on hover
   const [isRailHovered, setIsRailHovered] = useState(false);
@@ -459,8 +498,40 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
 
             {/* Parent Navigation Items */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2.5 space-y-1.5 scrollbar-thin">
-              {filteredParents.map((parent) =>
-                renderRailItem(parent, isRailVisuallyExpanded),
+              {isSingleSidebarRole ? (
+                singleSidebarItems.map((item) => {
+                  const active =
+                    pathname === item.url ||
+                    (item.url !== "/finance" &&
+                      item.url !== "/admission" &&
+                      item.url !== "/hr" &&
+                      item.url !== "/reports" &&
+                      pathname.startsWith(item.url + "/"));
+                  const ItemIcon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.url}
+                      to={item.url}
+                      title={isUrdu ? item.ur : item.en}
+                      className={cn(
+                        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium transition-all select-none",
+                        active
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold shadow-xs"
+                          : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                      )}
+                    >
+                      <ItemIcon className="h-4 w-4 shrink-0" />
+                      <span className={cn("truncate", isUrdu ? "font-urdu text-sm" : "")}>
+                        {isUrdu ? item.ur : item.en}
+                      </span>
+                    </Link>
+                  );
+                })
+              ) : (
+                filteredParents.map((parent) =>
+                  renderRailItem(parent, isRailVisuallyExpanded),
+                )
               )}
             </div>
 
@@ -893,129 +964,163 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
 
           {/* Mobile Accordion Nav */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {/* Dashboard Direct Button */}
-            <Link
-              to="/dashboard"
-              onClick={() => setOpenMobile(false)}
-              className={cn(
-                "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",
-                pathname === "/dashboard"
-                  ? "bg-sidebar-primary/15 text-sidebar-primary ring-1 ring-sidebar-primary/20"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent",
-              )}
-            >
-              <div className="h-8 w-8 rounded-lg bg-sidebar-accent flex items-center justify-center shrink-0">
-                <School className="h-4 w-4" />
-              </div>
-              <span className={cn("flex-1 text-start", isUrdu && "font-urdu text-base")}>
-                {isUrdu ? "ڈیش بورڈ" : "Dashboard"}
-              </span>
-            </Link>
-
-            {/* Other Parent Sections */}
-            {filteredParents
-              .filter((p) => p.key !== "dashboard")
-              .map((parent) => {
-                const isOpen = mobileExpandedSection === parent.key;
-                const children = childrenFor(parent, module, role);
-                const ParentIcon = parent.icon;
+            {isSingleSidebarRole ? (
+              singleSidebarItems.map((item) => {
+                const active =
+                  pathname === item.url ||
+                  (item.url !== "/finance" &&
+                    item.url !== "/admission" &&
+                    item.url !== "/hr" &&
+                    item.url !== "/reports" &&
+                    pathname.startsWith(item.url + "/"));
+                const ItemIcon = item.icon;
 
                 return (
-                  <div
-                    key={parent.key}
-                    className="rounded-xl border border-sidebar-border/60 overflow-hidden bg-sidebar-accent/15"
+                  <Link
+                    key={item.url}
+                    to={item.url}
+                    onClick={() => setOpenMobile(false)}
+                    className={cn(
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                      active
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold shadow-xs"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent",
+                    )}
                   >
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setMobileExpandedSection(isOpen ? null : parent.key)
-                      }
-                      className="flex items-center justify-between w-full px-3 py-2.5 text-start hover:bg-sidebar-accent/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <ParentIcon className="h-4 w-4 text-sidebar-primary" />
-                        <span
-                          className={cn(
-                            "text-sm font-medium",
-                            isUrdu && "font-urdu text-base",
-                          )}
-                        >
-                          {isUrdu ? parent.ur : parent.en}
-                        </span>
-                      </div>
-                      <ChevronDown
-                        className={cn(
-                          "h-4 w-4 text-sidebar-foreground/50 transition-transform duration-200",
-                          isOpen && "rotate-180",
-                        )}
-                      />
-                    </button>
+                    <ItemIcon className="h-4 w-4 shrink-0" />
+                    <span className={cn("flex-1 text-start", isUrdu && "font-urdu text-base")}>
+                      {isUrdu ? item.ur : item.en}
+                    </span>
+                  </Link>
+                );
+              })
+            ) : (
+              <>
+                {/* Dashboard Direct Button */}
+                <Link
+                  to="/dashboard"
+                  onClick={() => setOpenMobile(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors",
+                    pathname === "/dashboard"
+                      ? "bg-sidebar-primary/15 text-sidebar-primary ring-1 ring-sidebar-primary/20"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent",
+                  )}
+                >
+                  <div className="h-8 w-8 rounded-lg bg-sidebar-accent flex items-center justify-center shrink-0">
+                    <School className="h-4 w-4" />
+                  </div>
+                  <span className={cn("flex-1 text-start", isUrdu && "font-urdu text-base")}>
+                    {isUrdu ? "ڈیش بورڈ" : "Dashboard"}
+                  </span>
+                </Link>
 
-                    {isOpen && (
-                      <div className="px-2 pb-2 pt-1 border-t border-sidebar-border/40 space-y-1 bg-sidebar/50">
-                        {/* Module switcher if academic */}
-                        {parent.key === "academic" && role !== "teacher" && (
-                          <div className="grid grid-cols-2 gap-1 p-1 bg-sidebar-accent/40 rounded-lg mb-2">
-                            <button
-                              type="button"
-                              onClick={() => handleModuleChange("madrassa")}
+                {/* Other Parent Sections */}
+                {filteredParents
+                  .filter((p) => p.key !== "dashboard")
+                  .map((parent) => {
+                    const isOpen = mobileExpandedSection === parent.key;
+                    const children = childrenFor(parent, module, role);
+                    const ParentIcon = parent.icon;
+
+                    return (
+                      <div
+                        key={parent.key}
+                        className="rounded-xl border border-sidebar-border/60 overflow-hidden bg-sidebar-accent/15"
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setMobileExpandedSection(isOpen ? null : parent.key)
+                          }
+                          className="flex items-center justify-between w-full px-3 py-2.5 text-start hover:bg-sidebar-accent/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <ParentIcon className="h-4 w-4 text-sidebar-primary" />
+                            <span
                               className={cn(
-                                "py-1 text-xs rounded font-medium",
-                                module === "madrassa"
-                                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                                  : "text-sidebar-foreground/70",
+                                "text-sm font-medium",
+                                isUrdu && "font-urdu text-base",
                               )}
                             >
-                              🕌 {isUrdu ? "مدرسہ" : "Madrassa"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleModuleChange("school")}
-                              className={cn(
-                                "py-1 text-xs rounded font-medium",
-                                module === "school"
-                                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                                  : "text-sidebar-foreground/70",
-                              )}
-                            >
-                              🏫 {isUrdu ? "اسکول" : "School"}
-                            </button>
+                              {isUrdu ? parent.ur : parent.en}
+                            </span>
+                          </div>
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 text-sidebar-foreground/50 transition-transform duration-200",
+                              isOpen && "rotate-180",
+                            )}
+                          />
+                        </button>
+
+                        {isOpen && (
+                          <div className="px-2 pb-2 pt-1 border-t border-sidebar-border/40 space-y-1 bg-sidebar/50">
+                            {/* Module switcher if academic */}
+                            {parent.key === "academic" && role !== "teacher" && (
+                              <div className="grid grid-cols-2 gap-1 p-1 bg-sidebar-accent/40 rounded-lg mb-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleModuleChange("madrassa")}
+                                  className={cn(
+                                    "py-1 text-xs rounded font-medium",
+                                    module === "madrassa"
+                                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                                      : "text-sidebar-foreground/70",
+                                  )}
+                                >
+                                  🕌 {isUrdu ? "مدرسہ" : "Madrassa"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleModuleChange("school")}
+                                  className={cn(
+                                    "py-1 text-xs rounded font-medium",
+                                    module === "school"
+                                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                                      : "text-sidebar-foreground/70",
+                                  )}
+                                >
+                                  🏫 {isUrdu ? "اسکول" : "School"}
+                                </button>
+                              </div>
+                            )}
+
+                            {children.map((child) => {
+                              const active = pathname === child.url;
+                              const ChildIcon = child.icon;
+
+                              return (
+                                <Link
+                                  key={child.url}
+                                  to={child.url}
+                                  onClick={() => setOpenMobile(false)}
+                                  className={cn(
+                                    "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs transition-colors",
+                                    active
+                                      ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
+                                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent",
+                                  )}
+                                >
+                                  <ChildIcon className="h-3.5 w-3.5 shrink-0" />
+                                  <span
+                                    className={cn(
+                                      "truncate",
+                                      isUrdu && "font-urdu text-sm",
+                                    )}
+                                  >
+                                    {isUrdu ? child.ur : child.en}
+                                  </span>
+                                </Link>
+                              );
+                            })}
                           </div>
                         )}
-
-                        {children.map((child) => {
-                          const active = pathname === child.url;
-                          const ChildIcon = child.icon;
-
-                          return (
-                            <Link
-                              key={child.url}
-                              to={child.url}
-                              onClick={() => setOpenMobile(false)}
-                              className={cn(
-                                "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs transition-colors",
-                                active
-                                  ? "bg-sidebar-primary text-sidebar-primary-foreground font-semibold"
-                                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent",
-                              )}
-                            >
-                              <ChildIcon className="h-3.5 w-3.5 shrink-0" />
-                              <span
-                                className={cn(
-                                  "truncate",
-                                  isUrdu && "font-urdu text-sm",
-                                )}
-                              >
-                                {isUrdu ? child.ur : child.en}
-                              </span>
-                            </Link>
-                          );
-                        })}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+              </>
+            )}
           </div>
 
           {/* Mobile Footer */}

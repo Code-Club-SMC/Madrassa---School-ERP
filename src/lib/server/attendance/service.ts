@@ -9,8 +9,16 @@ import {
   programs,
   schoolClasses,
 } from "@/db/schema/academic";
+import { user as authUser } from "@/db/schema/auth";
 import { studentAttendance, type StudentAttendanceStatus } from "@/db/schema/attendance";
 import { studentEnrollments, students } from "@/db/schema/students";
+import { teacherAssignments, teacherProfiles } from "@/db/schema/teachers";
+import {
+  madrassaTimetablePeriods,
+  madrassaTimetableSlots,
+  schoolTimetablePeriods,
+  schoolTimetableSlots,
+} from "@/db/schema/timetable";
 import type { ModuleKey } from "@/lib/permissions/module-registry";
 import { attendanceTimelineEvent, summarizeAttendance } from "@/lib/server/attendance/calculations";
 import { getRequestUser, requirePermission } from "@/lib/server/authz";
@@ -164,6 +172,95 @@ function serializeAttendanceRow(row: AttendanceRow | undefined) {
   };
 }
 
+export async function getDesignatedFirstPeriodTeacher(
+  system: AttendanceSystem,
+  filters: { classId?: string; subcategoryId?: string },
+  dateString: string,
+) {
+  const dateObj = new Date(dateString);
+  const dayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+
+  if (system === "school" && filters.classId) {
+    const [firstPeriod] = await db
+      .select({ id: schoolTimetablePeriods.id, label: schoolTimetablePeriods.label })
+      .from(schoolTimetablePeriods)
+      .where(and(eq(schoolTimetablePeriods.schoolClassId, filters.classId), eq(schoolTimetablePeriods.isBreak, false)))
+      .orderBy(asc(schoolTimetablePeriods.displayOrder))
+      .limit(1);
+
+    if (!firstPeriod) return null;
+
+    const [slot] = await db
+      .select({ subjectId: schoolTimetableSlots.subjectId })
+      .from(schoolTimetableSlots)
+      .where(and(eq(schoolTimetableSlots.periodId, firstPeriod.id), eq(schoolTimetableSlots.dayOfWeek, dayOfWeek)))
+      .limit(1);
+
+    if (!slot?.subjectId) return null;
+
+    const [assignment] = await db
+      .select({
+        teacherProfileId: teacherAssignments.teacherProfileId,
+        userId: teacherProfiles.userId,
+        name: authUser.name,
+      })
+      .from(teacherAssignments)
+      .innerJoin(teacherProfiles, eq(teacherProfiles.id, teacherAssignments.teacherProfileId))
+      .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
+      .where(
+        and(
+          eq(teacherAssignments.schoolClassId, filters.classId),
+          eq(teacherAssignments.subjectId, slot.subjectId),
+          eq(teacherAssignments.active, true),
+        ),
+      )
+      .limit(1);
+
+    return assignment ?? null;
+  }
+
+  if (system === "madrassa" && filters.subcategoryId) {
+    const [firstPeriod] = await db
+      .select({ id: madrassaTimetablePeriods.id, label: madrassaTimetablePeriods.label })
+      .from(madrassaTimetablePeriods)
+      .where(and(eq(madrassaTimetablePeriods.madrassaSubcategoryId, filters.subcategoryId), eq(madrassaTimetablePeriods.isBreak, false)))
+      .orderBy(asc(madrassaTimetablePeriods.displayOrder))
+      .limit(1);
+
+    if (!firstPeriod) return null;
+
+    const [slot] = await db
+      .select({ subjectId: madrassaTimetableSlots.subjectId })
+      .from(madrassaTimetableSlots)
+      .where(and(eq(madrassaTimetableSlots.periodId, firstPeriod.id), eq(madrassaTimetableSlots.dayOfWeek, dayOfWeek)))
+      .limit(1);
+
+    if (!slot?.subjectId) return null;
+
+    const [assignment] = await db
+      .select({
+        teacherProfileId: teacherAssignments.teacherProfileId,
+        userId: teacherProfiles.userId,
+        name: authUser.name,
+      })
+      .from(teacherAssignments)
+      .innerJoin(teacherProfiles, eq(teacherProfiles.id, teacherAssignments.teacherProfileId))
+      .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
+      .where(
+        and(
+          eq(teacherAssignments.madrassaSubcategoryId, filters.subcategoryId),
+          eq(teacherAssignments.subjectId, slot.subjectId),
+          eq(teacherAssignments.active, true),
+        ),
+      )
+      .limit(1);
+
+    return assignment ?? null;
+  }
+
+  return null;
+}
+
 export async function getSchoolAttendanceRoster(
   request: Request,
   query: z.infer<typeof schoolAttendanceRosterQuerySchema>,
@@ -182,10 +279,51 @@ export async function getSchoolAttendanceRoster(
   const existing = await loadExistingAttendance(db, date, roster.map((row) => row.enrollmentId));
   const existingByEnrollment = new Map(existing.map((row) => [row.enrollmentId, row]));
 
+  let markerName: string | null = null;
+  if (existing.length > 0 && existing[0]?.markedByUserId) {
+    const [markerUser] = await db
+      .select({ name: authUser.name })
+      .from(authUser)
+      .where(eq(authUser.id, existing[0].markedByUserId))
+      .limit(1);
+    markerName = markerUser?.name || null;
+  }
+
+  const designatedTeacher = await getDesignatedFirstPeriodTeacher(
+    "school",
+    { classId: query.classId },
+    date,
+  );
+
+  const actor = await getRequestUser(request);
+  const isTeacher = actor?.role === "teacher";
+  let canMark = true;
+  let lockReason: string | null = null;
+
+  if (isTeacher) {
+    if (existing.length > 0) {
+      if (existing[0]?.markedByUserId && existing[0]?.markedByUserId !== actor.id) {
+        canMark = false;
+        lockReason = `Attendance has already been marked by teacher ${markerName ?? "another teacher"}.`;
+      }
+    } else if (designatedTeacher && designatedTeacher.userId !== actor.id) {
+      canMark = false;
+      lockReason = `Daily attendance is assigned to 1st period teacher: ${designatedTeacher.name}.`;
+    }
+  }
+
   return {
     date,
     students: roster.map((row) => serializeRosterStudent(row, existingByEnrollment.get(row.enrollmentId))),
     summary: summarizeAttendance(existing, roster.length),
+    attendancePolicy: {
+      isAlreadyMarked: existing.length > 0,
+      markedByUserId: existing[0]?.markedByUserId ?? null,
+      markedByName: markerName,
+      designatedTeacherName: designatedTeacher?.name ?? null,
+      canMark,
+      lockReason,
+    },
   };
 }
 
@@ -207,10 +345,51 @@ export async function getMadrassaAttendanceRoster(
   const existing = await loadExistingAttendance(db, date, roster.map((row) => row.enrollmentId));
   const existingByEnrollment = new Map(existing.map((row) => [row.enrollmentId, row]));
 
+  let markerName: string | null = null;
+  if (existing.length > 0 && existing[0]?.markedByUserId) {
+    const [markerUser] = await db
+      .select({ name: authUser.name })
+      .from(authUser)
+      .where(eq(authUser.id, existing[0].markedByUserId))
+      .limit(1);
+    markerName = markerUser?.name || null;
+  }
+
+  const designatedTeacher = await getDesignatedFirstPeriodTeacher(
+    "madrassa",
+    { subcategoryId: query.subcategoryId },
+    date,
+  );
+
+  const actor = await getRequestUser(request);
+  const isTeacher = actor?.role === "teacher";
+  let canMark = true;
+  let lockReason: string | null = null;
+
+  if (isTeacher) {
+    if (existing.length > 0) {
+      if (existing[0]?.markedByUserId && existing[0]?.markedByUserId !== actor.id) {
+        canMark = false;
+        lockReason = `Attendance has already been marked by teacher ${markerName ?? "another teacher"}.`;
+      }
+    } else if (designatedTeacher && designatedTeacher.userId !== actor.id) {
+      canMark = false;
+      lockReason = `Daily attendance is assigned to 1st period teacher: ${designatedTeacher.name}.`;
+    }
+  }
+
   return {
     date,
     students: roster.map((row) => serializeRosterStudent(row, existingByEnrollment.get(row.enrollmentId))),
     summary: summarizeAttendance(existing, roster.length),
+    attendancePolicy: {
+      isAlreadyMarked: existing.length > 0,
+      markedByUserId: existing[0]?.markedByUserId ?? null,
+      markedByName: markerName,
+      designatedTeacherName: designatedTeacher?.name ?? null,
+      canMark,
+      lockReason,
+    },
   };
 }
 
@@ -367,6 +546,42 @@ async function markAttendance(
     attendanceModuleForSystem(system),
     hasChangedExistingRow ? "edit" : "create",
   );
+
+  // One-Teacher Daily Attendance Policy Enforcement:
+  if (actor.role === "teacher") {
+    // 1. If attendance has already been marked on this date for this class:
+    if (existing.length > 0) {
+      const markerId = existing[0]?.markedByUserId;
+      if (markerId && markerId !== actor.id) {
+        const [markerUser] = await db
+          .select({ name: authUser.name })
+          .from(authUser)
+          .where(eq(authUser.id, markerId))
+          .limit(1);
+        const markerName = markerUser?.name || "another teacher";
+        throw new HttpError(
+          `Attendance for this class on ${date} has already been recorded by teacher ${markerName}. Only they or an administrator can update it.`,
+          403,
+        );
+      }
+    } else {
+      // 2. If attendance has not been taken yet, verify actor is the designated 1st period teacher (if timetable is set)
+      const designatedTeacher = await getDesignatedFirstPeriodTeacher(
+        system,
+        system === "school"
+          ? { classId: (input as z.infer<typeof markSchoolAttendanceSchema>).classId }
+          : { subcategoryId: (input as z.infer<typeof markMadrassaAttendanceSchema>).subcategoryId },
+        date,
+      );
+
+      if (designatedTeacher && designatedTeacher.userId !== actor.id) {
+        throw new HttpError(
+          `Daily attendance for this class must be taken by the 1st period teacher (${designatedTeacher.name}).`,
+          403,
+        );
+      }
+    }
+  }
 
   return db.transaction(async (tx) => {
     const upserted: AttendanceRow[] = [];

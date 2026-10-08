@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { BookOpen, GraduationCap, CalendarClock, ClipboardList, CalendarCheck, BarChart3, User } from "lucide-react";
+import { BookOpen, GraduationCap, CalendarClock, ClipboardList, CalendarCheck, BarChart3, User, LogOut } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useLanguage } from "@/components/language-context";
 import {
@@ -105,7 +105,14 @@ export function TeacherSidebar({ active, onChange }: Props) {
                     >
                       <item.icon className="h-[18px] w-[18px] shrink-0 opacity-90" />
                       {!collapsed && (
-                        <span className="text-[11px] uppercase tracking-wide text-sidebar-foreground/60 truncate">
+                        <span
+                          className={cn(
+                            "truncate",
+                            lang === "ur"
+                              ? "font-urdu text-sm leading-normal text-sidebar-foreground"
+                              : "text-xs font-medium uppercase tracking-wide text-sidebar-foreground/80"
+                          )}
+                        >
                           {text}
                         </span>
                       )}

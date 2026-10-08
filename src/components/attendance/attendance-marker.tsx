@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import { CalendarMinus, Check, Clock, Save, X, type LucideIcon } from "lucide-react";
+import { CalendarMinus, Check, Clock, Lock, Save, ShieldAlert, X, type LucideIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useLanguage } from "@/components/language-context";
 import { cn } from "@/lib/utils";
 import type {
   AttendanceRosterPayload,
@@ -86,6 +87,9 @@ export function AttendanceMarker({
   onClear,
   onSave,
 }: AttendanceMarkerProps) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
+
   const counts = useMemo(() => {
     const next = {
       present: 0,
@@ -108,6 +112,7 @@ export function AttendanceMarker({
     return next;
   }, [marks, roster]);
 
+  const canMark = roster?.attendancePolicy ? roster.attendancePolicy.canMark : true;
   const canUseRoster = Boolean(roster) && !loading;
   const students = roster?.students ?? [];
 
@@ -126,40 +131,79 @@ export function AttendanceMarker({
               variant="outline"
               size="sm"
               className="gap-1.5"
-              disabled={!canUseRoster || students.length === 0 || saving}
+              disabled={!canUseRoster || students.length === 0 || saving || !canMark}
               onClick={onMarkAllPresent}
             >
               <Check className="h-4 w-4" />
-              Mark All Present
+              {isUrdu ? "سب حاضر" : "Mark All Present"}
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              disabled={!canUseRoster || students.length === 0 || saving}
+              disabled={!canUseRoster || students.length === 0 || saving || !canMark}
               onClick={onClear}
             >
-              Clear
+              {isUrdu ? "صاف کریں" : "Clear"}
             </Button>
             <Button
               type="button"
               size="sm"
               className="gap-1.5"
-              disabled={!roster || saving}
+              disabled={!roster || saving || !canMark}
               onClick={onSave}
             >
               <Save className="h-4 w-4" />
-              {saving ? "Saving..." : "Save Attendance"}
+              {saving ? (isUrdu ? "محفوظ ہو رہا ہے..." : "Saving...") : (isUrdu ? "حاضری محفوظ کریں" : "Save Attendance")}
             </Button>
           </div>
         </div>
 
+        {roster?.attendancePolicy && !canMark && (
+          <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2.5">
+            <Lock className="h-4 w-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-xs uppercase tracking-wide">
+                {isUrdu ? "حاضری مقفل ہے (حاضری صرف روزانہ ایک بار تفویض شدہ استاد لے سکتا ہے)" : "Attendance Locked — Daily Policy"}
+              </p>
+              <p className="mt-0.5 text-xs">
+                {roster.attendancePolicy.lockReason ??
+                  (roster.attendancePolicy.isAlreadyMarked
+                    ? `Attendance for today has already been marked by ${roster.attendancePolicy.markedByName || "another teacher"}. Attendance cannot be marked twice.`
+                    : `Daily attendance for this class must be taken by the 1st period teacher (${roster.attendancePolicy.designatedTeacherName || "designated teacher"}).`)}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {roster?.attendancePolicy?.isAlreadyMarked && canMark && (
+          <div className="mt-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-2.5 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+            <Check className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {isUrdu
+                ? `حاضری پہلے ہی درج ہو چکی ہے (${roster.attendancePolicy.markedByName ?? "ریکارڈ شدہ"})`
+                : `Attendance recorded today by ${roster.attendancePolicy.markedByName ?? "teacher"}`}
+            </span>
+          </div>
+        )}
+
+        {roster?.attendancePolicy?.canMark && roster.attendancePolicy.designatedTeacherName && !roster.attendancePolicy.isAlreadyMarked && (
+          <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs text-primary flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {isUrdu
+                ? `پہلے پیریڈ کے تفویض شدہ استاد: ${roster.attendancePolicy.designatedTeacherName}`
+                : `1st Period Designated Teacher: ${roster.attendancePolicy.designatedTeacherName}`}
+            </span>
+          </div>
+        )}
+
         <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <AttendanceCount label="Present" value={counts.present} tone="present" />
-          <AttendanceCount label="Absent" value={counts.absent} tone="absent" />
-          <AttendanceCount label="Late" value={counts.late} tone="late" />
-          <AttendanceCount label="Leave" value={counts.leave} tone="leave" />
-          <AttendanceCount label="Unmarked" value={counts.unmarked} />
+          <AttendanceCount label={isUrdu ? "حاضر" : "Present"} value={counts.present} tone="present" />
+          <AttendanceCount label={isUrdu ? "غیر حاضر" : "Absent"} value={counts.absent} tone="absent" />
+          <AttendanceCount label={isUrdu ? "دیر سے" : "Late"} value={counts.late} tone="late" />
+          <AttendanceCount label={isUrdu ? "رخصت" : "Leave"} value={counts.leave} tone="leave" />
+          <AttendanceCount label={isUrdu ? "باقی" : "Unmarked"} value={counts.unmarked} />
         </div>
       </div>
 
@@ -182,6 +226,8 @@ export function AttendanceMarker({
               status={marks[student.id]}
               note={notes[student.id] ?? ""}
               saving={saving}
+              canMark={canMark}
+              isUrdu={isUrdu}
               onSetStatus={onSetStatus}
               onSetNote={onSetNote}
             />
@@ -197,6 +243,8 @@ function AttendanceStudentRow({
   status,
   note,
   saving,
+  canMark,
+  isUrdu,
   onSetStatus,
   onSetNote,
 }: {
@@ -204,13 +252,23 @@ function AttendanceStudentRow({
   status?: AttendanceStatus;
   note: string;
   saving: boolean;
+  canMark: boolean;
+  isUrdu: boolean;
   onSetStatus: (studentId: string, status: AttendanceStatus) => void;
   onSetNote: (studentId: string, note: string) => void;
 }) {
+  const primaryName = isUrdu ? (student.nameUrdu || student.name) : (student.name || student.nameUrdu);
+  const secondaryName = isUrdu
+    ? (student.name && student.name !== student.nameUrdu ? student.name : null)
+    : (student.nameUrdu && student.nameUrdu !== student.name ? student.nameUrdu : null);
+  const fatherText = isUrdu
+    ? (student.fatherNameUrdu || student.fatherName || "والد کا نام درج نہیں")
+    : (student.fatherName || "Father not recorded");
+
   return (
     <div className="grid gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_auto_minmax(180px,260px)] lg:items-center">
       <div className="flex min-w-0 items-center gap-3">
-        <Avatar className="h-9 w-9">
+        <Avatar className="h-9 w-9 shrink-0">
           <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">
             {studentInitials(student.name)}
           </AvatarFallback>
@@ -221,12 +279,17 @@ function AttendanceStudentRow({
             <Badge variant="outline" className="font-mono text-[10px]">
               {student.rollNo || "No roll"}
             </Badge>
-            <p className="truncate font-urdu text-sm font-semibold leading-tight" dir="rtl" lang="ur">
-              {student.nameUrdu || student.name}
+            <p className={cn("truncate text-sm font-semibold leading-normal", isUrdu && "font-urdu")} dir={isUrdu ? "rtl" : "ltr"}>
+              {primaryName}
             </p>
+            {secondaryName && (
+              <span className={cn("truncate text-xs text-muted-foreground", !isUrdu && "font-urdu")}>
+                ({secondaryName})
+              </span>
+            )}
           </div>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {student.name} · {student.fatherName || "Father not recorded"}
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {fatherText}
           </p>
           <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
             {student.groupLabel} · Admission {student.admissionNo || "N/A"}
@@ -248,7 +311,7 @@ function AttendanceStudentRow({
               title={option.label}
               aria-label={`${option.label} ${student.name}`}
               aria-pressed={active}
-              disabled={saving}
+              disabled={saving || !canMark}
               className={cn(
                 "h-8 w-9 rounded-md",
                 active ? option.activeClassName : option.className,
@@ -265,8 +328,8 @@ function AttendanceStudentRow({
       <Input
         value={note}
         onChange={(event) => onSetNote(student.id, event.target.value)}
-        placeholder="Optional note"
-        disabled={saving}
+        placeholder={isUrdu ? "اختیاری نوٹ" : "Optional note"}
+        disabled={saving || !canMark}
         className="h-8 text-xs"
       />
     </div>

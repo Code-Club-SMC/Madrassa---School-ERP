@@ -1008,12 +1008,48 @@ function DashboardPage() {
     ((activeCashflow.totalIncome - activeCashflow.totalExpenses) / (activeCashflow.totalIncome || 1)) * 100,
   );
 
+  useEffect(() => {
+    if (!user) return;
+    if (user.role === "finance_admin" || user.role === "accountant") {
+      void navigate({ to: "/finance", replace: true });
+    } else if (user.role === "admission_admin") {
+      void navigate({ to: "/admission", replace: true });
+    } else if (user.role === "academic_admin") {
+      void navigate({ to: "/madrassa/students", replace: true });
+    } else if (user.role === "hr_admin" || user.role === "hr_manager") {
+      void navigate({ to: "/hr", replace: true });
+    } else if (user.role === "reports_admin") {
+      void navigate({ to: "/reports", replace: true });
+    } else if (user.role === "parent") {
+      void navigate({ to: "/parents", replace: true });
+    }
+  }, [user, navigate]);
+
   if (isLoading) {
     return <BookLoader text="Loading..." className="h-96" />;
   }
 
   if (!user) {
     return null;
+  }
+
+  if (user.role === "finance_admin" || user.role === "accountant") {
+    return <BookLoader text={lang === "ur" ? "مالیات ڈیش بورڈ لوڈ ہو رہا ہے..." : "Redirecting to Finance Dashboard..."} className="h-96" />;
+  }
+  if (user.role === "admission_admin") {
+    return <BookLoader text={lang === "ur" ? "داخلہ ڈیش بورڈ لوڈ ہو رہا ہے..." : "Redirecting to Admission Dashboard..."} className="h-96" />;
+  }
+  if (user.role === "academic_admin") {
+    return <BookLoader text={lang === "ur" ? "تعلیمی ڈیش بورڈ لوڈ ہو رہا ہے..." : "Redirecting to Academic Dashboard..."} className="h-96" />;
+  }
+  if (user.role === "hr_admin" || user.role === "hr_manager") {
+    return <BookLoader text={lang === "ur" ? "ایچ آر ڈیش بورڈ لوڈ ہو رہا ہے..." : "Redirecting to HR Dashboard..."} className="h-96" />;
+  }
+  if (user.role === "reports_admin") {
+    return <BookLoader text={lang === "ur" ? "رپورٹس ڈیش بورڈ لوڈ ہو رہا ہے..." : "Redirecting to Reports Dashboard..."} className="h-96" />;
+  }
+  if (user.role === "parent") {
+    return <BookLoader text={lang === "ur" ? "والدین پورٹل لوڈ ہو رہا ہے..." : "Redirecting to Parent Portal..."} className="h-96" />;
   }
 
   const today = new Date().toLocaleDateString("en-GB", {

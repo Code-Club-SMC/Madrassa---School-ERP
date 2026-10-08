@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/components/language-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,6 +70,8 @@ type MadrassaCategoryOption = {
 const pageSize = 10;
 
 export function StudentsTable({ system, section, institutionId }: Props) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | StudentStatus>("all");
@@ -214,34 +217,63 @@ export function StudentsTable({ system, section, institutionId }: Props) {
             </SelectTrigger>
             <SelectContent className="max-h-[320px]">
               <SelectItem value="all">
-                {system === "madrassa" ? "All Darjat — تمام" : "All Classes — تمام"}
+                {isUrdu
+                  ? (system === "madrassa" ? "تمام درجات (All Darjat)" : "تمام کلاسز (All Classes)")
+                  : (system === "madrassa" ? "All Darjat" : "All Classes")}
               </SelectItem>
               {system === "madrassa" ? (
                 madrassaCategories.map((category) => {
                   const subs = category.subcategories ?? [];
                   if (subs.length === 0) return null;
+                  const catPrimary = isUrdu ? (category.nameUrdu || category.name) : (category.name || category.nameUrdu);
+                  const catSecondary = isUrdu
+                    ? (category.name && category.name !== category.nameUrdu ? category.name : null)
+                    : (category.nameUrdu && category.nameUrdu !== category.name ? category.nameUrdu : null);
+
                   return (
                     <SelectGroup key={category.id}>
-                      <SelectLabel className="font-urdu text-xs font-semibold text-primary/80 px-2 py-1.5 bg-muted/40 rounded-sm mt-1">
-                        {category.nameUrdu || category.name}
-                        {category.name && category.nameUrdu ? ` (${category.name})` : ""}
+                      <SelectLabel className={cn("text-xs font-semibold text-primary/80 px-2 py-1.5 bg-muted/40 rounded-sm mt-1", isUrdu && "font-urdu")}>
+                        {catPrimary}
+                        {catSecondary ? ` (${catSecondary})` : ""}
                       </SelectLabel>
-                      {subs.map((sub) => (
-                        <SelectItem key={sub.id} value={sub.id}>
-                          <span className="font-urdu">{sub.nameUrdu || sub.name}</span>
-                          <span className="text-muted-foreground ms-2 text-xs">{sub.name || sub.nameUrdu}</span>
-                        </SelectItem>
-                      ))}
+                      {subs.map((sub) => {
+                        const subPrimary = isUrdu ? (sub.nameUrdu || sub.name) : (sub.name || sub.nameUrdu);
+                        const subSecondary = isUrdu
+                          ? (sub.name && sub.name !== sub.nameUrdu ? sub.name : null)
+                          : (sub.nameUrdu && sub.nameUrdu !== sub.name ? sub.nameUrdu : null);
+
+                        return (
+                          <SelectItem key={sub.id} value={sub.id}>
+                            <span className={cn(isUrdu && "font-urdu")}>{subPrimary}</span>
+                            {subSecondary && (
+                              <span className={cn("text-muted-foreground ms-2 text-xs", !isUrdu && "font-urdu")}>
+                                ({subSecondary})
+                              </span>
+                            )}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectGroup>
                   );
                 })
               ) : (
-                schoolClasses.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    <span className="font-urdu">{item.nameUrdu || item.name}</span>
-                    <span className="text-muted-foreground ms-2 text-xs">{item.name || item.nameUrdu}</span>
-                  </SelectItem>
-                ))
+                schoolClasses.map((item) => {
+                  const itemPrimary = isUrdu ? (item.nameUrdu || item.name) : (item.name || item.nameUrdu);
+                  const itemSecondary = isUrdu
+                    ? (item.name && item.name !== item.nameUrdu ? item.name : null)
+                    : (item.nameUrdu && item.nameUrdu !== item.name ? item.nameUrdu : null);
+
+                  return (
+                    <SelectItem key={item.id} value={item.id}>
+                      <span className={cn(isUrdu && "font-urdu")}>{itemPrimary}</span>
+                      {itemSecondary && (
+                        <span className={cn("text-muted-foreground ms-2 text-xs", !isUrdu && "font-urdu")}>
+                          ({itemSecondary})
+                        </span>
+                      )}
+                    </SelectItem>
+                  );
+                })
               )}
             </SelectContent>
           </Select>
@@ -342,30 +374,50 @@ export function StudentsTable({ system, section, institutionId }: Props) {
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="font-urdu text-sm leading-tight truncate">
-                    {student.nameUrdu}
+                  <p className={cn("text-sm font-semibold truncate leading-normal", isUrdu && "font-urdu")}>
+                    {isUrdu ? (student.nameUrdu || student.name) : (student.name || student.nameUrdu)}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">{student.name}</p>
+                  {isUrdu ? (
+                    student.name && student.name !== student.nameUrdu ? (
+                      <p className="text-xs text-muted-foreground truncate">{student.name}</p>
+                    ) : null
+                  ) : (
+                    student.nameUrdu && student.nameUrdu !== student.name ? (
+                      <p className="font-urdu text-xs text-muted-foreground truncate leading-normal">{student.nameUrdu}</p>
+                    ) : null
+                  )}
                 </div>
               </div>
             </TableCell>
             <TableCell className="hidden md:table-cell">
-              <div className="flex flex-col leading-tight min-w-0">
-                <span className="font-urdu text-sm truncate">
-                  {student.fatherNameUrdu || student.fatherName}
+              <div className="flex flex-col leading-normal min-w-0">
+                <span className={cn("text-sm font-medium truncate", isUrdu && "font-urdu")}>
+                  {isUrdu
+                    ? (student.fatherNameUrdu || student.fatherName || "—")
+                    : (student.fatherName || student.fatherNameUrdu || "—")}
                 </span>
-                <span className="text-[11px] text-muted-foreground truncate">
-                  {student.fatherName}
-                </span>
+                {isUrdu ? (
+                  student.fatherName && student.fatherName !== student.fatherNameUrdu ? (
+                    <span className="text-[11px] text-muted-foreground truncate">{student.fatherName}</span>
+                  ) : null
+                ) : (
+                  student.fatherNameUrdu && student.fatherNameUrdu !== student.fatherName ? (
+                    <span className="font-urdu text-[11px] text-muted-foreground truncate leading-normal">{student.fatherNameUrdu}</span>
+                  ) : null
+                )}
               </div>
             </TableCell>
             <TableCell className="hidden md:table-cell">
-              <div className="flex flex-col leading-tight min-w-0">
-                <span className="font-urdu text-sm truncate">{student.groupLabel}</span>
-                <span className="text-[11px] text-muted-foreground truncate">
-                  {student.groupEnglish}
-                  {student.section ? ` · ${student.section}` : ""}
+              <div className="flex flex-col leading-normal min-w-0">
+                <span className={cn("text-sm font-medium truncate", isUrdu && "font-urdu")}>
+                  {isUrdu ? student.groupLabel : (student.groupEnglish || student.groupLabel)}
                 </span>
+                {student.groupEnglish && student.groupLabel && student.groupEnglish !== student.groupLabel && (
+                  <span className={cn("text-[11px] text-muted-foreground truncate", !isUrdu && "font-urdu leading-normal")}>
+                    {isUrdu ? student.groupEnglish : student.groupLabel}
+                    {student.section ? ` · ${student.section}` : ""}
+                  </span>
+                )}
               </div>
             </TableCell>
             <TableCell className="text-end">

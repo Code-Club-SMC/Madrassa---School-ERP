@@ -277,7 +277,22 @@ export function visibleFor(role: UserRole | undefined, group: NavItem["group"]):
 }
 
 export function parentsFor(role: UserRole | undefined) {
-  return navParents.filter((p) => !p.roles || (role && p.roles.includes(role)));
+  const filtered = navParents.filter((p) => !p.roles || (role && p.roles.includes(role)));
+  if (!role) return filtered;
+
+  return filtered.map((parent) => {
+    if (parent.key === "dashboard") {
+      let customUrl = "/dashboard";
+      if (role === "finance_admin" || role === "accountant") customUrl = "/finance";
+      else if (role === "admission_admin") customUrl = "/admission";
+      else if (role === "hr_admin" || role === "hr_manager") customUrl = "/hr";
+      else if (role === "reports_admin") customUrl = "/reports";
+      else if (role === "academic_admin") customUrl = "/madrassa/students";
+      else if (role === "parent") customUrl = "/parents";
+      return { ...parent, url: customUrl };
+    }
+    return parent;
+  });
 }
 
 export function childrenFor(

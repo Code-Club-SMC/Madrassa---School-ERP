@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/components/language-context";
 
 type Props = {
   examId: string;
@@ -47,6 +48,8 @@ type DraftMark = {
 
 export function MarksEntry({ examId, system, readOnly }: Props) {
   const { user } = useAuth();
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const [exam, setExam] = useState<ExamSession | null>(null);
   const [subjectId, setSubjectId] = useState("");
   const [payload, setPayload] = useState<MarksEntryPayload | null>(null);
@@ -60,6 +63,11 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
   const [loadingTeacher, setLoadingTeacher] = useState(false);
 
   const isTeacher = useMemo(() => user?.role === "teacher", [user?.role]);
+
+  const teacherAllowedSubjects = useMemo(() => {
+    if (!isTeacher || !exam) return exam?.subjects ?? [];
+    return exam.subjects.filter((item) => teacherSubjectIds.has(item.subjectId));
+  }, [isTeacher, exam, teacherSubjectIds]);
 
   useEffect(() => {
     if (!isTeacher) return;
@@ -216,34 +224,76 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
           </Button>
           {!readOnly && (
             <>
-              <Button size="sm" variant="outline" disabled={!subject || subject.locked || saving} onClick={() => void handleSave()}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!subject || subject.locked || saving || (isTeacher && teacherAllowedSubjects.length === 0)}
+                onClick={() => void handleSave()}
+              >
                 <Save className="mr-1.5 h-3.5 w-3.5" />
-                Save
+                {saving ? (isUrdu ? "محفوظ ہو رہا ہے..." : "Saving...") : (isUrdu ? "محفوظ کریں" : "Save")}
               </Button>
-              <Button size="sm" variant="outline" disabled={!subject || subject.locked} onClick={() => setConfirmLock(true)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!subject || subject.locked || (isTeacher && teacherAllowedSubjects.length === 0)}
+                onClick={() => setConfirmLock(true)}
+              >
                 <Lock className="mr-1.5 h-3.5 w-3.5" />
-                Lock Subject
+                {isUrdu ? "مضمون مقفل کریں" : "Lock Subject"}
               </Button>
-              <Button size="sm" disabled={exam.status === "published"} onClick={() => setConfirmPublish(true)}>
-                <Send className="mr-1.5 h-3.5 w-3.5" />
-                Publish
-              </Button>
+              {!isTeacher && (
+                <Button size="sm" disabled={exam.status === "published"} onClick={() => setConfirmPublish(true)}>
+                  <Send className="mr-1.5 h-3.5 w-3.5" />
+                  {isUrdu ? "شائع کریں" : "Publish"}
+                </Button>
+              )}
             </>
           )}
         </div>
       </div>
 
+      {isTeacher && !loadingTeacher && teacherAllowedSubjects.length === 0 && (
+        <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-3">
+          <Lock className="h-5 w-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-sm">
+              {isUrdu
+                ? "اس امتحانی جماعت میں آپ کو کوئی مضمون تفویض نہیں ہے۔"
+                : "No Assigned Subjects in this Examination Class"}
+            </p>
+            <p className="mt-1 text-xs">
+              {isUrdu
+                ? "اساتذہ صرف اپنے تفویض شدہ مضامین کے امتحانی نمبر درج کر سکتے ہیں۔"
+                : "Teachers are restricted to viewing and entering marks only for subjects assigned to them."}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="p-3 lg:col-span-2">
-          <p className="mb-1.5 text-xs text-muted-foreground">Subject</p>
-          <Select value={subjectId} onValueChange={setSubjectId}>
-            <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+          <p className="mb-1.5 text-xs text-muted-foreground">{isUrdu ? "مضمون منتخب کریں" : "Subject"}</p>
+          <Select value={subjectId} onValueChange={setSubjectId} disabled={teacherAllowedSubjects.length === 0}>
+            <SelectTrigger><SelectValue placeholder={isUrdu ? "مضمون منتخب کریں" : "Select subject"} /></SelectTrigger>
             <SelectContent>
-              {(isTeacher ? exam.subjects.filter((item) => teacherSubjectIds.has(item.subjectId)) : exam.subjects).map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.name} · {item.nameUrdu}
-                </SelectItem>
-              ))}
+              {teacherAllowedSubjects.map((item) => {
+                const primary = isUrdu ? (item.nameUrdu || item.name) : (item.name || item.nameUrdu);
+                const secondary = isUrdu
+                  ? (item.name && item.name !== item.nameUrdu ? item.name : null)
+                  : (item.nameUrdu && item.nameUrdu !== item.name ? item.nameUrdu : null);
+
+                return (
+                  <SelectItem key={item.id} value={item.id}>
+                    <span className={cn(isUrdu && "font-urdu")}>{primary}</span>
+                    {secondary && (
+                      <span className={cn("text-muted-foreground ms-2 text-xs", !isUrdu && "font-urdu")}>
+                        ({secondary})
+                      </span>
+                    )}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </Card>
