@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -69,6 +69,86 @@ export function cleanExamName(name: string): string {
     .replace(/\s*-\s*[A-Z]{2,4}_[a-zA-Z0-9_-]+/g, "")
     .replace(/\s*-\s*none$/i, "")
     .trim();
+}
+
+export type GroupedExam = {
+  key: string;
+  primaryId: string;
+  name: string;
+  cleanTitle: string;
+  nameUrdu: string;
+  academicYear: string;
+  type: string;
+  system: ExamSystem;
+  institutionId: string | null;
+  institutionName: string | null;
+  startDate: string;
+  endDate: string;
+  status: "draft" | "active" | "locked" | "published";
+  sessions: ExamSession[];
+  totalClasses: number;
+  totalStudents: number;
+  totalSubjects: number;
+  classLabels: string[];
+  allLocked: boolean;
+};
+
+export function groupExamSessions(sessions: ExamSession[]): GroupedExam[] {
+  const map = new Map<string, ExamSession[]>();
+
+  for (const session of sessions) {
+    const cleanName = cleanExamName(session.name).toLowerCase();
+    const key = `${cleanName}::${session.academicYear}::${session.type}::${session.institutionId || ""}::${session.startDate}::${session.endDate}`;
+    const list = map.get(key) || [];
+    list.push(session);
+    map.set(key, list);
+  }
+
+  const result: GroupedExam[] = [];
+
+  for (const [key, groupSessions] of map.entries()) {
+    const first = groupSessions[0];
+    const totalStudents = groupSessions.reduce((acc, s) => acc + (s.studentCount || 0), 0);
+    const totalSubjects = groupSessions.reduce((acc, s) => acc + (s.subjects?.length || 0), 0);
+    const classLabels = Array.from(new Set(groupSessions.map((s) => s.groupLabel).filter(Boolean)));
+
+    let status: "draft" | "active" | "locked" | "published" = "draft";
+    if (groupSessions.every((s) => s.status === "published")) {
+      status = "published";
+    } else if (groupSessions.every((s) => s.status === "locked" || s.status === "published")) {
+      status = "locked";
+    } else if (groupSessions.some((s) => s.status === "active" || s.status === "locked" || s.status === "published")) {
+      status = "active";
+    }
+
+    const allLocked = groupSessions.every(
+      (s) => s.subjects && s.subjects.length > 0 && s.subjects.every((sub) => sub.locked),
+    );
+
+    result.push({
+      key,
+      primaryId: first.id,
+      name: first.name,
+      cleanTitle: cleanExamName(first.name),
+      nameUrdu: first.nameUrdu,
+      academicYear: first.academicYear,
+      type: first.type,
+      system: first.system,
+      institutionId: first.institutionId,
+      institutionName: first.institutionName,
+      startDate: first.startDate,
+      endDate: first.endDate,
+      status,
+      sessions: groupSessions,
+      totalClasses: groupSessions.length,
+      totalStudents,
+      totalSubjects,
+      classLabels,
+      allLocked,
+    });
+  }
+
+  return result;
 }
 
 type InstitutionOption = {
@@ -417,7 +497,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   const [options, setOptions] = useState<AcademicOptions>(emptyOptions);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<ExamSession | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<GroupedExam | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTerm, setSelectedTerm] = useState("all");
@@ -426,10 +506,10 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
   const [form, setForm] = useState({
-    classId: "",
+    classId: "all",
     sectionId: "",
-    categoryId: "",
-    subcategoryId: "",
+    categoryId: "all",
+    subcategoryId: "all",
     subjectId: "",
     type: system === "school" ? "quarterly" : "salanah",
     name: "",
@@ -437,6 +517,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     startDate: "",
     endDate: "",
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const activeInstitution = useMemo(() => {
     if (system === "school") {
@@ -506,8 +587,10 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await deleteExamSession(deleteTarget.id);
-      toast.success("Exam deleted");
+      await Promise.all(deleteTarget.sessions.map((s) => deleteExamSession(s.id)));
+      toast.success(
+        `Deleted examination "${deleteTarget.cleanTitle}" and all ${deleteTarget.sessions.length} class sessions`,
+      );
       setDeleteTarget(null);
       await load();
     } catch (error) {
@@ -521,21 +604,24 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     void load();
   }, [load]);
 
-  const uniqueTerms = useMemo(() => {
-    return Array.from(new Set(exams.map((e) => cleanExamName(e.name)))).filter(Boolean);
+  const groupedExams = useMemo(() => {
+    return groupExamSessions(exams);
   }, [exams]);
+
+  const uniqueTerms = useMemo(() => {
+    return Array.from(new Set(groupedExams.map((e) => e.cleanTitle))).filter(Boolean);
+  }, [groupedExams]);
 
   const uniqueClasses = useMemo(() => {
     return Array.from(new Set(exams.map((e) => e.groupLabel))).filter(Boolean);
   }, [exams]);
 
-  const filteredExams = useMemo(() => {
-    return exams.filter((exam) => {
-      const cleanName = cleanExamName(exam.name).toLowerCase();
-      const rawName = exam.name.toLowerCase();
-      const urduName = (exam.nameUrdu || "").toLowerCase();
-      const groupLabel = (exam.groupLabel || "").toLowerCase();
-      const academicYear = (exam.academicYear || "").toLowerCase();
+  const filteredGroups = useMemo(() => {
+    return groupedExams.filter((group) => {
+      const cleanName = group.cleanTitle.toLowerCase();
+      const rawName = group.name.toLowerCase();
+      const urduName = (group.nameUrdu || "").toLowerCase();
+      const academicYear = (group.academicYear || "").toLowerCase();
       const q = searchQuery.toLowerCase().trim();
 
       if (q) {
@@ -543,50 +629,57 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
           cleanName.includes(q) ||
           rawName.includes(q) ||
           urduName.includes(q) ||
-          groupLabel.includes(q) ||
-          academicYear.includes(q);
+          academicYear.includes(q) ||
+          group.classLabels.some((lbl) => lbl.toLowerCase().includes(q));
         if (!matches) return false;
       }
 
-      if (selectedTerm !== "all" && cleanExamName(exam.name) !== selectedTerm) {
+      if (selectedTerm !== "all" && group.cleanTitle !== selectedTerm) {
         return false;
       }
 
-      if (selectedClass !== "all" && exam.groupLabel !== selectedClass) {
+      if (selectedClass !== "all" && !group.classLabels.includes(selectedClass)) {
         return false;
       }
 
-      if (selectedStatus !== "all" && exam.status !== selectedStatus) {
+      if (selectedStatus !== "all" && group.status !== selectedStatus) {
         return false;
       }
 
       return true;
     });
-  }, [exams, searchQuery, selectedTerm, selectedClass, selectedStatus]);
+  }, [groupedExams, searchQuery, selectedTerm, selectedClass, selectedStatus]);
 
   const stats = useMemo(() => {
+    const totalExamEvents = groupedExams.length;
     const totalSessions = exams.length;
     const totalStudents = exams.reduce((acc, curr) => acc + (curr.studentCount || 0), 0);
-    const publishedCount = exams.filter((e) => e.status === "published").length;
+    const publishedCount = groupedExams.filter((e) => e.status === "published").length;
     const totalClasses = new Set(exams.map((e) => e.groupLabel)).size;
-    return { totalSessions, totalStudents, publishedCount, totalClasses };
-  }, [exams]);
+    return { totalExamEvents, totalSessions, totalStudents, publishedCount, totalClasses };
+  }, [groupedExams, exams]);
 
   async function handleCreate() {
-    if (!form.name || !form.nameUrdu || !form.startDate || !form.endDate) {
-      toast.error("Exam name and dates are required");
+    if (!form.name.trim() || !form.nameUrdu.trim() || !form.startDate || !form.endDate) {
+      toast.error("Exam name, Urdu name, and dates are required");
       return;
     }
 
+    setSubmitting(true);
     try {
       if (system === "school") {
-        const activeClasses = options.classes.filter((item) => item.active);
-        if (activeClasses.length === 0) {
+        const targetClasses =
+          form.classId && form.classId !== "all"
+            ? options.classes.filter((item) => item.id === form.classId && item.active)
+            : options.classes.filter((item) => item.active);
+
+        if (targetClasses.length === 0) {
           toast.error(`No active classes found for ${activeInstitution.name}`);
           return;
         }
 
-        for (const schoolClass of activeClasses) {
+        let createdCount = 0;
+        for (const schoolClass of targetClasses) {
           const classSubjects = await listExamSubjects({
             system: "school",
             schoolClassId: schoolClass.id,
@@ -608,19 +701,30 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
             startDate: form.startDate,
             endDate: form.endDate,
           });
+          createdCount++;
         }
+
+        toast.success(`Created ${createdCount} exam session${createdCount > 1 ? "s" : ""}`);
       } else {
-        const activeCategories = options.categories.filter((item) => item.active);
-        if (activeCategories.length === 0) {
+        let targetCategories = options.categories.filter((item) => item.active);
+        if (form.categoryId && form.categoryId !== "all") {
+          targetCategories = targetCategories.filter((item) => item.id === form.categoryId);
+        }
+
+        if (targetCategories.length === 0) {
           toast.error(`No active categories found for ${activeInstitution.name}`);
           return;
         }
 
-        for (const category of activeCategories) {
-          const activeSubcategories = category.subcategories.filter((item) => item.active);
-          if (activeSubcategories.length === 0) continue;
+        let createdCount = 0;
+        for (const category of targetCategories) {
+          let targetSubcategories = category.subcategories.filter((item) => item.active);
+          if (form.subcategoryId && form.subcategoryId !== "all") {
+            targetSubcategories = targetSubcategories.filter((item) => item.id === form.subcategoryId);
+          }
+          if (targetSubcategories.length === 0) continue;
 
-          for (const subcategory of activeSubcategories) {
+          for (const subcategory of targetSubcategories) {
             const categorySubjects = await listExamSubjects({
               system: "madrassa",
               schoolClassId: undefined,
@@ -642,15 +746,24 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
               startDate: form.startDate,
               endDate: form.endDate,
             });
+            createdCount++;
           }
         }
+
+        if (createdCount === 0) {
+          toast.error("No classes found to create exams for");
+          return;
+        }
+
+        toast.success(`Created ${createdCount} exam session${createdCount > 1 ? "s" : ""}`);
       }
 
-      toast.success("Exam created");
       setOpen(false);
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not create exam");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -662,7 +775,19 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
           titleUrdu={`${activeInstitution.nameUrdu} — امتحانات`}
           description={`Internal exam sessions, subjects, marks, DMCs, seating plans, and published results for ${activeInstitution.name} (${activeInstitution.campus}).`}
           actions={
-            <Button size="sm" className="gap-1.5 shadow-xs" onClick={() => setOpen(true)}>
+            <Button
+              size="sm"
+              className="gap-1.5 shadow-xs"
+              onClick={() => {
+                setForm((prev) => ({
+                  ...prev,
+                  categoryId: "all",
+                  subcategoryId: "all",
+                  classId: "all",
+                }));
+                setOpen(true);
+              }}
+            >
               <Plus className="h-4 w-4" />
               New Exam
             </Button>
@@ -680,9 +805,9 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="p-4 border border-border/70 bg-card/60 flex items-center justify-between shadow-xs">
           <div>
-            <p className="text-xs text-muted-foreground font-medium">Exam Sessions</p>
-            <p className="font-heading text-xl font-bold mt-1 tabular-nums">{stats.totalSessions}</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{stats.totalClasses} classes active</p>
+            <p className="text-xs text-muted-foreground font-medium">Exam Events</p>
+            <p className="font-heading text-xl font-bold mt-1 tabular-nums">{stats.totalExamEvents}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{stats.totalSessions} class sessions ({stats.totalClasses} classes)</p>
           </div>
           <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
             <ClipboardList className="h-5 w-5" />
@@ -704,7 +829,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
           <div>
             <p className="text-xs text-muted-foreground font-medium">Published Status</p>
             <p className="font-heading text-xl font-bold mt-1 text-emerald-600 dark:text-emerald-400 tabular-nums">
-              {stats.publishedCount} / {stats.totalSessions}
+              {stats.publishedCount} / {stats.totalExamEvents}
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">Results & DMCs ready</p>
           </div>
@@ -822,8 +947,8 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
         {(searchQuery || selectedTerm !== "all" || selectedClass !== "all" || selectedStatus !== "all") && (
           <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-border/50 text-xs">
             <span className="text-muted-foreground">
-              Showing <strong className="text-foreground">{filteredExams.length}</strong> of{" "}
-              {exams.length} exams matching filters
+              Showing <strong className="text-foreground">{filteredGroups.length}</strong> of{" "}
+              {groupedExams.length} examinations matching filters
             </span>
             <button
               type="button"
@@ -847,13 +972,13 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
         <Card className="p-12 text-center text-sm text-muted-foreground">
           Loading examinations...
         </Card>
-      ) : filteredExams.length === 0 ? (
+      ) : filteredGroups.length === 0 ? (
         <Card className="p-12 text-center border-dashed">
           <GraduationCap className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-40" />
           <h4 className="font-semibold text-base">No examinations found for {activeInstitution.name}</h4>
           <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-            {exams.length === 0
-              ? `No exam sessions have been scheduled yet for ${activeInstitution.name} (${activeInstitution.campus}). Click 'New Exam' to schedule one.`
+            {groupedExams.length === 0
+              ? `No exam events have been scheduled yet for ${activeInstitution.name} (${activeInstitution.campus}). Click 'New Exam' to schedule one.`
               : "No exam sessions match your active search and filter criteria."}
           </p>
           {searchQuery || selectedTerm !== "all" || selectedClass !== "all" || selectedStatus !== "all" ? (
@@ -883,56 +1008,175 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
         </Card>
       ) : viewMode === "grid" ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredExams.map((exam) => (
-            <ExamCard key={exam.id} exam={exam} onDelete={setDeleteTarget} />
+          {filteredGroups.map((group) => (
+            <GroupedExamCard key={group.key} exam={group} onDelete={setDeleteTarget} />
           ))}
         </div>
       ) : (
-        <ExamTableView exams={filteredExams} onDelete={setDeleteTarget} />
+        <GroupedExamTableView exams={filteredGroups} onDelete={setDeleteTarget} />
       )}
 
       <ResponsiveDialog
         title="Create Exam"
-        description="Create an internal exam from the selected academic scope."
+        description={`Create internal exam sessions for ${activeInstitution.name} (${activeInstitution.campus}).`}
         open={open}
         onOpenChange={setOpen}
         icon={ClipboardList}
         className="sm:max-w-3xl"
       >
         <div className="grid gap-4 p-1">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Exam Name">
-              <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+          {/* Active Institution Badge */}
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs text-primary font-medium">
+            <span className="text-xl">{activeInstitution.icon}</span>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm text-foreground flex items-center gap-2">
+                {activeInstitution.name}
+                <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
+                  {activeInstitution.campus}
+                </Badge>
+              </p>
+              <p className="text-xs text-muted-foreground font-urdu" dir="rtl">
+                {activeInstitution.nameUrdu} ({activeInstitution.campusUrdu})
+              </p>
+            </div>
+          </div>
+
+          {/* Academic Scope Selection */}
+          {system === "madrassa" ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Category · شعبہ">
+                <Select
+                  value={form.categoryId || "all"}
+                  onValueChange={(val) => setForm({ ...form, categoryId: val, subcategoryId: "all" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">تمام شعبہ جات (All Categories)</SelectItem>
+                    {options.categories
+                      .filter((c) => c.active)
+                      .map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name} {cat.nameUrdu ? `· ${cat.nameUrdu}` : ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Field label="Darja / Class · درجہ">
+                <Select
+                  value={form.subcategoryId || "all"}
+                  onValueChange={(val) => setForm({ ...form, subcategoryId: val })}
+                  disabled={!form.categoryId || form.categoryId === "all"}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        form.categoryId === "all"
+                          ? "All Classes in All Categories"
+                          : "All Classes in this Category"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">اس شعبے کے تمام درجات (All Classes in Category)</SelectItem>
+                    {options.categories
+                      .find((c) => c.id === form.categoryId)
+                      ?.subcategories.filter((s) => s.active)
+                      .map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          {sub.name} {sub.nameUrdu ? `· ${sub.nameUrdu}` : ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+          ) : (
+            <Field label="Class · جماعت">
+              <Select
+                value={form.classId || "all"}
+                onValueChange={(val) => setForm({ ...form, classId: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Classes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">تمام جماعتیں (All Classes)</SelectItem>
+                  {options.classes
+                    .filter((c) => c.active)
+                    .map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        {cls.name} {cls.nameUrdu ? `· ${cls.nameUrdu}` : ""}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </Field>
-            <Field label="Urdu Name">
-              <Input dir="rtl" className="font-urdu" value={form.nameUrdu} onChange={(event) => setForm({ ...form, nameUrdu: event.target.value })} />
+          )}
+
+          {/* Exam Name & Urdu Name */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Exam Name (English)">
+              <Input
+                value={form.name}
+                placeholder={system === "school" ? "Annual Examination 2026" : "Annual Examination 2026"}
+                onChange={(event) => setForm({ ...form, name: event.target.value })}
+              />
+            </Field>
+            <Field label="Exam Name (Urdu)">
+              <Input
+                dir="rtl"
+                className="font-urdu"
+                placeholder={system === "school" ? "سالانہ امتحان ۲۰۲۶" : "سالانہ امتحان ۲۰۲۶"}
+                value={form.nameUrdu}
+                onChange={(event) => setForm({ ...form, nameUrdu: event.target.value })}
+              />
             </Field>
           </div>
 
+          {/* Exam Type & Dates */}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Type">
+            <Field label="Type · نوعیت امتحان">
               <Select value={form.type} onValueChange={(value) => setForm({ ...form, type: value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {(system === "school" ? ["quarterly", "halfyearly", "annual"] : ["sahmahi", "salanah"]).map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  {(system === "school"
+                    ? [
+                        { value: "quarterly", label: "سہ ماہی (Quarterly)" },
+                        { value: "halfyearly", label: "شش ماہی (Half-Yearly)" },
+                        { value: "annual", label: "سالانہ (Annual)" },
+                        { value: "monthly", label: "ماہانہ (Monthly)" },
+                      ]
+                    : [
+                        { value: "sahmahi", label: "سہ ماہی (First Term)" },
+                        { value: "salanah", label: "سالانہ (Annual)" },
+                      ]
+                  ).map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Start">
+              <Field label="Start Date">
                 <Input type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
               </Field>
-              <Field label="End">
+              <Field label="End Date">
                 <Input type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} />
               </Field>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={() => void handleCreate()}>Create Exam</Button>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" disabled={submitting} onClick={() => setOpen(false)}>Cancel</Button>
+            <Button disabled={submitting} onClick={() => void handleCreate()}>
+              {submitting ? "Creating..." : "Create Exam"}
+            </Button>
           </div>
         </div>
       </ResponsiveDialog>
@@ -940,15 +1184,15 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Exam</AlertDialogTitle>
+            <AlertDialogTitle>Delete Examination</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{deleteTarget?.name}"? This action cannot be undone and will remove all associated marks, results, and seating data.
+              Are you sure you want to delete &ldquo;{deleteTarget?.cleanTitle}&rdquo;? This action cannot be undone and will permanently delete this examination across all {deleteTarget?.totalClasses} participating {deleteTarget?.totalClasses === 1 ? "class" : "classes"}, including associated marks, seating plans, and published results.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {deleting ? "Deleting..." : "Delete"}
+              {deleting ? "Deleting..." : `Delete All ${deleteTarget?.totalClasses ?? 1} Class Sessions`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -958,87 +1202,344 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
 }
 
 export function ExamDetailWorkspace({ examId, system }: { examId: string; system: ExamSystem }) {
+  const { gender } = useSystem();
+  const navigate = useNavigate();
   const [exam, setExam] = useState<ExamSession | null>(null);
+  const [siblingSessions, setSiblingSessions] = useState<ExamSession[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string>(examId);
   const [loading, setLoading] = useState(true);
+  const [deleteSessionTarget, setDeleteSessionTarget] = useState<ExamSession | null>(null);
+  const [deletingSession, setDeletingSession] = useState(false);
+
+  const loadExamAndSiblings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const primaryPayload = await getExamSession(examId);
+      const primary = primaryPayload.exam;
+      setExam(primary);
+
+      const listPayload = await listExamSessions({
+        system,
+        section: gender,
+        institutionId: primary.institutionId || undefined,
+      });
+
+      const primaryClean = cleanExamName(primary.name).toLowerCase();
+      const siblings = listPayload.exams.filter(
+        (s) =>
+          cleanExamName(s.name).toLowerCase() === primaryClean &&
+          s.academicYear === primary.academicYear &&
+          s.type === primary.type &&
+          (s.institutionId === primary.institutionId || !primary.institutionId),
+      );
+
+      if (!siblings.some((s) => s.id === primary.id)) {
+        siblings.unshift(primary);
+      }
+
+      setSiblingSessions(siblings);
+      setSelectedSessionId((current) => {
+        if (current && siblings.some((s) => s.id === current)) return current;
+        return primary.id;
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load exam");
+    } finally {
+      setLoading(false);
+    }
+  }, [examId, system, gender]);
 
   useEffect(() => {
-    let cancelled = false;
-    getExamSession(examId)
-      .then((payload) => {
-        if (!cancelled) setExam(payload.exam);
-      })
-      .catch((error) => {
-        if (!cancelled) toast.error(error instanceof Error ? error.message : "Could not load exam");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [examId]);
+    void loadExamAndSiblings();
+  }, [loadExamAndSiblings]);
 
-  if (loading) return <Card className="p-6 text-sm text-muted-foreground">Loading exam...</Card>;
-  if (!exam) return <Card className="p-6 text-sm text-destructive">Exam not found.</Card>;
+  const handleDeleteSession = async () => {
+    if (!deleteSessionTarget) return;
+    setDeletingSession(true);
+    try {
+      await deleteExamSession(deleteSessionTarget.id);
+      toast.success(`Removed ${deleteSessionTarget.groupLabel} from this examination`);
+
+      const remaining = siblingSessions.filter((s) => s.id !== deleteSessionTarget.id);
+      setDeleteSessionTarget(null);
+
+      if (remaining.length === 0) {
+        void navigate({ to: system === "school" ? "/school/exams" : "/madrassa/exams" });
+        return;
+      }
+
+      setSiblingSessions(remaining);
+      if (selectedSessionId === deleteSessionTarget.id) {
+        setSelectedSessionId(remaining[0].id);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete class session");
+    } finally {
+      setDeletingSession(false);
+    }
+  };
+
+  const currentSession = useMemo(() => {
+    return siblingSessions.find((s) => s.id === selectedSessionId) || exam;
+  }, [siblingSessions, selectedSessionId, exam]);
+
+  const aggregateStats = useMemo(() => {
+    const totalClasses = siblingSessions.length;
+    const totalStudents = siblingSessions.reduce((acc, s) => acc + (s.studentCount || 0), 0);
+    const totalSubjects = siblingSessions.reduce((acc, s) => acc + (s.subjects?.length || 0), 0);
+    const allLocked = siblingSessions.every(
+      (s) => s.subjects && s.subjects.length > 0 && s.subjects.every((sub) => sub.locked),
+    );
+    return { totalClasses, totalStudents, totalSubjects, allLocked };
+  }, [siblingSessions]);
+
+  if (loading) return <Card className="p-8 text-center text-sm text-muted-foreground">Loading examination details...</Card>;
+  if (!exam || !currentSession) return <Card className="p-8 text-center text-sm text-destructive">Examination not found.</Card>;
 
   return (
-    <div>
+    <div className="space-y-6">
       <BackLink system={system} examId={examId} />
+
       <PageHeader
         title={cleanExamName(exam.name)}
         titleUrdu={exam.nameUrdu}
-        description={`${exam.groupLabel}${exam.institutionName ? ` · ${exam.institutionName}` : ""} · ${formatDate(exam.startDate)} - ${formatDate(exam.endDate)}`}
+        description={`${exam.institutionName ? `${exam.institutionName} · ` : ""}${exam.academicYear} · ${formatDate(exam.startDate)} – ${formatDate(exam.endDate)} · ${aggregateStats.totalClasses} ${aggregateStats.totalClasses === 1 ? "Class" : "Classes"}`}
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5 shadow-xs" onClick={() => window.print()}>
               <Printer className="h-3.5 w-3.5" />
               Print Date Sheet
             </Button>
-            <ExamActionLinks exam={exam} />
+            <Badge
+              variant="outline"
+              className={cn("capitalize text-xs font-medium px-2.5 py-1", statusTone[exam.status])}
+            >
+              {exam.status}
+            </Badge>
           </div>
         }
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat icon={Calendar} label="Dates" value={`${formatDate(exam.startDate)} - ${formatDate(exam.endDate)}`} />
-        <Stat icon={Grid3x3} label="Subjects" value={String(exam.subjects.length)} />
-        <Stat icon={Users} label="Students" value={String(exam.studentCount)} />
-        <Stat icon={FileText} label="Status" value={exam.status} />
+      {/* Overview Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Stat
+          icon={Calendar}
+          label="Examination Schedule"
+          value={`${formatDate(exam.startDate)} – ${formatDate(exam.endDate)}`}
+        />
+        <Stat
+          icon={Layers}
+          label="Participating Classes"
+          value={`${aggregateStats.totalClasses} ${aggregateStats.totalClasses === 1 ? "Class" : "Classes"}`}
+        />
+        <Stat
+          icon={Users}
+          label="Total Candidates"
+          value={`${aggregateStats.totalStudents} Students`}
+        />
+        <Stat
+          icon={Award}
+          label="Total Subjects"
+          value={`${aggregateStats.totalSubjects} Subjects`}
+        />
       </div>
 
-      <Card className="overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Subject</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead className="text-end">Marks</TableHead>
-              <TableHead className="text-end">Lock</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {exam.subjects.map((subject) => (
-              <TableRow key={subject.id}>
-                <TableCell>
-                  <p className="font-medium">{subject.name}</p>
-                  <p className="font-urdu text-sm text-muted-foreground">{subject.nameUrdu}</p>
-                </TableCell>
-                <TableCell>{subject.examDate ? formatDate(subject.examDate) : "-"}</TableCell>
-                <TableCell className="font-mono text-xs">
-                  {[subject.startTime, subject.endTime].filter(Boolean).join(" - ") || "-"}
-                </TableCell>
-                <TableCell className="text-end font-mono">
-                  {subject.totalMarks} / {subject.passingMarks}
-                </TableCell>
-                <TableCell className="text-end">
-                  <Badge variant={subject.locked ? "secondary" : "outline"}>{subject.locked ? "Locked" : "Open"}</Badge>
-                </TableCell>
+      {/* Participating Classes Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Layers className="h-4.5 w-4.5 text-primary" />
+            <h3 className="font-semibold text-sm text-foreground">
+              Participating Classes · شامل درجات و جماعتیں
+            </h3>
+            <Badge variant="secondary" className="text-xs py-0 px-2 font-semibold bg-primary/10 text-primary">
+              {siblingSessions.length}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground hidden sm:block">
+            Click any class to view its timetable, or use quick actions below.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {siblingSessions.map((session) => {
+            const isSelected = session.id === currentSession.id;
+            return (
+              <Card
+                key={session.id}
+                onClick={() => setSelectedSessionId(session.id)}
+                className={cn(
+                  "p-4 border transition-all cursor-pointer flex flex-col justify-between gap-3 text-start",
+                  isSelected
+                    ? "border-primary bg-primary/5 ring-1 ring-primary shadow-xs"
+                    : "border-border/70 bg-card hover:border-primary/40 hover:shadow-2xs",
+                )}
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-sm text-foreground truncate">
+                        {session.groupLabel}
+                      </h4>
+                      <p className="text-xs text-muted-foreground font-urdu mt-0.5 truncate">
+                        {session.nameUrdu}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge
+                        variant="outline"
+                        className={cn("capitalize text-[10px] px-1.5 py-0.5", statusTone[session.status])}
+                      >
+                        {session.status}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteSessionTarget(session);
+                        }}
+                        title={`Remove ${session.groupLabel} from exam`}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 mt-2.5 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5 text-primary" />
+                      <strong className="text-foreground font-semibold">{session.studentCount}</strong> Students
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <BookOpen className="h-3.5 w-3.5 text-primary" />
+                      <strong className="text-foreground font-semibold">{session.subjects.length}</strong> Subjects
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-between gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <ClassActionLinks session={session} system={system} />
+                  <Button
+                    size="sm"
+                    variant={isSelected ? "secondary" : "ghost"}
+                    className="h-7 text-xs px-2"
+                    onClick={() => setSelectedSessionId(session.id)}
+                  >
+                    {isSelected ? "Active View" : "Timetable"}
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Selected Class Timetable & Subjects */}
+      <div className="space-y-3 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-card border border-border/70 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+              <BookOpen className="h-4.5 w-4.5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                <span>{currentSession.groupLabel}</span>
+                <Badge variant="outline" className="text-[11px] font-normal py-0">
+                  {currentSession.subjects.length} subjects
+                </Badge>
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Class examination timetable, marks status, and schedule
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <ClassActionLinks session={currentSession} system={system} />
+          </div>
+        </div>
+
+        <Card className="overflow-hidden border border-border/70 shadow-xs">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/40">
+                <TableHead className="text-xs font-semibold">Subject</TableHead>
+                <TableHead className="text-xs font-semibold">Exam Date</TableHead>
+                <TableHead className="text-xs font-semibold">Exam Time</TableHead>
+                <TableHead className="text-end text-xs font-semibold">Total / Passing</TableHead>
+                <TableHead className="text-end text-xs font-semibold">Status</TableHead>
+                <TableHead className="text-end text-xs font-semibold pe-4">Action</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+            </TableHeader>
+            <TableBody>
+              {currentSession.subjects.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-xs text-muted-foreground">
+                    No subjects configured for {currentSession.groupLabel}.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                currentSession.subjects.map((subject) => (
+                  <TableRow key={subject.id} className="hover:bg-muted/30 transition-colors">
+                    <TableCell>
+                      <p className="font-medium text-xs text-foreground">{subject.name}</p>
+                      <p className="font-urdu text-[11px] text-muted-foreground">{subject.nameUrdu}</p>
+                    </TableCell>
+                    <TableCell className="text-xs">{subject.examDate ? formatDate(subject.examDate) : "-"}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {[subject.startTime, subject.endTime].filter(Boolean).join(" - ") || "-"}
+                    </TableCell>
+                    <TableCell className="text-end font-mono text-xs">
+                      {subject.totalMarks} / {subject.passingMarks}
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <Badge variant={subject.locked ? "secondary" : "outline"} className="text-[10px]">
+                        {subject.locked ? "Locked" : "Open"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-end pe-4">
+                      <Button asChild size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-primary">
+                        <Link
+                          to={system === "school" ? "/school/exams/$id/results" : "/madrassa/exams/$id/marks"}
+                          params={{ id: currentSession.id }}
+                        >
+                          Marks →
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </Card>
+      </div>
+
+      {/* Delete Single Class Dialog */}
+      <AlertDialog
+        open={!!deleteSessionTarget}
+        onOpenChange={(open) => !open && setDeleteSessionTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Class from Examination</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove &ldquo;{deleteSessionTarget?.groupLabel}&rdquo; from this examination? This will delete the session and associated marks for this class only.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingSession}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSession}
+              disabled={deletingSession}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingSession ? "Removing..." : "Remove Class"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -1137,12 +1638,51 @@ export function ExamReportWorkspace() {
   );
 }
 
-function ExamTableView({
+function ClassActionLinks({ session, system }: { session: ExamSession; system: ExamSystem }) {
+  if (system === "school") {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Button asChild size="sm" variant="outline" className="h-7 text-xs px-2 gap-1">
+          <Link to="/school/exams/$id/seating" params={{ id: session.id }}>
+            <Grid3x3 className="h-3 w-3" /> Seating
+          </Link>
+        </Button>
+        <Button asChild size="sm" className="h-7 text-xs px-2 gap-1 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs">
+          <Link to="/school/exams/$id/results" params={{ id: session.id }}>
+            <Award className="h-3 w-3" /> Marks
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Button asChild size="sm" variant="outline" className="h-7 text-xs px-2 gap-1">
+        <Link to="/madrassa/exams/$id/seating" params={{ id: session.id }}>
+          <Grid3x3 className="h-3 w-3" /> Seating
+        </Link>
+      </Button>
+      <Button asChild size="sm" className="h-7 text-xs px-2 gap-1 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs">
+        <Link to="/madrassa/exams/$id/marks" params={{ id: session.id }}>
+          <Award className="h-3 w-3" /> Marks
+        </Link>
+      </Button>
+      <Button asChild size="sm" variant="outline" className="h-7 text-xs px-2 gap-1">
+        <Link to="/madrassa/exams/$id/results" params={{ id: session.id }}>
+          <FileText className="h-3 w-3" /> Results
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
+function GroupedExamTableView({
   exams,
   onDelete,
 }: {
-  exams: ExamSession[];
-  onDelete?: (exam: ExamSession) => void;
+  exams: GroupedExam[];
+  onDelete?: (exam: GroupedExam) => void;
 }) {
   return (
     <Card className="overflow-hidden border border-border/70 shadow-xs">
@@ -1151,76 +1691,87 @@ function ExamTableView({
           <TableHeader>
             <TableRow className="bg-muted/40">
               <TableHead className="font-semibold text-xs">Exam Title</TableHead>
-              <TableHead className="font-semibold text-xs">Class / Group</TableHead>
+              <TableHead className="font-semibold text-xs text-center">Classes</TableHead>
               <TableHead className="font-semibold text-xs">Academic Year</TableHead>
               <TableHead className="font-semibold text-xs">Date Range</TableHead>
-              <TableHead className="font-semibold text-xs text-center">Subjects</TableHead>
-              <TableHead className="font-semibold text-xs text-center">Students</TableHead>
+              <TableHead className="font-semibold text-xs text-center">Total Subjects</TableHead>
+              <TableHead className="font-semibold text-xs text-center">Total Students</TableHead>
               <TableHead className="font-semibold text-xs text-center">Status</TableHead>
               <TableHead className="font-semibold text-xs text-end pe-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {exams.map((exam) => (
-              <TableRow key={exam.id} className="hover:bg-muted/30 transition-colors">
-                <TableCell>
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
-                      <GraduationCap className="h-4 w-4" />
+            {exams.map((exam) => {
+              const detailPath =
+                exam.system === "school"
+                  ? `/school/exams/${exam.primaryId}`
+                  : `/madrassa/exams/${exam.primaryId}`;
+              return (
+                <TableRow key={exam.key} className="hover:bg-muted/30 transition-colors">
+                  <TableCell>
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                        <GraduationCap className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-xs text-foreground">{exam.cleanTitle}</p>
+                        <p className="font-urdu text-[11px] text-muted-foreground">{exam.nameUrdu}</p>
+                        {exam.institutionName && (
+                          <p className="text-[10px] text-muted-foreground/80 mt-0.5 flex items-center gap-1 font-medium">
+                            <Building2 className="h-2.5 w-2.5 opacity-70" />
+                            {exam.institutionName}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-xs text-foreground">{cleanExamName(exam.name)}</p>
-                      <p className="font-urdu text-[11px] text-muted-foreground">{exam.nameUrdu}</p>
-                      {exam.institutionName && (
-                        <p className="text-[10px] text-muted-foreground/80 mt-0.5 flex items-center gap-1 font-medium">
-                          <Building2 className="h-2.5 w-2.5 opacity-70" />
-                          {exam.institutionName}
-                        </p>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="secondary" className="gap-1 font-semibold text-xs py-0.5 px-2 bg-primary/10 text-primary border border-primary/20">
+                      <Layers className="h-3 w-3" />
+                      {exam.totalClasses} {exam.totalClasses === 1 ? "Class" : "Classes"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{exam.academicYear}</TableCell>
+                  <TableCell className="text-xs whitespace-nowrap">
+                    {formatDate(exam.startDate)} – {formatDate(exam.endDate)}
+                  </TableCell>
+                  <TableCell className="text-center font-medium text-xs">
+                    {exam.totalSubjects}
+                  </TableCell>
+                  <TableCell className="text-center font-semibold text-xs">
+                    {exam.totalStudents}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge
+                      variant="outline"
+                      className={cn("capitalize text-[10px] font-medium px-2 py-0.5", statusTone[exam.status])}
+                    >
+                      {exam.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-end pe-4">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs h-8">
+                        <Link to={detailPath as any}>
+                          <Eye className="h-3.5 w-3.5" /> Detail
+                        </Link>
+                      </Button>
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => onDelete(exam)}
+                          title="Delete Exam"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       )}
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className="gap-1 font-semibold text-xs py-0.5 px-2 bg-primary/10 text-primary border border-primary/20">
-                    <School className="h-3 w-3" />
-                    {exam.groupLabel}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{exam.academicYear}</TableCell>
-                <TableCell className="text-xs whitespace-nowrap">
-                  {formatDate(exam.startDate)} – {formatDate(exam.endDate)}
-                </TableCell>
-                <TableCell className="text-center font-medium text-xs">
-                  {exam.subjects.length}
-                </TableCell>
-                <TableCell className="text-center font-semibold text-xs">
-                  {exam.studentCount}
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge
-                    variant="outline"
-                    className={cn("capitalize text-[10px] font-medium px-2 py-0.5", statusTone[exam.status])}
-                  >
-                    {exam.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-end pe-4">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <ExamCardLinks exam={exam} />
-                    {onDelete && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => onDelete(exam)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -1228,8 +1779,18 @@ function ExamTableView({
   );
 }
 
-function ExamCard({ exam, onDelete }: { exam: ExamSession; onDelete?: (exam: ExamSession) => void }) {
-  const cleanTitle = cleanExamName(exam.name);
+function GroupedExamCard({
+  exam,
+  onDelete,
+}: {
+  exam: GroupedExam;
+  onDelete?: (exam: GroupedExam) => void;
+}) {
+  const detailPath =
+    exam.system === "school"
+      ? `/school/exams/${exam.primaryId}`
+      : `/madrassa/exams/${exam.primaryId}`;
+
   return (
     <Card className="flex flex-col p-5 border border-border/70 hover:border-primary/40 hover:shadow-md transition-all duration-200 group bg-card">
       <div className="flex items-start justify-between gap-3">
@@ -1239,7 +1800,7 @@ function ExamCard({ exam, onDelete }: { exam: ExamSession; onDelete?: (exam: Exa
           </div>
           <div className="min-w-0">
             <h4 className="font-semibold text-base tracking-tight truncate group-hover:text-primary transition-colors">
-              {cleanTitle}
+              {exam.cleanTitle}
             </h4>
             <p className="font-urdu text-xs text-muted-foreground mt-0.5 truncate">
               {exam.nameUrdu}
@@ -1271,6 +1832,7 @@ function ExamCard({ exam, onDelete }: { exam: ExamSession; onDelete?: (exam: Exa
               size="sm"
               className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg"
               onClick={() => onDelete(exam)}
+              title="Delete Exam"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -1283,8 +1845,8 @@ function ExamCard({ exam, onDelete }: { exam: ExamSession; onDelete?: (exam: Exa
           variant="secondary"
           className="gap-1 font-semibold text-xs py-0.5 px-2 bg-primary/10 text-primary border border-primary/20"
         >
-          <School className="h-3 w-3" />
-          {exam.groupLabel}
+          <Layers className="h-3 w-3" />
+          {exam.totalClasses} {exam.totalClasses === 1 ? "Class" : "Classes"}
         </Badge>
         {exam.institutionName && (
           <Badge variant="outline" className="text-xs text-muted-foreground py-0.5 px-2 gap-1">
@@ -1315,7 +1877,7 @@ function ExamCard({ exam, onDelete }: { exam: ExamSession; onDelete?: (exam: Exa
             Candidates
           </p>
           <p className="font-semibold text-foreground mt-0.5">
-            {exam.studentCount} Students
+            {exam.totalStudents} Students
           </p>
         </div>
 
@@ -1325,68 +1887,47 @@ function ExamCard({ exam, onDelete }: { exam: ExamSession; onDelete?: (exam: Exa
             Subjects
           </p>
           <p className="font-semibold text-foreground mt-0.5">
-            {exam.subjects.length} Subjects
+            {exam.totalSubjects} Subjects
           </p>
         </div>
 
         <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40">
           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
             <Award className="h-3 w-3" />
-            Lock Status
+            Status
           </p>
           <p className="font-medium text-foreground mt-0.5">
-            {exam.subjects.every((s) => s.locked) ? "Locked" : "Open for Marks"}
+            {exam.allLocked ? "Locked" : "Open for Marks"}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 pt-3 border-t border-border/60 grid grid-cols-3 gap-2">
-        <ExamCardLinks exam={exam} />
+      {exam.classLabels.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1 items-center">
+          {exam.classLabels.slice(0, 3).map((lbl, idx) => (
+            <span
+              key={idx}
+              className="inline-flex items-center text-[11px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium"
+            >
+              {lbl}
+            </span>
+          ))}
+          {exam.classLabels.length > 3 && (
+            <span className="text-[11px] text-muted-foreground font-medium">
+              +{exam.classLabels.length - 3} more
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="mt-4 pt-3 border-t border-border/60">
+        <Button asChild size="sm" className="w-full gap-1.5 text-xs h-8.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs font-medium">
+          <Link to={detailPath as any}>
+            <Eye className="h-3.5 w-3.5" /> View Exam & Participating Classes ({exam.totalClasses})
+          </Link>
+        </Button>
       </div>
     </Card>
-  );
-}
-
-function ExamCardLinks({ exam }: { exam: ExamSession }) {
-  if (exam.system === "school") {
-    return (
-      <>
-        <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs h-8">
-          <Link to="/school/exams/$id" params={{ id: exam.id }}>
-            <Eye className="h-3.5 w-3.5" /> Detail
-          </Link>
-        </Button>
-        <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs h-8">
-          <Link to="/school/exams/$id/seating" params={{ id: exam.id }}>
-            <Grid3x3 className="h-3.5 w-3.5" /> Seating
-          </Link>
-        </Button>
-        <Button asChild size="sm" className="gap-1.5 text-xs h-8 bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs">
-          <Link to="/school/exams/$id/results" params={{ id: exam.id }}>
-            <Award className="h-3.5 w-3.5" /> Marks
-          </Link>
-        </Button>
-      </>
-    );
-  }
-  return (
-    <>
-      <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs h-8">
-        <Link to="/madrassa/exams/$id" params={{ id: exam.id }}>
-          <Eye className="h-3.5 w-3.5" /> Detail
-        </Link>
-      </Button>
-      <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs h-8">
-        <Link to="/madrassa/exams/$id/seating" params={{ id: exam.id }}>
-          <Grid3x3 className="h-3.5 w-3.5" /> Seating
-        </Link>
-      </Button>
-      <Button asChild size="sm" className="gap-1.5 text-xs h-8 bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs">
-        <Link to="/madrassa/exams/$id/marks" params={{ id: exam.id }}>
-          <Award className="h-3.5 w-3.5" /> Marks
-        </Link>
-      </Button>
-    </>
   );
 }
 
@@ -1492,14 +2033,10 @@ function seedExamForm<T extends {
   sectionId: string;
   categoryId: string;
   subcategoryId: string;
-}>(form: T, options: AcademicOptions, system: ExamSystem): T {
-  const classId = form.classId || options.classes.find((item) => item.active)?.id || "";
-  const sectionId =
-    form.sectionId || options.classes.find((item) => item.id === classId)?.sections?.find((item) => item.active)?.id || "";
-  const categoryId = form.categoryId || options.categories.find((item) => item.active)?.id || "";
-  const subcategoryId =
-    form.subcategoryId ||
-    options.categories.find((item) => item.id === categoryId)?.subcategories?.find((item) => item.active)?.id ||
-    "";
+}>(form: T, _options: AcademicOptions, _system: ExamSystem): T {
+  const classId = form.classId || "all";
+  const sectionId = form.sectionId || "";
+  const categoryId = form.categoryId || "all";
+  const subcategoryId = form.subcategoryId || "all";
   return { ...form, classId, sectionId, categoryId, subcategoryId };
 }

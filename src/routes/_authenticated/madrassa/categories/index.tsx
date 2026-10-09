@@ -18,13 +18,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { cn } from "@/lib/utils";
@@ -77,7 +70,6 @@ function CategoriesPage() {
   const [formRollPrefix, setFormRollPrefix] = useState("");
   const [formDarja, setFormDarja] = useState("");
   const [formFee, setFormFee] = useState("");
-  const [formSection, setFormSection] = useState<string>("male");
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
@@ -106,8 +98,7 @@ function CategoriesPage() {
     setFormRollPrefix("");
     setFormDarja("");
     setFormFee("");
-    setFormSection(gender);
-  }, [gender]);
+  }, []);
 
   useEffect(() => {
     void loadCategories();
@@ -200,7 +191,7 @@ function CategoriesPage() {
         ? "male"
         : selectedCategory.section === "female"
           ? "female"
-          : (formSection || gender);
+          : gender;
 
     setSubmitting(true);
     try {
@@ -291,7 +282,6 @@ function CategoriesPage() {
                 size="sm"
                 className="gap-1.5"
                 onClick={() => {
-                  setFormSection(selectedCategory.section === "both" ? "both" : (selectedCategory.section || gender));
                   setAddOpen(true);
                 }}
               >
@@ -391,20 +381,6 @@ function CategoriesPage() {
               placeholder="Hifz Year 1"
             />
           </BilingualLabel>
-          {selectedCategory?.section === "both" && (
-            <BilingualLabel urdu="کیمپس / سیکشن" english="Campus / Section" lang={lang}>
-              <Select value={formSection} onValueChange={setFormSection}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("Select Campus", "کیمپس منتخب کریں")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="both">{t("Both Campuses (Boys & Girls)", "دونوں کیمپس (بنین اور بنات)")}</SelectItem>
-                  <SelectItem value="male">{t("Baneen Campus (Boys)", "جامعہ قاسمیہ - بنین")}</SelectItem>
-                  <SelectItem value="female">{t("Banat Campus (Girls)", "جامعہ زینب - بنات")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </BilingualLabel>
-          )}
           <BilingualLabel urdu="رول پریفکس" english="Roll Prefix" lang={lang}>
             <Input
               value={formRollPrefix}

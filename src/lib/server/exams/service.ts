@@ -372,6 +372,178 @@ export async function listExamSessions(request: Request, query: z.infer<typeof e
   };
 }
 
+async function resolveExamProgramAndInstitution(params: {
+  system: ExamSystem;
+  institutionId?: string | null;
+  programId?: string | null;
+  madrassaCategoryId?: string | null;
+  madrassaSubcategoryId?: string | null;
+  schoolClassId?: string | null;
+}): Promise<{ institutionId: string; programId: string }> {
+  let { system, institutionId, programId, madrassaCategoryId, madrassaSubcategoryId, schoolClassId } = params;
+
+  if (system === "madrassa") {
+    // 1. Resolve institutionId if not provided
+    if (!institutionId) {
+      if (madrassaSubcategoryId) {
+        const [subcat] = await db
+          .select({
+            subcatSection: madrassaSubcategories.section,
+            categorySection: madrassaCategories.section,
+            categoryId: madrassaCategories.id,
+          })
+          .from(madrassaSubcategories)
+          .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+          .where(eq(madrassaSubcategories.id, madrassaSubcategoryId))
+          .limit(1);
+
+        if (subcat) {
+          const sec = subcat.subcatSection || subcat.categorySection;
+          institutionId = sec === "female" || sec === "banat" ? "jamia_zainab_banat" : "jamia_qasmia_baneen";
+          madrassaCategoryId ??= subcat.categoryId;
+        }
+      } else if (madrassaCategoryId) {
+        const [cat] = await db
+          .select({ section: madrassaCategories.section })
+          .from(madrassaCategories)
+          .where(eq(madrassaCategories.id, madrassaCategoryId))
+          .limit(1);
+
+        if (cat) {
+          institutionId =
+            cat.section === "female" || cat.section === "banat" ? "jamia_zainab_banat" : "jamia_qasmia_baneen";
+        }
+      }
+      institutionId ??= "jamia_qasmia_baneen";
+    }
+
+    // 2. If programId is provided, verify it belongs to this institutionId
+    if (programId) {
+      const [existing] = await db
+        .select({ id: programs.id })
+        .from(programs)
+        .where(
+          and(
+            eq(programs.id, programId),
+            eq(programs.institutionId, institutionId),
+            eq(programs.system, "madrassa"),
+            eq(programs.active, true),
+          ),
+        )
+        .limit(1);
+      if (!existing) {
+        programId = undefined;
+      }
+    }
+
+    // 3. Resolve programId matching institutionId and category
+    if (!programId) {
+      let categoryId = madrassaCategoryId;
+      if (!categoryId && madrassaSubcategoryId) {
+        const [subcat] = await db
+          .select({ categoryId: madrassaSubcategories.categoryId })
+          .from(madrassaSubcategories)
+          .where(eq(madrassaSubcategories.id, madrassaSubcategoryId))
+          .limit(1);
+        categoryId = subcat?.categoryId;
+      }
+
+      let targetKind: string | undefined;
+      if (categoryId) {
+        if (categoryId === "hifz") targetKind = "hifz";
+        else if (categoryId === "qaida_nazira" || categoryId === "nazira") targetKind = "nazira";
+        else if (categoryId === "dars_nizami") targetKind = "dars_nizami";
+        else targetKind = categoryId;
+      }
+
+      if (targetKind) {
+        const [matchedProgram] = await db
+          .select({ id: programs.id })
+          .from(programs)
+          .where(
+            and(
+              eq(programs.institutionId, institutionId),
+              eq(programs.system, "madrassa"),
+              eq(programs.kind, targetKind),
+              eq(programs.active, true),
+            ),
+          )
+          .limit(1);
+        if (matchedProgram) {
+          programId = matchedProgram.id;
+        }
+      }
+
+      if (!programId) {
+        const [fallbackProgram] = await db
+          .select({ id: programs.id })
+          .from(programs)
+          .where(
+            and(
+              eq(programs.institutionId, institutionId),
+              eq(programs.system, "madrassa"),
+              eq(programs.active, true),
+            ),
+          )
+          .limit(1);
+        programId =
+          fallbackProgram?.id ??
+          (institutionId === "jamia_zainab_banat" ? "zainab_dars_nizami" : "qasmia_dars_nizami");
+      }
+    }
+  } else {
+    // School
+    if (schoolClassId) {
+      const [cls] = await db
+        .select({ institutionId: schoolClasses.institutionId })
+        .from(schoolClasses)
+        .where(eq(schoolClasses.id, schoolClassId))
+        .limit(1);
+      if (cls?.institutionId) {
+        institutionId = cls.institutionId;
+      }
+    }
+    institutionId ??= "al_qasim_academy";
+
+    if (programId) {
+      const [existing] = await db
+        .select({ id: programs.id })
+        .from(programs)
+        .where(
+          and(
+            eq(programs.id, programId),
+            eq(programs.institutionId, institutionId),
+            or(eq(programs.system, "school"), eq(programs.system, "school_support")),
+            eq(programs.active, true),
+          ),
+        )
+        .limit(1);
+      if (!existing) {
+        programId = undefined;
+      }
+    }
+
+    if (!programId) {
+      const [matchedProgram] = await db
+        .select({ id: programs.id })
+        .from(programs)
+        .where(
+          and(
+            eq(programs.institutionId, institutionId),
+            or(eq(programs.system, "school"), eq(programs.system, "school_support")),
+            eq(programs.active, true),
+          ),
+        )
+        .limit(1);
+      programId =
+        matchedProgram?.id ??
+        (institutionId === "jamia_zainab_banat" ? "zainab_school_support" : "al_qasim_school");
+    }
+  }
+
+  return { institutionId, programId };
+}
+
 export async function createExamSession(request: Request, input: z.infer<typeof examInputSchema>) {
   const actor = await requireExamPermission(request, input.system, "create");
   validateExamScope(input.system, input);
@@ -383,68 +555,21 @@ export async function createExamSession(request: Request, input: z.infer<typeof 
   let programId = input.programId;
   let academicYear = input.academicYear;
 
+  const resolved = await resolveExamProgramAndInstitution({
+    system: input.system,
+    institutionId,
+    programId,
+    madrassaCategoryId: input.madrassaCategoryId,
+    madrassaSubcategoryId: input.madrassaSubcategoryId,
+    schoolClassId: input.schoolClassId,
+  });
+
+  institutionId = resolved.institutionId;
+  programId = resolved.programId;
+
   if (input.system === "madrassa") {
-    if (!institutionId || !programId) {
-      const scopeId = input.madrassaSubcategoryId || input.madrassaCategoryId;
-      if (scopeId) {
-        const [scope] = await db
-          .select({
-            categorySection: madrassaCategories.section,
-            categoryId: madrassaCategories.id,
-          })
-          .from(madrassaSubcategories)
-          .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
-          .where(eq(madrassaSubcategories.id, scopeId))
-          .limit(1);
-
-        if (scope) {
-          const targetSection = scope.categorySection === "female" ? "banat" : "baneen";
-          const [matchedProgram] = await db
-            .select({ programId: programs.id, institutionId: programs.institutionId })
-            .from(programs)
-            .where(and(eq(programs.system, "madrassa"), eq(programs.active, true)))
-            .limit(1);
-
-          if (matchedProgram) {
-            institutionId ??= matchedProgram.institutionId;
-            programId ??= matchedProgram.programId;
-          }
-        }
-      }
-    }
-
     academicYear ??= (await getActiveAcademicYear("madrassa")).name;
   } else if (input.system === "school") {
-    if (!institutionId || !programId) {
-      if (input.schoolClassId) {
-        const [cls] = await db
-          .select({ institutionId: schoolClasses.institutionId })
-          .from(schoolClasses)
-          .where(eq(schoolClasses.id, input.schoolClassId))
-          .limit(1);
-        if (cls) {
-          institutionId ??= cls.institutionId;
-          const [matchedProgram] = await db
-            .select({ programId: programs.id, institutionId: programs.institutionId })
-            .from(programs)
-            .where(and(eq(programs.institutionId, cls.institutionId), eq(programs.system, "school"), eq(programs.active, true)))
-            .limit(1);
-          if (matchedProgram) {
-            programId ??= matchedProgram.programId;
-          }
-        }
-      }
-      institutionId ??= "al_qasim_academy";
-      if (!programId) {
-        const [matchedProgram] = await db
-          .select({ programId: programs.id })
-          .from(programs)
-          .where(and(eq(programs.institutionId, institutionId), eq(programs.system, "school"), eq(programs.active, true)))
-          .limit(1);
-        programId = matchedProgram?.programId ?? "al_qasim_school";
-      }
-    }
-
     academicYear ??= (await getActiveAcademicYear("school")).name;
   }
 
@@ -499,78 +624,31 @@ export async function updateExamSession(
   if (current.status === "published") throw new HttpError("Published exams cannot be edited", 400);
 
   const nextSystem = input.system ?? current.system;
+  let nextInstitutionId = input.institutionId ?? current.institutionId ?? undefined;
+  let nextProgramId = input.programId ?? current.programId ?? undefined;
+  let nextAcademicYear = input.academicYear ?? current.academicYear;
+
   validateExamScope(nextSystem, {
     schoolClassId: input.schoolClassId ?? current.schoolClassId ?? undefined,
     madrassaCategoryId: input.madrassaCategoryId ?? current.madrassaCategoryId ?? undefined,
     madrassaSubcategoryId: input.madrassaSubcategoryId ?? current.madrassaSubcategoryId ?? undefined,
   });
 
-  let nextInstitutionId = input.institutionId ?? current.institutionId;
-  let nextProgramId = input.programId ?? current.programId;
-  let nextAcademicYear = input.academicYear ?? current.academicYear;
+  const resolved = await resolveExamProgramAndInstitution({
+    system: nextSystem,
+    institutionId: nextInstitutionId,
+    programId: nextProgramId,
+    madrassaCategoryId: input.madrassaCategoryId ?? current.madrassaCategoryId,
+    madrassaSubcategoryId: input.madrassaSubcategoryId ?? current.madrassaSubcategoryId,
+    schoolClassId: input.schoolClassId ?? current.schoolClassId,
+  });
+
+  nextInstitutionId = resolved.institutionId;
+  nextProgramId = resolved.programId;
 
   if (nextSystem === "madrassa") {
-    if (!nextInstitutionId || !nextProgramId) {
-      const scopeId = input.madrassaSubcategoryId ?? current.madrassaSubcategoryId ?? input.madrassaCategoryId ?? current.madrassaCategoryId;
-      if (scopeId) {
-        const [scope] = await db
-          .select({
-            categorySection: madrassaCategories.section,
-            categoryId: madrassaCategories.id,
-          })
-          .from(madrassaSubcategories)
-          .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
-          .where(eq(madrassaSubcategories.id, scopeId))
-          .limit(1);
-
-        if (scope) {
-          const [matchedProgram] = await db
-            .select({ programId: programs.id, institutionId: programs.institutionId })
-            .from(programs)
-            .where(and(eq(programs.system, "madrassa"), eq(programs.active, true)))
-            .limit(1);
-
-          if (matchedProgram) {
-            nextInstitutionId ??= matchedProgram.institutionId;
-            nextProgramId ??= matchedProgram.programId;
-          }
-        }
-      }
-    }
-
     nextAcademicYear ??= (await getActiveAcademicYear("madrassa")).name;
   } else if (nextSystem === "school") {
-    if (!nextInstitutionId || !nextProgramId) {
-      const classId = input.schoolClassId ?? current.schoolClassId;
-      if (classId) {
-        const [cls] = await db
-          .select({ institutionId: schoolClasses.institutionId })
-          .from(schoolClasses)
-          .where(eq(schoolClasses.id, classId))
-          .limit(1);
-        if (cls) {
-          nextInstitutionId ??= cls.institutionId;
-          const [matchedProgram] = await db
-            .select({ programId: programs.id, institutionId: programs.institutionId })
-            .from(programs)
-            .where(and(eq(programs.institutionId, cls.institutionId), eq(programs.system, "school"), eq(programs.active, true)))
-            .limit(1);
-          if (matchedProgram) {
-            nextProgramId ??= matchedProgram.programId;
-          }
-        }
-      }
-      nextInstitutionId ??= "al_qasim_academy";
-      if (!nextProgramId) {
-        const [matchedProgram] = await db
-          .select({ programId: programs.id })
-          .from(programs)
-          .where(and(eq(programs.institutionId, nextInstitutionId), eq(programs.system, "school"), eq(programs.active, true)))
-          .limit(1);
-        nextProgramId = matchedProgram?.programId ?? "al_qasim_school";
-      }
-    }
-
     nextAcademicYear ??= (await getActiveAcademicYear("school")).name;
   }
 
@@ -1707,7 +1785,8 @@ async function assertProgramScope(system: ExamSystem, institutionId: string, pro
     .where(and(eq(programs.id, programId), eq(programs.institutionId, institutionId)))
     .limit(1);
   if (!row) throw new HttpError("Program does not belong to the selected institution", 400);
-  if (row.system !== system) throw new HttpError("Program system does not match exam system", 400);
+  const matches = row.system === system || (system === "school" && row.system === "school_support");
+  if (!matches) throw new HttpError("Program system does not match exam system", 400);
 }
 
 function assertSubjectScope(system: ExamSystem, schoolClassId?: string, madrassaSubcategoryId?: string) {
