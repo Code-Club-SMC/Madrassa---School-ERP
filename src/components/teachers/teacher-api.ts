@@ -181,12 +181,22 @@ export function getMyTeacherExams() {
     sessions: Array<{
       id: string;
       name: string;
+      nameUrdu?: string | null;
       system: "school" | "madrassa";
       status: string;
       academicYear: string;
       startDate: string;
       endDate: string;
       publishedAt: string | null;
+      schoolClassId?: string | null;
+      schoolClassName?: string | null;
+      schoolClassNameUrdu?: string | null;
+      madrassaCategoryId?: string | null;
+      madrassaCategoryName?: string | null;
+      madrassaCategoryNameUrdu?: string | null;
+      madrassaSubcategoryId?: string | null;
+      madrassaSubcategoryName?: string | null;
+      madrassaSubcategoryNameUrdu?: string | null;
     }>;
   }>("/api/teachers/me/exams");
 }

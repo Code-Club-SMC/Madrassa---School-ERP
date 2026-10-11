@@ -7,5 +7,5 @@ export const Route = createFileRoute("/_authenticated/school/exams/$id/results")
 
 function ResultsPage() {
   const { id } = useParams({ from: "/_authenticated/school/exams/$id/results" });
-  return <MarksEntry examId={id} system="school" />;
+  return <MarksEntry examId={id} system="school" readOnly />;
 }

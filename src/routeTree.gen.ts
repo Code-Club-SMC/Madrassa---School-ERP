@@ -153,6 +153,7 @@ import { Route as AuthenticatedMadrassaExamsIdMarksRouteImport } from './routes/
 import { Route as AuthenticatedMadrassaExamsIdResultsRouteImport } from './routes/_authenticated/madrassa/exams/$id/results'
 import { Route as AuthenticatedMadrassaExamsIdSeatingRouteImport } from './routes/_authenticated/madrassa/exams/$id/seating'
 import { Route as AuthenticatedSchoolExamsIdIndexRouteImport } from './routes/_authenticated/school/exams/$id/index'
+import { Route as AuthenticatedSchoolExamsIdMarksRouteImport } from './routes/_authenticated/school/exams/$id/marks'
 import { Route as AuthenticatedSchoolExamsIdResultsRouteImport } from './routes/_authenticated/school/exams/$id/results'
 import { Route as AuthenticatedSchoolExamsIdSeatingRouteImport } from './routes/_authenticated/school/exams/$id/seating'
 import { Route as ApiAcademicMadrassaCategoriesIdRouteImport } from './routes/api/academic/madrassa/categories/$id'
@@ -976,6 +977,12 @@ const AuthenticatedSchoolExamsIdIndexRoute =
     path: '/$id/',
     getParentRoute: () => AuthenticatedSchoolExamsRoute,
   } as any)
+const AuthenticatedSchoolExamsIdMarksRoute =
+  AuthenticatedSchoolExamsIdMarksRouteImport.update({
+    id: '/$id/marks',
+    path: '/$id/marks',
+    getParentRoute: () => AuthenticatedSchoolExamsRoute,
+  } as any)
 const AuthenticatedSchoolExamsIdResultsRoute =
   AuthenticatedSchoolExamsIdResultsRouteImport.update({
     id: '/$id/results',
@@ -1295,6 +1302,7 @@ export interface FileRoutesByFullPath {
   '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
   '/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
   '/madrassa/exams/$id/seating': typeof AuthenticatedMadrassaExamsIdSeatingRoute
+  '/school/exams/$id/marks': typeof AuthenticatedSchoolExamsIdMarksRoute
   '/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
   '/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
   '/api/academic/madrassa/categories/$id': typeof ApiAcademicMadrassaCategoriesIdRouteWithChildren
@@ -1461,6 +1469,7 @@ export interface FileRoutesByTo {
   '/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
   '/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
   '/madrassa/exams/$id/seating': typeof AuthenticatedMadrassaExamsIdSeatingRoute
+  '/school/exams/$id/marks': typeof AuthenticatedSchoolExamsIdMarksRoute
   '/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
   '/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
   '/api/academic/madrassa/categories/$id': typeof ApiAcademicMadrassaCategoriesIdRouteWithChildren
@@ -1638,6 +1647,7 @@ export interface FileRoutesById {
   '/_authenticated/madrassa/exams/$id/marks': typeof AuthenticatedMadrassaExamsIdMarksRoute
   '/_authenticated/madrassa/exams/$id/results': typeof AuthenticatedMadrassaExamsIdResultsRoute
   '/_authenticated/madrassa/exams/$id/seating': typeof AuthenticatedMadrassaExamsIdSeatingRoute
+  '/_authenticated/school/exams/$id/marks': typeof AuthenticatedSchoolExamsIdMarksRoute
   '/_authenticated/school/exams/$id/results': typeof AuthenticatedSchoolExamsIdResultsRoute
   '/_authenticated/school/exams/$id/seating': typeof AuthenticatedSchoolExamsIdSeatingRoute
   '/api/academic/madrassa/categories/$id': typeof ApiAcademicMadrassaCategoriesIdRouteWithChildren
@@ -1815,6 +1825,7 @@ export interface FileRouteTypes {
     | '/madrassa/exams/$id/marks'
     | '/madrassa/exams/$id/results'
     | '/madrassa/exams/$id/seating'
+    | '/school/exams/$id/marks'
     | '/school/exams/$id/results'
     | '/school/exams/$id/seating'
     | '/api/academic/madrassa/categories/$id'
@@ -1981,6 +1992,7 @@ export interface FileRouteTypes {
     | '/madrassa/exams/$id/marks'
     | '/madrassa/exams/$id/results'
     | '/madrassa/exams/$id/seating'
+    | '/school/exams/$id/marks'
     | '/school/exams/$id/results'
     | '/school/exams/$id/seating'
     | '/api/academic/madrassa/categories/$id'
@@ -2157,6 +2169,7 @@ export interface FileRouteTypes {
     | '/_authenticated/madrassa/exams/$id/marks'
     | '/_authenticated/madrassa/exams/$id/results'
     | '/_authenticated/madrassa/exams/$id/seating'
+    | '/_authenticated/school/exams/$id/marks'
     | '/_authenticated/school/exams/$id/results'
     | '/_authenticated/school/exams/$id/seating'
     | '/api/academic/madrassa/categories/$id'
@@ -3265,6 +3278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSchoolExamsIdIndexRouteImport
       parentRoute: typeof AuthenticatedSchoolExamsRoute
     }
+    '/_authenticated/school/exams/$id/marks': {
+      id: '/_authenticated/school/exams/$id/marks'
+      path: '/$id/marks'
+      fullPath: '/school/exams/$id/marks'
+      preLoaderRoute: typeof AuthenticatedSchoolExamsIdMarksRouteImport
+      parentRoute: typeof AuthenticatedSchoolExamsRoute
+    }
     '/_authenticated/school/exams/$id/results': {
       id: '/_authenticated/school/exams/$id/results'
       path: '/$id/results'
@@ -3628,6 +3648,7 @@ const AuthenticatedSchoolClassesRouteWithChildren =
 interface AuthenticatedSchoolExamsRouteChildren {
   AuthenticatedSchoolExamsBoardRoute: typeof AuthenticatedSchoolExamsBoardRoute
   AuthenticatedSchoolExamsIndexRoute: typeof AuthenticatedSchoolExamsIndexRoute
+  AuthenticatedSchoolExamsIdMarksRoute: typeof AuthenticatedSchoolExamsIdMarksRoute
   AuthenticatedSchoolExamsIdResultsRoute: typeof AuthenticatedSchoolExamsIdResultsRoute
   AuthenticatedSchoolExamsIdSeatingRoute: typeof AuthenticatedSchoolExamsIdSeatingRoute
   AuthenticatedSchoolExamsIdIndexRoute: typeof AuthenticatedSchoolExamsIdIndexRoute
@@ -3637,6 +3658,7 @@ const AuthenticatedSchoolExamsRouteChildren: AuthenticatedSchoolExamsRouteChildr
   {
     AuthenticatedSchoolExamsBoardRoute: AuthenticatedSchoolExamsBoardRoute,
     AuthenticatedSchoolExamsIndexRoute: AuthenticatedSchoolExamsIndexRoute,
+    AuthenticatedSchoolExamsIdMarksRoute: AuthenticatedSchoolExamsIdMarksRoute,
     AuthenticatedSchoolExamsIdResultsRoute:
       AuthenticatedSchoolExamsIdResultsRoute,
     AuthenticatedSchoolExamsIdSeatingRoute:

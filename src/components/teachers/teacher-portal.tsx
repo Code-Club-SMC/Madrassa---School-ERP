@@ -553,31 +553,66 @@ function ExamsTab({
           </p>
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {data.sessions.map((session) => (
-              <div key={session.id} className="rounded-md border p-3 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{session.name}</p>
-                    <Badge variant="outline">{session.status}</Badge>
+            {data.sessions.map((session) => {
+              const classLabel =
+                session.system === "school"
+                  ? (isUrdu ? session.schoolClassNameUrdu : session.schoolClassName) ||
+                    session.schoolClassName ||
+                    session.schoolClassId
+                  : [
+                      isUrdu
+                        ? session.madrassaCategoryNameUrdu || session.madrassaCategoryName
+                        : session.madrassaCategoryName,
+                      isUrdu
+                        ? session.madrassaSubcategoryNameUrdu || session.madrassaSubcategoryName
+                        : session.madrassaSubcategoryName,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || session.madrassaSubcategoryId;
+
+              const isMadrassa = session.system === "madrassa";
+
+              return (
+                <div key={session.id} className="rounded-md border p-3 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">{session.name}</p>
+                      <Badge variant="outline">{session.status}</Badge>
+                    </div>
+                    {classLabel && (
+                      <p className={cn("text-xs font-semibold text-primary mt-1", isUrdu && "font-urdu")}>
+                        {classLabel}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-0.5">{session.academicYear}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {session.startDate} - {session.endDate}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">{session.academicYear}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {session.startDate} - {session.endDate}
-                  </p>
+                  <div className="mt-3 pt-2 border-t flex justify-end">
+                    <Button size="sm" variant="outline" asChild>
+                      {isMadrassa ? (
+                        <Link
+                          to="/madrassa/exams/$id/marks"
+                          params={{ id: session.id }}
+                        >
+                          <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
+                          {isUrdu ? "نمبر درج کریں" : "Enter Marks"}
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/school/exams/$id/marks"
+                          params={{ id: session.id }}
+                        >
+                          <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
+                          {isUrdu ? "نمبر درج کریں" : "Enter Marks"}
+                        </Link>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <div className="mt-3 pt-2 border-t flex justify-end">
-                  <Button size="sm" variant="outline" asChild>
-                    <Link
-                      to="/school/exams/$id/marks"
-                      params={{ id: session.id }}
-                    >
-                      <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
-                      {isUrdu ? "نمبر درج کریں" : "Enter Marks"}
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </Card>

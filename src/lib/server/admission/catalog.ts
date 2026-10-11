@@ -78,6 +78,8 @@ export type AdmissionTarget = {
   schoolClassId: string | null;
   madrassaSubcategoryId: string | null;
   darja: string | null;
+  rollPrefix?: string;
+  fee?: number | null;
 };
 
 export async function resolveAdmissionTarget(
@@ -113,13 +115,15 @@ export async function resolveAdmissionTarget(
     throw new AdmissionError("A school class is required for Al-Qasim Academy admissions", 400);
   }
 
+  let schoolClassFee: number | null = null;
   if (schoolClassId) {
     const [existingClass] = await db
-      .select({ id: schoolClasses.id })
+      .select({ id: schoolClasses.id, fee: schoolClasses.fee })
       .from(schoolClasses)
       .where(eq(schoolClasses.id, schoolClassId))
       .limit(1);
     if (!existingClass) throw new AdmissionError("Selected school class does not exist", 400);
+    schoolClassFee = existingClass.fee ?? null;
   }
 
   if (madrassaSubcategoryId) {
@@ -130,7 +134,12 @@ export async function resolveAdmissionTarget(
     }
 
     const [existingSubcategory] = await db
-      .select({ id: madrassaSubcategories.id, darja: madrassaSubcategories.darja })
+      .select({
+        id: madrassaSubcategories.id,
+        darja: madrassaSubcategories.darja,
+        rollPrefix: madrassaSubcategories.rollPrefix,
+        fee: madrassaSubcategories.fee,
+      })
       .from(madrassaSubcategories)
       .where(eq(madrassaSubcategories.id, madrassaSubcategoryId))
       .limit(1);
@@ -142,11 +151,13 @@ export async function resolveAdmissionTarget(
       schoolClassId,
       madrassaSubcategoryId,
       darja: override.darja ?? existingSubcategory.darja ?? null,
+      rollPrefix: existingSubcategory.rollPrefix ?? "MAD",
+      fee: existingSubcategory.fee ?? schoolClassFee,
     };
   }
 
   const [program] = await db
-    .select({ id: programs.id })
+    .select({ id: programs.id, rollPrefix: programs.rollPrefix })
     .from(programs)
     .where(eq(programs.id, target.programId))
     .limit(1);
@@ -158,10 +169,13 @@ export async function resolveAdmissionTarget(
     schoolClassId,
     madrassaSubcategoryId: null,
     darja: override.darja ?? null,
+    rollPrefix: target.defaultSchoolClassId ?? program.rollPrefix ?? "SCH",
+    fee: schoolClassFee,
   };
 }
 
 export async function getRollPrefix(target: AdmissionTarget) {
+  if (target.rollPrefix) return target.rollPrefix;
   if (target.madrassaSubcategoryId) {
     const [subcategory] = await db
       .select({ rollPrefix: madrassaSubcategories.rollPrefix })

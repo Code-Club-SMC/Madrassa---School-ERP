@@ -28,6 +28,8 @@ function AuthenticatedLayout() {
   const { user, isLoading, logout } = useAuth();
   const { module, setModule } = useSystem();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { lang, setLang } = useLanguage();
+  const isUrdu = lang === "ur";
 
   useEffect(() => {
     if (pathname.startsWith("/madrassa")) setModule("madrassa");
@@ -48,12 +50,11 @@ function AuthenticatedLayout() {
     return null;
   }
 
-  const { lang, setLang } = useLanguage();
-  const isUrdu = lang === "ur";
   const isTeacher = user?.role === "teacher";
   const isParent = user?.role === "parent";
 
   if (isTeacher) {
+    const isTeacherDashboard = pathname === "/" || pathname === "/dashboard";
     return (
       <HRProvider>
         <SidebarProvider
@@ -107,7 +108,7 @@ function AuthenticatedLayout() {
             </header>
             <SidebarInset className="flex-1 min-w-0">
               <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 max-w-[1600px] w-full mx-auto">
-                <TeacherPortal />
+                {isTeacherDashboard ? <TeacherPortal /> : <Outlet />}
               </main>
             </SidebarInset>
           </div>

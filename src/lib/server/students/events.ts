@@ -47,6 +47,8 @@ export type InsertStudentEventInput = {
   message: string;
   metadata?: StudentEventMetadata;
   actorUserId?: string | null;
+  preloadedStudent?: { name: string; nameUrdu: string | null };
+  preloadedGuardians?: Array<{ guardianId: string; userId: string | null }>;
 };
 
 export async function insertStudentEvent(tx: DbLike, input: InsertStudentEventInput) {

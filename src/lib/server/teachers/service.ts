@@ -1143,35 +1143,85 @@ export async function getMyTeacherExams(request: Request) {
     .orderBy(asc(teacherAssignments.system), asc(teacherAssignments.academicYear));
 
   const subjectIds = uniqueStrings(assignments.map((a) => a.subjectId).filter(Boolean) as string[]);
-  const classKeys = assignments
-    .filter((a) => a.system === "school" && a.schoolClassId)
-    .map((a) => a.schoolClassId);
-  const madrassaKeys = assignments
-    .filter((a) => a.system === "madrassa" && a.madrassaSubcategoryId)
-    .map((a) => a.madrassaSubcategoryId);
+  const classKeys = uniqueStrings(
+    assignments
+      .filter((a) => a.system === "school" && a.schoolClassId)
+      .map((a) => a.schoolClassId as string),
+  );
+  const madrassaKeys = uniqueStrings(
+    assignments
+      .filter((a) => a.system === "madrassa" && a.madrassaSubcategoryId)
+      .map((a) => a.madrassaSubcategoryId as string),
+  );
 
-  const sessionClauses: (SQL | undefined)[] = [inArray(examSessions.system, ["school", "madrassa"])];
+  const scopeConditions: SQL[] = [];
   if (classKeys.length > 0) {
-    sessionClauses.push(and(eq(examSessions.system, "school"), inArray(examSessions.schoolClassId, uniqueStrings(classKeys))));
+    scopeConditions.push(
+      and(
+        eq(examSessions.system, "school"),
+        inArray(examSessions.schoolClassId, classKeys),
+      )!,
+    );
   }
   if (madrassaKeys.length > 0) {
-    sessionClauses.push(and(eq(examSessions.system, "madrassa"), inArray(examSessions.madrassaSubcategoryId, madrassaKeys as string[])));
+    scopeConditions.push(
+      and(
+        eq(examSessions.system, "madrassa"),
+        inArray(examSessions.madrassaSubcategoryId, madrassaKeys),
+      )!,
+    );
   }
 
-  const sessions = await db
+  if (scopeConditions.length === 0 || subjectIds.length === 0) {
+    return { assignments, sessions: [] };
+  }
+
+  const sessionRows = await db
     .select({
       id: examSessions.id,
       name: examSessions.name,
+      nameUrdu: examSessions.nameUrdu,
       system: examSessions.system,
       status: examSessions.status,
       academicYear: examSessions.academicYear,
       startDate: examSessions.startDate,
       endDate: examSessions.endDate,
       publishedAt: examSessions.publishedAt,
+      schoolClassId: examSessions.schoolClassId,
+      schoolClassName: schoolClasses.name,
+      schoolClassNameUrdu: schoolClasses.nameUrdu,
+      madrassaCategoryId: examSessions.madrassaCategoryId,
+      madrassaCategoryName: madrassaCategories.name,
+      madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
+      madrassaSubcategoryId: examSessions.madrassaSubcategoryId,
+      madrassaSubcategoryName: madrassaSubcategories.name,
+      madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
     })
     .from(examSessions)
-    .where(and(...compactSql(sessionClauses)))
+    .innerJoin(
+      examSessionSubjects,
+      and(
+        eq(examSessionSubjects.examId, examSessions.id),
+        inArray(examSessionSubjects.subjectId, subjectIds),
+      ),
+    )
+    .leftJoin(schoolClasses, eq(schoolClasses.id, examSessions.schoolClassId))
+    .leftJoin(madrassaCategories, eq(madrassaCategories.id, examSessions.madrassaCategoryId))
+    .leftJoin(
+      madrassaSubcategories,
+      eq(madrassaSubcategories.id, examSessions.madrassaSubcategoryId),
+    )
+    .where(or(...scopeConditions))
     .orderBy(desc(examSessions.startDate));
+
+  const seenSessionIds = new Set<string>();
+  const sessions = [];
+  for (const row of sessionRows) {
+    if (!seenSessionIds.has(row.id)) {
+      seenSessionIds.add(row.id);
+      sessions.push(row);
+    }
+  }
 
   return { assignments, sessions };
 }

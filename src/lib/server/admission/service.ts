@@ -139,6 +139,8 @@ export async function createAdmissionApplication(
       prefix: visibleScopedNumberPrefix(source === "public" ? "APP" : "ADM-REQ", target, rollPrefix),
     });
 
+    const { institutionId, programId, schoolClassId, madrassaSubcategoryId, darja } = target;
+
     const [application] = await tx
       .insert(admissionApplications)
       .values({
@@ -148,7 +150,11 @@ export async function createAdmissionApplication(
         variantKey: input.variantKey,
         status: source === "public" ? "pending" : "under_review",
         ...normalized,
-        ...target,
+        institutionId,
+        programId,
+        schoolClassId,
+        madrassaSubcategoryId,
+        darja,
         formData: form,
         photoPath,
       })
@@ -177,16 +183,302 @@ export async function createDirectAdmission(
   input: z.infer<typeof createAdmissionApplicationSchema>,
 ) {
   const actor = await requireAdmissionPermission(request, "admission_new", "create");
-  const created = await createAdmissionApplication(input, "admin");
-  const accepted = await acceptAdmissionApplication(request, created.application.id, {
-    siblingStudentIds: [],
-    createParentAccount: true,
-  });
+  await ensureAcademicSeeded();
 
-  return {
-    ...accepted,
-    createdByUserId: actor.id,
-  };
+  const applicationId = randomUUID();
+  const studentId = randomUUID();
+  const enrollmentId = randomUUID();
+
+  const form = normalizeFormValues(input.form);
+  const normalized = normalizeAdmissionForm(input.variantKey, form);
+
+  // Concurrently resolve target (with pre-fetched rollPrefix & fee), photo, and reusable guardian
+  const [target, photoPath, reusableGuardian] = await Promise.all([
+    resolveAdmissionTarget(input.variantKey, form, input.target),
+    saveAdmissionPhoto(applicationId, input.photoDataUrl),
+    findReusableGuardian(normalized.guardianCnic, normalized.guardianPhone),
+  ]);
+
+  const [academicYearSystem, rollPrefix] = await Promise.all([
+    resolveProgramAcademicYearSystem(target.programId),
+    getRollPrefix(target),
+  ]);
+
+  const activeAcademicYear = await getActiveAcademicYear(academicYearSystem);
+  const rollScopeCode = visibleNumberScopeCode(target, rollPrefix);
+
+  // Create parent account before database transaction
+  const parentUser = await maybeCreateParentAccount(
+    {
+      guardianName: normalized.guardianName,
+      guardianNameUrdu: normalized.guardianNameUrdu,
+      guardianCnic: normalized.guardianCnic,
+      guardianPhone: normalized.guardianPhone,
+    },
+    {
+      createParentAccount: true,
+      siblingStudentIds: [],
+    },
+    reusableGuardian,
+  );
+
+  try {
+    return await db.transaction(async (tx) => {
+      // 1. Generate sequence numbers in parallel
+      const [refNo, admissionNo, rollNo] = await Promise.all([
+        nextScopedNumber(tx, {
+          type: "application",
+          institutionId: target.institutionId,
+          programId: target.programId,
+          schoolClassId: target.schoolClassId,
+          madrassaSubcategoryId: target.madrassaSubcategoryId,
+          prefix: visibleScopedNumberPrefix("ADM-REQ", target, rollPrefix),
+        }),
+        nextScopedNumber(tx, {
+          type: "admission",
+          institutionId: target.institutionId,
+          programId: target.programId,
+          schoolClassId: target.schoolClassId,
+          madrassaSubcategoryId: target.madrassaSubcategoryId,
+          prefix: `AD-${rollScopeCode}`,
+        }),
+        nextScopedNumber(tx, {
+          type: "roll",
+          institutionId: target.institutionId,
+          programId: target.programId,
+          schoolClassId: target.schoolClassId,
+          madrassaSubcategoryId: target.madrassaSubcategoryId,
+          prefix: rollScopeCode,
+        }),
+      ]);
+
+      // 2. Upsert guardian
+      const resolvedGuardianId = await upsertGuardianForStudent(tx, {
+        existingGuardianId: reusableGuardian?.id ?? null,
+        userId: parentUser?.ok ? parentUser.userId : null,
+        name: normalized.guardianName,
+        nameUrdu: normalized.guardianNameUrdu,
+        cnic: normalized.guardianCnic,
+        phone: normalized.guardianPhone,
+        email: normalized.guardianEmail,
+        address: normalized.address,
+      });
+
+      const now = new Date();
+      const { institutionId, programId, schoolClassId, madrassaSubcategoryId, darja } = target;
+      const feeAmount = target.fee;
+
+      // 3. Batch insert core entities
+      const [application] = await Promise.all([
+        tx
+          .insert(admissionApplications)
+          .values({
+            id: applicationId,
+            refNo,
+            source: "admin",
+            variantKey: input.variantKey,
+            status: "accepted",
+            ...normalized,
+            institutionId,
+            programId,
+            schoolClassId,
+            madrassaSubcategoryId,
+            darja,
+            formData: form,
+            photoPath,
+            acceptedStudentId: studentId,
+            acceptedEnrollmentId: enrollmentId,
+            matchedGuardianId: resolvedGuardianId,
+            reviewedByUserId: actor.id,
+            decidedAt: now,
+            updatedAt: now,
+          })
+          .returning()
+          .then(([row]) => row),
+
+        tx.insert(students).values({
+          id: studentId,
+          name: normalized.name,
+          nameUrdu: normalized.nameUrdu,
+          fatherName: normalized.fatherName,
+          fatherNameUrdu: normalized.fatherNameUrdu,
+          gender: normalized.gender,
+          dob: normalized.dob,
+          cnicBForm: normalized.cnicBForm,
+          photoPath,
+        }),
+
+        tx.insert(studentEnrollments).values({
+          id: enrollmentId,
+          studentId,
+          academicYearId: activeAcademicYear.id,
+          institutionId,
+          programId,
+          schoolClassId,
+          madrassaSubcategoryId,
+          darja,
+          admissionNo,
+          rollNo,
+        }),
+
+        tx.insert(studentGuardians).values({
+          studentId,
+          guardianId: resolvedGuardianId,
+          relation: normalized.guardianRelation,
+          isPrimary: true,
+        }),
+
+        ...(feeAmount && feeAmount > 0
+          ? [
+              tx.insert(feeCharges).values({
+                id: randomUUID(),
+                studentId,
+                enrollmentId,
+                institutionId,
+                programId,
+                schoolClassId,
+                madrassaSubcategoryId,
+                type: "monthly",
+                label: "Monthly Fee",
+                period: activeAcademicYear.name,
+                amountPaisa: feeAmount * 100,
+                dueDate: now,
+                status: "open",
+                notes: "Auto-generated from admission",
+                metadata: {
+                  source: "admission",
+                  applicationId,
+                  enrollmentId,
+                  rollNo,
+                },
+              }),
+            ]
+          : []),
+      ]);
+
+      // 4. Batch insert admission events
+      await tx.insert(admissionEvents).values([
+        {
+          id: randomUUID(),
+          applicationId,
+          type: "application_created",
+          toStatus: "accepted",
+          message: "Admission created by staff",
+          actorUserId: actor.id,
+        },
+        {
+          id: randomUUID(),
+          applicationId,
+          type: "application_accepted",
+          fromStatus: "under_review",
+          toStatus: "accepted",
+          actorUserId: actor.id,
+          metadata: {
+            studentId,
+            enrollmentId,
+            guardianId: resolvedGuardianId,
+            rollNo,
+            admissionNo,
+          },
+        },
+        ...(parentUser?.ok
+          ? [
+              {
+                id: randomUUID(),
+                applicationId,
+                type: "parent_account_created",
+                actorUserId: actor.id,
+                metadata: { userId: parentUser.userId, username: parentUser.credentials.username },
+              },
+            ]
+          : []),
+      ]);
+
+      // 5. Preloaded student events & notifications (zero extra select queries)
+      const preloadedStudent = { name: normalized.name, nameUrdu: normalized.nameUrdu };
+      const preloadedGuardians = [
+        { guardianId: resolvedGuardianId, userId: parentUser?.ok ? parentUser.userId : null },
+      ];
+
+      await insertStudentEvent(tx, {
+        studentId,
+        enrollmentId,
+        type: "admission_accepted",
+        message: `Admission accepted with roll ${rollNo}`,
+        metadata: {
+          applicationId,
+          refNo,
+          source: "admin",
+          variantKey: input.variantKey,
+          admissionNo,
+          rollNo,
+          institutionId,
+          programId,
+          schoolClassId,
+          madrassaSubcategoryId,
+          darja,
+        },
+        actorUserId: actor.id,
+        preloadedStudent,
+        preloadedGuardians,
+      });
+
+      if (parentUser?.ok) {
+        await insertStudentEvent(tx, {
+          studentId,
+          enrollmentId,
+          type: "parent_account_created",
+          message: "Parent login created",
+          metadata: {
+            userId: parentUser.userId,
+            username: parentUser.credentials.username,
+            guardianId: resolvedGuardianId,
+          },
+          actorUserId: actor.id,
+          preloadedStudent,
+          preloadedGuardians,
+        });
+      } else if (parentUser && !parentUser.ok) {
+        await insertStudentEvent(tx, {
+          studentId,
+          enrollmentId,
+          type: "parent_account_failed",
+          message: "Parent login could not be created",
+          metadata: {
+            username: parentUser.username,
+            reason: parentUser.reason,
+            guardianId: resolvedGuardianId,
+          },
+          actorUserId: actor.id,
+          preloadedStudent,
+          preloadedGuardians,
+        });
+      }
+
+      const warnings: AdmissionAcceptanceWarning[] =
+        parentUser && !parentUser.ok
+          ? [
+              {
+                code: "parent_account_failed",
+                message: "داخلہ منظور ہو گیا، مگر والدین کا لاگ اِن نہیں بن سکا۔",
+                metadata: { username: parentUser.username, reason: parentUser.reason },
+              },
+            ]
+          : [];
+
+      return {
+        application: toApplicationResponse(application),
+        student: { id: studentId, rollNo, admissionNo },
+        guardian: { id: resolvedGuardianId },
+        parentCredentials: parentUser?.ok ? parentUser.credentials : null,
+        warnings,
+        createdByUserId: actor.id,
+      };
+    });
+  } catch (error) {
+    if (parentUser?.ok) await cleanupParentAccount(parentUser.userId);
+    throw error;
+  }
 }
 
 export async function listAdmissionApplications(
@@ -374,37 +666,45 @@ export async function acceptAdmissionApplication(
     darja: application.darja,
   };
 
-  const academicYearSystem = await resolveProgramAcademicYearSystem(target.programId);
+  const [academicYearSystem, rollPrefix, reusableGuardian, targetFee] = await Promise.all([
+    resolveProgramAcademicYearSystem(target.programId),
+    getRollPrefix(target),
+    input.guardianId
+      ? Promise.resolve(null)
+      : findReusableGuardian(application.guardianCnic, application.guardianPhone),
+    resolveTargetFee(target),
+  ]);
+
   const activeAcademicYear = await getActiveAcademicYear(academicYearSystem);
-  const rollPrefix = await getRollPrefix(target);
   const rollScopeCode = visibleNumberScopeCode(target, rollPrefix);
-  const parentUser = await maybeCreateParentAccount(application, input);
+  const parentUser = await maybeCreateParentAccount(application, input, reusableGuardian);
 
   try {
     return await db.transaction(async (tx) => {
       const studentId = randomUUID();
       const enrollmentId = randomUUID();
-      const guardianId =
-        input.guardianId ??
-        (await findReusableGuardianId(application.guardianCnic, application.guardianPhone));
+      const guardianId = input.guardianId ?? reusableGuardian?.id ?? null;
 
-      const admissionNo = await nextScopedNumber(tx, {
-        type: "admission",
-        institutionId: target.institutionId,
-        programId: target.programId,
-        schoolClassId: target.schoolClassId,
-        madrassaSubcategoryId: target.madrassaSubcategoryId,
-        prefix: `AD-${rollScopeCode}`,
-      });
+      const [admissionNo, rollNo] = await Promise.all([
+        nextScopedNumber(tx, {
+          type: "admission",
+          institutionId: target.institutionId,
+          programId: target.programId,
+          schoolClassId: target.schoolClassId,
+          madrassaSubcategoryId: target.madrassaSubcategoryId,
+          prefix: `AD-${rollScopeCode}`,
+        }),
+        nextScopedNumber(tx, {
+          type: "roll",
+          institutionId: target.institutionId,
+          programId: target.programId,
+          schoolClassId: target.schoolClassId,
+          madrassaSubcategoryId: target.madrassaSubcategoryId,
+          prefix: rollScopeCode,
+        }),
+      ]);
 
-      const rollNo = await nextScopedNumber(tx, {
-        type: "roll",
-        institutionId: target.institutionId,
-        programId: target.programId,
-        schoolClassId: target.schoolClassId,
-        madrassaSubcategoryId: target.madrassaSubcategoryId,
-        prefix: rollScopeCode,
-      });
+      const { institutionId, programId, schoolClassId, madrassaSubcategoryId, darja } = target;
 
       await tx.insert(students).values({
         id: studentId,
@@ -422,75 +722,39 @@ export async function acceptAdmissionApplication(
         id: enrollmentId,
         studentId,
         academicYearId: activeAcademicYear.id,
-        ...target,
+        institutionId,
+        programId,
+        schoolClassId,
+        madrassaSubcategoryId,
+        darja,
         admissionNo,
         rollNo,
       });
 
-      if (target.madrassaSubcategoryId) {
-        const [subcategory] = await tx
-          .select({ fee: madrassaSubcategories.fee })
-          .from(madrassaSubcategories)
-          .where(eq(madrassaSubcategories.id, target.madrassaSubcategoryId))
-          .limit(1);
-
-        if (subcategory?.fee && subcategory.fee > 0) {
-          const admissionFeeChargeId = randomUUID();
-          await tx.insert(feeCharges).values({
-            id: admissionFeeChargeId,
-            studentId,
+      if (targetFee && targetFee > 0) {
+        const admissionFeeChargeId = randomUUID();
+        await tx.insert(feeCharges).values({
+          id: admissionFeeChargeId,
+          studentId,
+          enrollmentId,
+          institutionId: target.institutionId,
+          programId: target.programId,
+          schoolClassId: target.schoolClassId,
+          madrassaSubcategoryId: target.madrassaSubcategoryId,
+          type: "monthly",
+          label: "Monthly Fee",
+          period: activeAcademicYear.name,
+          amountPaisa: targetFee * 100,
+          dueDate: new Date(),
+          status: "open",
+          notes: "Auto-generated from admission",
+          metadata: {
+            source: "admission",
+            applicationId: id,
             enrollmentId,
-            institutionId: target.institutionId,
-            programId: target.programId,
-            madrassaSubcategoryId: target.madrassaSubcategoryId,
-            type: "monthly",
-            label: "Monthly Fee",
-            period: activeAcademicYear.name,
-            amountPaisa: subcategory.fee * 100,
-            dueDate: new Date(),
-            status: "open",
-            notes: "Auto-generated from admission",
-            metadata: {
-              source: "admission",
-              applicationId: id,
-              enrollmentId,
-              rollNo,
-            },
-          });
-        }
-      }
-
-      if (target.schoolClassId) {
-        const [schoolClass] = await tx
-          .select({ fee: schoolClasses.fee })
-          .from(schoolClasses)
-          .where(eq(schoolClasses.id, target.schoolClassId))
-          .limit(1);
-
-        if (schoolClass?.fee && schoolClass.fee > 0) {
-          const admissionFeeChargeId = randomUUID();
-          await tx.insert(feeCharges).values({
-            id: admissionFeeChargeId,
-            studentId,
-            enrollmentId,
-            institutionId: target.institutionId,
-            programId: target.programId,
-            schoolClassId: target.schoolClassId,
-            type: "monthly",
-            label: "Monthly Fee",
-            period: activeAcademicYear.name,
-            amountPaisa: schoolClass.fee * 100,
-            dueDate: new Date(),
-            status: "open",
-            notes: "Auto-generated from admission",
-            metadata: {
-              source: "admission",
-              applicationId: id,
-              enrollmentId,
-              rollNo,
-            },
-          });
-        }
+            rollNo,
+          },
+        });
       }
 
       const resolvedGuardianId = await upsertGuardianForStudent(tx, {
@@ -513,6 +777,11 @@ export async function acceptAdmissionApplication(
 
       await insertSiblingLinks(tx, studentId, input.siblingStudentIds, actor.id);
 
+      const preloadedStudent = { name: application.name, nameUrdu: application.nameUrdu };
+      const preloadedGuardians = [
+        { guardianId: resolvedGuardianId, userId: parentUser?.ok ? parentUser.userId : null },
+      ];
+
       await insertStudentEvent(tx, {
         studentId,
         enrollmentId,
@@ -532,6 +801,8 @@ export async function acceptAdmissionApplication(
           darja: target.darja,
         },
         actorUserId: actor.id,
+        preloadedStudent,
+        preloadedGuardians,
       });
 
       if (parentUser?.ok) {
@@ -546,6 +817,8 @@ export async function acceptAdmissionApplication(
             guardianId: resolvedGuardianId,
           },
           actorUserId: actor.id,
+          preloadedStudent,
+          preloadedGuardians,
         });
       }
 
@@ -561,6 +834,8 @@ export async function acceptAdmissionApplication(
             guardianId: resolvedGuardianId,
           },
           actorUserId: actor.id,
+          preloadedStudent,
+          preloadedGuardians,
         });
       }
 
@@ -632,7 +907,12 @@ export async function acceptAdmissionApplication(
   }
 }
 
+const programSystemCache = new Map<string, AcademicYearSystem>();
+
 async function resolveProgramAcademicYearSystem(programId: string): Promise<AcademicYearSystem> {
+  const cached = programSystemCache.get(programId);
+  if (cached) return cached;
+
   const [program] = await db
     .select({ system: programs.system })
     .from(programs)
@@ -644,7 +924,30 @@ async function resolveProgramAcademicYearSystem(programId: string): Promise<Acad
     throw new AdmissionError("Admission program has an invalid academic-year system", 500);
   }
 
-  return program.system === "school_support" ? "school" : program.system;
+  const resolved = program.system === "school_support" ? "school" : program.system;
+  programSystemCache.set(programId, resolved);
+  return resolved;
+}
+
+async function resolveTargetFee(target: AdmissionTarget): Promise<number | null> {
+  if (target.fee !== undefined) return target.fee;
+  if (target.madrassaSubcategoryId) {
+    const [subcategory] = await db
+      .select({ fee: madrassaSubcategories.fee })
+      .from(madrassaSubcategories)
+      .where(eq(madrassaSubcategories.id, target.madrassaSubcategoryId))
+      .limit(1);
+    return subcategory?.fee ?? null;
+  }
+  if (target.schoolClassId) {
+    const [schoolClass] = await db
+      .select({ fee: schoolClasses.fee })
+      .from(schoolClasses)
+      .where(eq(schoolClasses.id, target.schoolClassId))
+      .limit(1);
+    return schoolClass?.fee ?? null;
+  }
+  return null;
 }
 
 export async function suggestGuardians(
@@ -725,25 +1028,34 @@ export async function suggestGuardians(
   return [...grouped.values()];
 }
 
+type ReusableGuardianResult = { id: string; userId: string | null; name: string };
+
 async function maybeCreateParentAccount(
-  application: typeof admissionApplications.$inferSelect,
+  application: Pick<
+    typeof admissionApplications.$inferSelect,
+    "guardianName" | "guardianNameUrdu" | "guardianCnic" | "guardianPhone"
+  >,
   input: z.infer<typeof acceptAdmissionApplicationSchema>,
+  preloadedGuardian?: ReusableGuardianResult | null,
 ): Promise<ParentAccountResult> {
   if (!input.createParentAccount) return null;
 
-  const existingGuardianId =
-    input.guardianId ??
-    (await findReusableGuardianId(application.guardianCnic, application.guardianPhone));
-  let parentLoginName = application.guardianName;
-  if (existingGuardianId) {
-    const [existingGuardian] = await db
-      .select()
-      .from(guardians)
-      .where(eq(guardians.id, existingGuardianId))
-      .limit(1);
-    if (existingGuardian?.userId) return null;
-    if (existingGuardian?.name) parentLoginName = existingGuardian.name;
+  let guardian = preloadedGuardian;
+  if (guardian === undefined) {
+    if (input.guardianId) {
+      const [g] = await db
+        .select({ id: guardians.id, userId: guardians.userId, name: guardians.name })
+        .from(guardians)
+        .where(eq(guardians.id, input.guardianId))
+        .limit(1);
+      guardian = g ?? null;
+    } else {
+      guardian = await findReusableGuardian(application.guardianCnic, application.guardianPhone);
+    }
   }
+
+  if (guardian?.userId) return null;
+  const parentLoginName = guardian?.name || application.guardianName;
 
   let identity: Awaited<ReturnType<typeof createUniqueParentLoginIdentity>> | null = null;
 
@@ -797,11 +1109,11 @@ async function cleanupParentAccount(userId: string) {
   }
 }
 
-async function findReusableGuardianId(cnic: string | null, phone: string | null) {
+async function findReusableGuardian(cnic: string | null, phone: string | null): Promise<ReusableGuardianResult | null> {
   if (!cnic && !phone) return null;
 
   const [guardian] = await db
-    .select({ id: guardians.id })
+    .select({ id: guardians.id, userId: guardians.userId, name: guardians.name })
     .from(guardians)
     .where(
       or(
@@ -811,7 +1123,7 @@ async function findReusableGuardianId(cnic: string | null, phone: string | null)
     )
     .limit(1);
 
-  return guardian?.id ?? null;
+  return guardian ?? null;
 }
 
 async function upsertGuardianForStudent(

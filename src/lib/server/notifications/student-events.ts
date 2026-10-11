@@ -16,15 +16,19 @@ export async function createNotificationsForStudentEvent(
   tx: DbLike,
   input: InsertStudentEventInput & { studentEventId: string },
 ) {
-  const [student] = await tx
-    .select({
-      id: students.id,
-      name: students.name,
-      nameUrdu: students.nameUrdu,
-    })
-    .from(students)
-    .where(eq(students.id, input.studentId))
-    .limit(1);
+  let student = input.preloadedStudent;
+  if (!student) {
+    const [row] = await tx
+      .select({
+        id: students.id,
+        name: students.name,
+        nameUrdu: students.nameUrdu,
+      })
+      .from(students)
+      .where(eq(students.id, input.studentId))
+      .limit(1);
+    student = row ? { name: row.name, nameUrdu: row.nameUrdu } : undefined;
+  }
 
   if (!student) return;
 
@@ -32,21 +36,24 @@ export async function createNotificationsForStudentEvent(
     type: input.type,
     message: input.message,
     studentName: student.name,
-    studentNameUrdu: student.nameUrdu,
+    studentNameUrdu: student.nameUrdu ?? "",
   });
   if (templates.length === 0) return;
 
-  const guardianRows = await tx
-    .select({
-      guardianId: guardians.id,
-      userId: guardians.userId,
-    })
-    .from(studentGuardians)
-    .innerJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
-    .where(eq(studentGuardians.studentId, input.studentId));
+  let guardianRows = input.preloadedGuardians;
+  if (!guardianRows) {
+    guardianRows = await tx
+      .select({
+        guardianId: guardians.id,
+        userId: guardians.userId,
+      })
+      .from(studentGuardians)
+      .innerJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
+      .where(eq(studentGuardians.studentId, input.studentId));
+  }
 
   const values: NotificationEventInsert[] = templates.flatMap((template) =>
-    notificationRowsForTemplate(template, input, guardianRows),
+    notificationRowsForTemplate(template, input, guardianRows!),
   );
   if (values.length === 0) return;
 

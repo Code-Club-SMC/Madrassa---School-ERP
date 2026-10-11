@@ -59,23 +59,38 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
   const [confirmLock, setConfirmLock] = useState(false);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [dmc, setDmc] = useState<DmcPayload | null>(null);
-  const [teacherSubjectIds, setTeacherSubjectIds] = useState<Set<string>>(new Set());
+  const [teacherAssignments, setTeacherAssignments] = useState<Array<{
+    subjectId: string | null;
+    schoolClassId: string | null;
+    madrassaSubcategoryId: string | null;
+    system: string;
+  }>>([]);
   const [loadingTeacher, setLoadingTeacher] = useState(false);
 
   const isTeacher = useMemo(() => user?.role === "teacher", [user?.role]);
 
   const teacherAllowedSubjects = useMemo(() => {
     if (!isTeacher || !exam) return exam?.subjects ?? [];
-    return exam.subjects.filter((item) => teacherSubjectIds.has(item.subjectId));
-  }, [isTeacher, exam, teacherSubjectIds]);
+    return exam.subjects.filter((item) => {
+      return teacherAssignments.some((a) => {
+        if (a.subjectId !== item.subjectId) return false;
+        if (exam.system === "school") {
+          return !exam.schoolClassId || !a.schoolClassId || a.schoolClassId === exam.schoolClassId;
+        }
+        if (exam.system === "madrassa") {
+          return !exam.madrassaSubcategoryId || !a.madrassaSubcategoryId || a.madrassaSubcategoryId === exam.madrassaSubcategoryId;
+        }
+        return true;
+      });
+    });
+  }, [isTeacher, exam, teacherAssignments]);
 
   useEffect(() => {
     if (!isTeacher) return;
     setLoadingTeacher(true);
     getMyTeacherExams()
       .then((data) => {
-        const ids = new Set<string>(data.assignments.filter((a) => a.subjectId).map((a) => a.subjectId as string));
-        setTeacherSubjectIds(ids);
+        setTeacherAssignments(data.assignments);
       })
       .catch(() => {})
       .finally(() => setLoadingTeacher(false));
@@ -84,15 +99,20 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
   const loadExam = useCallback(async () => {
     const next = await getExamSession(examId);
     setExam(next.exam);
-    const available = isTeacher
-      ? next.exam.subjects.filter((item) => teacherSubjectIds.has(item.subjectId))
-      : next.exam.subjects;
-    const first = available[0]?.id || "";
-    setSubjectId((current) => {
-      if (current && available.some((item) => item.id === current)) return current;
-      return first;
-    });
-  }, [examId, isTeacher, teacherSubjectIds]);
+  }, [examId]);
+
+  useEffect(() => {
+    if (!exam) return;
+    const available = isTeacher ? teacherAllowedSubjects : exam.subjects;
+    if (available.length > 0) {
+      setSubjectId((current) => {
+        if (current && available.some((item) => item.id === current)) return current;
+        return available[0].id;
+      });
+    } else {
+      setSubjectId("");
+    }
+  }, [exam, isTeacher, teacherAllowedSubjects]);
 
   const loadMarks = useCallback(async () => {
     if (!subjectId) return;
@@ -206,7 +226,7 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
 
   return (
     <div>
-      <BackLink system={system} examId={examId} />
+      <BackLink system={system} examId={examId} isTeacher={isTeacher} />
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-urdu text-[28px] font-bold leading-tight">{readOnly ? "نتائج" : "نمبر درج کریں"}</h1>
@@ -445,17 +465,48 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
   }
 }
 
-function BackLink({ system, examId }: { system: "school" | "madrassa"; examId: string }) {
+function BackLink({
+  system,
+  examId,
+  isTeacher,
+}: {
+  system: "school" | "madrassa";
+  examId: string;
+  isTeacher?: boolean;
+}) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
+
+  if (isTeacher) {
+    return (
+      <Link
+        to="/dashboard"
+        className="mb-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+        {isUrdu ? "واپس پورٹل" : "Back to Teacher Portal"}
+      </Link>
+    );
+  }
+
   if (system === "school") {
     return (
-      <Link to="/school/exams/$id" params={{ id: examId }} className="mb-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+      <Link
+        to="/school/exams/$id"
+        params={{ id: examId }}
+        className="mb-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
         Back to exam
       </Link>
     );
   }
   return (
-    <Link to="/madrassa/exams/$id" params={{ id: examId }} className="mb-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+    <Link
+      to="/madrassa/exams/$id"
+      params={{ id: examId }}
+      className="mb-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+    >
       <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
       Back to exam
     </Link>

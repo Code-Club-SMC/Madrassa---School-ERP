@@ -13,6 +13,7 @@ export const Route = createFileRoute("/api/attendance/school/mark")({
         try {
           return json(await markSchoolAttendance(request, body.data));
         } catch (error) {
+          console.error("[POST /api/attendance/school/mark error]:", error);
           return errorResponse(error, "Could not mark school attendance");
         }
       },

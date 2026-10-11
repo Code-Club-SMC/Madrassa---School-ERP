@@ -246,13 +246,28 @@ export async function backfillActiveEnrollments(
   };
 }
 
+let activeAcademicYearCache: Record<string, { year: typeof academicYears.$inferSelect; expiresAt: number }> = {};
+
+export function clearActiveAcademicYearCache() {
+  activeAcademicYearCache = {};
+}
+
 export async function getActiveAcademicYear(system: AcademicYearSystem) {
+  const cached = activeAcademicYearCache[system];
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return assertActiveAcademicYear(cached.year, system);
+  }
+
   const [row] = await db
     .select()
     .from(academicYears)
     .where(and(eq(academicYears.status, "active"), eq(academicYears.system, system)))
     .limit(1);
-  return assertActiveAcademicYear(row, system);
+
+  const active = assertActiveAcademicYear(row, system);
+  activeAcademicYearCache[system] = { year: row, expiresAt: now + 300_000 };
+  return active;
 }
 
 export async function requireEditableAcademicYearId(academicYearId: string | null | undefined) {

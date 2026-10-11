@@ -591,54 +591,91 @@ async function markAttendance(
       if (!rosterRow) throw new HttpError("One or more attendance rows are outside the selected roster", 400);
 
       const previous = existingByKey.get(markRowKey(row));
-      const [attendance] = await tx
-        .insert(studentAttendance)
-        .values({
-          id: previous?.id ?? randomUUID(),
-          studentId: rosterRow.studentId,
-          enrollmentId: rosterRow.enrollmentId,
-          institutionId: rosterRow.institutionId,
-          programId: rosterRow.programId,
-          schoolClassId: rosterRow.schoolClassId,
-          madrassaCategoryId: rosterRow.madrassaCategoryId,
-          madrassaSubcategoryId: rosterRow.madrassaSubcategoryId,
-          attendanceDate: date,
-          status: row.status,
-          notes: normalizeNotes(row.notes),
-          markedByUserId: actor.id,
-        })
-        .onConflictDoUpdate({
-          target: [studentAttendance.studentId, studentAttendance.enrollmentId, studentAttendance.attendanceDate],
-          set: {
+      let attendance: AttendanceRow;
+
+      if (previous?.id) {
+        const [updated] = await tx
+          .update(studentAttendance)
+          .set({
             status: row.status,
             notes: normalizeNotes(row.notes),
             markedByUserId: actor.id,
             updatedAt: new Date(),
-          },
-        })
-        .returning();
+          })
+          .where(eq(studentAttendance.id, previous.id))
+          .returning();
+        attendance = updated;
+      } else {
+        const [existingDb] = await tx
+          .select({ id: studentAttendance.id })
+          .from(studentAttendance)
+          .where(
+            and(
+              eq(studentAttendance.enrollmentId, rosterRow.enrollmentId),
+              eq(studentAttendance.attendanceDate, date),
+            ),
+          )
+          .limit(1);
+
+        if (existingDb) {
+          const [updated] = await tx
+            .update(studentAttendance)
+            .set({
+              status: row.status,
+              notes: normalizeNotes(row.notes),
+              markedByUserId: actor.id,
+              updatedAt: new Date(),
+            })
+            .where(eq(studentAttendance.id, existingDb.id))
+            .returning();
+          attendance = updated;
+        } else {
+          const [inserted] = await tx
+            .insert(studentAttendance)
+            .values({
+              id: randomUUID(),
+              studentId: rosterRow.studentId,
+              enrollmentId: rosterRow.enrollmentId,
+              institutionId: rosterRow.institutionId,
+              programId: rosterRow.programId,
+              schoolClassId: rosterRow.schoolClassId ?? null,
+              madrassaCategoryId: rosterRow.madrassaCategoryId ?? null,
+              madrassaSubcategoryId: rosterRow.madrassaSubcategoryId ?? null,
+              attendanceDate: date,
+              status: row.status,
+              notes: normalizeNotes(row.notes),
+              markedByUserId: actor.id,
+            })
+            .returning();
+          attendance = inserted;
+        }
+      }
 
       const eventType = attendanceTimelineEvent(previous?.status, row.status);
       if (eventType) {
-        await insertStudentEvent(tx, {
-          studentId: rosterRow.studentId,
-          enrollmentId: rosterRow.enrollmentId,
-          type: eventType,
-          message: attendanceEventMessage(eventType, row.status, date),
-          metadata: {
-            date,
-            previousStatus: previous?.status ?? null,
-            nextStatus: row.status,
-            notes: normalizeNotes(row.notes),
-            institutionName: rosterRow.institutionName,
-            programName: rosterRow.programName,
-            className: rosterRow.schoolClassName,
-            madrassaCategoryName: rosterRow.madrassaCategoryName,
-            madrassaSubcategoryName: rosterRow.madrassaSubcategoryName,
-            darja: rosterRow.darja,
-          },
-          actorUserId: actor.id,
-        });
+        try {
+          await insertStudentEvent(tx, {
+            studentId: rosterRow.studentId,
+            enrollmentId: rosterRow.enrollmentId,
+            type: eventType,
+            message: attendanceEventMessage(eventType, row.status, date),
+            metadata: {
+              date,
+              previousStatus: previous?.status ?? null,
+              nextStatus: row.status,
+              notes: normalizeNotes(row.notes),
+              institutionName: rosterRow.institutionName,
+              programName: rosterRow.programName,
+              className: rosterRow.schoolClassName,
+              madrassaCategoryName: rosterRow.madrassaCategoryName,
+              madrassaSubcategoryName: rosterRow.madrassaSubcategoryName,
+              darja: rosterRow.darja,
+            },
+            actorUserId: actor.id,
+          });
+        } catch (eventErr) {
+          console.error("[attendance] Failed to record timeline event or notification:", eventErr);
+        }
       }
 
       upserted.push(attendance);

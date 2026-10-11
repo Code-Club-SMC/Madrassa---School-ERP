@@ -1501,7 +1501,7 @@ export function ExamDetailWorkspace({ examId, system }: { examId: string; system
                     <TableCell className="text-end pe-4">
                       <Button asChild size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-primary">
                         <Link
-                          to={system === "school" ? "/school/exams/$id/results" : "/madrassa/exams/$id/marks"}
+                          to={system === "school" ? "/school/exams/$id/marks" : "/madrassa/exams/$id/marks"}
                           params={{ id: currentSession.id }}
                         >
                           Marks →
@@ -1648,8 +1648,13 @@ function ClassActionLinks({ session, system }: { session: ExamSession; system: E
           </Link>
         </Button>
         <Button asChild size="sm" className="h-7 text-xs px-2 gap-1 bg-primary text-primary-foreground hover:bg-primary/90 shadow-2xs">
-          <Link to="/school/exams/$id/results" params={{ id: session.id }}>
+          <Link to="/school/exams/$id/marks" params={{ id: session.id }}>
             <Award className="h-3 w-3" /> Marks
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="outline" className="h-7 text-xs px-2 gap-1">
+          <Link to="/school/exams/$id/results" params={{ id: session.id }}>
+            <FileText className="h-3 w-3" /> Results
           </Link>
         </Button>
       </div>
@@ -1936,7 +1941,8 @@ function ExamActionLinks({ exam }: { exam: ExamSession }) {
     return (
       <>
         <Button asChild size="sm" variant="outline"><Link to="/school/exams/$id/seating" params={{ id: exam.id }}>Seating</Link></Button>
-        <Button asChild size="sm"><Link to="/school/exams/$id/results" params={{ id: exam.id }}>Marks</Link></Button>
+        <Button asChild size="sm"><Link to="/school/exams/$id/marks" params={{ id: exam.id }}>Marks</Link></Button>
+        <Button asChild size="sm" variant="outline"><Link to="/school/exams/$id/results" params={{ id: exam.id }}>Results</Link></Button>
       </>
     );
   }
