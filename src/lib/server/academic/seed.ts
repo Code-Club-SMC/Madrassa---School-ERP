@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { count } from "drizzle-orm";
 import {
   institutions,
   madrassaCategories,
@@ -110,10 +111,13 @@ export const ACADEMIC_PROGRAMS = [
 let seedPromise: Promise<void> | null = null;
 
 export function ensureAcademicSeeded(force = false) {
-  if (force && seedPromise) {
+  if (!force) {
+    return Promise.resolve();
+  }
+  if (seedPromise) {
     seedPromise = null;
   }
-  seedPromise ??= seedAcademicCatalog();
+  seedPromise = seedAcademicCatalog();
   return seedPromise;
 }
 
@@ -212,29 +216,20 @@ export async function seedAcademicCatalog() {
       });
   }
 
-  const catalogCategories = buildMadrassaCategories();
+  const existingSubcategoriesCount = await db
+    .select({ count: count() })
+    .from(madrassaSubcategories);
+  const hasSubcategories = Number(existingSubcategoriesCount[0]?.count ?? 0) > 0;
 
-  for (const cat of catalogCategories) {
-    for (const sub of cat.subcategories) {
-      await db
-        .insert(madrassaSubcategories)
-        .values({
-          id: sub.id,
-          categoryId: cat.id,
-          name: sub.name,
-          nameUrdu: sub.nameUrdu,
-          rollPrefix: sub.rollPrefix,
-          darja: sub.darja ?? null,
-          govtEquivalent: sub.govtEquivalent ?? null,
-          durationYears: sub.durationYears,
-          fee: null,
-          displayOrder: sub.displayOrder ?? 0,
-          active: true,
-          section: sub.section ?? "male",
-        })
-        .onConflictDoUpdate({
-          target: madrassaSubcategories.id,
-          set: {
+  if (!hasSubcategories) {
+    const catalogCategories = buildMadrassaCategories();
+
+    for (const cat of catalogCategories) {
+      for (const sub of cat.subcategories) {
+        await db
+          .insert(madrassaSubcategories)
+          .values({
+            id: sub.id,
             categoryId: cat.id,
             name: sub.name,
             nameUrdu: sub.nameUrdu,
@@ -242,10 +237,13 @@ export async function seedAcademicCatalog() {
             darja: sub.darja ?? null,
             govtEquivalent: sub.govtEquivalent ?? null,
             durationYears: sub.durationYears,
+            fee: null,
+            displayOrder: sub.displayOrder ?? 0,
+            active: true,
             section: sub.section ?? "male",
-            updatedAt: new Date(),
-          },
-        });
+          })
+          .onConflictDoNothing();
+      }
     }
   }
 }

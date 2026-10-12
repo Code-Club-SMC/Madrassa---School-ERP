@@ -24,6 +24,7 @@ type VariantTarget = {
   defaultSchoolClassId?: string;
   defaultMadrassaSubcategoryId?: string;
   requiresSchoolClass?: boolean;
+  requiresMadrassaSubcategory?: boolean;
   supportClassOnly?: boolean;
 };
 
@@ -36,39 +37,39 @@ export const variantTargets: Record<AdmissionVariantKey, VariantTarget> = {
   "school-girls-main": {
     institutionId: "jamia_zainab_banat",
     programId: "zainab_school_support",
-    defaultSchoolClassId: "c1",
+    requiresSchoolClass: true,
     supportClassOnly: true,
   },
   "school-girls-shoba": {
     institutionId: "jamia_zainab_banat",
     programId: "zainab_school_support",
-    defaultSchoolClassId: "c1",
+    requiresSchoolClass: true,
     supportClassOnly: true,
   },
   "madrassa-boys-nazira": {
     institutionId: "jamia_qasmia_baneen",
     programId: "qasmia_nazira",
-    defaultMadrassaSubcategoryId: "bn-nazira-1",
+    requiresMadrassaSubcategory: true,
   },
   "madrassa-boys-hifz": {
     institutionId: "jamia_qasmia_baneen",
     programId: "qasmia_hifz",
-    defaultMadrassaSubcategoryId: "bn-hifz-1",
+    requiresMadrassaSubcategory: true,
   },
   "madrassa-boys-general": {
     institutionId: "jamia_qasmia_baneen",
     programId: "qasmia_dars_nizami",
-    defaultMadrassaSubcategoryId: "bn-dars-ula",
+    requiresMadrassaSubcategory: true,
   },
   "madrassa-girls-general": {
     institutionId: "jamia_zainab_banat",
     programId: "zainab_dars_nizami",
-    defaultMadrassaSubcategoryId: "bt-dars-ula",
+    requiresMadrassaSubcategory: true,
   },
   "madrassa-girls-nazira": {
     institutionId: "jamia_zainab_banat",
     programId: "zainab_nazira",
-    defaultMadrassaSubcategoryId: "bt-nazira-1",
+    requiresMadrassaSubcategory: true,
   },
 };
 
@@ -112,7 +113,11 @@ export async function resolveAdmissionTarget(
     : null;
 
   if (target.requiresSchoolClass && !schoolClassId) {
-    throw new AdmissionError("A school class is required for Al-Qasim Academy admissions", 400);
+    throw new AdmissionError("A school class is required for school admissions · اسکول میں داخلے کے لیے جماعت منتخب کرنا لازمی ہے", 400);
+  }
+
+  if (target.requiresMadrassaSubcategory && !madrassaSubcategoryId) {
+    throw new AdmissionError("A madrassa class/darja is required for madrassa admissions · مدرسہ میں داخلے کے لیے درجہ منتخب کرنا لازمی ہے", 400);
   }
 
   let schoolClassFee: number | null = null;
@@ -128,10 +133,6 @@ export async function resolveAdmissionTarget(
 
   if (madrassaSubcategoryId) {
     const expectedSection = madrassaSectionForVariant(variantKey);
-    const staticGrade = getMadrassaGradeById(madrassaSubcategoryId);
-    if (expectedSection && staticGrade && staticGrade.section !== expectedSection) {
-      throw new AdmissionError("Selected madrassa grade does not belong to this madrassa", 400);
-    }
 
     const [existingSubcategory] = await db
       .select({
@@ -139,12 +140,24 @@ export async function resolveAdmissionTarget(
         darja: madrassaSubcategories.darja,
         rollPrefix: madrassaSubcategories.rollPrefix,
         fee: madrassaSubcategories.fee,
+        section: madrassaSubcategories.section,
       })
       .from(madrassaSubcategories)
       .where(eq(madrassaSubcategories.id, madrassaSubcategoryId))
       .limit(1);
     if (!existingSubcategory)
       throw new AdmissionError("Selected madrassa category does not exist", 400);
+
+    if (expectedSection) {
+      const dbSec = (existingSubcategory.section || "").toLowerCase();
+      const valid =
+        expectedSection === "baneen"
+          ? ["baneen", "male", "both", "all"].includes(dbSec)
+          : ["banat", "female", "both", "all"].includes(dbSec);
+      if (!valid) {
+        throw new AdmissionError("Selected madrassa grade does not belong to this madrassa", 400);
+      }
+    }
     return {
       institutionId: target.institutionId,
       programId: target.programId,

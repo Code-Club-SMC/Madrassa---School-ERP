@@ -1,15 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { deleteSchoolClass } from "@/lib/server/academic/service";
+import {
+  deleteSchoolClass,
+  updateSchoolClass,
+  schoolClassUpdateSchema,
+} from "@/lib/server/academic/service";
 import { errorResponse } from "@/lib/server/http";
-import { json } from "@/lib/server/super-admin";
+import { json, parseJsonBody } from "@/lib/server/super-admin";
 
 export const Route = createFileRoute("/api/academic/school/classes/$classId")({
   server: {
     handlers: {
-      DELETE: async ({ request }) => {
+      PATCH: async ({ request, params }) => {
+        const body = await parseJsonBody(request, schoolClassUpdateSchema);
+        if (!body.ok) return body.response;
+
         try {
-          const url = new URL(request.url);
-          const classId = url.pathname.split("/").pop() || "";
+          const classId = params.classId;
+          const updated = await updateSchoolClass(request, classId, body.data);
+          return json({ class: updated });
+        } catch (error) {
+          return errorResponse(error, "Could not update school class");
+        }
+      },
+      DELETE: async ({ request, params }) => {
+        try {
+          const classId = params.classId;
           await deleteSchoolClass(request, classId);
           return json({ success: true });
         } catch (error) {

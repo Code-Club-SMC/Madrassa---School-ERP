@@ -514,7 +514,25 @@ export function PdfFormRenderer({
       }
     } catch (error) {
       setSubmitting(false);
-      toast.error(error instanceof Error ? error.message : "Could not save admission");
+      const msg = error instanceof Error ? error.message : "Could not save admission";
+      if (msg.includes("تعلیمی سال") || msg.toLowerCase().includes("academic year")) {
+        toast.error(
+          lang === "ur"
+            ? "فعال تعلیمی سال موجود نہیں ہے۔ براہ کرم پہلے ترتیبات میں تعلیمی سال بنائیں۔"
+            : "No active academic year found. Please configure an active academic year in Settings first.",
+          {
+            action: !isPublic
+              ? {
+                  label: lang === "ur" ? "سال بنائیں" : "Create Year",
+                  onClick: () => navigate({ to: "/settings/academic-year" }),
+                }
+              : undefined,
+            duration: 8000,
+          },
+        );
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
