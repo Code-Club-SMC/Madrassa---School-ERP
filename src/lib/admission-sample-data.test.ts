@@ -30,6 +30,6 @@ describe("admission sample data", () => {
     const sample = buildAdmissionSampleData(variant);
 
     expect(sample.name).toBe("عائشہ فاطمہ");
-    expect(sample.class).toBe("چہارم");
+    expect(sample.class).toBeUndefined();
   });
 });

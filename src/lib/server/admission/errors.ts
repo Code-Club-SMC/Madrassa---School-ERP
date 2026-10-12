@@ -26,14 +26,21 @@ export function admissionErrorResponse(error: unknown, fallback = "Admission req
     });
   }
 
-  const databaseMessage = admissionDatabaseErrorMessage(error);
-  return new Response(JSON.stringify({ error: databaseMessage ?? fallback }), {
+  const databaseInfo = admissionDatabaseErrorInfo(error);
+  if (databaseInfo) {
+    return new Response(JSON.stringify({ error: databaseInfo.message }), {
+      status: databaseInfo.status,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  return new Response(JSON.stringify({ error: fallback }), {
     status: 500,
     headers: { "content-type": "application/json" },
   });
 }
 
-function admissionDatabaseErrorMessage(error: unknown) {
+function admissionDatabaseErrorInfo(error: unknown): { message: string; status: number } | null {
   const pgError = findPostgresError(error);
   if (!pgError) return null;
 
@@ -43,30 +50,42 @@ function admissionDatabaseErrorMessage(error: unknown) {
       pgError.constraint === "student_enrollments_admission_no_idx" ||
       pgError.constraint === "student_enrollments_roll_no_idx"
     ) {
-      return "داخلہ نمبر بنانے میں مسئلہ ہوا، دوبارہ کوشش کریں";
+      return { message: "داخلہ نمبر بنانے میں مسئلہ ہوا، دوبارہ کوشش کریں", status: 409 };
     }
 
     if (pgError.constraint === "guardians_cnic_unique_idx") {
-      return "اس شناختی کارڈ کے سرپرست کا ریکارڈ پہلے سے موجود ہے";
+      return { message: "اس شناختی کارڈ کے سرپرست کا ریکارڈ پہلے سے موجود ہے", status: 409 };
     }
 
-    return "یہ ریکارڈ پہلے سے موجود ہے";
+    return { message: "یہ ریکارڈ پہلے سے موجود ہے", status: 409 };
   }
 
   if (pgError.code === "23503") {
     if (pgError.constraint?.includes("madrassa_subcategory")) {
-      return "منتخب کردہ مدرسہ درجہ موجود نہیں، درجات کی ترتیب دوبارہ لوڈ کریں";
+      return { message: "منتخب کردہ مدرسہ درجہ موجود نہیں، درجات کی ترتیب دوبارہ لوڈ کریں", status: 400 };
     }
 
     if (pgError.constraint?.includes("school_class")) {
-      return "منتخب کردہ اسکول کلاس موجود نہیں، کلاسز دوبارہ لوڈ کریں";
+      return { message: "منتخب کردہ اسکول کلاس موجود نہیں، کلاسز دوبارہ لوڈ کریں", status: 400 };
     }
 
     if (pgError.constraint?.includes("academic_year")) {
-      return "فعال تعلیمی سال موجود نہیں";
+      return { message: "فعال تعلیمی سال موجود نہیں، برائے مہربانی پہلے تعلیمی سال شامل کریں", status: 400 };
     }
 
-    return "داخلہ کے لیے منتخب کردہ متعلقہ ریکارڈ موجود نہیں";
+    if (pgError.constraint?.includes("institution")) {
+      return { message: "منتخب کردہ ادارہ موجود نہیں", status: 400 };
+    }
+
+    if (pgError.constraint?.includes("program")) {
+      return { message: "منتخب کردہ تعلیمی شعبہ موجود نہیں", status: 400 };
+    }
+
+    return { message: "داخلہ کے لیے منتخب کردہ متعلقہ ریکارڈ موجود نہیں", status: 400 };
+  }
+
+  if (pgError.code === "23502") {
+    return { message: "تمام ضروری معلومات درج کرنا لازمی ہیں", status: 400 };
   }
 
   return null;

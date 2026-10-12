@@ -203,7 +203,7 @@ function schoolSample(person: PersonSample, isGirls: boolean) {
     religion: "اسلام",
     prev_school: "گورنمنٹ پرائمری سکول ٹل",
     cert_no: "TC-2487",
-    class: isGirls ? "چہارم" : "پنجم",
+    class: "",
     guardian_name: person.guardian,
     guardian_email: person.email,
     also_madrassa: isGirls ? "نہیں" : "جی",
@@ -212,15 +212,13 @@ function schoolSample(person: PersonSample, isGirls: boolean) {
 }
 
 function madrassaShortSample(variant: AdmissionVariant, person: PersonSample) {
-  const grade = firstGradeForVariant(variant);
-
   return pruneEmpty({
     adm_date: todayDateOnly(),
     bmutabiq: todayHijriLabel(),
     name: person.name,
     father: person.father,
     dob: person.dob,
-    shoba: grade?.id ?? "",
+    shoba: "",
     curr_address: person.fullAddress,
     perm_address: person.fullAddress,
     prev_madrassa: "مدرسہ تعلیم القرآن، ٹل",
@@ -232,12 +230,10 @@ function madrassaShortSample(variant: AdmissionVariant, person: PersonSample) {
 }
 
 function madrassaLongSample(variant: AdmissionVariant, person: PersonSample) {
-  const grade = firstGradeForVariant(variant);
-
   return pruneEmpty({
     adm_date: todayDateOnly(),
     bmutabiq: todayHijriLabel(),
-    req_darja: grade?.id ?? "",
+    req_darja: "",
     entry_marks: "82",
     acad_year: currentHijriAcademicYearLabel(),
     name: person.name,

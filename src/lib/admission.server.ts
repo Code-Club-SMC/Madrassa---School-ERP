@@ -41,8 +41,10 @@ export const getAdmissionSubcategories = createServerFn({ method: "GET" })
               eq(madrassaSubcategories.section, data.section),
               eq(
                 madrassaSubcategories.section,
-                data.section === "male" ? "baneen" : data.section === "female" ? "banat" : data.section,
+                data.section === "male" ? "baneen" : "banat",
               ),
+              eq(madrassaSubcategories.section, "both"),
+              eq(madrassaSubcategories.section, "all"),
             )
           : undefined,
       )

@@ -224,33 +224,33 @@ export async function createDirectAdmission(
 
   try {
     return await db.transaction(async (tx) => {
-      // 1. Generate sequence numbers in parallel
-      const [refNo, admissionNo, rollNo] = await Promise.all([
-        nextScopedNumber(tx, {
-          type: "application",
-          institutionId: target.institutionId,
-          programId: target.programId,
-          schoolClassId: target.schoolClassId,
-          madrassaSubcategoryId: target.madrassaSubcategoryId,
-          prefix: visibleScopedNumberPrefix("ADM-REQ", target, rollPrefix),
-        }),
-        nextScopedNumber(tx, {
-          type: "admission",
-          institutionId: target.institutionId,
-          programId: target.programId,
-          schoolClassId: target.schoolClassId,
-          madrassaSubcategoryId: target.madrassaSubcategoryId,
-          prefix: `AD-${rollScopeCode}`,
-        }),
-        nextScopedNumber(tx, {
-          type: "roll",
-          institutionId: target.institutionId,
-          programId: target.programId,
-          schoolClassId: target.schoolClassId,
-          madrassaSubcategoryId: target.madrassaSubcategoryId,
-          prefix: rollScopeCode,
-        }),
-      ]);
+      // 1. Generate sequence numbers
+      const refNo = await nextScopedNumber(tx, {
+        type: "application",
+        institutionId: target.institutionId,
+        programId: target.programId,
+        schoolClassId: target.schoolClassId,
+        madrassaSubcategoryId: target.madrassaSubcategoryId,
+        prefix: visibleScopedNumberPrefix("ADM-REQ", target, rollPrefix),
+      });
+
+      const admissionNo = await nextScopedNumber(tx, {
+        type: "admission",
+        institutionId: target.institutionId,
+        programId: target.programId,
+        schoolClassId: target.schoolClassId,
+        madrassaSubcategoryId: target.madrassaSubcategoryId,
+        prefix: `AD-${rollScopeCode}`,
+      });
+
+      const rollNo = await nextScopedNumber(tx, {
+        type: "roll",
+        institutionId: target.institutionId,
+        programId: target.programId,
+        schoolClassId: target.schoolClassId,
+        madrassaSubcategoryId: target.madrassaSubcategoryId,
+        prefix: rollScopeCode,
+      });
 
       // 2. Upsert guardian
       const resolvedGuardianId = await upsertGuardianForStudent(tx, {
@@ -268,93 +268,88 @@ export async function createDirectAdmission(
       const { institutionId, programId, schoolClassId, madrassaSubcategoryId, darja } = target;
       const feeAmount = target.fee;
 
-      // 3. Batch insert core entities
-      const [application] = await Promise.all([
-        tx
-          .insert(admissionApplications)
-          .values({
-            id: applicationId,
-            refNo,
-            source: "admin",
-            variantKey: input.variantKey,
-            status: "accepted",
-            ...normalized,
-            institutionId,
-            programId,
-            schoolClassId,
-            madrassaSubcategoryId,
-            darja,
-            formData: form,
-            photoPath,
-            acceptedStudentId: studentId,
-            acceptedEnrollmentId: enrollmentId,
-            matchedGuardianId: resolvedGuardianId,
-            reviewedByUserId: actor.id,
-            decidedAt: now,
-            updatedAt: now,
-          })
-          .returning()
-          .then(([row]) => row),
+      // 3. Sequentially insert core entities respecting foreign key constraints
+      await tx.insert(students).values({
+        id: studentId,
+        name: normalized.name,
+        nameUrdu: normalized.nameUrdu,
+        fatherName: normalized.fatherName,
+        fatherNameUrdu: normalized.fatherNameUrdu,
+        gender: normalized.gender,
+        dob: normalized.dob,
+        cnicBForm: normalized.cnicBForm,
+        photoPath,
+      });
 
-        tx.insert(students).values({
-          id: studentId,
-          name: normalized.name,
-          nameUrdu: normalized.nameUrdu,
-          fatherName: normalized.fatherName,
-          fatherNameUrdu: normalized.fatherNameUrdu,
-          gender: normalized.gender,
-          dob: normalized.dob,
-          cnicBForm: normalized.cnicBForm,
-          photoPath,
-        }),
+      await tx.insert(studentGuardians).values({
+        studentId,
+        guardianId: resolvedGuardianId,
+        relation: normalized.guardianRelation,
+        isPrimary: true,
+      });
 
-        tx.insert(studentEnrollments).values({
-          id: enrollmentId,
+      await tx.insert(studentEnrollments).values({
+        id: enrollmentId,
+        studentId,
+        academicYearId: activeAcademicYear.id,
+        institutionId,
+        programId,
+        schoolClassId,
+        madrassaSubcategoryId,
+        darja,
+        admissionNo,
+        rollNo,
+      });
+
+      if (feeAmount && feeAmount > 0) {
+        await tx.insert(feeCharges).values({
+          id: randomUUID(),
           studentId,
-          academicYearId: activeAcademicYear.id,
+          enrollmentId,
+          institutionId,
+          programId,
+          schoolClassId,
+          madrassaSubcategoryId,
+          type: "monthly",
+          label: "Monthly Fee",
+          period: activeAcademicYear.name,
+          amountPaisa: feeAmount * 100,
+          dueDate: now,
+          status: "open",
+          notes: "Auto-generated from admission",
+          metadata: {
+            source: "admission",
+            applicationId,
+            enrollmentId,
+            rollNo,
+          },
+        });
+      }
+
+      const [application] = await tx
+        .insert(admissionApplications)
+        .values({
+          id: applicationId,
+          refNo,
+          source: "admin",
+          variantKey: input.variantKey,
+          status: "accepted",
+          ...normalized,
           institutionId,
           programId,
           schoolClassId,
           madrassaSubcategoryId,
           darja,
-          admissionNo,
-          rollNo,
-        }),
-
-        tx.insert(studentGuardians).values({
-          studentId,
-          guardianId: resolvedGuardianId,
-          relation: normalized.guardianRelation,
-          isPrimary: true,
-        }),
-
-        ...(feeAmount && feeAmount > 0
-          ? [
-              tx.insert(feeCharges).values({
-                id: randomUUID(),
-                studentId,
-                enrollmentId,
-                institutionId,
-                programId,
-                schoolClassId,
-                madrassaSubcategoryId,
-                type: "monthly",
-                label: "Monthly Fee",
-                period: activeAcademicYear.name,
-                amountPaisa: feeAmount * 100,
-                dueDate: now,
-                status: "open",
-                notes: "Auto-generated from admission",
-                metadata: {
-                  source: "admission",
-                  applicationId,
-                  enrollmentId,
-                  rollNo,
-                },
-              }),
-            ]
-          : []),
-      ]);
+          formData: form,
+          photoPath,
+          acceptedStudentId: studentId,
+          acceptedEnrollmentId: enrollmentId,
+          matchedGuardianId: resolvedGuardianId,
+          reviewedByUserId: actor.id,
+          decidedAt: now,
+          updatedAt: now,
+        })
+        .returning();
 
       // 4. Batch insert admission events
       await tx.insert(admissionEvents).values([

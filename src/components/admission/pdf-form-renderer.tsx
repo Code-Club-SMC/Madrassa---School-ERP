@@ -405,6 +405,15 @@ export function PdfFormRenderer({
       prev_roll: person.prevRoll,
     };
 
+    if (requestedGradeOptions && requestedGradeOptions.length > 0) {
+      randomSample.req_darja = requestedGradeOptions[0].id;
+      randomSample.shoba = requestedGradeOptions[0].id;
+    }
+    if (cls && cls.length > 0) {
+      randomSample.classId = cls[0].id;
+      randomSample.class = cls[0].nameUrdu || cls[0].name;
+    }
+
     const emptyEntries = Object.entries(randomSample).filter(([key]) => !form[key]?.trim());
 
     if (emptyEntries.length === 0) {

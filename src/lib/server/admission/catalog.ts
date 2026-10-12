@@ -127,7 +127,9 @@ export async function resolveAdmissionTarget(
       .from(schoolClasses)
       .where(eq(schoolClasses.id, schoolClassId))
       .limit(1);
-    if (!existingClass) throw new AdmissionError("Selected school class does not exist", 400);
+    if (!existingClass) {
+      throw new AdmissionError("منتخب کردہ اسکول کلاس موجود نہیں · Selected school class does not exist", 400);
+    }
     schoolClassFee = existingClass.fee ?? null;
   }
 
@@ -145,8 +147,9 @@ export async function resolveAdmissionTarget(
       .from(madrassaSubcategories)
       .where(eq(madrassaSubcategories.id, madrassaSubcategoryId))
       .limit(1);
-    if (!existingSubcategory)
-      throw new AdmissionError("Selected madrassa category does not exist", 400);
+    if (!existingSubcategory) {
+      throw new AdmissionError("منتخب کردہ مدرسہ درجہ موجود نہیں · Selected madrassa class does not exist", 400);
+    }
 
     if (expectedSection) {
       const dbSec = (existingSubcategory.section || "").toLowerCase();
@@ -155,7 +158,7 @@ export async function resolveAdmissionTarget(
           ? ["baneen", "male", "both", "all"].includes(dbSec)
           : ["banat", "female", "both", "all"].includes(dbSec);
       if (!valid) {
-        throw new AdmissionError("Selected madrassa grade does not belong to this madrassa", 400);
+        throw new AdmissionError("منتخب کردہ درجہ اس مدرسہ سے متعلق نہیں · Selected madrassa grade does not belong to this madrassa", 400);
       }
     }
     return {
@@ -182,7 +185,7 @@ export async function resolveAdmissionTarget(
     schoolClassId,
     madrassaSubcategoryId: null,
     darja: override.darja ?? null,
-    rollPrefix: target.defaultSchoolClassId ?? program.rollPrefix ?? "SCH",
+    rollPrefix: override.rollPrefix ?? program.rollPrefix ?? "SCH",
     fee: schoolClassFee,
   };
 }
@@ -207,28 +210,36 @@ export async function getRollPrefix(target: AdmissionTarget) {
   return program?.rollPrefix ?? "ADM";
 }
 
+export function matchSchoolClass(
+  needle: string | undefined,
+  rows: Array<{ id: string; name: string; nameUrdu: string; govtEquivalent?: string | null }>,
+) {
+  const normNeedle = normalize(needle);
+  if (!normNeedle) return null;
+
+  const exact = rows.find((item) =>
+    normalizedCandidates(item.id, item.name, item.nameUrdu, item.govtEquivalent ?? undefined).some(
+      (candidate) => candidate === normNeedle,
+    ),
+  );
+  if (exact) return exact.id;
+
+  const loose = rows.find((item) =>
+    normalizedCandidates(item.name, item.nameUrdu, item.govtEquivalent ?? undefined).some(
+      (candidate) => candidate.includes(normNeedle) || normNeedle.includes(candidate),
+    ),
+  );
+  return loose?.id ?? null;
+}
+
 export async function resolveSchoolClassId(value: string | undefined) {
-  const needle = normalize(value);
-  if (!needle) return null;
+  if (!value) return null;
 
   return db
     .select({ id: schoolClasses.id, name: schoolClasses.name, nameUrdu: schoolClasses.nameUrdu, govtEquivalent: schoolClasses.govtEquivalent })
     .from(schoolClasses)
-    .then((rows) => {
-      const exact = rows.find((item) =>
-        normalizedCandidates(item.id, item.name, item.nameUrdu, item.govtEquivalent ?? undefined).some(
-          (candidate) => candidate === needle,
-        ),
-      );
-      if (exact) return exact.id;
-
-      const loose = rows.find((item) =>
-        normalizedCandidates(item.name, item.nameUrdu, item.govtEquivalent ?? undefined).some(
-          (candidate) => candidate.includes(needle) || needle.includes(candidate),
-        ),
-      );
-      return loose?.id ?? null;
-    });
+    .then((rows) => matchSchoolClass(value, rows))
+    .catch(() => null);
 }
 
 function variantAllowsSchoolClass(target: VariantTarget) {
@@ -240,7 +251,14 @@ function variantAllowsSchoolClass(target: VariantTarget) {
 async function resolveMadrassaSubcategoryId(value: string | undefined, section: Section | null) {
   if (!value) return null;
 
-  // The admission form now stores the real subcategory id (from the classes table) in form.shoba.
+  const expectedDbSections =
+    section === "baneen"
+      ? ["baneen", "male", "both", "all"]
+      : section === "banat"
+        ? ["banat", "female", "both", "all"]
+        : [section, "both", "all"].filter(Boolean) as string[];
+
+  // 1. Exact ID match from database
   const [subcategory] = await db
     .select({
       id: madrassaSubcategories.id,
@@ -252,15 +270,43 @@ async function resolveMadrassaSubcategoryId(value: string | undefined, section: 
 
   if (subcategory) {
     if (section) {
-      const expectedDbSections =
-        section === "baneen" ? ["baneen", "male"] : section === "banat" ? ["banat", "female"] : [section];
-      if (!expectedDbSections.includes(subcategory.section)) return null;
+      if (!expectedDbSections.includes((subcategory.section || "").toLowerCase())) return null;
     }
     return subcategory.id;
   }
 
-  // Fallback for legacy catalog values (name / rollPrefix / darja).
-  return findMadrassaGrade(value, section)?.id ?? null;
+  // 2. Query all subcategories from the database to match by name, nameUrdu, rollPrefix, or darja
+  const needle = normalize(value);
+  if (!needle) return null;
+
+  const rows = await db
+    .select({
+      id: madrassaSubcategories.id,
+      name: madrassaSubcategories.name,
+      nameUrdu: madrassaSubcategories.nameUrdu,
+      rollPrefix: madrassaSubcategories.rollPrefix,
+      darja: madrassaSubcategories.darja,
+      section: madrassaSubcategories.section,
+    })
+    .from(madrassaSubcategories);
+
+  const filtered = section
+    ? rows.filter((r) => expectedDbSections.includes((r.section || "").toLowerCase()))
+    : rows;
+
+  const exact = filtered.find((item) =>
+    normalizedCandidates(item.id, item.name, item.nameUrdu, item.rollPrefix ?? undefined, item.darja ?? undefined).some(
+      (candidate) => candidate === needle,
+    ),
+  );
+  if (exact) return exact.id;
+
+  const loose = filtered.find((item) =>
+    normalizedCandidates(item.name, item.nameUrdu, item.rollPrefix ?? undefined, item.darja ?? undefined).some(
+      (candidate) => candidate.includes(needle) || needle.includes(candidate),
+    ),
+  );
+  return loose?.id ?? null;
 }
 
 function madrassaSectionForVariant(variantKey: AdmissionVariantKey): Section | null {
