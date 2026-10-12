@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useState } from "react";
 import { BookMarked, Save, TrendingUp, Award, Printer, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { students } from "@/mock/students";
 import { institution } from "@/mock";
 
 export const Route = createFileRoute("/_authenticated/madrassa/hifz")({
@@ -20,13 +19,42 @@ export const Route = createFileRoute("/_authenticated/madrassa/hifz")({
 });
 
 function HifzTracker() {
-  const hifzStudents = students.filter((s) => s.system === "madrassa" && s.categoryId === "hifz");
-  const [progress, setProgress] = useState<Record<string, { sabaq: string; sabqi: string; manzil: string; juz: number }>>(() => Object.fromEntries(hifzStudents.map((s) => [s.id, {
-    sabaq: "نیا سبق درج کریں",
-    sabqi: `پارہ ${(s.hifzJuzCompleted ?? 1) - 1} مکمل`,
-    manzil: `پارہ ۱ تا ${Math.max(1, (s.hifzJuzCompleted ?? 1) - 2)}`,
-    juz: s.hifzJuzCompleted ?? 0,
-  }])));
+  const [studentsList, setStudentsList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/students?system=madrassa&pageSize=100", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.students && Array.isArray(data.students)) {
+          setStudentsList(data.students);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const hifzStudents = studentsList;
+  const [progress, setProgress] = useState<Record<string, { sabaq: string; sabqi: string; manzil: string; juz: number }>>({});
+
+  useEffect(() => {
+    if (hifzStudents.length > 0) {
+      setProgress((prev) => {
+        const next = { ...prev };
+        hifzStudents.forEach((s) => {
+          if (!next[s.id]) {
+            next[s.id] = {
+              sabaq: "نیا سبق درج کریں",
+              sabqi: "پارہ ۱ مکمل",
+              manzil: "پارہ ۱",
+              juz: 1,
+            };
+          }
+        });
+        return next;
+      });
+    }
+  }, [hifzStudents]);
 
   return (
     <div>
@@ -56,8 +84,15 @@ function HifzTracker() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {hifzStudents.map((s) => {
-              const p = progress[s.id];
+            {hifzStudents.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="h-28 text-center text-muted-foreground">
+                  {loading ? "حفظ طلبہ لوڈ ہو رہے ہیں..." : "کوئی حفظ کے طلبہ موجود نہیں ہیں — No Hifz students enrolled yet."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              hifzStudents.map((s) => {
+                const p = progress[s.id] ?? { sabaq: "—", sabqi: "—", manzil: "—", juz: 0 };
               const isKhatm = p.juz >= 30;
               return (
                 <TableRow key={s.id}>
@@ -87,8 +122,9 @@ function HifzTracker() {
                   </TableCell>
                 </TableRow>
               );
-            })}
-          </TableBody>
+            })
+          )}
+        </TableBody>
         </Table>
       </Card>
     </div>

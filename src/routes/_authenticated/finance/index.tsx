@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useMemo, useState } from "react";
 import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download, Printer } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
-import { financeRecords as initialFinance, incomeVsExpense, feeRecords, institution, type FinanceRecord, type System } from "@/mock";
+import { institution, type FinanceRecord, type System } from "@/mock";
 import { formatPKR, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -27,11 +27,66 @@ const tooltipStyle = { background: "var(--card)", border: "1px solid var(--borde
 type Scope = "both" | "school" | "madrassa";
 
 function FinanceDashboard() {
-  const [records, setRecords] = useState<FinanceRecord[]>(initialFinance);
+  const [records, setRecords] = useState<FinanceRecord[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("msmis_finance_records");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  });
+  const [dbMonthly, setDbMonthly] = useState<
+    Array<{
+      month: string;
+      income: number;
+      expense: number;
+      schoolIncome: number;
+      madrassaIncome: number;
+      schoolExpense: number;
+      madrassaExpense: number;
+    }>
+  >([]);
+  const [dbKpis, setDbKpis] = useState<{ totalCollectedPaisa: number; openArrearsPaisa: number }>({
+    totalCollectedPaisa: 0,
+    openArrearsPaisa: 0,
+  });
   const [scope, setScope] = useState<Scope>("both");
   const [open, setOpen] = useState(false);
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
   const [balanceDialogOpen, setBalanceDialogOpen] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/dashboard?filter=all")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!mounted || !d) return;
+        if (Array.isArray(d.monthlyHistory)) setDbMonthly(d.monthlyHistory);
+        if (d.kpis) {
+          setDbKpis({
+            totalCollectedPaisa: d.kpis.totalCollectedPaisa ?? 0,
+            openArrearsPaisa: d.kpis.openArrearsPaisa ?? 0,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleAddTxn = (r: FinanceRecord) => {
+    setRecords((prev) => {
+      const next = [r, ...prev];
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("msmis_finance_records", JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
+  };
 
   const scoped = useMemo(
     () => (scope === "both" ? records : records.filter((r) => r.system === scope || r.system === "both")),
@@ -81,15 +136,10 @@ function FinanceDashboard() {
 
     return Array.from({ length: daysInMonth }, (_, index) => {
       const day = index + 1;
-      const baseSchoolInc = Math.round(1800 + Math.sin(day * 0.7) * 900 + (day % 5 === 0 ? 3200 : 0) + (day <= 10 ? 2400 : 600));
-      const baseMadrassaInc = Math.round(1400 + Math.cos(day * 0.6) * 700 + (day % 7 === 0 ? 2800 : 0) + (day <= 10 ? 1700 : 500));
-      const baseSchoolExp = Math.round(1100 + Math.cos(day * 0.5) * 500 + (day % 10 === 0 ? 1800 : 300));
-      const baseMadrassaExp = Math.round(850 + Math.sin(day * 0.4) * 400 + (day % 12 === 0 ? 1400 : 250));
-
-      const schoolIncome = recordSchoolIncomeByDay.get(day) ?? Math.max(500, baseSchoolInc);
-      const madrassaIncome = recordMadrassaIncomeByDay.get(day) ?? Math.max(400, baseMadrassaInc);
-      const schoolExpense = recordSchoolExpenseByDay.get(day) ?? Math.max(300, baseSchoolExp);
-      const madrassaExpense = recordMadrassaExpenseByDay.get(day) ?? Math.max(250, baseMadrassaExp);
+      const schoolIncome = recordSchoolIncomeByDay.get(day) ?? 0;
+      const madrassaIncome = recordMadrassaIncomeByDay.get(day) ?? 0;
+      const schoolExpense = recordSchoolExpenseByDay.get(day) ?? 0;
+      const madrassaExpense = recordMadrassaExpenseByDay.get(day) ?? 0;
 
       return {
         day: `${day}`,
@@ -105,19 +155,18 @@ function FinanceDashboard() {
   }, [scoped]);
 
   const totals = useMemo(() => {
+    const totalDue = dbKpis.totalCollectedPaisa + dbKpis.openArrearsPaisa;
+    const rate = totalDue > 0 ? Math.round((dbKpis.totalCollectedPaisa / totalDue) * 100) : 0;
+
     if (period === "yearly") {
-      const income = incomeVsExpense.reduce((acc, curr) => acc + (curr[incomeKey] ?? curr.income), 0);
-      const expense = incomeVsExpense.reduce((acc, curr) => acc + (curr[expenseKey] ?? curr.expense), 0);
-      const collected = feeRecords.filter((f) => f.status === "paid").length;
-      const rate = Math.round((collected / Math.max(feeRecords.length, 1)) * 100);
+      const income = dbMonthly.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
+      const expense = dbMonthly.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
       return { income, expense, net: income - expense, rate };
     }
-    const income = dailyIncomeVsExpense.reduce((acc, curr) => acc + (curr[incomeKey] ?? curr.income), 0);
-    const expense = dailyIncomeVsExpense.reduce((acc, curr) => acc + (curr[expenseKey] ?? curr.expense), 0);
-    const collected = feeRecords.filter((f) => f.status === "paid").length;
-    const rate = Math.round((collected / Math.max(feeRecords.length, 1)) * 100);
+    const income = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
+    const expense = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
     return { income, expense, net: income - expense, rate };
-  }, [period, incomeKey, expenseKey, dailyIncomeVsExpense]);
+  }, [period, incomeKey, expenseKey, dailyIncomeVsExpense, dbMonthly, dbKpis]);
 
   const incomeBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; nameUrdu: string; value: number }>();
@@ -169,7 +218,7 @@ function FinanceDashboard() {
               </DialogContent>
             </Dialog>
             <Button variant="outline" size="sm" className="gap-1.5"><Download className="h-4 w-4" />Export</Button>
-            <AddTxnDialog open={open} onOpenChange={setOpen} onAdd={(r) => setRecords((p) => [r, ...p])} defaultSystem={scope === "both" ? "both" : scope} />
+            <AddTxnDialog open={open} onOpenChange={setOpen} onAdd={handleAddTxn} defaultSystem={scope === "both" ? "both" : scope} />
           </div>
         }
       />
@@ -224,7 +273,7 @@ function FinanceDashboard() {
         </div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={period === "monthly" ? dailyIncomeVsExpense : incomeVsExpense} barGap={period === "monthly" ? 2 : 6}>
+            <BarChart data={period === "monthly" ? dailyIncomeVsExpense : dbMonthly} barGap={period === "monthly" ? 2 : 6}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey={period === "monthly" ? "day" : "month"}
@@ -274,17 +323,25 @@ function FinanceDashboard() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {scoped.slice(0, 14).map((r) => (
-              <TableRow key={r.id}>
-                <TableCell className="font-mono text-xs">{formatDate(r.date)}</TableCell>
-                <TableCell><span className={cn("text-xs font-medium capitalize", r.type === "income" ? "text-chart-5 dark:text-chart-1" : "text-destructive")}>{r.type}</span></TableCell>
-                <TableCell><span className="text-[10px] uppercase tracking-wide text-muted-foreground">{r.system}</span></TableCell>
-                <TableCell><span className="text-xs capitalize">{r.category}</span> · <span className="font-urdu text-sm">{r.categoryUrdu}</span></TableCell>
-                <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{r.description}</TableCell>
-                <TableCell className={cn("text-end font-mono text-sm font-medium", r.type === "income" ? "text-chart-5 dark:text-chart-1" : "text-destructive")}>{r.type === "income" ? "+" : "−"}{formatPKR(r.amount)}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{r.source}</TableCell>
+            {scoped.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  کوئی لین دین درج نہیں ہے · No transactions recorded
+                </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              scoped.slice(0, 14).map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="font-mono text-xs">{formatDate(r.date)}</TableCell>
+                  <TableCell><span className={cn("text-xs font-medium capitalize", r.type === "income" ? "text-chart-5 dark:text-chart-1" : "text-destructive")}>{r.type}</span></TableCell>
+                  <TableCell><span className="text-[10px] uppercase tracking-wide text-muted-foreground">{r.system}</span></TableCell>
+                  <TableCell><span className="text-xs capitalize">{r.category}</span> · <span className="font-urdu text-sm">{r.categoryUrdu}</span></TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{r.description}</TableCell>
+                  <TableCell className={cn("text-end font-mono text-sm font-medium", r.type === "income" ? "text-chart-5 dark:text-chart-1" : "text-destructive")}>{r.type === "income" ? "+" : "−"}{formatPKR(r.amount)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{r.source}</TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </Card>

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Printer, FileSpreadsheet } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -10,8 +11,6 @@ import {
 } from "recharts";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
-import { students, applications, feeRecords, recentActivity } from "@/mock";
-import { generateAttendance } from "@/mock/attendance";
 import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
 import { useLanguage } from "@/components/language-context";
 import { cn } from "@/lib/utils";
@@ -28,32 +27,53 @@ function MonthlyReport() {
   const URDU_MONTHS = ["جنوری", "فروری", "مارچ", "اپریل", "مئی", "جون", "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر", "دسمبر"];
   const monthLabelUrdu = `${URDU_MONTHS[now.getMonth()]} ${now.getFullYear()}`;
 
-  // Admissions this month (use applications)
-  const admissions = applications.filter((a) => a.status === "accepted").length;
-  const withdrawals = applications.filter((a) => a.status === "rejected").length;
-  const pending = applications.filter((a) => a.status === "pending").length;
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [applicationsList, setApplicationsList] = useState<any[]>([]);
 
-  const paid = feeRecords.filter((f) => f.status === "paid").length;
-  const partial = feeRecords.filter((f) => f.status === "partial").length;
-  const unpaid = feeRecords.filter((f) => f.status === "unpaid" || f.status === "overdue").length;
-  const collected = feeRecords.reduce((a, b) => a + b.paidAmount, 0);
-  const expected = feeRecords.reduce((a, b) => a + b.monthlyFee, 0);
-  const rate = expected ? Math.round((collected / expected) * 100) : 0;
+  useEffect(() => {
+    fetch("/api/dashboard?filter=all", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d) setDashboardData(d);
+      })
+      .catch(() => {});
 
-  // 30-day attendance trend
-  const sample = students.slice(0, 24);
-  const per = new Map<string, { p: number; t: number }>();
-  for (const s of sample) {
-    for (const r of generateAttendance(s.id, 30)) {
-      const cur = per.get(r.date) ?? { p: 0, t: 0 };
-      cur.t++;
-      if (r.status === "present" || r.status === "late") cur.p++;
-      per.set(r.date, cur);
-    }
-  }
-  const attendanceDaily = [...per.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([d, v]) => ({ date: d.slice(5), rate: Math.round((v.p / v.t) * 100) }));
+    fetch("/api/admission/applications", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.applications && Array.isArray(d.applications)) {
+          setApplicationsList(d.applications);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Real Admissions
+  const admissions = applicationsList.filter((a) => a.status === "accepted").length;
+  const withdrawals = applicationsList.filter((a) => a.status === "rejected").length;
+  const pending = applicationsList.filter((a) => a.status === "pending").length;
+
+  // Real Financials
+  const collected = dashboardData?.financialMeta?.collected ?? 0;
+  const expected = dashboardData?.financialMeta?.target ?? 0;
+  const rate = expected > 0 ? Math.round((collected / expected) * 100) : 0;
+  const studentStatus = dashboardData?.financialMeta?.studentStatus ?? {
+    cleared: { count: 0 },
+    partial: { count: 0 },
+    unpaid: { count: 0 },
+  };
+
+  const paid = studentStatus.cleared.count;
+  const partial = studentStatus.partial.count;
+  const unpaid = studentStatus.unpaid.count;
+
+  // Attendance
+  const attendanceDaily = (dashboardData?.attendanceSummary?.rates || []).map((r: any) => ({
+    date: r.day,
+    rate: r.rate,
+  }));
+
+  const recentActivity = dashboardData?.recentActivities || [];
 
   const overview = [
     { metric: "Admissions", metricUrdu: "داخلے", value: admissions },
@@ -101,8 +121,8 @@ function MonthlyReport() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <KpiCard label="New Admissions" labelUrdu="نئے داخلے" value={admissions} accent="success" delta={{ value: 12, positive: true }} />
-        <KpiCard label="Fee Collected" labelUrdu="فیس وصول" value={`${(collected / 1000).toFixed(1)}k`} accent="success" />
+        <KpiCard label="New Admissions" labelUrdu="نئے داخلے" value={admissions} accent="success" />
+        <KpiCard label="Fee Collected" labelUrdu="فیس وصول" value={`PKR ${collected.toLocaleString()}`} accent="success" />
         <KpiCard label="Collection Rate" labelUrdu="وصولی کی شرح" value={`${rate}%`} accent={rate >= 75 ? "success" : "warning"} />
         <KpiCard label="Pending Apps" labelUrdu="زیر التواء درخواستیں" value={pending} accent="warning" />
       </div>
@@ -133,7 +153,7 @@ function MonthlyReport() {
         </ChartCard>
       </div>
 
-      <ChartCard title="Attendance Rate · Last 30 days" titleUrdu="پچھلے 30 دن کی حاضری" bodyClassName="h-72" className="mb-4">
+      <ChartCard title="Attendance Rate · Weekly" titleUrdu="ہفتہ وار حاضری کی شرح" bodyClassName="h-72" className="mb-4">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={attendanceDaily} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -161,39 +181,26 @@ function MonthlyReport() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentActivity.map((e) => (
-                <TableRow key={e.id}>
-                  <TableCell className="capitalize text-xs">{e.type}</TableCell>
-                  <TableCell>
-                    <div className={cn("text-sm", isUrdu && "font-urdu")}>{isUrdu ? e.titleUrdu : e.title}</div>
+              {recentActivity.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="h-20 text-center text-muted-foreground">
+                    {isUrdu ? "کوئی حالیہ سرگرمی درج نہیں ہوئی" : "No recent activity recorded yet"}
                   </TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground">{new Date(e.at).toLocaleString()}</TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                recentActivity.map((e: any) => (
+                  <TableRow key={e.id}>
+                    <TableCell className="capitalize text-xs">{e.type}</TableCell>
+                    <TableCell>
+                      <div className={cn("text-sm", isUrdu && "font-urdu")}>{isUrdu ? e.titleUrdu : e.title}</div>
+                    </TableCell>
+                    <TableCell className="text-right text-xs text-muted-foreground">{new Date(e.at).toLocaleString()}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
-      </Card>
-
-      <Card className="p-5">
-        <h3 className={cn("font-semibold text-sm mb-3", isUrdu ? "font-urdu text-base" : "font-heading")}>
-          {isUrdu ? "اہم نکات" : "Insights"}
-        </h3>
-        <ul className={cn("text-sm space-y-2 list-disc ps-5 text-muted-foreground", isUrdu && "font-urdu")}>
-          {isUrdu ? (
-            <>
-              <li>متوقع فیس <span className="font-semibold text-foreground">PKR {expected.toLocaleString()}</span> میں سے <span className="font-semibold text-foreground">PKR {collected.toLocaleString()}</span> وصول ہوئے ({rate}% کارکردگی)۔</li>
-              <li>اس ماہ <span className="font-semibold text-foreground">{unpaid}</span> طلبہ کی فیس واجب الادا ہے — یاد دہانی نوٹس جاری کرنے کی سفارش کی جاتی ہے۔</li>
-              <li><span className="font-semibold text-foreground">{admissions}</span> داخلوں کی تصدیق بمقابلہ <span className="font-semibold text-foreground">{withdrawals}</span> خارج طلبہ — خالص ترقی: {admissions - withdrawals}۔</li>
-            </>
-          ) : (
-            <>
-              <li><span className="font-semibold text-foreground">PKR {collected.toLocaleString()}</span> of <span className="font-semibold text-foreground">PKR {expected.toLocaleString()}</span> collected ({rate}% collection efficiency).</li>
-              <li><span className="font-semibold text-foreground">{unpaid}</span> students remain unpaid this month — follow-up notices recommended.</li>
-              <li><span className="font-semibold text-foreground">{admissions}</span> admissions confirmed vs <span className="font-semibold text-foreground">{withdrawals}</span> withdrawals — net growth of {admissions - withdrawals}.</li>
-            </>
-          )}
-        </ul>
       </Card>
     </div>
   );

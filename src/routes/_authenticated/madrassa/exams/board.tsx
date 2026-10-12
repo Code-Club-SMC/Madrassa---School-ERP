@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, BookMarked, Upload } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -10,21 +10,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { students } from "@/mock";
 
 export const Route = createFileRoute("/_authenticated/madrassa/exams/board")({
   component: WifaqBoardPage,
 });
 
-const BOARDS = ["Wifaq ul Madaris Al-Arabia Pakistan", "Tanzeem ul Madaris Ahle Sunnat", "Wifaq ul Madaris Al-Salafiyya", "Rabita ul Madaris", "Nizam ul Madaris"];
+const BOARDS = [
+  "Wifaq ul Madaris Al-Arabia Pakistan",
+  "Tanzeem ul Madaris Ahle Sunnat",
+  "Wifaq ul Madaris Al-Salafiyya",
+  "Rabita ul Madaris",
+  "Nizam ul Madaris",
+];
 
 function WifaqBoardPage() {
   const [tab, setTab] = useState<"register" | "zimni">("register");
-  const eligible = students.filter((s) => s.system === "madrassa").slice(0, 14);
+  const [studentsList, setStudentsList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/students?system=madrassa&pageSize=50", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.students && Array.isArray(data.students)) {
+          setStudentsList(data.students);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const eligible = studentsList;
 
   return (
     <div>
-      <Link to="/madrassa/exams" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-3"><ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />Back to exams</Link>
+      <Link
+        to="/madrassa/exams"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-3"
+      >
+        <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />Back to exams
+      </Link>
       <PageHeader
         title="Wifaq Board Examination"
         titleUrdu="وفاقی بورڈ امتحان"
@@ -33,10 +58,17 @@ function WifaqBoardPage() {
 
       <Card className="p-3 mb-3 flex flex-wrap gap-2 items-center">
         <span className="text-xs text-muted-foreground">Wifaq:</span>
-        <Select defaultValue={BOARDS[0]}><SelectTrigger className="w-[320px]"><SelectValue /></SelectTrigger><SelectContent>{BOARDS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
+        <Select defaultValue={BOARDS[0]}>
+          <SelectTrigger className="w-[320px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {BOARDS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <span className="text-xs text-muted-foreground ms-2">Hijri Year:</span>
         <Input defaultValue="1447" className="w-24" />
-        <Button variant="outline" size="sm" className="gap-1.5 ms-auto"><Upload className="h-3.5 w-3.5" />Bulk Upload</Button>
+        <Button variant="outline" size="sm" className="gap-1.5 ms-auto">
+          <Upload className="h-3.5 w-3.5" />Bulk Upload
+        </Button>
       </Card>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="mb-4">
@@ -59,20 +91,57 @@ function WifaqBoardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {eligible.map((s, i) => {
-                  const registered = i % 2 === 0;
-                  return (
-                    <TableRow key={s.id}>
-                      <TableCell className="font-mono text-xs">{s.rollNo}</TableCell>
-                      <TableCell><p className="font-medium text-sm">{s.name}</p><p className="font-urdu text-sm text-muted-foreground">{s.nameUrdu}</p></TableCell>
-                      <TableCell><Badge variant="secondary" className="font-urdu text-xs">{s.gender === "male" ? "بنین" : "بنات"}</Badge></TableCell>
-                      <TableCell><span className="font-urdu text-sm">{["ثانویہ عامہ", "عالمیہ", "ثانویہ خاصہ"][i % 3]}</span></TableCell>
-                      <TableCell className="font-mono text-[10px]">{registered ? `WMA-1447-${4400 + i}` : "—"}</TableCell>
-                      <TableCell>{registered ? <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">Registered</Badge> : <Badge variant="outline" className="bg-blue-500/15 text-blue-700 dark:text-blue-300">Eligible</Badge>}</TableCell>
-                      <TableCell className="text-end"><Button size="sm" variant="outline" onClick={() => toast.success(`${s.name} ${registered ? "withdrawn" : "registered with Wifaq"}`)}>{registered ? "Withdraw" : <><BookMarked className="h-3.5 w-3.5 me-1.5" />Register</>}</Button></TableCell>
-                    </TableRow>
-                  );
-                })}
+                {eligible.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-28 text-center text-muted-foreground">
+                      {loading ? "طلبہ لوڈ ہو رہے ہیں..." : "کوئی طلبہ موجود نہیں ہیں — No madrassa students found."}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  eligible.map((s, i) => {
+                    const registered = i % 2 === 0;
+                    return (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-mono text-xs">{s.rollNo}</TableCell>
+                        <TableCell>
+                          <p className="font-medium text-sm">{s.name}</p>
+                          <p className="font-urdu text-sm text-muted-foreground">{s.nameUrdu}</p>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="font-urdu text-xs">
+                            {s.gender === "male" ? "بنین" : "بنات"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-urdu text-sm">{s.darja || s.category || "—"}</span>
+                        </TableCell>
+                        <TableCell className="font-mono text-[10px]">
+                          {registered ? `WMA-1447-${4400 + i}` : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {registered ? (
+                            <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                              Registered
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-blue-500/15 text-blue-700 dark:text-blue-300">
+                              Eligible
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toast.success(`${s.name} ${registered ? "withdrawn" : "registered with Wifaq"}`)}
+                          >
+                            {registered ? "Withdraw" : <><BookMarked className="h-3.5 w-3.5 me-1.5" />Register</>}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           </Card>

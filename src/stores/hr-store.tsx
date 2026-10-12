@@ -1,17 +1,11 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import {
-  staffSeed,
-  payrollProfilesSeed,
-  payslipsSeed,
-  attendanceSeed,
-  leavesSeed,
-  loansSeed,
-  type StaffMember,
-  type PayrollProfile,
-  type Payslip,
-  type AttendanceRecord,
-  type LeaveRequest,
-  type StaffLoan,
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import type {
+  StaffMember,
+  PayrollProfile,
+  Payslip,
+  AttendanceRecord,
+  LeaveRequest,
+  StaffLoan,
 } from "@/lib/mock/hr";
 
 type NewStaffInput = Omit<StaffMember, "id"> & {
@@ -42,12 +36,73 @@ type HRStore = {
 const Ctx = createContext<HRStore | null>(null);
 
 export function HRProvider({ children }: { children: ReactNode }) {
-  const [staff, setStaff] = useState<StaffMember[]>(staffSeed);
-  const [payrollProfiles, setPayrollProfiles] = useState<PayrollProfile[]>(payrollProfilesSeed);
-  const [payslips, setPayslips] = useState<Payslip[]>(payslipsSeed);
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>(attendanceSeed);
-  const [leaves, setLeaves] = useState<LeaveRequest[]>(leavesSeed);
-  const [loans, setLoans] = useState<StaffLoan[]>(loansSeed);
+  const [staff, setStaff] = useState<StaffMember[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("msmis_hr_staff");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  });
+  const [payrollProfiles, setPayrollProfiles] = useState<PayrollProfile[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("msmis_hr_payroll_profiles");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  });
+  const [payslips, setPayslips] = useState<Payslip[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("msmis_hr_payslips");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  });
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("msmis_hr_attendance");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  });
+  const [leaves, setLeaves] = useState<LeaveRequest[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("msmis_hr_leaves");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  });
+  const [loans, setLoans] = useState<StaffLoan[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("msmis_hr_loans");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("msmis_hr_staff", JSON.stringify(staff));
+        localStorage.setItem("msmis_hr_payroll_profiles", JSON.stringify(payrollProfiles));
+        localStorage.setItem("msmis_hr_payslips", JSON.stringify(payslips));
+        localStorage.setItem("msmis_hr_attendance", JSON.stringify(attendance));
+        localStorage.setItem("msmis_hr_leaves", JSON.stringify(leaves));
+        localStorage.setItem("msmis_hr_loans", JSON.stringify(loans));
+      } catch {}
+    }
+  }, [staff, payrollProfiles, payslips, attendance, leaves, loans]);
 
   const addStaff = useCallback<HRStore["addStaff"]>((data) => {
     const id = `STF-${String(Date.now()).slice(-6)}`;

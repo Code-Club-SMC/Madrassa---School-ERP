@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, GraduationCap, Plus, Upload, Search } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { students } from "@/mock";
 
 export const Route = createFileRoute("/_authenticated/school/exams/board")({
   component: BoardExamsPage,
@@ -23,31 +22,75 @@ const EXAM_TYPES = ["SSC Part I (9th)", "SSC Part II (10th)", "HSSC Part I (11th
 function BoardExamsPage() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const eligible = students.filter((s) => s.system === "school" && s.classId && ["c9", "c10", "c11", "c12"].includes(s.classId));
-  const filtered = eligible.filter((s) => !q || s.name.toLowerCase().includes(q.toLowerCase()) || s.rollNo.includes(q));
+  const [studentsList, setStudentsList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/students?system=school&pageSize=50", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.students && Array.isArray(data.students)) {
+          setStudentsList(data.students);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const eligible = studentsList;
+  const filtered = eligible.filter(
+    (s) =>
+      !q ||
+      s.name?.toLowerCase().includes(q.toLowerCase()) ||
+      (s.rollNo && s.rollNo.includes(q)),
+  );
 
   return (
     <div>
-      <Link to="/school/exams" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-3"><ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />Back to exams</Link>
+      <Link
+        to="/school/exams"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-3"
+      >
+        <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />Back to exams
+      </Link>
       <PageHeader
         title="BISE Board Registration"
         titleUrdu="بورڈ امتحانات کا اندراج"
         description="Register Grade 9–12 students for the regional Board of Intermediate and Secondary Education examination."
         actions={
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5"><Upload className="h-3.5 w-3.5" />Bulk Upload</Button>
-            <Button size="sm" className="gap-1.5" onClick={() => setOpen(true)}><Plus className="h-3.5 w-3.5" />Register Batch</Button>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Upload className="h-3.5 w-3.5" />Bulk Upload
+            </Button>
+            <Button size="sm" className="gap-1.5" onClick={() => setOpen(true)}>
+              <Plus className="h-3.5 w-3.5" />Register Batch
+            </Button>
           </div>
         }
       />
 
       <Card className="p-3 mb-3 flex flex-wrap items-center gap-3">
-        <Select defaultValue={BOARDS[0]}><SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger><SelectContent>{BOARDS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
-        <Select defaultValue={EXAM_TYPES[0]}><SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger><SelectContent>{EXAM_TYPES.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent></Select>
+        <Select defaultValue={BOARDS[0]}>
+          <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {BOARDS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select defaultValue={EXAM_TYPES[0]}>
+          <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {EXAM_TYPES.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Input defaultValue="2026" className="w-[100px]" />
         <div className="relative w-full lg:max-w-xs ms-auto">
           <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search student…" className="pe-9" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search student…"
+            className="pe-9"
+          />
         </div>
       </Card>
 
@@ -72,26 +115,40 @@ function BoardExamsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((s, i) => {
-              const status = i % 3 === 0 ? "pending" : i % 3 === 1 ? "registered" : "fee_due";
-              return (
-                <TableRow key={s.id}>
-                  <TableCell className="font-mono text-xs">{s.rollNo}</TableCell>
-                  <TableCell><p className="font-medium text-sm">{s.name}</p><p className="font-urdu text-sm text-muted-foreground">{s.nameUrdu}</p></TableCell>
-                  <TableCell className="text-xs">{s.classId?.toUpperCase()} {s.section ? `· ${s.section}` : ""}</TableCell>
-                  <TableCell><p className="text-xs">{s.guardianName}</p><p className="font-urdu text-sm text-muted-foreground">{s.guardianNameUrdu}</p></TableCell>
-                  <TableCell className="font-mono text-[10px]">{s.guardianCnic}</TableCell>
-                  <TableCell>
-                    {status === "registered" && <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">Registered</Badge>}
-                    {status === "pending" && <Badge variant="outline" className="bg-blue-500/15 text-blue-700 dark:text-blue-300">Pending</Badge>}
-                    {status === "fee_due" && <Badge variant="outline" className="bg-amber-500/15 text-amber-700 dark:text-amber-300">Fee Due</Badge>}
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Button size="sm" variant="outline" onClick={() => toast.success(`${s.name} ${status === "registered" ? "withdrawn" : "registered with board"}`)}>{status === "registered" ? "Withdraw" : "Register"}</Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-28 text-center text-muted-foreground">
+                  {loading ? "طلبہ لوڈ ہو رہے ہیں..." : "کوئی طلبہ موجود نہیں ہیں — No school board candidates found."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filtered.map((s, i) => {
+                const status = i % 3 === 0 ? "pending" : i % 3 === 1 ? "registered" : "fee_due";
+                return (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-mono text-xs">{s.rollNo}</TableCell>
+                    <TableCell>
+                      <p className="font-medium text-sm">{s.name}</p>
+                      <p className="font-urdu text-sm text-muted-foreground">{s.nameUrdu}</p>
+                    </TableCell>
+                    <TableCell className="text-xs">{s.className || s.classId || "—"}</TableCell>
+                    <TableCell>
+                      <p className="text-xs">{s.fatherName || s.guardianName}</p>
+                      <p className="font-urdu text-sm text-muted-foreground">{s.fatherNameUrdu || s.guardianNameUrdu}</p>
+                    </TableCell>
+                    <TableCell className="font-mono text-[10px]">{s.cnicBForm || s.guardianCnic}</TableCell>
+                    <TableCell>
+                      {status === "registered" && <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">Registered</Badge>}
+                      {status === "pending" && <Badge variant="outline" className="bg-blue-500/15 text-blue-700 dark:text-blue-300">Pending</Badge>}
+                      {status === "fee_due" && <Badge variant="outline" className="bg-amber-500/15 text-amber-700 dark:text-amber-300">Fee Due</Badge>}
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <Button size="sm" variant="outline" onClick={() => toast.success(`${s.name} ${status === "registered" ? "withdrawn" : "registered with board"}`)}>{status === "registered" ? "Withdraw" : "Register"}</Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </Card>

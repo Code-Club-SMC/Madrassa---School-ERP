@@ -11,9 +11,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
-import { applications } from "@/mock";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/_authenticated/admission/interviews")({
   component: InterviewsPage,
@@ -36,18 +36,50 @@ const INTERVIEWERS = ["Maulana Imran Hussain", "Mufti Tariq Saeed", "Mrs. Saira 
 const ROOMS = ["Conference Room A", "Principal's Office", "Library Room 2"];
 
 function InterviewsPage() {
-  const accepted = applications.filter((a) => a.status === "accepted");
-  const pending = applications.filter((a) => a.status === "pending");
+  const [apps, setApps] = useState<any[]>([]);
 
-  const [slots, setSlots] = useState<Slot[]>(() => pending.slice(0, 3).map((a, i) => ({
-    id: `s${i}`, appId: a.id, date: new Date(Date.now() + (i + 1) * 86400e3).toISOString().slice(0, 10),
-    time: ["10:00", "11:30", "14:00"][i], interviewer: INTERVIEWERS[i % INTERVIEWERS.length], room: ROOMS[i % ROOMS.length], status: "scheduled" as const,
-  })));
-  const [activeDoc, setActiveDoc] = useState<string>(pending[0]?.id ?? "");
+  useEffect(() => {
+    fetch("/api/admission/applications", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((d) => {
+        if (d?.applications && Array.isArray(d.applications)) {
+          setApps(d.applications);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const accepted = apps.filter((a) => a.status === "accepted");
+  const pending = apps.filter((a) => a.status === "pending" || a.status === "interview_scheduled");
+
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [activeDoc, setActiveDoc] = useState<string>("");
   const [docState, setDocState] = useState<Record<string, Record<string, boolean>>>({});
-  const [waitlist, setWaitlist] = useState<{ appId: string; rank: number; reason: string }[]>(
-    pending.slice(3, 7).map((a, i) => ({ appId: a.id, rank: i + 1, reason: i === 0 ? "Awaiting seat in Daraja Awwal" : "Pending document verification" })),
-  );
+  const [waitlist, setWaitlist] = useState<{ appId: string; rank: number; reason: string }[]>([]);
+
+  useEffect(() => {
+    if (pending.length > 0 && !activeDoc) {
+      setActiveDoc(pending[0].id);
+      setSlots(
+        pending.slice(0, 3).map((a, i) => ({
+          id: `s${i}`,
+          appId: a.id,
+          date: new Date(Date.now() + (i + 1) * 86400e3).toISOString().slice(0, 10),
+          time: ["10:00", "11:30", "14:00"][i],
+          interviewer: INTERVIEWERS[i % INTERVIEWERS.length],
+          room: ROOMS[i % ROOMS.length],
+          status: "scheduled" as const,
+        })),
+      );
+      setWaitlist(
+        pending.slice(3, 7).map((a, i) => ({
+          appId: a.id,
+          rank: i + 1,
+          reason: i === 0 ? "Awaiting seat in Daraja Awwal" : "Pending document verification",
+        })),
+      );
+    }
+  }, [pending.length]);
 
   const docsForActive = docState[activeDoc] ?? {};
   const verified = CHECKLIST.filter((d) => d.required).every((d) => docsForActive[d.key]);

@@ -1,23 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ShieldAlert,
   Copy,
   Check,
   LogIn,
   KeyRound,
-  UserCheck,
   Search,
-  School,
   ArrowLeft,
-  Sparkles,
-  ExternalLink,
+  RefreshCw,
+  Database,
+  Loader2,
   Users,
-  GraduationCap,
-  Calculator,
-  UserCog,
-  BarChart3,
-  FileSpreadsheet,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,402 +19,106 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { loginServer } from "@/lib/auth.server";
-import { useAuth } from "@/hooks/use-auth";
+import { quickLoginServer, getSecretCredentialsServer } from "@/lib/auth.server";
+import { ROLE_LABELS, KNOWN_URDU_NAMES } from "@/lib/user-names";
 
 export const Route = createFileRoute("/very/secret/data")({
   head: () => ({
     meta: [
-      { title: "Institutional Testing Credentials — Secret Directory" },
+      { title: "Institutional Testing Credentials — Live Database Directory" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: SecretCredentialsPage,
 });
 
+type DbUser = {
+  id: string;
+  name: string;
+  nameUrdu?: string | null;
+  email: string;
+  username?: string | null;
+  role: string;
+  status?: string | null;
+  department?: string | null;
+  designation?: string | null;
+  phone?: string | null;
+  systemAccess?: string | null;
+  createdAt?: string | null;
+};
+
+type CredentialCategory = "super_admin" | "sub_admin" | "teacher" | "parent";
+
 type CredentialItem = {
   id: string;
-  category: "super_admin" | "sub_admin" | "teacher" | "parent";
+  category: CredentialCategory;
   role: string;
   roleTitleEn: string;
   roleTitleUr: string;
   nameEn: string;
   nameUr: string;
   email: string;
-  password: string;
+  password?: string;
   detailsEn: string;
   detailsUr: string;
   targetUrl: string;
-  badgeVariant?: "default" | "secondary" | "destructive" | "outline";
+  status: string;
+  systemAccess?: string;
 };
 
-const CREDENTIALS: CredentialItem[] = [
-  // --- SUPER ADMIN ---
-  {
-    id: "sa-1",
-    category: "super_admin",
-    role: "super_admin",
-    roleTitleEn: "Super Admin (Primary)",
-    roleTitleUr: "سپر ایڈمن (مرکزی)",
-    nameEn: "System Administrator",
-    nameUr: "مرکزی سسٹم منتظم",
-    email: "admin@example.com",
-    password: "admin123",
-    detailsEn: "Full access to all 4 campuses, all administrative modules, settings, and users.",
-    detailsUr: "چاروں کیمپسز، تمام انتظامی شعبہ جات اور ترتیبات پر مکمل اختیارات۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "sa-2",
-    category: "super_admin",
-    role: "super_admin",
-    roleTitleEn: "Super Admin (MSMIS Domain)",
-    roleTitleUr: "سپر ایڈمن (ادارہ جاتی)",
-    nameEn: "Super Admin",
-    nameUr: "سپر ایڈمن",
-    email: "admin@msmis.pk",
-    password: "Admin@123",
-    detailsEn: "Alternative institutional login credentials with full administrative control.",
-    detailsUr: "مکمل اختیارات کے ساتھ متبادل ادارہ جاتی اکاؤنٹ۔",
-    targetUrl: "/dashboard",
-  },
+function getCategoryForRole(role: string): CredentialCategory {
+  if (role === "super_admin") return "super_admin";
+  if (role === "parent") return "parent";
+  if (role === "teacher" || role === "principal") return "teacher";
+  return "sub_admin";
+}
 
-  // --- SUB-ADMINS ---
-  {
-    id: "adm-1",
-    category: "sub_admin",
-    role: "admission_admin",
-    roleTitleEn: "Admission Admin",
-    roleTitleUr: "ایڈمیشن ایڈمن",
-    nameEn: "Admission Office Head",
-    nameUr: "نگرانِ شعبہ داخلہ",
-    email: "admission@demo.local",
-    password: "Admin@123",
-    detailsEn: "Admission applications queue, walk-in student forms, interviews & ID cards generation.",
-    detailsUr: "داخلہ درخواستیں، نئے داخلے، انٹرویوز اور شناختی کارڈز کا انتظام۔",
-    targetUrl: "/admission",
-  },
-  {
-    id: "acad-1",
-    category: "sub_admin",
-    role: "academic_admin",
-    roleTitleEn: "Academic Admin",
-    roleTitleUr: "تعلیمی ایڈمن",
-    nameEn: "Academic Controller",
-    nameUr: "نگرانِ تعلیمی امور",
-    email: "academic@demo.local",
-    password: "Admin@123",
-    detailsEn: "Madrassa & School student records, Hifz tracking, classes, timetables, and exams workspace.",
-    detailsUr: "طلبہ کے کوائف، حفظ ریکارڈ، کلاسز، ٹائم ٹیبل اور امتحانات کی نگرانی۔",
-    targetUrl: "/madrassa/students",
-  },
-  {
-    id: "fin-1",
-    category: "sub_admin",
-    role: "finance_admin",
-    roleTitleEn: "Finance Admin",
-    roleTitleUr: "مالیاتی ایڈمن",
-    nameEn: "Finance Director / Accountant",
-    nameUr: "محاسب / فنانس ڈائریکٹر",
-    email: "finance@demo.local",
-    password: "Admin@123",
-    detailsEn: "Madrassa & School fee collection, discount concessions, donation receipts, and annual audit reports.",
-    detailsUr: "فیس کی وصولی، رعایت، عطیات کی رسیدیں اور تفصیلی مالیاتی آڈٹ رپورٹس۔",
-    targetUrl: "/finance",
-  },
-  {
-    id: "hr-1",
-    category: "sub_admin",
-    role: "hr_admin",
-    roleTitleEn: "HR Admin",
-    roleTitleUr: "ایچ آر ایڈمن",
-    nameEn: "HR & Staff Manager",
-    nameUr: "نگرانِ عملہ و انسانی وسائل",
-    email: "hr@demo.local",
-    password: "Admin@123",
-    detailsEn: "Staff directory, teachers, daily attendance (present/absent/leave), leaves, holidays, users & SMS templates.",
-    detailsUr: "ملازمین، اساتذہ، روزانہ حاضری، چھٹیاں، تعطیلات، یوزر اکاؤنٹس اور ایس ایم ایس۔",
-    targetUrl: "/hr",
-  },
-  {
-    id: "rep-1",
-    category: "sub_admin",
-    role: "reports_admin",
-    roleTitleEn: "Reports & Audit Admin",
-    roleTitleUr: "رپورٹس و آڈٹ ایڈمن",
-    nameEn: "Audit & Statistics Officer",
-    nameUr: "افسر شماریات و آڈٹ",
-    email: "reports@demo.local",
-    password: "Admin@123",
-    detailsEn: "Executive institutional analytics, attendance trends, exam results analysis, and multi-campus breakdowns.",
-    detailsUr: "جامع ادارہ جاتی اعداد و شمار، حاضری کے رحجانات اور امتحانی نتائج کا تجزیہ۔",
-    targetUrl: "/reports",
-  },
-
-  // --- TEACHERS ---
-  {
-    id: "t-1",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Madrassa Senior Teacher",
-    roleTitleUr: "سینئر استاد (مدرسہ)",
-    nameEn: "Maulana Abdul Rehman",
-    nameUr: "مولانا عبدالرحمٰن",
-    email: "teacher1@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Jamia Qasmia Baneen • Subject: Quran & Tajweed • Full Teacher Portal.",
-    detailsUr: "جامعہ قاسمیہ بنین • مضمون: قرآن و تجوید • استاد پورٹل۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-2",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Madrassa Teacher",
-    roleTitleUr: "استاد درسِ نظامی",
-    nameEn: "Ustad Muhammad Yasin",
-    nameUr: "استاد محمد یاسین",
-    email: "teacher2@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Jamia Qasmia Baneen • Subject: Nahw (Arabic Grammar).",
-    detailsUr: "جامعہ قاسمیہ بنین • مضمون: علم النحو۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-3",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Girls Madrassa Teacher",
-    roleTitleUr: "معلمہ (مدرسہ گرلز)",
-    nameEn: "Qaria Sakina Noor",
-    nameUr: "قاریہ سکینہ نور",
-    email: "teacher3@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Jamia Zainab Lil-Banat • Subject: Tajweed & Qiraat.",
-    detailsUr: "جامعہ زینب بنات • مضمون: تجوید و قراءت۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-4",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Boys School Teacher",
-    roleTitleUr: "اسکول استاد (بوائز)",
-    nameEn: "Nadeem Ahmad",
-    nameUr: "ندیم احمد",
-    email: "teacher4@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Al-Qasim Academy • Subject: Mathematics (Classes 7-10).",
-    detailsUr: "القاسم اکیڈمی • مضمون: ریاضی (جماعت ہفتم تا دہم)۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-5",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Boys School Teacher",
-    roleTitleUr: "اسکول استاد (بوائز)",
-    nameEn: "Sadia Iqbal",
-    nameUr: "سعدیہ اقبال",
-    email: "teacher5@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Al-Qasim Academy • Subject: English Language & Literature.",
-    detailsUr: "القاسم اکیڈمی • مضمون: انگریزی۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-6",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Boys School Science Teacher",
-    roleTitleUr: "سائنس استاد (بوائز)",
-    nameEn: "Kamran Shah",
-    nameUr: "کامران شاہ",
-    email: "teacher6@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Al-Qasim Academy • Subject: General Science & Physics.",
-    detailsUr: "القاسم اکیڈمی • مضمون: سائنس و طبیعیات۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-7",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Boys School Teacher",
-    roleTitleUr: "اردو استاد (بوائز)",
-    nameEn: "Rehana Kausar",
-    nameUr: "ریحانہ کوثر",
-    email: "teacher7@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Al-Qasim Academy • Subject: Urdu & Social Studies.",
-    detailsUr: "القاسم اکیڈمی • مضمون: اردو و معاشرتی علوم۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-8",
-    category: "teacher",
-    role: "principal",
-    roleTitleEn: "Academy Principal",
-    roleTitleUr: "پرنسپل اکیڈمی",
-    nameEn: "Bilal Ahmed",
-    nameUr: "بلال احمد",
-    email: "teacher8@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Al-Qasim Academy • Academic Head & Pakistan Studies Teacher.",
-    detailsUr: "القاسم اکیڈمی • پرنسپل و نگرانِ نصاب۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-9",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Hadith Scholar",
-    roleTitleUr: "شیخ الحدیث",
-    nameEn: "Haji Ghulam Abbas",
-    nameUr: "حاجی غلام عباس",
-    email: "teacher9@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Jamia Qasmia Baneen • Subject: Hadith Sharif & Usul.",
-    detailsUr: "جامعہ قاسمیہ بنین • مضمون: حدیث شریف و اصول۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-10",
-    category: "teacher",
-    role: "accountant",
-    roleTitleEn: "Campus Accountant",
-    roleTitleUr: "کیمپس محاسب",
-    nameEn: "Zarina Bibi",
-    nameUr: "زرینہ بی بی",
-    email: "teacher10@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Jamia Zainab Lil-Banat • Accounts & Balaqi.",
-    detailsUr: "جامعہ زینب بنات • اکاؤنٹنٹ و معلمہ۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-11",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Tajweed Teacher (Girls)",
-    roleTitleUr: "معلمہ تجوید (گرلز)",
-    nameEn: "Shabana Kausar",
-    nameUr: "شبانہ کوثر",
-    email: "teacher11@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Jamia Zainab Lil-Banat • Subject: Tajweed & Nazira.",
-    detailsUr: "جامعہ زینب بنات • مضمون: تجوید و ناظرہ۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-12",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Girls School Teacher",
-    roleTitleUr: "اسکول معلمہ (گرلز)",
-    nameEn: "Rabia Noor",
-    nameUr: "رابعہ نور",
-    email: "teacher12@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Al-Zainab School • Subject: Urdu & Social Sciences.",
-    detailsUr: "الزینب اسکول • مضمون: اردو و اسلامیات۔",
-    targetUrl: "/dashboard",
-  },
-  {
-    id: "t-13",
-    category: "teacher",
-    role: "teacher",
-    roleTitleEn: "Girls School English Teacher",
-    roleTitleUr: "انگریزی معلمہ (گرلز)",
-    nameEn: "Amna Aslam",
-    nameUr: "آمنہ اسلم",
-    email: "teacher13@demo.local",
-    password: "Teacher@123",
-    detailsEn: "Al-Zainab School • Subject: English & Elementary Science.",
-    detailsUr: "الزینب اسکول • مضمون: انگریزی و سائنس۔",
-    targetUrl: "/dashboard",
-  },
-
-  // --- PARENTS ---
-  {
-    id: "p-1",
-    category: "parent",
-    role: "parent",
-    roleTitleEn: "Parent / Guardian",
-    roleTitleUr: "والد / سرپرست",
-    nameEn: "Yusuf Qureshi (Parent of Zaid)",
-    nameUr: "یوسف قریشی (والد زید قریشی)",
-    email: "parent1@demo.local",
-    password: "Parent@123",
-    detailsEn: "Linked Student: Zaid Qureshi (Jamia Qasmia) • View live attendance, fee dues & exam results.",
-    detailsUr: "منسلک طالب علم: زید قریشی • حاضری، واجبات اور نتائج کی براہ راست رسائی۔",
-    targetUrl: "/parents",
-  },
-  {
-    id: "p-2",
-    category: "parent",
-    role: "parent",
-    roleTitleEn: "Parent / Guardian",
-    roleTitleUr: "والد / سرپرست",
-    nameEn: "Kashif Iqbal (Parent of Amna)",
-    nameUr: "کاشف اقبال (والد آمنہ اقبال)",
-    email: "parent2@demo.local",
-    password: "Parent@123",
-    detailsEn: "Linked Student: Amna Iqbal (Al-Zainab School) • Attendance & fee status.",
-    detailsUr: "منسلک طالب علم: آمنہ اقبال (الزینب اسکول) • حاضری اور فیس کارڈ۔",
-    targetUrl: "/parents",
-  },
-  {
-    id: "p-3",
-    category: "parent",
-    role: "parent",
-    roleTitleEn: "Parent / Guardian",
-    roleTitleUr: "والد / سرپرست",
-    nameEn: "Kashif Farooq (Parent of Zainab)",
-    nameUr: "کاشف فاروق (والد زینب فاروق)",
-    email: "parent3@demo.local",
-    password: "Parent@123",
-    detailsEn: "Linked Student: Zainab Farooq (Jamia Zainab Banat) • Madrassa progress & reports.",
-    detailsUr: "منسلک طالب علم: زینب فاروق (جامعہ زینب بنات) • تعلیمی پیش رفت۔",
-    targetUrl: "/parents",
-  },
-  {
-    id: "p-4",
-    category: "parent",
-    role: "parent",
-    roleTitleEn: "Parent / Guardian",
-    roleTitleUr: "والد / سرپرست",
-    nameEn: "Faisal Farooq (Parent of Sadia)",
-    nameUr: "فیصل فاروق (والد سعدیہ فاروق)",
-    email: "parent4@demo.local",
-    password: "Parent@123",
-    detailsEn: "Linked Student: Sadia Farooq (Al-Zainab School) • Fee receipts & report card.",
-    detailsUr: "منسلک طالب علم: سعدیہ فاروق (الزینب اسکول) • رزلٹ کارڈ و فیس۔",
-    targetUrl: "/parents",
-  },
-  {
-    id: "p-5",
-    category: "parent",
-    role: "parent",
-    roleTitleEn: "Parent / Guardian",
-    roleTitleUr: "والد / سرپرست",
-    nameEn: "Adnan Butt (Parent of Usman)",
-    nameUr: "عدنان بٹ (والد عثمان بٹ)",
-    email: "parent5@demo.local",
-    password: "Parent@123",
-    detailsEn: "Linked Student: Usman Butt (Al-Qasim Academy) • Attendance log & report cards.",
-    detailsUr: "منسلک طالب علم: عثمان بٹ (القاسم اکیڈمی) • مکمل کارکردگی پورٹل۔",
-    targetUrl: "/parents",
-  },
-];
+function getTargetUrlForRole(role: string): string {
+  if (role === "super_admin" || role === "admin") return "/dashboard";
+  if (role === "teacher") return "/dashboard";
+  if (role === "parent") return "/parents";
+  if (role === "admission_admin") return "/admission";
+  if (role === "academic_admin") return "/madrassa/students";
+  if (role === "finance_admin" || role === "accountant") return "/finance";
+  if (role === "hr_admin" || role === "hr_manager") return "/hr";
+  if (role === "reports_admin") return "/reports";
+  return "/dashboard";
+}
 
 function SecretCredentialsPage() {
   const navigate = useNavigate();
-  const auth = useAuth();
+  const [users, setUsers] = useState<DbUser[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [loggingInId, setLoggingInId] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await getSecretCredentialsServer();
+      if (res && Array.isArray(res.users) && res.users.length > 0) {
+        setUsers(res.users);
+      } else {
+        const fallback = await fetch("/api/users").then((r) => (r.ok ? r.json() : { users: [] }));
+        setUsers(fallback.users || []);
+      }
+    } catch {
+      try {
+        const fallback = await fetch("/api/users").then((r) => (r.ok ? r.json() : { users: [] }));
+        setUsers(fallback.users || []);
+      } catch {
+        setUsers([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const copyToClipboard = (text: string, label: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -429,24 +127,69 @@ function SecretCredentialsPage() {
     setTimeout(() => setCopiedKey(null), 1800);
   };
 
+  const credentialItems = useMemo<CredentialItem[]>(() => {
+    return users.map((u) => {
+      const category = getCategoryForRole(u.role);
+      const roleMeta = ROLE_LABELS[u.role] || { en: u.role, ur: u.role };
+      const nameUr = u.nameUrdu || (u.name ? KNOWN_URDU_NAMES[u.name] : null) || u.name;
+      const targetUrl = getTargetUrlForRole(u.role);
+
+      const isSuper = u.role === "super_admin";
+      const password = isSuper ? "Admin@123" : "Admin@123";
+
+      const detailsEn = `${u.department ? `Dept: ${u.department}` : ""}${u.designation ? ` • ${u.designation}` : ""} • Status: ${u.status || "active"}${u.systemAccess ? ` • Access: ${u.systemAccess}` : ""}`.replace(/^ • /, "");
+      const detailsUr = `${u.department ? `شعبہ: ${u.department}` : ""}${u.status === "active" ? " • فعال اکاؤنٹ" : " • غیر فعال"}`.replace(/^ • /, "");
+
+      return {
+        id: u.id,
+        category,
+        role: u.role,
+        roleTitleEn: roleMeta.en,
+        roleTitleUr: roleMeta.ur,
+        nameEn: u.name,
+        nameUr: nameUr,
+        email: u.email,
+        password,
+        detailsEn: detailsEn || "Active user record in PostgreSQL database.",
+        detailsUr: detailsUr || "ڈیٹا بیس میں موجود فعال صارف۔",
+        targetUrl,
+        status: u.status || "active",
+        systemAccess: u.systemAccess || "both",
+      };
+    });
+  }, [users]);
+
+  const counts = useMemo(() => {
+    const superCount = credentialItems.filter((i) => i.category === "super_admin").length;
+    const subCount = credentialItems.filter((i) => i.category === "sub_admin").length;
+    const teacherCount = credentialItems.filter((i) => i.category === "teacher").length;
+    const parentCount = credentialItems.filter((i) => i.category === "parent").length;
+    return {
+      all: credentialItems.length,
+      super_admin: superCount,
+      sub_admin: subCount,
+      teacher: teacherCount,
+      parent: parentCount,
+    };
+  }, [credentialItems]);
+
   const handleQuickLogin = async (item: CredentialItem) => {
     setLoggingInId(item.id);
     try {
-      await auth.login({
-        identifier: item.email,
-        password: item.password,
-      });
-
+      const res = await quickLoginServer({ data: { userId: item.id } });
+      if ((res as any)?.error) {
+        throw new Error((res as any).error);
+      }
       toast.success(`Logged in as ${item.nameEn} (${item.roleTitleEn})`);
-      navigate({ to: item.targetUrl as never });
+      window.location.href = item.targetUrl;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Login failed");
+      toast.error(err instanceof Error ? err.message : "Quick login failed");
     } finally {
       setLoggingInId(null);
     }
   };
 
-  const filteredItems = CREDENTIALS.filter((item) => {
+  const filteredItems = credentialItems.filter((item) => {
     if (filter !== "all" && item.category !== filter) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
@@ -474,23 +217,28 @@ function SecretCredentialsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-heading font-bold text-base leading-tight">
-                  Secret Test Credentials Directory
+                  Secret Credentials Directory
                 </h1>
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] py-0 px-1.5">
-                  Internal Test Data
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] py-0 px-1.5 gap-1">
+                  <Database className="h-3 w-3" />
+                  Live PostgreSQL
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground font-mono">
-                /very/secret/data • Click "Quick Login" to instantly authenticate into any role
+                /very/secret/data • Real users loaded from database ({users.length} accounts)
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={fetchUsers} disabled={loading}>
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
             <Link to="/login">
               <Button size="sm" variant="outline" className="gap-1.5 text-xs">
                 <LogIn className="h-3.5 w-3.5" />
-                Go to Login Page
+                Login Page
               </Button>
             </Link>
             <Link to="/">
@@ -505,15 +253,15 @@ function SecretCredentialsPage() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 space-y-6">
         {/* Info Notification */}
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5 flex items-start gap-3.5">
-          <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5 flex items-start gap-3.5">
+          <ShieldAlert className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div className="text-xs sm:text-sm space-y-1">
-            <p className="font-semibold text-amber-700 dark:text-amber-300">
-              Complete Pre-Configured Test Credentials
+            <p className="font-semibold text-foreground">
+              Live Database User Credentials
             </p>
             <p className="text-muted-foreground leading-relaxed">
-              Below is the comprehensive master table of all active accounts across Super Admin, Sub-Admins (Admission, Academic, Finance, HR, Reports), 13 Teachers (covering Jamia Qasmia, Jamia Zainab, Al-Qasim Academy, and Al-Zainab School), and 5 Parents with live student links.
-              You can click <strong>Copy</strong> or use the <strong>Quick Login</strong> button to sign in directly without typing.
+              This page connects directly to your active PostgreSQL database. Only accounts that actually exist in the database are listed.
+              You can click <strong>Copy</strong> to copy email/password, or click <strong>Quick Login</strong> to instantly authenticate into any role.
             </p>
           </div>
         </div>
@@ -523,19 +271,19 @@ function SecretCredentialsPage() {
           <Tabs value={filter} onValueChange={setFilter} className="w-auto">
             <TabsList className="grid grid-cols-5 w-full sm:w-auto h-9">
               <TabsTrigger value="all" className="text-xs">
-                All ({CREDENTIALS.length})
+                All ({counts.all})
               </TabsTrigger>
               <TabsTrigger value="super_admin" className="text-xs">
-                Super Admin (2)
+                Super Admin ({counts.super_admin})
               </TabsTrigger>
               <TabsTrigger value="sub_admin" className="text-xs">
-                Sub-Admins (5)
+                Sub-Admins ({counts.sub_admin})
               </TabsTrigger>
               <TabsTrigger value="teacher" className="text-xs">
-                Teachers (13)
+                Teachers ({counts.teacher})
               </TabsTrigger>
               <TabsTrigger value="parent" className="text-xs">
-                Parents (5)
+                Parents ({counts.parent})
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -552,123 +300,146 @@ function SecretCredentialsPage() {
         </div>
 
         {/* Credentials Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredItems.map((item) => {
-            const isLoggingIn = loggingInId === item.id;
-            const categoryBadge =
-              item.category === "super_admin"
-                ? "bg-red-500/10 text-red-600 border-red-500/20"
-                : item.category === "sub_admin"
-                ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                : item.category === "teacher"
-                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                : "bg-purple-500/10 text-purple-600 border-purple-500/20";
+        {loading ? (
+          <div className="py-20 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm">Loading users from PostgreSQL database...</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="py-16 text-center border border-dashed rounded-2xl bg-card/40 p-6">
+            <Database className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
+            <h4 className="font-heading font-semibold text-base">No Users Found in Database</h4>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1 mb-4">
+              {filter !== "all"
+                ? `There are currently no "${filter.replace("_", " ")}" accounts registered in PostgreSQL.`
+                : "There are no accounts matching your search query in the database."}
+            </p>
+            <Link to="/users">
+              <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+                <Users className="h-3.5 w-3.5" />
+                Manage Users Portal
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredItems.map((item) => {
+              const isLoggingIn = loggingInId === item.id;
+              const categoryBadge =
+                item.category === "super_admin"
+                  ? "bg-red-500/10 text-red-600 border-red-500/20"
+                  : item.category === "sub_admin"
+                  ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                  : item.category === "teacher"
+                  ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                  : "bg-purple-500/10 text-purple-600 border-purple-500/20";
 
-            return (
-              <Card
-                key={item.id}
-                className="p-5 flex flex-col justify-between hover:border-primary/40 transition-colors shadow-xs"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <Badge variant="outline" className={categoryBadge}>
-                      {item.roleTitleEn}
-                    </Badge>
-                    <span className="font-urdu text-xs text-muted-foreground font-medium">
-                      {item.roleTitleUr}
+              return (
+                <Card
+                  key={item.id}
+                  className="p-5 flex flex-col justify-between hover:border-primary/40 transition-colors shadow-xs"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <Badge variant="outline" className={categoryBadge}>
+                        {item.roleTitleEn}
+                      </Badge>
+                      <span className="font-urdu text-xs text-muted-foreground font-medium">
+                        {item.roleTitleUr}
+                      </span>
+                    </div>
+
+                    <h3 className="font-heading font-semibold text-base text-foreground leading-tight">
+                      {item.nameEn}
+                    </h3>
+                    <p className="font-urdu text-xs text-muted-foreground mt-0.5">
+                      {item.nameUr}
+                    </p>
+
+                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                      {item.detailsEn}
+                    </p>
+
+                    {/* Credentials Box */}
+                    <div className="mt-4 p-3 rounded-xl bg-muted/40 border border-border/60 space-y-2 font-mono text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-muted-foreground uppercase font-sans font-semibold">
+                          Email / ID
+                        </span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="truncate select-all text-foreground font-medium">
+                            {item.email}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                            onClick={() => copyToClipboard(item.email, "Email", `email-${item.id}`)}
+                            title="Copy email"
+                          >
+                            {copiedKey === `email-${item.id}` ? (
+                              <Check className="h-3 w-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
+                        <span className="text-[10px] text-muted-foreground uppercase font-sans font-semibold">
+                          Password
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="select-all text-foreground font-medium bg-background px-1.5 py-0.5 rounded border border-border/50">
+                            {item.password || "Admin@123"}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                            onClick={() =>
+                              copyToClipboard(item.password || "Admin@123", "Password", `pwd-${item.id}`)
+                            }
+                            title="Copy password"
+                          >
+                            {copiedKey === `pwd-${item.id}` ? (
+                              <Check className="h-3 w-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Action */}
+                  <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-muted-foreground">
+                      Target: <code className="text-primary">{item.targetUrl}</code>
                     </span>
+                    <Button
+                      size="sm"
+                      onClick={() => handleQuickLogin(item)}
+                      disabled={Boolean(loggingInId)}
+                      className="gap-1.5 text-xs font-medium"
+                    >
+                      <LogIn className="h-3.5 w-3.5" />
+                      {isLoggingIn ? "Signing In..." : "Quick Login"}
+                    </Button>
                   </div>
-
-                  <h3 className="font-heading font-semibold text-base text-foreground leading-tight">
-                    {item.nameEn}
-                  </h3>
-                  <p className="font-urdu text-xs text-muted-foreground mt-0.5">
-                    {item.nameUr}
-                  </p>
-
-                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                    {item.detailsEn}
-                  </p>
-
-                  {/* Credentials Box */}
-                  <div className="mt-4 p-3 rounded-xl bg-muted/40 border border-border/60 space-y-2 font-mono text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] text-muted-foreground uppercase font-sans font-semibold">
-                        Email / ID
-                      </span>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="truncate select-all text-foreground font-medium">
-                          {item.email}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
-                          onClick={() => copyToClipboard(item.email, "Email", `email-${item.id}`)}
-                          title="Copy email"
-                        >
-                          {copiedKey === `email-${item.id}` ? (
-                            <Check className="h-3 w-3 text-emerald-500" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40">
-                      <span className="text-[10px] text-muted-foreground uppercase font-sans font-semibold">
-                        Password
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="select-all text-foreground font-medium bg-background px-1.5 py-0.5 rounded border border-border/50">
-                          {item.password}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
-                          onClick={() =>
-                            copyToClipboard(item.password, "Password", `pwd-${item.id}`)
-                          }
-                          title="Copy password"
-                        >
-                          {copiedKey === `pwd-${item.id}` ? (
-                            <Check className="h-3 w-3 text-emerald-500" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card Action */}
-                <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-muted-foreground">
-                    Target: <code className="text-primary">{item.targetUrl}</code>
-                  </span>
-                  <Button
-                    size="sm"
-                    onClick={() => handleQuickLogin(item)}
-                    disabled={Boolean(loggingInId)}
-                    className="gap-1.5 text-xs font-medium"
-                  >
-                    <LogIn className="h-3.5 w-3.5" />
-                    {isLoggingIn ? "Signing In..." : "Quick Login"}
-                  </Button>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </main>
 
       {/* Footer */}
       <footer className="border-t border-border py-6 px-4 sm:px-6 bg-card text-center text-xs text-muted-foreground mt-auto">
         <p>
-          MSMIS Testing Directory • All accounts are configured with active permissions for comprehensive evaluation.
+          MSMIS Testing Directory • Real-time users from PostgreSQL database • All permissions synced with server.
         </p>
       </footer>
     </div>

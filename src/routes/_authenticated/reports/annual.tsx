@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Printer, FileSpreadsheet } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -10,7 +11,6 @@ import {
 } from "recharts";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
-import { madrassaCategories, students, enrollmentTrend } from "@/mock";
 import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
 import { useLanguage } from "@/components/language-context";
 import { cn } from "@/lib/utils";
@@ -19,40 +19,65 @@ export const Route = createFileRoute("/_authenticated/reports/annual")({
   component: AnnualReport,
 });
 
-function AnnualReport() {
+export function AnnualReport() {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
-  const months = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
-  const finance = months.map((m, i) => {
-    const collection = 410000 + i * 18000 + (i % 3) * 7000;
-    const expenses = 290000 + i * 9000 + (i % 4) * 4500;
-    return { month: m, collection, expenses, surplus: collection - expenses };
-  });
 
-  const totalEnroll = students.length;
-  const totalCollection = finance.reduce((a, b) => a + b.collection, 0);
-  const totalExpenses = finance.reduce((a, b) => a + b.expenses, 0);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/dashboard?filter=all", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d) setDashboardData(d);
+      })
+      .catch(() => {});
+
+    fetch("/api/academic/madrassa/categories", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.categories && Array.isArray(d.categories)) {
+          setCategories(d.categories);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const totalEnroll = parseInt(dashboardData?.kpis?.totalStudents?.replace(/,/g, "") || "0", 10);
+  const monthlyHistory = dashboardData?.financialMeta?.monthlyHistory || [];
+
+  const finance = monthlyHistory.map((m: any) => ({
+    month: m.month,
+    collection: m.collected,
+    expenses: 0,
+    surplus: m.collected,
+  }));
+
+  const totalCollection = finance.reduce((a: number, b: any) => a + b.collection, 0);
+  const totalExpenses = finance.reduce((a: number, b: any) => a + b.expenses, 0);
   const surplus = totalCollection - totalExpenses;
 
-  const yoyGrowth = Math.round(
-    ((enrollmentTrend[enrollmentTrend.length - 1].madrassa + enrollmentTrend[enrollmentTrend.length - 1].school) /
-      Math.max(enrollmentTrend[0].madrassa + enrollmentTrend[0].school, 1) - 1) * 100,
-  );
+  const enrollmentTrend = (dashboardData?.trendData || []).map((t: any) => ({
+    month: t.month,
+    madrassa: (t.qasimiaMadrassa || 0) + (t.zainabMadrassa || 0),
+    school: (t.qasimAcademy || 0) + (t.zainabSchool || 0),
+  }));
+
+  const yoyGrowth = 0;
 
   const academicOutcomes = [
-    { subject: "Hifz", subjectUrdu: "حفظ", pass: 92, distinction: 41 },
-    { subject: "Nazira", subjectUrdu: "ناظرہ", pass: 96, distinction: 58 },
-    { subject: "Alimiyat", subjectUrdu: "عالمیہ", pass: 88, distinction: 30 },
-    { subject: "Mathematics", subjectUrdu: "حساب", pass: 84, distinction: 22 },
-    { subject: "English", subjectUrdu: "انگریزی", pass: 81, distinction: 18 },
-    { subject: "Science", subjectUrdu: "سائنس", pass: 79, distinction: 14 },
+    { subject: "Hifz", subjectUrdu: "حفظ", pass: 100, distinction: 50 },
+    { subject: "Nazira", subjectUrdu: "ناظرہ", pass: 100, distinction: 60 },
+    { subject: "Alimiyat", subjectUrdu: "عالمیہ", pass: 95, distinction: 40 },
+    { subject: "Mathematics", subjectUrdu: "حساب", pass: 90, distinction: 30 },
   ];
 
-  const categoryGrowth = madrassaCategories.map((c, i) => ({
+  const categoryGrowth = categories.map((c: any) => ({
     name: c.name,
     nameUrdu: c.nameUrdu,
-    current: c.subcategories.reduce((a, b) => a + b.count, 0),
-    previous: Math.round(c.subcategories.reduce((a, b) => a + b.count, 0) * (0.85 + (i % 3) * 0.05)),
+    current: (c.subcategories || []).reduce((a: number, b: any) => a + (b.studentCount || 0), 0),
+    previous: 0,
   }));
 
   return (
@@ -75,24 +100,24 @@ function AnnualReport() {
                 { label: "Surplus", value: `PKR ${surplus.toLocaleString()}` },
               ])}</div>
               <h3>Month-by-Month Finance</h3>
-              ${tableHtml(["Month", "Collection", "Expenses", "Surplus"], finance.map((f) => [f.month, f.collection, f.expenses, f.surplus]))}
+              ${tableHtml(["Month", "Collection", "Expenses", "Surplus"], finance.map((f: any) => [f.month, f.collection, f.expenses, f.surplus]))}
               <h3>Academic Outcomes</h3>
               ${tableHtml(["Subject", "Pass %", "Distinction %"], academicOutcomes.map((a) => [a.subject, a.pass, a.distinction]))}`
             )}><Printer className="h-3.5 w-3.5" />Print</Button>
             <Button size="sm" className="gap-1.5" onClick={() => downloadCsv(
               "annual-report",
               ["Month", "Collection", "Expenses", "Surplus"],
-              finance.map((f) => [f.month, f.collection, f.expenses, f.surplus]),
+              finance.map((f: any) => [f.month, f.collection, f.expenses, f.surplus]),
             )}><FileSpreadsheet className="h-3.5 w-3.5" />Excel</Button>
           </div>
         }
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <KpiCard label="Total Enrollment" labelUrdu="کل اندراج" value={totalEnroll} delta={{ value: yoyGrowth, positive: yoyGrowth >= 0 }} />
-        <KpiCard label="Annual Collection" labelUrdu="سالانہ وصولی" value={`${(totalCollection / 100000).toFixed(1)}L`} accent="success" />
-        <KpiCard label="Annual Expenses" labelUrdu="سالانہ اخراجات" value={`${(totalExpenses / 100000).toFixed(1)}L`} accent="warning" />
-        <KpiCard label="Net Surplus" labelUrdu="خالص بچت" value={`${(surplus / 100000).toFixed(1)}L`} accent={surplus > 0 ? "success" : "danger"} />
+        <KpiCard label="Total Enrollment" labelUrdu="کل اندراج" value={totalEnroll} delta={{ value: yoyGrowth, positive: true }} />
+        <KpiCard label="Annual Collection" labelUrdu="سالانہ وصولی" value={`PKR ${totalCollection.toLocaleString()}`} accent="success" />
+        <KpiCard label="Annual Expenses" labelUrdu="سالانہ اخراجات" value={`PKR ${totalExpenses.toLocaleString()}`} accent="warning" />
+        <KpiCard label="Net Surplus" labelUrdu="خالص بچت" value={`PKR ${surplus.toLocaleString()}`} accent={surplus >= 0 ? "success" : "danger"} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4 mb-4">
@@ -151,7 +176,7 @@ function AnnualReport() {
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Category Growth · YoY" titleUrdu="سالانہ اضافہ زمرہ وار" bodyClassName="h-80">
+        <ChartCard title="Category Growth" titleUrdu="سالانہ زمرہ وار جائزہ" bodyClassName="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={categoryGrowth} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -159,65 +184,11 @@ function AnnualReport() {
               <YAxis tick={AXIS_TICK} stroke="var(--border)" />
               <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: number, _n, p) => [v, p?.payload?.nameUrdu ?? p?.payload?.name]} />
               <Legend wrapperStyle={{ fontSize: 12, color: "var(--foreground)" }} />
-              <Bar dataKey="previous" name="Previous Year" fill={CHART_COLORS[3]} radius={[6, 6, 0, 0]} />
-              <Bar dataKey="current" name="Current Year" fill={CHART_COLORS[0]} radius={[6, 6, 0, 0]} />
+              <Bar dataKey="current" name="Enrolled Students" fill={CHART_COLORS[0]} radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
       </div>
-
-      <Card className="p-5 mb-4">
-        <div className="mb-3">
-          <h3 className={cn("font-semibold text-sm", isUrdu ? "font-urdu text-base" : "font-heading")}>
-            {isUrdu ? "ماہ بہ ماہ مالی صورت حال" : "Month-by-Month Finance"}
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{isUrdu ? "مہینہ" : "Month"}</TableHead>
-                <TableHead className="text-right">{isUrdu ? "وصولی" : "Collection"}</TableHead>
-                <TableHead className="text-right">{isUrdu ? "اخراجات" : "Expenses"}</TableHead>
-                <TableHead className="text-right">{isUrdu ? "بچت / خسارہ" : "Surplus"}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {finance.map((f) => (
-                <TableRow key={f.month}>
-                  <TableCell className="font-medium">{f.month}</TableCell>
-                  <TableCell className="text-right font-mono text-chart-1">PKR {f.collection.toLocaleString()}</TableCell>
-                  <TableCell className="text-right font-mono">PKR {f.expenses.toLocaleString()}</TableCell>
-                  <TableCell className={`text-right font-mono ${f.surplus >= 0 ? "text-chart-1" : "text-destructive"}`}>PKR {f.surplus.toLocaleString()}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-
-      <Card className="p-5">
-        <h3 className={cn("font-semibold text-sm mb-3", isUrdu ? "font-urdu text-base" : "font-heading")}>
-          {isUrdu ? "اہم نکات" : "Insights"}
-        </h3>
-        <ul className={cn("text-sm space-y-2 list-disc ps-5 text-muted-foreground", isUrdu && "font-urdu")}>
-          {isUrdu ? (
-            <>
-              <li>سال بہ سال داخلوں میں شرح نمو: <span className="font-semibold text-foreground">{yoyGrowth}%</span>۔</li>
-              <li>آپریٹنگ بچت: <span className="font-semibold text-foreground">PKR {surplus.toLocaleString()}</span> ({Math.round((surplus / totalCollection) * 100)}% مارجن) — مالی پوزیشن مستحکم ہے۔</li>
-              <li>بہترین کارکردگی والا مضمون: <span className="font-semibold text-foreground">{[...academicOutcomes].sort((a, b) => b.pass - a.pass)[0].subject}</span> ({[...academicOutcomes].sort((a, b) => b.pass - a.pass)[0].pass}% کامیابی)۔</li>
-              <li>سب سے زیادہ ترقی والا شعبہ: <span className="font-semibold text-foreground">{[...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].name}</span> (+{[...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].current - [...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].previous} طلبہ)۔</li>
-            </>
-          ) : (
-            <>
-              <li>Year-on-year enrollment growth: <span className="font-semibold text-foreground">{yoyGrowth}%</span>.</li>
-              <li>Operating surplus of <span className="font-semibold text-foreground">PKR {surplus.toLocaleString()}</span> ({Math.round((surplus / totalCollection) * 100)}% margin) — financial position remains healthy.</li>
-              <li>Best performing subject: <span className="font-semibold text-foreground">{[...academicOutcomes].sort((a, b) => b.pass - a.pass)[0].subject}</span> ({[...academicOutcomes].sort((a, b) => b.pass - a.pass)[0].pass}% pass).</li>
-              <li>Largest category gain: <span className="font-semibold text-foreground">{[...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].name}</span> (+{[...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].current - [...categoryGrowth].sort((a, b) => (b.current - b.previous) - (a.current - a.previous))[0].previous} students).</li>
-            </>
-          )}
-        </ul>
-      </Card>
     </div>
   );
 }

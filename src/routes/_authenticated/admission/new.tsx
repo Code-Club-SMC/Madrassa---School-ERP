@@ -28,36 +28,6 @@ type MadrassaCategoryItem = {
   formVariantKeys?: string[];
 };
 
-const DEFAULT_CATEGORIES: MadrassaCategoryItem[] = [
-  {
-    id: "dars_nizami",
-    name: "Dars-e-Nizami",
-    nameUrdu: "درس نظامی",
-    description: "Institution-provided Dars-e-Nizami grade sequence.",
-    descriptionUrdu: "ادارے کی فراہم کردہ درس نظامی درجات کی ترتیب",
-    section: "both",
-    formVariantKeys: ["madrassa-boys-general", "madrassa-girls-general"],
-  },
-  {
-    id: "hifz",
-    name: "Hifz",
-    nameUrdu: "حفظ",
-    description: "Memorization grades provided by Jamia Qasmia Lil-Baneen.",
-    descriptionUrdu: "جامعہ قاسمیہ للبنین کے فراہم کردہ حفظ کے درجات",
-    section: "male",
-    formVariantKeys: ["madrassa-boys-hifz"],
-  },
-  {
-    id: "qaida_nazira",
-    name: "Nazira",
-    nameUrdu: "ناظرہ",
-    description: "Nazira grades provided separately for boys and girls madrassas.",
-    descriptionUrdu: "بنین اور بنات مدارس کے لیے فراہم کردہ ناظرہ درجات",
-    section: "both",
-    formVariantKeys: ["madrassa-boys-nazira", "madrassa-girls-nazira"],
-  },
-];
-
 function NewAdmissionRoute() {
   const { variant: variantKey, categoryId } = Route.useSearch();
   const { lang } = useLanguage();
@@ -78,10 +48,7 @@ function NewAdmissionRoute() {
   });
 
   const categoriesList = useMemo(() => {
-    if (categoriesData && categoriesData.length > 0) {
-      return categoriesData;
-    }
-    return DEFAULT_CATEGORIES;
+    return categoriesData ?? [];
   }, [categoriesData]);
 
   const qasimiaCategories = useMemo(() => {
@@ -234,53 +201,49 @@ function NewAdmissionRoute() {
         description={lang === "ur" ? "داخلہ کے لیے زمرہ منتخب کریں" : "Select a category for admission"}
       />
 
-      {qasimiaCategories.length > 0 && (
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <BookOpen className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold">
-                {lang === "ur" ? "جامعہ قاسمیہ للبنین" : "Jamia Qasimia lilBanin"}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {lang === "ur" ? "مذہبی تعلیم" : "Religious Education"}
-              </p>
-            </div>
+      <section>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <BookOpen className="h-5 w-5 text-primary" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {qasimiaCategories.map((c) => (
-              <div key={`male-${c.id}`}>{renderMadrassaCard(c, "male")}</div>
-            ))}
-            {renderSchoolCard("school-boys-main")}
+          <div>
+            <h3 className="text-lg font-semibold">
+              {lang === "ur" ? "جامعہ قاسمیہ للبنین" : "Jamia Qasimia lilBanin"}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {lang === "ur" ? "مذہبی و عصری تعلیم" : "Religious & School Education"}
+            </p>
           </div>
-        </section>
-      )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {qasimiaCategories.map((c) => (
+            <div key={`male-${c.id}`}>{renderMadrassaCard(c, "male")}</div>
+          ))}
+          {renderSchoolCard("school-boys-main")}
+        </div>
+      </section>
 
-      {zainabCategories.length > 0 && (
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <BookOpen className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold">
-                {lang === "ur" ? "جامعہ زینب للبنات" : "Jamia Zainab lilBanat"}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {lang === "ur" ? "مذہبی تعلیم" : "Religious Education"}
-              </p>
-            </div>
+      <section>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <BookOpen className="h-5 w-5 text-primary" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {zainabCategories.map((c) => (
-              <div key={`female-${c.id}`}>{renderMadrassaCard(c, "female")}</div>
-            ))}
-            {renderSchoolCard("school-girls-main")}
+          <div>
+            <h3 className="text-lg font-semibold">
+              {lang === "ur" ? "جامعہ زینب للبنات" : "Jamia Zainab lilBanat"}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {lang === "ur" ? "مذہبی و عصری تعلیم" : "Religious & School Education"}
+            </p>
           </div>
-        </section>
-      )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {zainabCategories.map((c) => (
+            <div key={`female-${c.id}`}>{renderMadrassaCard(c, "female")}</div>
+          ))}
+          {renderSchoolCard("school-girls-main")}
+        </div>
+      </section>
     </div>
   );
 }

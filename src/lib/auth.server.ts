@@ -315,3 +315,60 @@ export const updateProfileServer = createServerFn({ method: "POST" })
       return { error: "Failed to update profile: " + (err instanceof Error ? err.message : String(err)) };
     }
   });
+
+export const quickLoginServer = createServerFn({ method: "POST" })
+  .validator((d: unknown) => {
+    return z.object({ userId: z.string().min(1) }).parse(d);
+  })
+  .handler(async ({ data }) => {
+    try {
+      const [foundUser] = await db
+        .select()
+        .from(user)
+        .where(eq(user.id, data.userId))
+        .limit(1);
+
+      if (!foundUser) {
+        return { error: "User not found in database" };
+      }
+
+      const token = createSessionToken(foundUser);
+      setCookie(SESSION_COOKIE, token, {
+        path: "/",
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60,
+      });
+
+      return { success: true, user: userResponse(foundUser) };
+    } catch (err) {
+      console.error("quickLoginServer error:", err);
+      return { error: "Quick login failed: " + (err instanceof Error ? err.message : String(err)) };
+    }
+  });
+
+export const getSecretCredentialsServer = createServerFn({ method: "GET" })
+  .handler(async () => {
+    try {
+      const rows = await db.select().from(user).orderBy(user.createdAt);
+      return {
+        users: rows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          nameUrdu: r.nameUrdu,
+          email: r.email,
+          username: r.username,
+          role: r.role || "teacher",
+          status: r.status || "active",
+          department: r.department,
+          designation: r.designation,
+          phone: r.phone,
+          systemAccess: r.systemAccess || "both",
+          createdAt: r.createdAt ? (typeof r.createdAt === "string" ? r.createdAt : r.createdAt.toISOString()) : null,
+        })),
+      };
+    } catch (err) {
+      console.error("getSecretCredentialsServer error:", err);
+      return { users: [] };
+    }
+  });

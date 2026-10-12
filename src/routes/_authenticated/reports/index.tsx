@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { ClipboardList, GraduationCap, CalendarRange, BarChart3, Shield, FileText } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from "recharts";
-import { madrassaCategories, students, feeRecords } from "@/mock";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 import { useLanguage } from "@/components/language-context";
@@ -66,15 +66,40 @@ function ReportsHub() {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
 
-  const enrollment = madrassaCategories.map((c) => ({
+  const [stats, setStats] = useState<{ totalStudents: number; active: number; feeRate: number } | null>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/dashboard?filter=all", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.kpis) {
+          const tot = parseInt(d.kpis.totalStudents?.replace(/,/g, "") || "0", 10);
+          const rate = parseInt(d.financialMeta?.recoveryRate?.replace(/%/g, "") || "0", 10);
+          setStats({ totalStudents: tot, active: tot, feeRate: rate });
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/academic/madrassa/categories", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.categories && Array.isArray(d.categories)) {
+          setCategories(d.categories);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const enrollment = categories.map((c) => ({
     name: c.name,
     nameUrdu: c.nameUrdu,
-    students: c.subcategories.reduce((a, b) => a + b.count, 0),
+    students: (c.subcategories || []).reduce((a: number, b: any) => a + (b.studentCount || 0), 0),
   }));
 
-  const present = students.filter((s) => s.status === "active").length;
-  const collected = feeRecords.filter((f) => f.status === "paid").length;
-  const collectionRate = Math.round((collected / Math.max(feeRecords.length, 1)) * 100);
+  const totalStudents = stats?.totalStudents ?? 0;
+  const activeStudents = stats?.active ?? 0;
+  const collectionRate = stats?.feeRate ?? 0;
 
   return (
     <div>
@@ -94,8 +119,8 @@ function ReportsHub() {
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <KpiCard label="Total Students" labelUrdu="کل طلبہ" value={students.length} delta={{ value: 6, positive: true }} />
-        <KpiCard label="Active" labelUrdu="فعال" value={present} accent="success" />
+        <KpiCard label="Total Students" labelUrdu="کل طلبہ" value={totalStudents} />
+        <KpiCard label="Active" labelUrdu="فعال" value={activeStudents} accent="success" />
         <KpiCard label="Fee Collection" labelUrdu="فیس وصولی" value={`${collectionRate}%`} accent={collectionRate >= 75 ? "success" : "warning"} />
         <KpiCard label="Reports Available" labelUrdu="دستیاب رپورٹس" value={REPORTS.length} />
       </div>

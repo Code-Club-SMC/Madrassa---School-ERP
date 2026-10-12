@@ -32,7 +32,6 @@ import {
   type AdmissionPrintResponse,
 } from "@/lib/admission-print-payload";
 import { buildAdmissionSampleData, getRandomSample } from "@/lib/admission-sample-data";
-import { madrassaGradesForSection, type MadrassaGradeKind } from "@/lib/madrassa-grade-catalog";
 import { getAdmissionSubcategories, type AdmissionSubcategoryOption } from "@/lib/admission.server";
 import {
   DatePickerInput,
@@ -179,8 +178,12 @@ const TEXT = {
 
 type State = Record<string, string>;
 type PhotoState = { name: string; dataUrl: string };
-type GradeOption = ReturnType<typeof gradeOptionsForVariant>[number];
-type GradeSelectOption = Pick<GradeOption, "id" | "name" | "nameUrdu" | "rollPrefix">;
+type GradeSelectOption = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  rollPrefix?: string;
+};
 type AdmissionSaveResponse = AdmissionPrintResponse & {
   error?: string;
   parentCredentials?: ParentCreds | null;
@@ -282,7 +285,6 @@ export function PdfFormRenderer({
   };
 
   const val = (k: string) => form[k] ?? "";
-  const requestedGradeOptions = gradeOptionsForVariant(variant);
 
   const variantSection = variant.category;
   const variantKind: "hifz" | "nazira" | null = variant.key.includes("hifz")
@@ -309,23 +311,41 @@ export function PdfFormRenderer({
 
   const madrassaCategoryOptions = (categoriesData ?? []) as Array<{ id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; subcategories: Array<{ id: string; name: string; nameUrdu: string }> }>;
 
-  const shobaOptions: GradeSelectOption[] | null = useMemo(() => {
-    if (!subcategoryData?.length) return null;
+  const dynamicGradeOptions: GradeSelectOption[] = useMemo(() => {
+    if (!subcategoryData || subcategoryData.length === 0) return [];
     if (categoryId) {
-      const filtered = subcategoryData
+      return subcategoryData
         .filter((s: AdmissionSubcategoryOption) => s.categoryId === categoryId)
         .map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
-      return filtered.length > 0 ? filtered : null;
     }
-    if (!variantKind) return null;
-    const filtered = subcategoryData.filter((s: AdmissionSubcategoryOption) => {
-      const label = `${s.categoryName} ${s.categoryNameUrdu}`.toLowerCase();
-      return variantKind === "hifz"
-        ? label.includes("hifz") || label.includes("حفظ")
-        : label.includes("nazira") || label.includes("ناظرہ") || label.includes("قاعد");
+    if (variantKind === "hifz") {
+      return subcategoryData
+        .filter((s: AdmissionSubcategoryOption) => {
+          const label = `${s.categoryId} ${s.categoryName} ${s.categoryNameUrdu}`.toLowerCase();
+          return label.includes("hifz") || label.includes("حفظ");
+        })
+        .map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+    }
+    if (variantKind === "nazira") {
+      return subcategoryData
+        .filter((s: AdmissionSubcategoryOption) => {
+          const label = `${s.categoryId} ${s.categoryName} ${s.categoryNameUrdu}`.toLowerCase();
+          return label.includes("nazira") || label.includes("ناظرہ") || label.includes("qaida") || label.includes("قاعد");
+        })
+        .map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+    }
+    const darsMatches = subcategoryData.filter((s: AdmissionSubcategoryOption) => {
+      const label = `${s.categoryId} ${s.categoryName} ${s.categoryNameUrdu}`.toLowerCase();
+      return label.includes("dars") || label.includes("درس") || label.includes("نظامی") || label.includes("general");
     });
-    return filtered.map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+    if (darsMatches.length > 0) {
+      return darsMatches.map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+    }
+    return subcategoryData.map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
   }, [subcategoryData, variantKind, categoryId]);
+
+  const requestedGradeOptions = dynamicGradeOptions;
+  const shobaOptions = dynamicGradeOptions;
 
   const setAdmissionDate = (value: string, date: Date) => {
     setForm((current) => ({
@@ -458,7 +478,7 @@ export function PdfFormRenderer({
         photoDataUrl: photo?.dataUrl,
         target: variant.section === "school"
           ? { schoolClassId: form.classId || undefined }
-          : { madrassaSubcategoryId: form.shoba || undefined },
+          : { madrassaSubcategoryId: form.req_darja || form.shoba || undefined },
       }),
         },
       );
@@ -841,18 +861,6 @@ type FieldProps = {
   onPermChange?: (k: string, v: string) => void;
 };
 
-function gradeOptionsForVariant(variant: AdmissionVariant) {
-  const section = variant.category === "female" ? "banat" : "baneen";
-  const kinds: MadrassaGradeKind[] =
-    variant.key === "madrassa-boys-hifz"
-      ? ["hifz"]
-      : variant.key === "madrassa-boys-nazira" || variant.key === "madrassa-girls-nazira"
-        ? ["nazira"]
-        : ["dars_nizami"];
-
-  return madrassaGradesForSection(section, kinds);
-}
-
 function MadrassaGradeSelect({
   id,
   value,
@@ -869,16 +877,23 @@ function MadrassaGradeSelect({
   lang?: "ur" | "en";
 }) {
   const isRtl = lang === "ur";
+  const hasOptions = options && options.length > 0;
+  const emptyPlaceholder = isRtl
+    ? "کوئی درجہ موجود نہیں"
+    : "No classes configured";
+
   return (
-    <Select value={value} onValueChange={onValueChange}>
+    <Select value={value} onValueChange={onValueChange} disabled={!hasOptions}>
       <SelectTrigger id={id} className={isRtl ? "font-urdu" : ""} dir={isRtl ? "rtl" : "ltr"}>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={hasOptions ? placeholder : emptyPlaceholder} />
       </SelectTrigger>
       <SelectContent>
         {options.map((option) => (
           <SelectItem key={option.id} value={option.id}>
             <span className={isRtl ? "font-urdu" : ""}>{isRtl ? option.nameUrdu : option.name}</span>
-            <span className="text-xs text-muted-foreground ms-2">{option.rollPrefix}</span>
+            {option.rollPrefix && (
+              <span className="text-xs text-muted-foreground ms-2">({option.rollPrefix})</span>
+            )}
           </SelectItem>
         ))}
       </SelectContent>
@@ -1020,16 +1035,28 @@ function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls, 
                 set("class", selected ? (selected.nameUrdu || selected.name) : v);
                 set("classId", v);
               }}
+              disabled={cls.length === 0}
             >
               <SelectTrigger id="class" className={isRtl ? "font-urdu" : ""}>
-                <SelectValue placeholder={lang === "ur" ? "جماعت منتخب کریں" : "Select class"} />
+                <SelectValue
+                  placeholder={
+                    cls.length === 0
+                      ? (lang === "ur" ? "کوئی جماعت موجود نہیں" : "No classes configured")
+                      : (lang === "ur" ? "جماعت منتخب کریں" : "Select class")
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {cls.filter((c) => c.gender === variant.category).map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    <span className="font-urdu">{c.nameUrdu}</span> · {c.name}
-                  </SelectItem>
-                ))}
+                {cls
+                  .filter((c) => {
+                    const g = (c.gender || "").toLowerCase();
+                    return !g || g === "mixed" || g === "both" || g === "all" || g === variant.category;
+                  })
+                  .map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="font-urdu">{c.nameUrdu}</span> · {c.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </BilingualLabel>
@@ -1179,7 +1206,7 @@ function MadrassaShortFields({
 }: FieldProps & { variant: AdmissionVariant; isGirls: boolean; step?: number; shobaOptions?: GradeSelectOption[] | null }) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
-  const gradeOptions = shobaOptions ?? gradeOptionsForVariant(variant);
+  const gradeOptions = shobaOptions ?? [];
   return (
     <>
       {step === 1 && (
@@ -1421,7 +1448,6 @@ function MadrassaLongFields({
 }: FieldProps & { variant: AdmissionVariant; isGirls: boolean; step?: number }) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
-  const gradeOptions = gradeOptionsForVariant(variant);
   return (
     <>
       {step === 1 && (

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
-import { inventoryItems as seedItems, type InventoryItem } from "@/mock";
+import { type InventoryItem } from "@/mock";
 import { formatPKR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
@@ -31,7 +31,24 @@ function InventoryPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<string>("all");
-  const [items, setItems] = useState<InventoryItem[]>(seedItems);
+  const [items, setItems] = useState<InventoryItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("inventory_items");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("inventory_items", JSON.stringify(items));
+      } catch {}
+    }
+  }, [items]);
+
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState<InventoryItem | null>(null);

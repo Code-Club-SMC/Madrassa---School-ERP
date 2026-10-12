@@ -30,6 +30,7 @@ import { Route as AuthenticatedSchoolRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as ApiDashboardRouteImport } from './routes/api/dashboard'
 import { Route as ApiStudentsRouteImport } from './routes/api/students'
 import { Route as WebsiteIndexRouteImport } from './routes/website/index'
 import { Route as WebsiteContactRouteImport } from './routes/website/contact'
@@ -289,6 +290,11 @@ const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const ApiDashboardRoute = ApiDashboardRouteImport.update({
+  id: '/api/dashboard',
+  path: '/api/dashboard',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStudentsRoute = ApiStudentsRouteImport.update({
   id: '/api/students',
@@ -1181,6 +1187,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/api/dashboard': typeof ApiDashboardRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
@@ -1350,6 +1357,7 @@ export interface FileRoutesByTo {
   '/parents': typeof AuthenticatedParentsRoute
   '/school': typeof AuthenticatedSchoolRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
+  '/api/dashboard': typeof ApiDashboardRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
@@ -1526,6 +1534,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/_authenticated/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/api/dashboard': typeof ApiDashboardRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
@@ -1704,6 +1713,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/teachers'
     | '/users'
+    | '/api/dashboard'
     | '/api/students'
     | '/website/contact'
     | '/website/gallery'
@@ -1873,6 +1883,7 @@ export interface FileRouteTypes {
     | '/parents'
     | '/school'
     | '/users'
+    | '/api/dashboard'
     | '/api/students'
     | '/website/contact'
     | '/website/gallery'
@@ -2048,6 +2059,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/teachers'
     | '/_authenticated/users'
+    | '/api/dashboard'
     | '/api/students'
     | '/website/contact'
     | '/website/gallery'
@@ -2211,6 +2223,7 @@ export interface RootRouteChildren {
   ChangePasswordRoute: typeof ChangePasswordRoute
   LoginRoute: typeof LoginRoute
   WebsiteRoute: typeof WebsiteRouteWithChildren
+  ApiDashboardRoute: typeof ApiDashboardRoute
   ApiStudentsRoute: typeof ApiStudentsRouteWithChildren
   ApiAcademicYearsIdRoute: typeof ApiAcademicYearsIdRouteWithChildren
   ApiAcademicYearsBackfillRoute: typeof ApiAcademicYearsBackfillRoute
@@ -2416,6 +2429,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/users'
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/dashboard': {
+      id: '/api/dashboard'
+      path: '/api/dashboard'
+      fullPath: '/api/dashboard'
+      preLoaderRoute: typeof ApiDashboardRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/students': {
       id: '/api/students'
@@ -4187,6 +4207,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChangePasswordRoute: ChangePasswordRoute,
   LoginRoute: LoginRoute,
   WebsiteRoute: WebsiteRouteWithChildren,
+  ApiDashboardRoute: ApiDashboardRoute,
   ApiStudentsRoute: ApiStudentsRouteWithChildren,
   ApiAcademicYearsIdRoute: ApiAcademicYearsIdRouteWithChildren,
   ApiAcademicYearsBackfillRoute: ApiAcademicYearsBackfillRoute,

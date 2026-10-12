@@ -45,8 +45,6 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookLoader } from "@/components/shared/book-loader";
 import { useHR } from "@/stores/hr-store";
-import { teachers as allTeachers } from "@/mock/teachers";
-import { users as allUsers } from "@/mock/users";
 import { formatPKR } from "@/lib/format";
 import { useLanguage } from "@/components/language-context";
 import { cn } from "@/lib/utils";
@@ -154,13 +152,24 @@ function HRHub() {
     }
   };
 
+  const [usersCount, setUsersCount] = useState({ total: 0, active: 0 });
+
   useEffect(() => {
     fetchTeachers();
+    fetch("/api/users", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.users && Array.isArray(d.users)) {
+          const act = d.users.filter((u: any) => u.status === "active").length;
+          setUsersCount({ total: d.users.length, active: act });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const activeStaff = staff.filter((s) => s.status === "active").length;
-  const activeTeachers = allTeachers.filter((t) => t.active).length;
-  const activeUsers = allUsers.filter((u) => u.status === "active").length;
+  const activeTeachers = teachers.filter((t) => t.employmentStatus === "active").length;
+  const activeUsers = usersCount.active;
   const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
 
   const modules: ModCard[] = [
@@ -257,13 +266,13 @@ function HRHub() {
       urdu: "تدریسی عملہ",
       value: activeTeachers,
       icon: GraduationCap,
-      hint: `${allTeachers.length} registered`,
-      hintUrdu: `${allTeachers.length} رجسٹرڈ`,
+      hint: `${teachers.length} registered`,
+      hintUrdu: `${teachers.length} رجسٹرڈ`,
     },
     {
       label: "User Accounts",
       urdu: "صارف اکاؤنٹس",
-      value: allUsers.length,
+      value: usersCount.total,
       icon: ShieldUser,
       hint: `${activeUsers} active`,
       hintUrdu: `${activeUsers} فعال`,

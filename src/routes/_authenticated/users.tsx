@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { users as seedUsers } from "@/mock/users";
 import type { User, UserRole } from "@/types";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
@@ -42,7 +41,7 @@ function UsersPage() {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
   const { user: currentUser, isLoading: sessionLoading } = useAuth();
-  const [list, setList] = useState<User[]>(seedUsers);
+  const [list, setList] = useState<User[]>([]);
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<UserRole | "all">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");

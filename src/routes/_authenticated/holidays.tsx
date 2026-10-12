@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -11,7 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { holidays as seedHolidays } from "@/mock/holidays";
 import type { Holiday } from "@/types";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/language-context";
@@ -44,8 +43,24 @@ function HolidaysPage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const [items, setItems] = useState<Holiday[]>(seedHolidays);
+  const [items, setItems] = useState<Holiday[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("msmis_holidays");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  });
   const [weeklyOff, setWeeklyOff] = useState<number[]>([5]); // Fri default (madrassa)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("msmis_holidays", JSON.stringify(items));
+      } catch {}
+    }
+  }, [items]);
 
   const monthLabel = useMemo(
     () =>

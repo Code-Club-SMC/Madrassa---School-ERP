@@ -11,8 +11,8 @@ import {
 } from "recharts";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
-import { auditLog } from "@/mock/audit-log";
-import { users } from "@/mock";
+import { useEffect, useState } from "react";
+import type { AuditEntry } from "@/types";
 import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
 import { useLanguage } from "@/components/language-context";
 import { cn } from "@/lib/utils";
@@ -24,13 +24,39 @@ export const Route = createFileRoute("/_authenticated/reports/admin")({
 function AdminReport() {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
+  const [userList, setUserList] = useState<Array<{ id: string; name: string; role: string; status: string }>>([]);
+  const [logs] = useState<AuditEntry[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("msmis_audit_log");
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/users")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => {
+        if (!mounted) return;
+        const list = Array.isArray(data) ? data : data.users ?? [];
+        setUserList(list);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Group by action prefix (module)
   const byModule = new Map<string, number>();
   const byUser = new Map<string, number>();
   const byAction = new Map<string, number>();
   const byDay = new Map<string, number>();
 
-  for (const a of auditLog) {
+  for (const a of logs) {
     const mod = a.action.split(".")[0];
     byModule.set(mod, (byModule.get(mod) ?? 0) + 1);
     byUser.set(a.userName, (byUser.get(a.userName) ?? 0) + 1);
@@ -46,9 +72,9 @@ function AdminReport() {
   const actionData = [...byAction.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([action, count]) => ({ action, count }));
   const trendData = [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, count]) => ({ date: date.slice(5), count }));
 
-  const activeUsers = users.filter((u) => u.status === "active").length;
-  const adminUsers = users.filter((u) => u.role === "admin" || u.role === "super_admin").length;
-  const loginEvents = auditLog.filter((a) => a.action.startsWith("auth.")).length;
+  const activeUsers = userList.filter((u) => u.status === "active").length;
+  const adminUsers = userList.filter((u) => u.role === "admin" || u.role === "super_admin").length;
+  const loginEvents = logs.filter((a) => a.action.startsWith("auth.")).length;
 
   return (
     <div>
@@ -65,23 +91,23 @@ function AdminReport() {
               "Administrative Report",
               `<h1>Administrative Report</h1><div class="urdu">انتظامی رپورٹ</div>
               <div>${kpiHtml([
-                { label: "Total Events", value: auditLog.length },
+                { label: "Total Events", value: logs.length },
                 { label: "Active Users", value: activeUsers },
                 { label: "Admin Users", value: adminUsers },
               ])}</div>
-              ${tableHtml(["When", "User", "Action", "Entity", "Details"], auditLog.map((a) => [new Date(a.at).toLocaleString(), a.userName, a.action, `${a.entity} ${a.entityId}`, a.details]))}`
+              ${tableHtml(["When", "User", "Action", "Entity", "Details"], logs.map((a) => [new Date(a.at).toLocaleString(), a.userName, a.action, `${a.entity} ${a.entityId}`, a.details]))}`
             )}><Printer className="h-3.5 w-3.5" />Print</Button>
             <Button size="sm" className="gap-1.5" onClick={() => downloadCsv(
               "administrative-report",
               ["When", "User", "Action", "Entity", "EntityId", "Details"],
-              auditLog.map((a) => [a.at, a.userName, a.action, a.entity, a.entityId, a.details]),
+              logs.map((a) => [a.at, a.userName, a.action, a.entity, a.entityId, a.details]),
             )}><FileSpreadsheet className="h-3.5 w-3.5" />Excel</Button>
           </div>
         }
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <KpiCard label="Total Events" labelUrdu="کل واقعات" value={auditLog.length} />
+        <KpiCard label="Total Events" labelUrdu="کل واقعات" value={logs.length} />
         <KpiCard label="Active Users" labelUrdu="فعال صارفین" value={activeUsers} accent="success" />
         <KpiCard label="Admin Accounts" labelUrdu="منتظم اکاؤنٹس" value={adminUsers} />
         <KpiCard label="Auth Events" labelUrdu="لاگ ان واقعات" value={loginEvents} accent="warning" />
@@ -164,15 +190,23 @@ function AdminReport() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {auditLog.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell className="text-xs text-muted-foreground font-mono">{new Date(a.at).toLocaleString()}</TableCell>
-                  <TableCell className="text-sm">{a.userName}</TableCell>
-                  <TableCell><Badge variant="secondary" className="font-mono text-[10px]">{a.action}</Badge></TableCell>
-                  <TableCell className="text-xs font-mono">{a.entity} · {a.entityId}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{a.details}</TableCell>
+              {logs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-6 text-sm text-muted-foreground">
+                    {isUrdu ? "کوئی آڈٹ ریکارڈ موجود نہیں" : "No audit trail records found."}
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                logs.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="text-xs text-muted-foreground font-mono">{new Date(a.at).toLocaleString()}</TableCell>
+                    <TableCell className="text-sm">{a.userName}</TableCell>
+                    <TableCell><Badge variant="secondary" className="font-mono text-[10px]">{a.action}</Badge></TableCell>
+                    <TableCell className="text-xs font-mono">{a.entity} · {a.entityId}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{a.details}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
@@ -225,17 +259,19 @@ function AdminReport() {
           {isUrdu ? "اہم نکات" : "Insights"}
         </h3>
         <ul className={cn("text-sm space-y-2 list-disc ps-5 text-muted-foreground", isUrdu && "font-urdu")}>
-          {isUrdu ? (
+          {logs.length === 0 ? (
+            <li>{isUrdu ? "ابھی کوئی آڈٹ ریکارڈ موجود نہیں ہے۔" : "No administrative events have been recorded yet."}</li>
+          ) : isUrdu ? (
             <>
-              <li><span className="font-semibold text-foreground">{byModule.size}</span> ماڈیولز میں <span className="font-semibold text-foreground">{auditLog.length}</span> سرگرمیاں ریکارڈ کی گئیں ہیں۔</li>
-              <li>سب سے زیادہ فعال صارف: <span className="font-semibold text-foreground">{userData[0]?.user}</span> ({userData[0]?.count} کارروائیاں)۔</li>
-              <li>سب سے عام کارروائی: <span className="font-semibold text-foreground">{actionData[0]?.action}</span> ({actionData[0]?.count} مرتبہ)۔</li>
+              <li><span className="font-semibold text-foreground">{byModule.size}</span> ماڈیولز میں <span className="font-semibold text-foreground">{logs.length}</span> سرگرمیاں ریکارڈ کی گئیں ہیں۔</li>
+              <li>سب سے زیادہ فعال صارف: <span className="font-semibold text-foreground">{userData[0]?.user ?? "—"}</span> ({userData[0]?.count ?? 0} کارروائیاں)۔</li>
+              <li>سب سے عام کارروائی: <span className="font-semibold text-foreground">{actionData[0]?.action ?? "—"}</span> ({actionData[0]?.count ?? 0} مرتبہ)۔</li>
             </>
           ) : (
             <>
-              <li><span className="font-semibold text-foreground">{auditLog.length}</span> events recorded across <span className="font-semibold text-foreground">{byModule.size}</span> modules.</li>
-              <li>Most active user: <span className="font-semibold text-foreground">{userData[0]?.user}</span> with {userData[0]?.count} actions.</li>
-              <li>Most frequent action: <span className="font-semibold text-foreground">{actionData[0]?.action}</span> ({actionData[0]?.count} occurrences).</li>
+              <li><span className="font-semibold text-foreground">{logs.length}</span> events recorded across <span className="font-semibold text-foreground">{byModule.size}</span> modules.</li>
+              <li>Most active user: <span className="font-semibold text-foreground">{userData[0]?.user ?? "—"}</span> with {userData[0]?.count ?? 0} actions.</li>
+              <li>Most frequent action: <span className="font-semibold text-foreground">{actionData[0]?.action ?? "—"}</span> ({actionData[0]?.count ?? 0} occurrences).</li>
             </>
           )}
         </ul>

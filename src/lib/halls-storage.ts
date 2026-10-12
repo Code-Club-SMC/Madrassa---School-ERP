@@ -1,4 +1,4 @@
-import { mockHalls, buildMockStudentsForHalls, type MockHall } from "@/lib/mock/seating";
+import { buildMockStudentsForHalls, type MockHall } from "@/lib/mock/seating";
 import type { SeatingStudent } from "@/lib/seating";
 
 export type Hall = MockHall & {
@@ -7,27 +7,22 @@ export type Hall = MockHall & {
   aisleEveryCol: number;
 };
 
-const DEFAULTS: Hall[] = mockHalls.map((h, i) => ({
-  ...h,
-  nameUrdu: ["ہال اے", "ہال بی", "ہال سی", "ہال ڈی"][i] ?? h.name,
-  aisleEveryRow: 3,
-  aisleEveryCol: 4,
-}));
+const DEFAULTS: Hall[] = [];
 
 function storageKey(module: "school" | "madrassa") {
   return `msmis.halls.${module}`;
 }
 
 export function loadHalls(module: "school" | "madrassa"): Hall[] {
-  if (typeof window === "undefined") return DEFAULTS;
+  if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(storageKey(module));
-    if (!raw) return DEFAULTS;
+    if (!raw) return [];
     const parsed = JSON.parse(raw) as Hall[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULTS;
+    if (!Array.isArray(parsed) || parsed.length === 0) return [];
     return parsed;
   } catch {
-    return DEFAULTS;
+    return [];
   }
 }
 

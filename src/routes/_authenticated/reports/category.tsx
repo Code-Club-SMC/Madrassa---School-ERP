@@ -8,7 +8,7 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from "recharts";
-import { madrassaCategories, students, feeRecords } from "@/mock";
+import { useEffect, useState } from "react";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { CHART_COLORS, TOOLTIP_STYLE, AXIS_TICK } from "@/lib/chart-theme";
 import { downloadCsv, printHtml, tableHtml, kpiHtml } from "@/lib/export";
@@ -19,45 +19,78 @@ export const Route = createFileRoute("/_authenticated/reports/category")({
   component: CategoryReport,
 });
 
+type CategoryItem = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  subcategories: Array<{
+    id: string;
+    name: string;
+    nameUrdu: string;
+    rollPrefix?: string;
+    count?: number;
+  }>;
+};
+
 function CategoryReport() {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
-  const byCategory = madrassaCategories.map((c, i) => {
-    const total = c.subcategories.reduce((a, b) => a + b.count, 0);
-    const inSystem = students.filter((s) => s.categoryId === c.id);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [studentsList, setStudentsList] = useState<Array<{ id: string; categoryId?: string; gender: string; status: string }>>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      fetch("/api/academic/madrassa/categories").then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      fetch("/api/students?system=madrassa").then((r) => (r.ok ? r.json() : [])).catch(() => []),
+    ]).then(([catData, studData]) => {
+      if (!mounted) return;
+      const cats = Array.isArray(catData) ? catData : (catData?.categories ?? []);
+      const studs = Array.isArray(studData) ? studData : (studData?.students ?? []);
+      setCategories(cats);
+      setStudentsList(studs);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const byCategory = categories.map((c, i) => {
+    const inSystem = studentsList.filter((s) => s.categoryId === c.id);
+    const total = inSystem.length > 0 ? inSystem.length : c.subcategories.reduce((a, b) => a + (b.count ?? 0), 0);
     const female = inSystem.filter((s) => s.gender === "female").length;
     const active = inSystem.filter((s) => s.status === "active").length;
-    const fee = feeRecords.filter((f) => inSystem.some((s) => s.id === f.studentId));
-    const collected = fee.reduce((a, b) => a + b.paidAmount, 0);
-    const expected = fee.reduce((a, b) => a + b.monthlyFee, 0);
     return {
       id: c.id,
       name: c.name,
       nameUrdu: c.nameUrdu,
       value: total,
       female,
-      male: total - female,
+      male: Math.max(0, total - female),
       active,
-      collected,
-      expected,
+      collected: 0,
+      expected: 0,
       color: CHART_COLORS[i % CHART_COLORS.length],
     };
   });
 
   const grandTotal = byCategory.reduce((a, b) => a + b.value, 0);
 
-  const subBreakdown = madrassaCategories.flatMap((c) =>
-    c.subcategories.map((s) => ({
-      category: c.name,
-      categoryUrdu: c.nameUrdu,
-      name: s.name,
-      nameUrdu: s.nameUrdu,
-      count: s.count,
-      rollPrefix: s.rollPrefix,
-    })),
+  const subBreakdown = categories.flatMap((c) =>
+    c.subcategories.map((s) => {
+      const count = studentsList.filter((st) => (st as any).subcategoryId === s.id).length || (s.count ?? 0);
+      return {
+        category: c.name,
+        categoryUrdu: c.nameUrdu,
+        name: s.name,
+        nameUrdu: s.nameUrdu,
+        count,
+        rollPrefix: s.rollPrefix ?? "",
+      };
+    }),
   );
 
-  const top = [...byCategory].sort((a, b) => b.value - a.value)[0];
+  const top = byCategory.length > 0 ? [...byCategory].sort((a, b) => b.value - a.value)[0] : null;
 
   return (
     <div>
@@ -169,23 +202,31 @@ function CategoryReport() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {subBreakdown.map((s) => (
-                <TableRow key={`${s.category}-${s.name}`}>
-                  <TableCell>
-                    <div className={cn("text-sm", isUrdu && "font-urdu")}>
-                      {isUrdu ? s.categoryUrdu : s.category}
-                    </div>
+              {subBreakdown.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-6 text-sm text-muted-foreground">
+                    {isUrdu ? "کوئی زمرہ یا طالب علم موجود نہیں" : "No categories or enrolled students found."}
                   </TableCell>
-                  <TableCell>
-                    <div className={cn("text-sm", isUrdu && "font-urdu")}>
-                      {isUrdu ? s.nameUrdu : s.name}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{s.rollPrefix}</TableCell>
-                  <TableCell className="text-right font-mono">{s.count}</TableCell>
-                  <TableCell className="text-right font-mono">{Math.round((s.count / grandTotal) * 1000) / 10}%</TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                subBreakdown.map((s) => (
+                  <TableRow key={`${s.category}-${s.name}`}>
+                    <TableCell>
+                      <div className={cn("text-sm", isUrdu && "font-urdu")}>
+                        {isUrdu ? s.categoryUrdu : s.category}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className={cn("text-sm", isUrdu && "font-urdu")}>
+                        {isUrdu ? s.nameUrdu : s.name}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">{s.rollPrefix}</TableCell>
+                    <TableCell className="text-right font-mono">{s.count}</TableCell>
+                    <TableCell className="text-right font-mono">{grandTotal > 0 ? Math.round((s.count / grandTotal) * 1000) / 10 : 0}%</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
@@ -198,15 +239,15 @@ function CategoryReport() {
         <ul className={cn("text-sm space-y-2 list-disc ps-5 text-muted-foreground", isUrdu && "font-urdu")}>
           {isUrdu ? (
             <>
-              <li><span className="font-semibold text-foreground">{top?.nameUrdu}</span> سب سے بڑا زمرہ ہے جس میں {top?.value} طلبہ ہیں — کل داخلوں کا {Math.round(((top?.value ?? 0) / grandTotal) * 100)}%۔</li>
-              <li>اوسط زمرے کا حجم <span className="font-semibold text-foreground">{Math.round(grandTotal / byCategory.length)}</span> طلبہ ہے۔</li>
-              <li>سب سے چھوٹا زمرہ <span className="font-semibold text-foreground">{[...byCategory].sort((a, b) => a.value - b.value)[0]?.nameUrdu}</span> میں داخلوں کی مہم کی ضرورت ہو سکتی ہے۔</li>
+              <li><span className="font-semibold text-foreground">{top?.nameUrdu ?? "—"}</span> {top ? `سب سے بڑا زمرہ ہے جس میں ${top.value} طلبہ ہیں — کل داخلوں کا ${grandTotal > 0 ? Math.round(((top?.value ?? 0) / grandTotal) * 100) : 0}%۔` : "کوئی زمرہ درج نہیں۔"}</li>
+              <li>اوسط زمرے کا حجم <span className="font-semibold text-foreground">{byCategory.length > 0 ? Math.round(grandTotal / byCategory.length) : 0}</span> طلبہ ہے۔</li>
+              <li>سب سے چھوٹا زمرہ <span className="font-semibold text-foreground">{[...byCategory].sort((a, b) => a.value - b.value)[0]?.nameUrdu ?? "—"}</span>۔</li>
             </>
           ) : (
             <>
-              <li><span className="font-semibold text-foreground">{top?.name}</span> ({top?.nameUrdu}) is the largest category with {top?.value} students — {Math.round(((top?.value ?? 0) / grandTotal) * 100)}% of total enrollment.</li>
-              <li>Average category size is <span className="font-semibold text-foreground">{Math.round(grandTotal / byCategory.length)}</span> students.</li>
-              <li>Smallest category <span className="font-semibold text-foreground">{[...byCategory].sort((a, b) => a.value - b.value)[0]?.name}</span> may need recruitment focus.</li>
+              <li><span className="font-semibold text-foreground">{top?.name ?? "—"}</span> ({top?.nameUrdu ?? "—"}) {top ? `is the largest category with ${top.value} students — ${grandTotal > 0 ? Math.round(((top?.value ?? 0) / grandTotal) * 100) : 0}% of total enrollment.` : "has no categories recorded."}</li>
+              <li>Average category size is <span className="font-semibold text-foreground">{byCategory.length > 0 ? Math.round(grandTotal / byCategory.length) : 0}</span> students.</li>
+              <li>Smallest category: <span className="font-semibold text-foreground">{[...byCategory].sort((a, b) => a.value - b.value)[0]?.name ?? "—"}</span>.</li>
             </>
           )}
         </ul>

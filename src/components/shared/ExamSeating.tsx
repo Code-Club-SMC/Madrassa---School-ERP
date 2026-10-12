@@ -172,77 +172,89 @@ export function ExamSeating({ examId, module }: Props) {
         </div>
       </Card>
 
-      {/* Hall tabs */}
-      <Tabs value={activeHallId} onValueChange={setActiveHallId} className="mb-4">
-        <TabsList className="flex flex-wrap h-auto">
-          {halls.map((h) => (
-            <TabsTrigger key={h.hallId} value={h.hallId} className="gap-2">
-              {h.hallName}
-              <Badge variant="secondary" className="ml-1">{h.students.length}</Badge>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
-        {/* Grid */}
-        <Card className="p-5 overflow-auto" ref={wrapRef}>
-          <div className="text-center mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground bg-muted/50 border border-dashed border-border rounded-md py-1">
-            Invigilator Desk · نگراں
-          </div>
-          {active && activeDef && (
-            <SeatingGrid
-              hall={active}
-              config={{
-                ...config,
-                rows: activeDef.rows,
-                cols: activeDef.cols,
-                aisleEveryRow: activeDef.aisleEveryRow,
-                aisleEveryCol: activeDef.aisleEveryCol,
-              }}
-              showViolations={showViolations}
-              onTip={setTip}
-              sameClass={sameClass}
-            />
-          )}
+      {hallDefs.length === 0 ? (
+        <Card className="p-12 text-center my-6">
+          <p className="text-muted-foreground mb-4">No examination halls configured yet. Click below to add an examination hall.</p>
+          <Button onClick={() => setHallDialogOpen(true)}>
+            <Settings2 className="h-4 w-4 mr-2" />
+            Manage Halls
+          </Button>
         </Card>
+      ) : (
+        <>
+          {/* Hall tabs */}
+          <Tabs value={activeHallId} onValueChange={setActiveHallId} className="mb-4">
+            <TabsList className="flex flex-wrap h-auto">
+              {halls.map((h) => (
+                <TabsTrigger key={h.hallId} value={h.hallId} className="gap-2">
+                  {h.hallName}
+                  <Badge variant="secondary" className="ml-1">{h.students.length}</Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
-        {/* Sidebar */}
-        <div className="space-y-3">
-          <Card className="p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Grade Legend</p>
-            <div className="space-y-1.5">
-              {mockGrades.map((g) => {
-                const count = active?.students.filter((s) => s.gradeId === g.id).length ?? 0;
-                const tone = toneFor(g.id);
-                return (
-                  <div key={g.id} className="flex items-center justify-between text-xs">
-                    <span className={`px-2 py-0.5 rounded border ${tone.bg} ${tone.border} ${tone.text}`}>{g.label}</span>
-                    <span className="font-mono text-muted-foreground">{count}</span>
-                  </div>
-                );
-              })}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+            {/* Grid */}
+            <Card className="p-5 overflow-auto" ref={wrapRef}>
+              <div className="text-center mb-3 text-xs uppercase tracking-[0.2em] text-muted-foreground bg-muted/50 border border-dashed border-border rounded-md py-1">
+                Invigilator Desk · نگراں
+              </div>
+              {active && activeDef && (
+                <SeatingGrid
+                  hall={active}
+                  config={{
+                    ...config,
+                    rows: activeDef.rows,
+                    cols: activeDef.cols,
+                    aisleEveryRow: activeDef.aisleEveryRow,
+                    aisleEveryCol: activeDef.aisleEveryCol,
+                  }}
+                  showViolations={showViolations}
+                  onTip={setTip}
+                  sameClass={sameClass}
+                />
+              )}
+            </Card>
+
+            {/* Sidebar */}
+            <div className="space-y-3">
+              <Card className="p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Grade Legend</p>
+                <div className="space-y-1.5">
+                  {mockGrades.map((g) => {
+                    const count = active?.students.filter((s) => s.gradeId === g.id).length ?? 0;
+                    const tone = toneFor(g.id);
+                    return (
+                      <div key={g.id} className="flex items-center justify-between text-xs">
+                        <span className={`px-2 py-0.5 rounded border ${tone.bg} ${tone.border} ${tone.text}`}>{g.label}</span>
+                        <span className="font-mono text-muted-foreground">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Hall Stats</p>
+                {active && <HallStats hall={active} />}
+              </Card>
+
+              <Card className="p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Constraints</p>
+                <ul className="text-xs space-y-1">
+                  <li className="flex justify-between"><span className="text-muted-foreground">Gap</span><span className="font-mono">{config.gap}</span></li>
+                  <li className="flex justify-between"><span className="text-muted-foreground">Row step</span><span className="font-mono">{active?.rowStep}</span></li>
+                  <li className="flex justify-between"><span className="text-muted-foreground">Col period</span><span className="font-mono">{active?.colPeriod}</span></li>
+                  <li className="flex justify-between"><span className="text-muted-foreground">Hall violations</span><span className={`font-mono ${active && countViolations(active.grid, active.rows, active.cols, config.gap, sameClass) === 0 ? "text-emerald-600" : "text-destructive"}`}>{active ? countViolations(active.grid, active.rows, active.cols, config.gap, sameClass) : 0}</span></li>
+                  <li className="flex justify-between"><span className="text-muted-foreground">Total violations</span><span className={`font-mono ${totalViolations === 0 ? "text-emerald-600" : "text-destructive"}`}>{totalViolations}</span></li>
+                </ul>
+                <p className="mt-3 text-[10px] text-muted-foreground leading-snug">Algorithm: slot = (row × rowStep + col) % numGrades. Row step chosen so colPeriod &gt; gap, guaranteeing horizontal &amp; vertical separation.</p>
+              </Card>
             </div>
-          </Card>
-
-          <Card className="p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Hall Stats</p>
-            {active && <HallStats hall={active} />}
-          </Card>
-
-          <Card className="p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Constraints</p>
-            <ul className="text-xs space-y-1">
-              <li className="flex justify-between"><span className="text-muted-foreground">Gap</span><span className="font-mono">{config.gap}</span></li>
-              <li className="flex justify-between"><span className="text-muted-foreground">Row step</span><span className="font-mono">{active?.rowStep}</span></li>
-              <li className="flex justify-between"><span className="text-muted-foreground">Col period</span><span className="font-mono">{active?.colPeriod}</span></li>
-              <li className="flex justify-between"><span className="text-muted-foreground">Hall violations</span><span className={`font-mono ${active && countViolations(active.grid, active.rows, active.cols, config.gap, sameClass) === 0 ? "text-emerald-600" : "text-destructive"}`}>{active ? countViolations(active.grid, active.rows, active.cols, config.gap, sameClass) : 0}</span></li>
-              <li className="flex justify-between"><span className="text-muted-foreground">Total violations</span><span className={`font-mono ${totalViolations === 0 ? "text-emerald-600" : "text-destructive"}`}>{totalViolations}</span></li>
-            </ul>
-            <p className="mt-3 text-[10px] text-muted-foreground leading-snug">Algorithm: slot = (row × rowStep + col) % numGrades. Row step chosen so colPeriod &gt; gap, guaranteeing horizontal &amp; vertical separation.</p>
-          </Card>
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       {tip && (
         <div

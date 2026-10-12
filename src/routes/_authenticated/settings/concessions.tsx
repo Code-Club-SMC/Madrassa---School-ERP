@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HeartHandshake, Plus, Trash2, Award } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { students } from "@/mock/students";
 import { formatPKR } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/settings/concessions")({
@@ -22,6 +21,9 @@ export const Route = createFileRoute("/_authenticated/settings/concessions")({
 type Concession = {
   id: string;
   studentId: string;
+  studentName?: string;
+  studentNameUrdu?: string;
+  monthlyFeePaisa?: number;
   reason: "orphan" | "hardship" | "merit" | "sibling" | "staff_child" | "other";
   reasonUrdu: string;
   percent: number;
@@ -39,15 +41,26 @@ const REASONS: { v: Concession["reason"]; en: string; ur: string }[] = [
 ];
 
 function ConcessionsPage() {
-  const [items, setItems] = useState<Concession[]>([
-    { id: "c1", studentId: students[0].id, reason: "orphan", reasonUrdu: "یتیم", percent: 100, approvedBy: "Super Admin", active: true },
-    { id: "c2", studentId: students[3].id, reason: "sibling", reasonUrdu: "بھائی بہن", percent: 25, approvedBy: "Hafiz Bilal", active: true },
-    { id: "c3", studentId: students[5].id, reason: "merit", reasonUrdu: "وظیفہ", percent: 50, approvedBy: "Super Admin", active: true },
-  ]);
+  const [items, setItems] = useState<Concession[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("fee_concessions");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("fee_concessions", JSON.stringify(items));
+      } catch {}
+    }
+  }, [items]);
 
   const totalWaivedPaisa = items.filter((i) => i.active).reduce((a, c) => {
-    const s = students.find((x) => x.id === c.studentId);
-    return a + Math.round(((s?.monthlyFeePaisa ?? 0) * c.percent) / 100);
+    return a + Math.round(((c.monthlyFeePaisa ?? 200000) * c.percent) / 100);
   }, 0);
 
   return (
@@ -80,23 +93,36 @@ function ConcessionsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((c) => {
-              const s = students.find((x) => x.id === c.studentId);
-              const waived = Math.round(((s?.monthlyFeePaisa ?? 0) * c.percent) / 100);
-              return (
-                <TableRow key={c.id}>
-                  <TableCell><p className="font-medium text-sm">{s?.name ?? c.studentId}</p><p className="font-urdu text-sm text-muted-foreground">{s?.nameUrdu}</p></TableCell>
-                  <TableCell><Badge variant="secondary">{REASONS.find((r) => r.v === c.reason)?.en}</Badge><p className="font-urdu text-xs text-muted-foreground mt-0.5">{c.reasonUrdu}</p></TableCell>
-                  <TableCell className="font-mono">{c.percent}%</TableCell>
-                  <TableCell className="font-mono text-sm">{formatPKR(waived / 100)}</TableCell>
-                  <TableCell className="text-sm">{c.approvedBy}</TableCell>
-                  <TableCell>{c.active ? <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" variant="outline">Active</Badge> : <Badge variant="outline">Ended</Badge>}</TableCell>
-                  <TableCell className="text-end">
-                    <Button size="sm" variant="ghost" onClick={() => { setItems((p) => p.filter((x) => x.id !== c.id)); toast.success("Concession removed"); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {items.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="h-28 text-center text-muted-foreground">
+                  کوئی رعایت درج نہیں ہے — No fee concessions recorded yet.
+                </TableCell>
+              </TableRow>
+            ) : (
+              items.map((c) => {
+                const waived = Math.round(((c.monthlyFeePaisa ?? 200000) * c.percent) / 100);
+                return (
+                  <TableRow key={c.id}>
+                    <TableCell>
+                      <p className="font-medium text-sm">{c.studentName ?? c.studentId}</p>
+                      {c.studentNameUrdu && <p className="font-urdu text-sm text-muted-foreground">{c.studentNameUrdu}</p>}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{REASONS.find((r) => r.v === c.reason)?.en}</Badge>
+                      <p className="font-urdu text-xs text-muted-foreground mt-0.5">{c.reasonUrdu}</p>
+                    </TableCell>
+                    <TableCell className="font-mono">{c.percent}%</TableCell>
+                    <TableCell className="font-mono text-sm">{formatPKR(waived / 100)}</TableCell>
+                    <TableCell className="text-sm">{c.approvedBy}</TableCell>
+                    <TableCell>{c.active ? <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" variant="outline">Active</Badge> : <Badge variant="outline">Ended</Badge>}</TableCell>
+                    <TableCell className="text-end">
+                      <Button size="sm" variant="ghost" onClick={() => { setItems((p) => p.filter((x) => x.id !== c.id)); toast.success("Concession removed"); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </Card>
@@ -116,7 +142,32 @@ function ConcessionsPage() {
 
 function AddConcessionDialog({ onSave }: { onSave: (c: Concession) => void }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ studentId: students[0].id, reason: "orphan" as Concession["reason"], percent: 25, notes: "" });
+  const [studentList, setStudentList] = useState<any[]>([]);
+  const [form, setForm] = useState({
+    studentId: "",
+    reason: "orphan" as Concession["reason"],
+    percent: 25,
+    notes: "",
+  });
+
+  useEffect(() => {
+    if (open) {
+      fetch("/api/students?pageSize=50", { credentials: "include" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d?.students && Array.isArray(d.students)) {
+            setStudentList(d.students);
+            if (d.students.length > 0 && !form.studentId) {
+              setForm((f) => ({ ...f, studentId: d.students[0].id }));
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [open]);
+
+  const selectedStudent = studentList.find((s) => s.id === form.studentId);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button size="sm" className="gap-1.5"><Plus className="h-3.5 w-3.5" />Add Concession</Button></DialogTrigger>
@@ -125,10 +176,24 @@ function AddConcessionDialog({ onSave }: { onSave: (c: Concession) => void }) {
         <div className="space-y-3 text-sm">
           <div>
             <Label>Student · طالب علم</Label>
-            <Select value={form.studentId} onValueChange={(v) => setForm({ ...form, studentId: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{students.slice(0, 20).map((s) => <SelectItem key={s.id} value={s.id}>{s.name} · {s.rollNo}</SelectItem>)}</SelectContent>
-            </Select>
+            {studentList.length === 0 ? (
+              <Input
+                placeholder="Enter Student ID / Roll No"
+                value={form.studentId}
+                onChange={(e) => setForm({ ...form, studentId: e.target.value })}
+              />
+            ) : (
+              <Select value={form.studentId} onValueChange={(v) => setForm({ ...form, studentId: v })}>
+                <SelectTrigger><SelectValue placeholder="Select student" /></SelectTrigger>
+                <SelectContent>
+                  {studentList.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name} · {s.rollNo || s.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div>
             <Label>Reason · وجہ</Label>
@@ -148,11 +213,26 @@ function AddConcessionDialog({ onSave }: { onSave: (c: Concession) => void }) {
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={() => {
-            const r = REASONS.find((x) => x.v === form.reason)!;
-            onSave({ id: `c${Date.now()}`, studentId: form.studentId, reason: form.reason, reasonUrdu: r.ur, percent: form.percent, approvedBy: "Super Admin", active: true });
-            setOpen(false);
-          }}><HeartHandshake className="h-3.5 w-3.5 me-1.5" />Approve</Button>
+          <Button
+            disabled={!form.studentId}
+            onClick={() => {
+              const r = REASONS.find((x) => x.v === form.reason)!;
+              onSave({
+                id: `c${Date.now()}`,
+                studentId: form.studentId,
+                studentName: selectedStudent?.name ?? form.studentId,
+                studentNameUrdu: selectedStudent?.nameUrdu,
+                reason: form.reason,
+                reasonUrdu: r.ur,
+                percent: form.percent,
+                approvedBy: "Super Admin",
+                active: true,
+              });
+              setOpen(false);
+            }}
+          >
+            <HeartHandshake className="h-3.5 w-3.5 me-1.5" />Approve
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -25,7 +25,6 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/shared/page-header";
 import { useLanguage } from "@/components/language-context";
-import { applications as mockApplications } from "@/mock";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -57,9 +56,7 @@ function AdmissionProgressDashboard() {
   const navigate = useNavigate();
   const isUrdu = lang === "ur";
 
-  const [applicationsList, setApplicationsList] = useState<ApplicationItem[]>(() =>
-    (mockApplications as unknown as ApplicationItem[]) || [],
-  );
+  const [applicationsList, setApplicationsList] = useState<ApplicationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
