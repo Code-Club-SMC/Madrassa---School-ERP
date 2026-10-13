@@ -16,6 +16,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Toolti
 import { institution, type FinanceRecord, type System } from "@/mock";
 import { formatPKR, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-context";
 
 export const Route = createFileRoute("/_authenticated/finance/")({
   component: FinanceDashboard,
@@ -519,6 +520,8 @@ function MiniStat({ label, urdu, value, highlight }: { label: string; urdu: stri
 }
 
 function AddTxnDialog({ open, onOpenChange, onAdd, defaultSystem }: { open: boolean; onOpenChange: (v: boolean) => void; onAdd: (r: FinanceRecord) => void; defaultSystem: System }) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const [form, setForm] = useState({
     type: "income" as "income" | "expense",
     category: "fees",
@@ -568,7 +571,10 @@ function AddTxnDialog({ open, onOpenChange, onAdd, defaultSystem }: { open: bool
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={() => {
             const amt = parseFloat(form.amount);
-            if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+            if (!amt || amt <= 0) {
+              toast.error(isUrdu ? "درست رقم درج کریں" : "Enter a valid amount");
+              return;
+            }
             onAdd({
               id: `fin-${Date.now()}`,
               date: form.date,
@@ -580,7 +586,7 @@ function AddTxnDialog({ open, onOpenChange, onAdd, defaultSystem }: { open: bool
               source: form.source || "—",
               system: form.system,
             });
-            toast.success("Transaction recorded");
+            toast.success(isUrdu ? "لین دین درج کر لیا گیا" : "Transaction recorded");
             onOpenChange(false);
           }}>Save</Button>
         </DialogFooter>
