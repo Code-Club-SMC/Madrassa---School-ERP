@@ -103,6 +103,7 @@ export async function createAcademicYear(
     })
     .returning();
 
+  clearActiveAcademicYearCache();
   return row;
 }
 
@@ -133,6 +134,7 @@ export async function updateAcademicYear(
     .where(eq(academicYears.id, academicYearId))
     .returning();
 
+  clearActiveAcademicYearCache();
   return row;
 }
 
@@ -161,6 +163,7 @@ export async function activateAcademicYear(request: Request, academicYearId: str
       .where(eq(academicYears.id, academicYearId))
       .returning();
 
+    clearActiveAcademicYearCache();
     return activated;
   });
 }
@@ -255,7 +258,7 @@ export function clearActiveAcademicYearCache() {
 export async function getActiveAcademicYear(system: AcademicYearSystem) {
   const cached = activeAcademicYearCache[system];
   const now = Date.now();
-  if (cached && cached.expiresAt > now) {
+  if (cached && cached.expiresAt > now && cached.year) {
     return assertActiveAcademicYear(cached.year, system);
   }
 
@@ -266,7 +269,9 @@ export async function getActiveAcademicYear(system: AcademicYearSystem) {
     .limit(1);
 
   const active = assertActiveAcademicYear(row, system);
-  activeAcademicYearCache[system] = { year: row, expiresAt: now + 300_000 };
+  if (row) {
+    activeAcademicYearCache[system] = { year: row, expiresAt: now + 60_000 };
+  }
   return active;
 }
 

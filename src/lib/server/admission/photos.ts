@@ -15,10 +15,18 @@ export async function saveAdmissionPhoto(applicationId: string, dataUrl: string 
   const buffer = Buffer.from(match[2], "base64");
   if (buffer.byteLength > maxPhotoBytes) throw new AdmissionError("Photo must be 2 MB or smaller", 400);
 
-  const publicDir = path.join(process.cwd(), "public", "uploads", "admissions", applicationId);
-  await mkdir(publicDir, { recursive: true });
+  try {
+    const publicDir = path.join(process.cwd(), "public", "uploads", "admissions", applicationId);
+    await mkdir(publicDir, { recursive: true });
 
-  const fileName = `photo.${extension}`;
-  await writeFile(path.join(publicDir, fileName), buffer);
-  return `/uploads/admissions/${applicationId}/${fileName}`;
+    const fileName = `photo.${extension}`;
+    await writeFile(path.join(publicDir, fileName), buffer);
+    return `/uploads/admissions/${applicationId}/${fileName}`;
+  } catch (fsError: any) {
+    console.warn(
+      "[saveAdmissionPhoto] Filesystem write failed (likely read-only serverless environment):",
+      fsError?.message,
+    );
+    return dataUrl;
+  }
 }

@@ -212,20 +212,20 @@ export async function getRollPrefix(target: AdmissionTarget) {
 
 export function matchSchoolClass(
   needle: string | undefined,
-  rows: Array<{ id: string; name: string; nameUrdu: string; govtEquivalent?: string | null }>,
+  rows: Array<{ id: string; name: string; nameUrdu: string; code?: string | null; govtEquivalent?: string | null }>,
 ) {
   const normNeedle = normalize(needle);
   if (!normNeedle) return null;
 
   const exact = rows.find((item) =>
-    normalizedCandidates(item.id, item.name, item.nameUrdu, item.govtEquivalent ?? undefined).some(
+    normalizedCandidates(item.id, item.code ?? undefined, item.name, item.nameUrdu, item.govtEquivalent ?? undefined).some(
       (candidate) => candidate === normNeedle,
     ),
   );
   if (exact) return exact.id;
 
   const loose = rows.find((item) =>
-    normalizedCandidates(item.name, item.nameUrdu, item.govtEquivalent ?? undefined).some(
+    normalizedCandidates(item.code ?? undefined, item.name, item.nameUrdu, item.govtEquivalent ?? undefined).some(
       (candidate) => candidate.includes(normNeedle) || normNeedle.includes(candidate),
     ),
   );
@@ -236,7 +236,13 @@ export async function resolveSchoolClassId(value: string | undefined) {
   if (!value) return null;
 
   return db
-    .select({ id: schoolClasses.id, name: schoolClasses.name, nameUrdu: schoolClasses.nameUrdu, govtEquivalent: schoolClasses.govtEquivalent })
+    .select({
+      id: schoolClasses.id,
+      code: schoolClasses.code,
+      name: schoolClasses.name,
+      nameUrdu: schoolClasses.nameUrdu,
+      govtEquivalent: schoolClasses.govtEquivalent,
+    })
     .from(schoolClasses)
     .then((rows) => matchSchoolClass(value, rows))
     .catch(() => null);
