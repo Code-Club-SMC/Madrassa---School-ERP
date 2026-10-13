@@ -464,14 +464,12 @@ function DashboardPage() {
   const { lang } = useLanguage();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [selectedFilter, setSelectedFilter] = useState<DashboardFilter>(search.filter || "all");
-  const activeFilter: DashboardFilter = selectedFilter;
+  const activeFilter: DashboardFilter = (search.filter as DashboardFilter) || "all";
 
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
   const setFilter = (key: DashboardFilter) => {
-    setSelectedFilter(key);
     void navigate({
       search: (prev: any) => ({ ...prev, filter: key === "all" ? undefined : key }),
       replace: true,
@@ -479,24 +477,32 @@ function DashboardPage() {
   };
 
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
     setDataLoading(true);
-    fetch(`/api/dashboard?filter=${activeFilter}`, { credentials: "include" })
-      .then((res) => (res.ok ? res.json() : null))
+
+    fetch(`/api/dashboard?filter=${activeFilter}&t=${Date.now()}`, {
+      credentials: "include",
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load dashboard data");
+        return res.json();
+      })
       .then((data) => {
-        if (isMounted && data) {
-          setDashboardData(data);
-        }
+        setDashboardData(data);
       })
       .catch((err) => {
-        console.error("Dashboard fetch error:", err);
+        if (err.name !== "AbortError") {
+          console.error("Dashboard fetch error:", err);
+        }
       })
       .finally(() => {
-        if (isMounted) setDataLoading(false);
+        setDataLoading(false);
       });
 
     return () => {
-      isMounted = false;
+      controller.abort();
     };
   }, [activeFilter]);
 
@@ -820,14 +826,14 @@ function DashboardPage() {
           </Badge>
         </div>
         <div className="h-72">
-          {dataLoading && trendData.length === 0 ? (
+          {dataLoading ? (
             <div className="h-full flex items-center justify-center text-muted-foreground text-xs gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading trend data...</span>
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span>{lang === "ur" ? "چارٹ ڈیٹا لوڈ ہو رہا ہے..." : "Loading trend data..."}</span>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 10, right: 15, left: 0, bottom: 0 }}>
+              <LineChart key={activeFilter} data={trendData} margin={{ top: 10, right: 15, left: 0, bottom: 0 }}>
                 <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="month"
@@ -836,6 +842,8 @@ function DashboardPage() {
                   tickLine={false}
                 />
                 <YAxis
+                  domain={[0, (dataMax: number) => Math.max(dataMax || 0, 5)]}
+                  allowDecimals={false}
                   tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
                   axisLine={false}
                   tickLine={false}

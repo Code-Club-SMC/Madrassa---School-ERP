@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, count, eq, inArray, max, ne, or } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, max, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -103,24 +103,48 @@ export async function listSchoolClasses(request: Request) {
   const gender = url.searchParams.get("gender") as "male" | "female" | null;
   const institutionId = url.searchParams.get("institutionId");
 
-  const [classes, classCounts, subjectCounts] = await Promise.all([
-    db
-      .select()
-      .from(schoolClasses)
-      .where(institutionId ? eq(schoolClasses.institutionId, institutionId) : undefined)
-      .orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name)),
+  const classes = await db
+    .select()
+    .from(schoolClasses)
+    .where(institutionId ? eq(schoolClasses.institutionId, institutionId) : undefined)
+    .orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name));
+
+  const filtered = gender ? classes.filter((c) => c.gender === gender) : classes;
+
+  if (filtered.length === 0) {
+    return [];
+  }
+
+  const [classCounts, subjectCounts] = await Promise.all([
     db
       .select({ classId: studentEnrollments.schoolClassId, count: count() })
       .from(studentEnrollments)
-      .where(and(eq(studentEnrollments.status, "active")))
-      .groupBy(studentEnrollments.schoolClassId),
+      .where(
+        and(
+          eq(studentEnrollments.status, "active"),
+          isNotNull(studentEnrollments.schoolClassId),
+        ),
+      )
+      .groupBy(studentEnrollments.schoolClassId)
+      .catch((err) => {
+        console.error("[listSchoolClasses] Failed to query enrollment counts:", err);
+        return [];
+      }),
     db
       .select({ classId: examSubjects.schoolClassId, count: count() })
       .from(examSubjects)
-      .groupBy(examSubjects.schoolClassId),
+      .where(
+        and(
+          eq(examSubjects.system, "school"),
+          isNotNull(examSubjects.schoolClassId),
+        ),
+      )
+      .groupBy(examSubjects.schoolClassId)
+      .catch((err) => {
+        console.error("[listSchoolClasses] Failed to query subject counts:", err);
+        return [];
+      }),
   ]);
-
-  const filtered = gender ? classes.filter((c) => c.gender === gender) : classes;
 
   const classCountMap = new Map(classCounts.map((row) => [row.classId, Number(row.count)]));
   const subjectCountMap = new Map(subjectCounts.map((row) => [row.classId, Number(row.count)]));
@@ -217,10 +241,15 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
       .where(
         and(
           eq(studentEnrollments.status, "active"),
+          isNotNull(studentEnrollments.madrassaSubcategoryId),
           academicYearId ? eq(studentEnrollments.academicYearId, academicYearId) : undefined,
         ),
       )
-      .groupBy(studentEnrollments.madrassaSubcategoryId, studentEnrollments.institutionId),
+      .groupBy(studentEnrollments.madrassaSubcategoryId, studentEnrollments.institutionId)
+      .catch((err) => {
+        console.error("[listMadrassaCategories] Failed to query enrollment counts:", err);
+        return [];
+      }),
   ]);
 
   const countMap = new Map<string, number>();

@@ -15,6 +15,8 @@ export async function requirePermission(request: Request, module: ModuleKey, act
   const user = await getRequestUser(request);
   if (!user) throw new HttpError("Authentication required", 401);
 
+  if (user.role === "super_admin") return user;
+
   const permissions = effectivePermissions(user);
   if (!can(permissions, module, action)) {
     throw new HttpError("You do not have permission for this action", 403);

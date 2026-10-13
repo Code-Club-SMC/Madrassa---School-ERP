@@ -27,7 +27,7 @@ const tooltipStyle = { background: "var(--card)", border: "1px solid var(--borde
 type Scope = "both" | "school" | "madrassa";
 
 function FinanceDashboard() {
-  const [records, setRecords] = useState<FinanceRecord[]>(() => {
+  const [localRecords, setLocalRecords] = useState<FinanceRecord[]>(() => {
     if (typeof window !== "undefined") {
       try {
         const raw = localStorage.getItem("msmis_finance_records");
@@ -36,9 +36,11 @@ function FinanceDashboard() {
     }
     return [];
   });
-  const [dbMonthly, setDbMonthly] = useState<
+  const [serverTransactions, setServerTransactions] = useState<FinanceRecord[]>([]);
+  const [serverMonthly, setServerMonthly] = useState<
     Array<{
       month: string;
+      monthUr: string;
       income: number;
       expense: number;
       schoolIncome: number;
@@ -47,10 +49,17 @@ function FinanceDashboard() {
       madrassaExpense: number;
     }>
   >([]);
-  const [dbKpis, setDbKpis] = useState<{ totalCollectedPaisa: number; openArrearsPaisa: number }>({
-    totalCollectedPaisa: 0,
-    openArrearsPaisa: 0,
-  });
+  const [serverKpis, setServerKpis] = useState<{
+    monthlyIncome: number;
+    schoolMonthlyIncome: number;
+    madrassaMonthlyIncome: number;
+    annualIncome: number;
+    schoolAnnualIncome: number;
+    madrassaAnnualIncome: number;
+    openArrears: number;
+    recoveryRate: number;
+  } | null>(null);
+
   const [scope, setScope] = useState<Scope>("both");
   const [open, setOpen] = useState(false);
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
@@ -58,17 +67,13 @@ function FinanceDashboard() {
 
   useEffect(() => {
     let mounted = true;
-    fetch("/api/dashboard?filter=all")
+    fetch("/api/finance/overview", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!mounted || !d) return;
-        if (Array.isArray(d.monthlyHistory)) setDbMonthly(d.monthlyHistory);
-        if (d.kpis) {
-          setDbKpis({
-            totalCollectedPaisa: d.kpis.totalCollectedPaisa ?? 0,
-            openArrearsPaisa: d.kpis.openArrearsPaisa ?? 0,
-          });
-        }
+        if (Array.isArray(d.recentTransactions)) setServerTransactions(d.recentTransactions);
+        if (Array.isArray(d.monthlyHistory)) setServerMonthly(d.monthlyHistory);
+        if (d.kpis) setServerKpis(d.kpis);
       })
       .catch(() => {});
     return () => {
@@ -77,7 +82,7 @@ function FinanceDashboard() {
   }, []);
 
   const handleAddTxn = (r: FinanceRecord) => {
-    setRecords((prev) => {
+    setLocalRecords((prev) => {
       const next = [r, ...prev];
       if (typeof window !== "undefined") {
         try {
@@ -87,6 +92,12 @@ function FinanceDashboard() {
       return next;
     });
   };
+
+  const records = useMemo(() => {
+    const localIds = new Set(localRecords.map((r) => r.id));
+    const uniqueServer = serverTransactions.filter((r) => !localIds.has(r.id));
+    return [...localRecords, ...uniqueServer];
+  }, [localRecords, serverTransactions]);
 
   const scoped = useMemo(
     () => (scope === "both" ? records : records.filter((r) => r.system === scope || r.system === "both")),
@@ -113,22 +124,24 @@ function FinanceDashboard() {
       if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
         const day = d.getDate();
         if (r.type === "income") {
-          if (r.system === "school" || r.system === "both") {
-            const amt = r.system === "both" ? Math.round(r.amount * 0.6) : r.amount;
-            recordSchoolIncomeByDay.set(day, (recordSchoolIncomeByDay.get(day) ?? 0) + amt);
-          }
-          if (r.system === "madrassa" || r.system === "both") {
-            const amt = r.system === "both" ? Math.round(r.amount * 0.4) : r.amount;
-            recordMadrassaIncomeByDay.set(day, (recordMadrassaIncomeByDay.get(day) ?? 0) + amt);
+          if (r.system === "school") {
+            recordSchoolIncomeByDay.set(day, (recordSchoolIncomeByDay.get(day) ?? 0) + r.amount);
+          } else if (r.system === "madrassa") {
+            recordMadrassaIncomeByDay.set(day, (recordMadrassaIncomeByDay.get(day) ?? 0) + r.amount);
+          } else {
+            const sAmt = Math.round(r.amount * 0.5);
+            recordSchoolIncomeByDay.set(day, (recordSchoolIncomeByDay.get(day) ?? 0) + sAmt);
+            recordMadrassaIncomeByDay.set(day, (recordMadrassaIncomeByDay.get(day) ?? 0) + (r.amount - sAmt));
           }
         } else {
-          if (r.system === "school" || r.system === "both") {
-            const amt = r.system === "both" ? Math.round(r.amount * 0.6) : r.amount;
-            recordSchoolExpenseByDay.set(day, (recordSchoolExpenseByDay.get(day) ?? 0) + amt);
-          }
-          if (r.system === "madrassa" || r.system === "both") {
-            const amt = r.system === "both" ? Math.round(r.amount * 0.4) : r.amount;
-            recordMadrassaExpenseByDay.set(day, (recordMadrassaExpenseByDay.get(day) ?? 0) + amt);
+          if (r.system === "school") {
+            recordSchoolExpenseByDay.set(day, (recordSchoolExpenseByDay.get(day) ?? 0) + r.amount);
+          } else if (r.system === "madrassa") {
+            recordMadrassaExpenseByDay.set(day, (recordMadrassaExpenseByDay.get(day) ?? 0) + r.amount);
+          } else {
+            const sAmt = Math.round(r.amount * 0.5);
+            recordSchoolExpenseByDay.set(day, (recordSchoolExpenseByDay.get(day) ?? 0) + sAmt);
+            recordMadrassaExpenseByDay.set(day, (recordMadrassaExpenseByDay.get(day) ?? 0) + (r.amount - sAmt));
           }
         }
       }
@@ -155,18 +168,17 @@ function FinanceDashboard() {
   }, [scoped]);
 
   const totals = useMemo(() => {
-    const totalDue = dbKpis.totalCollectedPaisa + dbKpis.openArrearsPaisa;
-    const rate = totalDue > 0 ? Math.round((dbKpis.totalCollectedPaisa / totalDue) * 100) : 0;
+    const rate = serverKpis?.recoveryRate ?? 0;
 
     if (period === "yearly") {
-      const income = dbMonthly.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
-      const expense = dbMonthly.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
+      const income = serverMonthly.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
+      const expense = serverMonthly.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
       return { income, expense, net: income - expense, rate };
     }
     const income = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
     const expense = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
     return { income, expense, net: income - expense, rate };
-  }, [period, incomeKey, expenseKey, dailyIncomeVsExpense, dbMonthly, dbKpis]);
+  }, [period, incomeKey, expenseKey, dailyIncomeVsExpense, serverMonthly, serverKpis]);
 
   const incomeBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; nameUrdu: string; value: number }>();
@@ -273,7 +285,7 @@ function FinanceDashboard() {
         </div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={period === "monthly" ? dailyIncomeVsExpense : dbMonthly} barGap={period === "monthly" ? 2 : 6}>
+            <BarChart data={period === "monthly" ? dailyIncomeVsExpense : serverMonthly} barGap={period === "monthly" ? 2 : 6}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
                 dataKey={period === "monthly" ? "day" : "month"}

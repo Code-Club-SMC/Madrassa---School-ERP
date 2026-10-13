@@ -35,6 +35,38 @@ function parseSessionToken(token: string): SessionPayload | null {
   }
 }
 
+let userSchemaChecked = false;
+
+export async function ensureUserColumns() {
+  if (userSchemaChecked) return;
+  try {
+    const { sql } = await import("drizzle-orm");
+    await db.execute(sql`
+      ALTER TABLE "user" 
+        ADD COLUMN IF NOT EXISTS "username" text,
+        ADD COLUMN IF NOT EXISTS "display_username" text,
+        ADD COLUMN IF NOT EXISTS "role" text,
+        ADD COLUMN IF NOT EXISTS "banned" boolean DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "ban_reason" text,
+        ADD COLUMN IF NOT EXISTS "ban_expires" timestamp,
+        ADD COLUMN IF NOT EXISTS "name_urdu" text,
+        ADD COLUMN IF NOT EXISTS "status" text DEFAULT 'active',
+        ADD COLUMN IF NOT EXISTS "phone" text,
+        ADD COLUMN IF NOT EXISTS "cnic" text,
+        ADD COLUMN IF NOT EXISTS "system_access" text DEFAULT 'both',
+        ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT true,
+        ADD COLUMN IF NOT EXISTS "linked_teacher_id" text,
+        ADD COLUMN IF NOT EXISTS "linked_student_ids" text[],
+        ADD COLUMN IF NOT EXISTS "permissions" jsonb,
+        ADD COLUMN IF NOT EXISTS "department" text,
+        ADD COLUMN IF NOT EXISTS "designation" text;
+    `);
+    userSchemaChecked = true;
+  } catch (e) {
+    console.warn("[ensureUserColumns] Note on user columns check:", e);
+  }
+}
+
 export async function getSessionUser(request?: Request): Promise<{
   id: string;
   name: string;
@@ -77,7 +109,29 @@ export async function getSessionUser(request?: Request): Promise<{
   const payload = parseSessionToken(sessionCookie);
   if (!payload) return null;
 
-  const [foundUser] = await db.select().from(user).where(eq(user.id, payload.userId)).limit(1);
+  let foundUser: any = null;
+  try {
+    const [u] = await db.select().from(user).where(eq(user.id, payload.userId)).limit(1);
+    foundUser = u;
+  } catch {
+    try {
+      await ensureUserColumns();
+      const [u] = await db.select().from(user).where(eq(user.id, payload.userId)).limit(1);
+      foundUser = u;
+    } catch {
+      try {
+        const { sql } = await import("drizzle-orm");
+        const rows = await db.execute(sql`
+          SELECT id, name, email, role, status FROM "user" WHERE id = ${payload.userId} LIMIT 1
+        `);
+        foundUser = rows.rows?.[0];
+      } catch (inner) {
+        console.error("[getSessionUser] User query error:", inner);
+        return null;
+      }
+    }
+  }
+
   if (!foundUser) return null;
 
   return {

@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   bootstrapSuperAdminSchema,
   createFirstSuperAdmin,
-  json,
   parseJsonBody,
   requireSetupToken,
 } from "@/lib/server/super-admin";
+import { errorResponse } from "@/lib/server/http";
 
 export const Route = createFileRoute("/api/setup/super-admin")({
   server: {
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/api/setup/super-admin")({
         try {
           return await createFirstSuperAdmin(body.data);
         } catch (error) {
-          return json({ error: error instanceof Error ? error.message : "Could not create super admin" }, 500);
+          return errorResponse(error, "سپر ایڈمن اکاؤنٹ بنانے میں خرابی پیش آئی · Could not create super admin");
         }
       },
     },

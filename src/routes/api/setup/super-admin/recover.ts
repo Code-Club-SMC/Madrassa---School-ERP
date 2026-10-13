@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  json,
   parseJsonBody,
   recoverSuperAdminPassword,
   recoverSuperAdminSchema,
   requireSetupToken,
 } from "@/lib/server/super-admin";
+import { errorResponse } from "@/lib/server/http";
 
 export const Route = createFileRoute("/api/setup/super-admin/recover")({
   server: {
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/api/setup/super-admin/recover")({
         try {
           return await recoverSuperAdminPassword(body.data);
         } catch (error) {
-          return json({ error: error instanceof Error ? error.message : "Could not recover super admin" }, 500);
+          return errorResponse(error, "سپر ایڈمن پاس ورڈ بحال نہیں ہو سکا · Could not recover super admin");
         }
       },
     },

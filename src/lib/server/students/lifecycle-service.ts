@@ -27,8 +27,21 @@ import {
   studentSiblings,
   students,
 } from "@/db/schema/students";
-import { requirePermission } from "@/lib/server/authz";
+import { getRequestUser, requirePermission } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
+
+async function requireLifecycleAccess(request: Request) {
+  const user = await getRequestUser(request);
+  if (!user) throw new HttpError("Authentication required", 401);
+  if (user.role === "super_admin" || user.role === "admin" || user.role === "academic_admin" || user.role === "principal") {
+    return user;
+  }
+  try {
+    return await requirePermission(request, "madrassa_students", "view");
+  } catch {
+    return await requirePermission(request, "school_students", "view");
+  }
+}
 
 export type StudentLifecycleArchive = Awaited<ReturnType<typeof getStudentLifecycleArchive>>;
 
@@ -78,7 +91,7 @@ export async function searchStudentsForLifecycle(
   request: Request,
   query: { q?: string; system?: string; status?: string; limit?: number },
 ) {
-  await requirePermission(request, "students", "view");
+  await requireLifecycleAccess(request);
 
   const limit = Math.min(Math.max(query.limit ?? 50, 1), 100);
   const search = query.q?.trim()?.toLowerCase();
@@ -112,9 +125,9 @@ export async function searchStudentsForLifecycle(
       darja: studentEnrollments.darja,
     })
     .from(students)
-    .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, students.id))
-    .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
-    .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
+    .leftJoin(studentEnrollments, eq(studentEnrollments.studentId, students.id))
+    .leftJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
+    .leftJoin(programs, eq(programs.id, studentEnrollments.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
     .leftJoin(
       madrassaSubcategories,
@@ -134,23 +147,23 @@ export async function searchStudentsForLifecycle(
 
   let results = Array.from(studentMap.values());
 
-  if (query.status) {
+  if (query.status && query.status !== "all") {
     results = results.filter((s) => s.status === query.status);
   }
 
-  if (query.system && (query.system === "school" || query.system === "madrassa")) {
+  if (query.system && query.system !== "all" && (query.system === "school" || query.system === "madrassa")) {
     results = results.filter((s) => s.programSystem === query.system);
   }
 
   if (search) {
     results = results.filter((s) => {
-      const matchName = s.name.toLowerCase().includes(search);
-      const matchUrdu = s.nameUrdu.includes(search);
-      const matchFather = s.fatherName.toLowerCase().includes(search);
-      const matchRoll = s.rollNo.toLowerCase().includes(search);
-      const matchAdm = s.admissionNo.toLowerCase().includes(search);
+      const matchName = s.name?.toLowerCase().includes(search);
+      const matchUrdu = s.nameUrdu?.includes(search);
+      const matchFather = s.fatherName?.toLowerCase().includes(search);
+      const matchRoll = s.rollNo?.toLowerCase().includes(search);
+      const matchAdm = s.admissionNo?.toLowerCase().includes(search);
       const matchCnic = s.cnicBForm ? s.cnicBForm.includes(search) : false;
-      return matchName || matchUrdu || matchFather || matchRoll || matchAdm || matchCnic;
+      return Boolean(matchName || matchUrdu || matchFather || matchRoll || matchAdm || matchCnic);
     });
   }
 
@@ -158,7 +171,7 @@ export async function searchStudentsForLifecycle(
 }
 
 export async function getStudentLifecycleArchive(request: Request, studentId: string) {
-  await requirePermission(request, "students", "view");
+  await requireLifecycleAccess(request);
 
   const [student] = await db
     .select({
@@ -198,7 +211,7 @@ export async function getStudentLifecycleArchive(request: Request, studentId: st
       institutionId: institutions.id,
       institutionName: institutions.name,
       institutionNameUrdu: institutions.nameUrdu,
-      institutionGender: institutions.gender,
+      institutionGender: institutions.section,
       programId: programs.id,
       programName: programs.name,
       programNameUrdu: programs.nameUrdu,
@@ -206,11 +219,11 @@ export async function getStudentLifecycleArchive(request: Request, studentId: st
       schoolClassId: schoolClasses.id,
       schoolClassName: schoolClasses.name,
       schoolClassNameUrdu: schoolClasses.nameUrdu,
-      schoolClassFee: schoolClasses.tuitionFeePaisa,
+      schoolClassFee: schoolClasses.fee,
       madrassaSubcategoryId: madrassaSubcategories.id,
       madrassaSubcategoryName: madrassaSubcategories.name,
       madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
-      madrassaSubcategoryFee: madrassaSubcategories.tuitionFeePaisa,
+      madrassaSubcategoryFee: madrassaSubcategories.fee,
       madrassaCategoryId: madrassaCategories.id,
       madrassaCategoryName: madrassaCategories.name,
       madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
@@ -286,11 +299,11 @@ export async function getStudentLifecycleArchive(request: Request, studentId: st
   // 5. Siblings Network
   const siblingLinks = await db
     .select({
-      siblingStudentId: studentSiblings.siblingStudentId,
-      relationship: studentSiblings.relationship,
+      siblingStudentId: studentSiblings.siblingId,
     })
     .from(studentSiblings)
-    .where(eq(studentSiblings.studentId, studentId));
+    .where(eq(studentSiblings.studentId, studentId))
+    .catch(() => []);
 
   let siblings: Array<{
     id: string;
@@ -324,7 +337,8 @@ export async function getStudentLifecycleArchive(request: Request, studentId: st
         eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
       )
       .where(inArray(students.id, siblingIds))
-      .orderBy(desc(studentEnrollments.startedAt));
+      .orderBy(desc(studentEnrollments.startedAt))
+      .catch(() => []);
 
     const map = new Map<string, (typeof siblingDetails)[number]>();
     for (const s of siblingDetails) {
@@ -343,7 +357,7 @@ export async function getStudentLifecycleArchive(request: Request, studentId: st
           status: row.status,
           rollNo: row.rollNo,
           className: row.schoolClassName ?? row.madrassaSubcategoryName ?? "—",
-          relationship: link.relationship,
+          relationship: "Sibling · ہمشیرہ / برادر",
         };
       })
       .filter(Boolean) as typeof siblings;
@@ -524,14 +538,14 @@ export async function getStudentLifecycleArchive(request: Request, studentId: st
     .select({
       id: feePayments.id,
       receiptNo: feePayments.receiptNo,
-      paymentDate: feePayments.paymentDate,
+      paymentDate: feePayments.receivedAt,
       amountPaisa: feePayments.amountPaisa,
       method: feePayments.method,
       status: feePayments.status,
     })
     .from(feePayments)
     .where(eq(feePayments.studentId, studentId))
-    .orderBy(desc(feePayments.paymentDate));
+    .orderBy(desc(feePayments.receivedAt));
 
   const totalBilledPaisa = charges
     .filter((c) => c.status !== "reversed")
@@ -617,7 +631,7 @@ export async function getStudentLifecycleArchive(request: Request, studentId: st
       })),
       payments: payments.map((p) => ({
         ...p,
-        paymentDate: p.paymentDate.toISOString(),
+        paymentDate: p.paymentDate instanceof Date ? p.paymentDate.toISOString() : new Date(p.paymentDate).toISOString(),
       })),
     },
     events: events.map((ev) => ({

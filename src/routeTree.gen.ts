@@ -91,6 +91,7 @@ import { Route as ApiFeesChargeAndCollectRouteImport } from './routes/api/fees/c
 import { Route as ApiFeesChargesRouteImport } from './routes/api/fees/charges'
 import { Route as ApiFeesPaymentsRouteImport } from './routes/api/fees/payments'
 import { Route as ApiFeesStudentsRouteImport } from './routes/api/fees/students'
+import { Route as ApiFinanceOverviewRouteImport } from './routes/api/finance/overview'
 import { Route as ApiNotificationsIndexRouteImport } from './routes/api/notifications/index'
 import { Route as ApiPromotionsPreviewRouteImport } from './routes/api/promotions/preview'
 import { Route as ApiPromotionsRulesRouteImport } from './routes/api/promotions/rules'
@@ -632,6 +633,11 @@ const ApiFeesPaymentsRoute = ApiFeesPaymentsRouteImport.update({
 const ApiFeesStudentsRoute = ApiFeesStudentsRouteImport.update({
   id: '/api/fees/students',
   path: '/api/fees/students',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFinanceOverviewRoute = ApiFinanceOverviewRouteImport.update({
+  id: '/api/finance/overview',
+  path: '/api/finance/overview',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiNotificationsIndexRoute = ApiNotificationsIndexRouteImport.update({
@@ -1241,6 +1247,7 @@ export interface FileRoutesByFullPath {
   '/api/fees/charges': typeof ApiFeesChargesRouteWithChildren
   '/api/fees/payments': typeof ApiFeesPaymentsRouteWithChildren
   '/api/fees/students': typeof ApiFeesStudentsRouteWithChildren
+  '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
   '/api/promotions/rules': typeof ApiPromotionsRulesRoute
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
@@ -1409,6 +1416,7 @@ export interface FileRoutesByTo {
   '/api/fees/charges': typeof ApiFeesChargesRouteWithChildren
   '/api/fees/payments': typeof ApiFeesPaymentsRouteWithChildren
   '/api/fees/students': typeof ApiFeesStudentsRouteWithChildren
+  '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
   '/api/promotions/rules': typeof ApiPromotionsRulesRoute
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
@@ -1588,6 +1596,7 @@ export interface FileRoutesById {
   '/api/fees/charges': typeof ApiFeesChargesRouteWithChildren
   '/api/fees/payments': typeof ApiFeesPaymentsRouteWithChildren
   '/api/fees/students': typeof ApiFeesStudentsRouteWithChildren
+  '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
   '/api/promotions/rules': typeof ApiPromotionsRulesRoute
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
@@ -1767,6 +1776,7 @@ export interface FileRouteTypes {
     | '/api/fees/charges'
     | '/api/fees/payments'
     | '/api/fees/students'
+    | '/api/finance/overview'
     | '/api/promotions/preview'
     | '/api/promotions/rules'
     | '/api/setup/super-admin'
@@ -1935,6 +1945,7 @@ export interface FileRouteTypes {
     | '/api/fees/charges'
     | '/api/fees/payments'
     | '/api/fees/students'
+    | '/api/finance/overview'
     | '/api/promotions/preview'
     | '/api/promotions/rules'
     | '/api/setup/super-admin'
@@ -2113,6 +2124,7 @@ export interface FileRouteTypes {
     | '/api/fees/charges'
     | '/api/fees/payments'
     | '/api/fees/students'
+    | '/api/finance/overview'
     | '/api/promotions/preview'
     | '/api/promotions/rules'
     | '/api/setup/super-admin'
@@ -2240,6 +2252,7 @@ export interface RootRouteChildren {
   ApiFeesChargesRoute: typeof ApiFeesChargesRouteWithChildren
   ApiFeesPaymentsRoute: typeof ApiFeesPaymentsRouteWithChildren
   ApiFeesStudentsRoute: typeof ApiFeesStudentsRouteWithChildren
+  ApiFinanceOverviewRoute: typeof ApiFinanceOverviewRoute
   ApiPromotionsPreviewRoute: typeof ApiPromotionsPreviewRoute
   ApiPromotionsRulesRoute: typeof ApiPromotionsRulesRoute
   ApiSetupSuperAdminRoute: typeof ApiSetupSuperAdminRouteWithChildren
@@ -2855,6 +2868,13 @@ declare module '@tanstack/react-router' {
       path: '/api/fees/students'
       fullPath: '/api/fees/students'
       preLoaderRoute: typeof ApiFeesStudentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/finance/overview': {
+      id: '/api/finance/overview'
+      path: '/api/finance/overview'
+      fullPath: '/api/finance/overview'
+      preLoaderRoute: typeof ApiFinanceOverviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/notifications/': {
@@ -4224,6 +4244,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFeesChargesRoute: ApiFeesChargesRouteWithChildren,
   ApiFeesPaymentsRoute: ApiFeesPaymentsRouteWithChildren,
   ApiFeesStudentsRoute: ApiFeesStudentsRouteWithChildren,
+  ApiFinanceOverviewRoute: ApiFinanceOverviewRoute,
   ApiPromotionsPreviewRoute: ApiPromotionsPreviewRoute,
   ApiPromotionsRulesRoute: ApiPromotionsRulesRoute,
   ApiSetupSuperAdminRoute: ApiSetupSuperAdminRouteWithChildren,

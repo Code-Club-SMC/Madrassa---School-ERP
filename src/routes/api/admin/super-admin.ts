@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  json,
   parseJsonBody,
   updateCurrentSuperAdmin,
   updateSuperAdminSchema,
 } from "@/lib/server/super-admin";
+import { errorResponse } from "@/lib/server/http";
 
 export const Route = createFileRoute("/api/admin/super-admin")({
   server: {
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/admin/super-admin")({
         try {
           return await updateCurrentSuperAdmin(request, body.data);
         } catch (error) {
-          return json({ error: error instanceof Error ? error.message : "Could not update super admin" }, 500);
+          return errorResponse(error, "سپر ایڈمن کی تفصیلات اپ ڈیٹ نہیں ہو سکیں · Could not update super admin");
         }
       },
     },

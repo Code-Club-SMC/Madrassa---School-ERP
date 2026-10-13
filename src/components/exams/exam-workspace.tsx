@@ -254,7 +254,7 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
 
   const loadOptions = useCallback(async () => {
     const institutionId = gender === "male" ? "al_qasim_academy" : "jamia_zainab_banat";
-    const next = await loadAcademicOptions(system === "madrassa" ? gender : undefined, institutionId);
+    const next = await loadAcademicOptions(system === "madrassa" ? gender : undefined, institutionId, system);
     setOptions(next);
   }, [system, gender]);
 
@@ -571,6 +571,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
         loadAcademicOptions(
           system === "madrassa" ? gender : undefined,
           system === "school" ? activeInstitution.id : undefined,
+          system,
         ),
       ]);
       setExams(examPayload.exams);
@@ -2006,24 +2007,38 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-async function loadAcademicOptions(section?: string, institutionId?: string): Promise<AcademicOptions> {
+async function loadAcademicOptions(
+  section?: string,
+  institutionId?: string,
+  system?: ExamSystem,
+): Promise<AcademicOptions> {
+  const shouldLoadClasses = !system || system === "school";
+  const shouldLoadCategories = !system || system === "madrassa";
+
   const categoriesUrl = section
     ? `/api/academic/madrassa/categories?section=${section}`
     : "/api/academic/madrassa/categories";
   const classesUrl = institutionId
     ? `/api/academic/school/classes?institutionId=${institutionId}`
     : "/api/academic/school/classes";
+
   const [institutionsPayload, programsPayload, classesPayload, categoriesPayload] = await Promise.all([
-    requestJson<{ institutions: InstitutionOption[] }>("/api/academic/institutions"),
-    requestJson<{ programs: ProgramOption[] }>("/api/academic/programs"),
-    requestJson<{ classes: SchoolClassOption[] }>(classesUrl),
-    requestJson<{ categories: MadrassaCategoryOption[] }>(categoriesUrl),
+    requestJson<{ institutions: InstitutionOption[] }>("/api/academic/institutions").catch(() => ({
+      institutions: [],
+    })),
+    requestJson<{ programs: ProgramOption[] }>("/api/academic/programs").catch(() => ({ programs: [] })),
+    shouldLoadClasses
+      ? requestJson<{ classes: SchoolClassOption[] }>(classesUrl).catch(() => ({ classes: [] }))
+      : Promise.resolve({ classes: [] }),
+    shouldLoadCategories
+      ? requestJson<{ categories: MadrassaCategoryOption[] }>(categoriesUrl).catch(() => ({ categories: [] }))
+      : Promise.resolve({ categories: [] }),
   ]);
   return {
-    institutions: institutionsPayload.institutions,
-    programs: programsPayload.programs,
-    classes: classesPayload.classes,
-    categories: categoriesPayload.categories,
+    institutions: institutionsPayload.institutions ?? [],
+    programs: programsPayload.programs ?? [],
+    classes: classesPayload.classes ?? [],
+    categories: categoriesPayload.categories ?? [],
   };
 }
 

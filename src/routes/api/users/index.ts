@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { user, account } from "@/db/schema/auth";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createFileRoute } from "@tanstack/react-router";
 import bcrypt from "bcryptjs";
@@ -23,11 +23,14 @@ const createSchema = z.object({
 });
 
 import { KNOWN_URDU_NAMES } from "@/lib/user-names";
+import { ensureUserColumns } from "@/lib/auth-helpers.server";
+import { errorResponse } from "@/lib/server/http";
 
 export const Route = createFileRoute("/api/users/")({
   server: {
     handlers: {
       GET: async () => {
+        await ensureUserColumns();
         try {
           const rows = await db.select().from(user).orderBy(desc(user.createdAt));
           const enriched = rows.map((r) => ({
@@ -36,9 +39,9 @@ export const Route = createFileRoute("/api/users/")({
             name: r.name || "User",
             email: r.email || "",
             username: r.username || r.email || r.id,
-            role: (r.role || "teacher"),
-            status: (r.status || "active"),
-            systemAccess: (r.systemAccess || "both"),
+            role: r.role || "teacher",
+            status: r.status || "active",
+            systemAccess: r.systemAccess || "both",
             createdAt: r.createdAt ? (typeof r.createdAt === "string" ? r.createdAt : r.createdAt.toISOString()) : new Date().toISOString(),
             lastLoginAt: (r as any).lastLoginAt ? String((r as any).lastLoginAt) : undefined,
             nameUrdu: r.nameUrdu || (r.name ? KNOWN_URDU_NAMES[r.name] : null) || null,
@@ -48,11 +51,32 @@ export const Route = createFileRoute("/api/users/")({
             headers: { "content-type": "application/json" },
           });
         } catch (err: any) {
-          console.error("Failed to load users:", err);
-          return new Response(JSON.stringify({ error: err?.message || "Failed to load users", users: [] }), {
-            status: 500,
-            headers: { "content-type": "application/json" },
-          });
+          console.error("Failed to load users with full schema, trying safe fallback:", err);
+          try {
+            const raw = await db.execute(sql`SELECT * FROM "user" ORDER BY created_at DESC`);
+            const enriched = (raw.rows || []).map((r: any) => ({
+              id: r.id,
+              name: r.name || "User",
+              email: r.email || "",
+              username: r.username || r.email || r.id,
+              role: r.role || "teacher",
+              status: r.status || "active",
+              systemAccess: r.system_access || r.systemAccess || "both",
+              createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+              nameUrdu: r.name_urdu || r.nameUrdu || (r.name ? KNOWN_URDU_NAMES[r.name] : null) || null,
+              phone: r.phone || null,
+              cnic: r.cnic || null,
+              department: r.department || null,
+              designation: r.designation || null,
+            }));
+            return new Response(JSON.stringify({ users: enriched }), {
+              status: 200,
+              headers: { "content-type": "application/json" },
+            });
+          } catch (fallbackErr: any) {
+            console.error("Both primary and fallback user queries failed:", fallbackErr);
+            return errorResponse(fallbackErr, "صارفین کی فہرست لوڈ نہیں ہو سکی · Could not load users");
+          }
         }
       },
       POST: async ({ request }: { request: Request }) => {
@@ -70,6 +94,7 @@ export const Route = createFileRoute("/api/users/")({
           const id = `u${Date.now()}`;
           const hashedPassword = await bcrypt.hash(data.password, 10);
 
+          await ensureUserColumns().catch(() => {});
           await db.insert(user).values({
             id,
             name: data.name,
@@ -102,10 +127,7 @@ export const Route = createFileRoute("/api/users/")({
           });
         } catch (err: any) {
           console.error("Failed to create user:", err);
-          return new Response(JSON.stringify({ error: err?.message || "Failed to create user" }), {
-            status: 500,
-            headers: { "content-type": "application/json" },
-          });
+          return errorResponse(err, "نیا صارف بنانے میں خرابی پیش آئی · Failed to create user");
         }
       },
     },

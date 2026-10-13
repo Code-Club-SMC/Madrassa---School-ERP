@@ -60,6 +60,48 @@ import { useLanguage } from "@/components/language-context";
 import { formatDate, formatNumber, formatPKR } from "@/lib/format";
 import type { StudentLifecycleArchive } from "@/lib/server/students/lifecycle-service";
 
+function calculateDuration(from: Date, to: Date) {
+  const diffTime = Math.max(0, to.getTime() - from.getTime());
+  const totalDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  let years = to.getFullYear() - from.getFullYear();
+  let months = to.getMonth() - from.getMonth();
+  let days = to.getDate() - from.getDate();
+
+  if (days < 0) {
+    months -= 1;
+    const prevMonth = new Date(to.getFullYear(), to.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  years = Math.max(0, years);
+  months = Math.max(0, months);
+  days = Math.max(0, days);
+
+  const partsEn: string[] = [];
+  if (years > 0) partsEn.push(`${years} ${years === 1 ? "year" : "years"}`);
+  if (months > 0) partsEn.push(`${months} ${months === 1 ? "month" : "months"}`);
+  if (days > 0 || partsEn.length === 0) partsEn.push(`${days} ${days === 1 ? "day" : "days"}`);
+
+  const partsUr: string[] = [];
+  if (years > 0) partsUr.push(`${years} سال`);
+  if (months > 0) partsUr.push(`${months} ماہ`);
+  if (days > 0 || partsUr.length === 0) partsUr.push(`${days} دن`);
+
+  return {
+    totalDays,
+    years,
+    months,
+    days,
+    formattedEn: partsEn.join(", "),
+    formattedUr: partsUr.join("، "),
+  };
+}
+
 type SearchParams = {
   studentId?: string;
 };
@@ -132,21 +174,23 @@ function StudentLifecyclePage() {
       if (statusFilter !== "all") params.set("status", statusFilter);
       params.set("limit", "40");
 
-      const res = await fetch(`/api/admin/student-lifecycle?${params.toString()}`);
+      const res = await fetch(`/api/admin/student-lifecycle?${params.toString()}`, {
+        credentials: "include",
+      });
       if (!res.ok) throw new Error("Failed to load students");
       const data = await res.json();
       setStudentList(data.students ?? []);
 
       // If no student selected yet and we have results, auto-select the first one
-      if (!selectedStudentId && data.students?.length > 0 && !searchParams.studentId) {
-        setSelectedStudentId(data.students[0].id);
+      if (!searchParams.studentId) {
+        setSelectedStudentId((prev) => prev ?? (data.students?.[0]?.id ?? null));
       }
     } catch {
       setStudentList([]);
     } finally {
       setLoadingList(false);
     }
-  }, [searchQuery, systemFilter, statusFilter, selectedStudentId, searchParams.studentId]);
+  }, [searchQuery, systemFilter, statusFilter, searchParams.studentId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -160,7 +204,7 @@ function StudentLifecyclePage() {
     setLoadingArchive(true);
     setArchiveError(null);
     try {
-      const res = await fetch(`/api/admin/student-lifecycle/${id}`);
+      const res = await fetch(`/api/admin/student-lifecycle/${id}`, { credentials: "include" });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Failed to load student life record");
@@ -189,6 +233,7 @@ function StudentLifecyclePage() {
       const res = await fetch(`/api/students/${archive.student.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           status: newStatus,
           reason: statusReason.trim() || undefined,

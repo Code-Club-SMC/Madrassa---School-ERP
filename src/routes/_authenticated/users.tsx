@@ -141,7 +141,7 @@ function UsersPage() {
   async function handleCreate(u: User & { _password: string }) {
     const { _password, ...user } = u;
     if (user.role === "super_admin") {
-      toast.error("Use the super admin setup API for this role");
+      toast.error(isUrdu ? "سپر ایڈمن بنانے کے لیے مخصوص سیٹ اپ استعمال کریں" : "Use the super admin setup API for this role");
       throw new Error("Super admin creation is not allowed from user management");
     }
 
@@ -170,14 +170,14 @@ function UsersPage() {
         password: _password,
       });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create user");
+      toast.error(error instanceof Error ? error.message : (isUrdu ? "نیا صارف بنانے میں خرابی پیش آئی" : "Could not create user"));
     }
   }
 
   async function handleUpdate(u: User) {
     const previous = list.find((x) => x.id === u.id);
     if (previous?.role === "super_admin" || u.role === "super_admin") {
-      toast.error("Use the dedicated super admin API for this account");
+      toast.error(isUrdu ? "سپر ایڈمن اکاؤنٹ کو تبدیل کرنے کے لیے مخصوص سیٹنگز استعمال کریں" : "Use the dedicated super admin API for this account");
       throw new Error("Super admin updates are not allowed from user management");
     }
 
@@ -191,13 +191,13 @@ function UsersPage() {
       setList((l) => l.map((x) => (x.id === u.id ? u : x)));
       setEditUser(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not update user");
+      toast.error(error instanceof Error ? error.message : (isUrdu ? "صارف اپ ڈیٹ نہیں ہو سکا" : "Could not update user"));
     }
   }
 
   async function handleDeactivate(u: User) {
     if (u.role === "super_admin") {
-      toast.error("The super admin cannot be deactivated from user management");
+      toast.error(isUrdu ? "سپر ایڈمن کو غیر فعال نہیں کیا جا سکتا" : "The super admin cannot be deactivated from user management");
       return;
     }
 
@@ -219,13 +219,15 @@ function UsersPage() {
             ? "Account activated"
             : "Account deactivated",
       );
-    } catch {}
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isUrdu ? "اکاؤنٹ اسٹیٹس تبدیل نہیں ہو سکا" : "Could not update account status"));
+    }
   }
 
   async function confirmReset() {
     if (!resetUser || resettingPassword) return;
     if (resetUser.role === "super_admin") {
-      toast.error("Use the super admin recovery API for this account");
+      toast.error(isUrdu ? "سپر ایڈمن کے لیے ریکوری استعمال کریں" : "Use the super admin recovery API for this account");
       setResetUser(null);
       return;
     }
@@ -248,7 +250,9 @@ function UsersPage() {
         password: pwd,
       });
       setResetUser(null);
-    } catch {} finally {
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isUrdu ? "پاس ورڈ تبدیل نہیں ہو سکا" : "Could not reset password"));
+    } finally {
       setResettingPassword(false);
     }
   }
@@ -256,7 +260,7 @@ function UsersPage() {
   async function confirmDelete() {
     if (!deleteUser || deleteConfirm !== deleteUser.email || deletingUser) return;
     if (deleteUser.role === "super_admin") {
-      toast.error("The super admin cannot be deleted");
+      toast.error(isUrdu ? "سپر ایڈمن کو حذف نہیں کیا جا سکتا" : "The super admin cannot be deleted");
       setDeleteUser(null);
       setDeleteConfirm("");
       return;
@@ -269,7 +273,9 @@ function UsersPage() {
       toast.success(isUrdu ? "صارف حذف کر دیا گیا" : "User deleted");
       setDeleteUser(null);
       setDeleteConfirm("");
-    } catch {} finally {
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : (isUrdu ? "صارف حذف نہیں ہو سکا" : "Could not delete user"));
+    } finally {
       setDeletingUser(false);
     }
   }
