@@ -38,10 +38,10 @@ type CategoryMeta = {
 const categories: CategoryMeta[] = [
   {
     id: "dars_nizami",
-    name: "Dars-e-Nizami",
-    nameUrdu: "درس نظامی",
-    description: "Institution-provided Dars-e-Nizami grade sequence.",
-    descriptionUrdu: "ادارے کی فراہم کردہ درس نظامی درجات کی ترتیب",
+    name: "Dars-e-Nizami / Alim",
+    nameUrdu: "درس نظامی / عالم",
+    description: "Institution-provided Dars-e-Nizami / Alim grade sequence.",
+    descriptionUrdu: "ادارے کی فراہم کردہ درس نظامی / عالم درجات کی ترتیب",
   },
   {
     id: "hifz",

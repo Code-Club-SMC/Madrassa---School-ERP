@@ -108,17 +108,21 @@ export const ACADEMIC_PROGRAMS = [
   },
 ] as const;
 
-let seedPromise: Promise<void> | null = null;
+let seeded = false;
 
-export function ensureAcademicSeeded(force = false) {
-  if (!force) {
-    return Promise.resolve();
+export async function ensureAcademicSeeded(force = false) {
+  if (seeded && !force) {
+    return;
   }
-  if (seedPromise) {
-    seedPromise = null;
+  try {
+    const [existing] = await db.select({ count: count() }).from(madrassaCategories);
+    if (Number(existing?.count ?? 0) === 0 || force) {
+      await seedAcademicCatalog();
+    }
+    seeded = true;
+  } catch (err) {
+    console.error("[ensureAcademicSeeded] Failed to verify or seed catalog:", err);
   }
-  seedPromise = seedAcademicCatalog();
-  return seedPromise;
 }
 
 export async function seedAcademicCatalog() {
@@ -163,10 +167,10 @@ export async function seedAcademicCatalog() {
   const CANONICAL_CATEGORIES = [
     {
       id: "dars_nizami",
-      name: "Dars-e-Nizami",
-      nameUrdu: "درس نظامی",
-      description: "Institution-provided Dars-e-Nizami grade sequence.",
-      descriptionUrdu: "ادارے کی فراہم کردہ درس نظامی درجات کی ترتیب",
+      name: "Dars-e-Nizami / Alim",
+      nameUrdu: "درس نظامی / عالم",
+      description: "Dars-e-Nizami (Alim Course) grade sequence.",
+      descriptionUrdu: "درس نظامی / عالم کورس کے درجات",
       displayOrder: 1,
       active: true,
       section: "both",
@@ -177,7 +181,7 @@ export async function seedAcademicCatalog() {
       name: "Hifz",
       nameUrdu: "حفظ",
       description: "Memorization grades provided by Jamia Qasmia Lil-Baneen.",
-      descriptionUrdu: "جامعہ قاسمیہ للبنین کے فراہم کردہ حفظ کے درجات",
+      descriptionUrdu: "جامعہ قاسمیہ للبنین کے حفظ کے درجات",
       displayOrder: 2,
       active: true,
       section: "male",
@@ -188,7 +192,7 @@ export async function seedAcademicCatalog() {
       name: "Nazira",
       nameUrdu: "ناظرہ",
       description: "Nazira grades provided separately for boys and girls madrassas.",
-      descriptionUrdu: "بنین اور بنات مدارس کے لیے فراہم کردہ ناظرہ درجات",
+      descriptionUrdu: "بنین اور بنات مدارس کے لیے ناظرہ درجات",
       displayOrder: 3,
       active: true,
       section: "both",
