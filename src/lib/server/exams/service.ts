@@ -712,13 +712,28 @@ export async function assertTeacherCanAccessExamSubject(
   exam: ExamDetailRow,
   subjectId: string,
 ) {
-  const [profile] = await db
-    .select({ id: teacherProfiles.id })
+  let [profile] = await db
+    .select({ id: teacherProfiles.id, employmentStatus: teacherProfiles.employmentStatus })
     .from(teacherProfiles)
-    .where(and(eq(teacherProfiles.userId, actorUserId), eq(teacherProfiles.employmentStatus, "active")))
+    .where(eq(teacherProfiles.userId, actorUserId))
     .limit(1);
 
   if (!profile) {
+    const [userRecord] = await db
+      .select({ linkedTeacherId: user.linkedTeacherId })
+      .from(user)
+      .where(eq(user.id, actorUserId))
+      .limit(1);
+    if (userRecord?.linkedTeacherId) {
+      [profile] = await db
+        .select({ id: teacherProfiles.id, employmentStatus: teacherProfiles.employmentStatus })
+        .from(teacherProfiles)
+        .where(eq(teacherProfiles.id, userRecord.linkedTeacherId))
+        .limit(1);
+    }
+  }
+
+  if (!profile || profile.employmentStatus !== "active") {
     throw new HttpError("Active teacher profile not found", 403);
   }
 
@@ -740,7 +755,21 @@ export async function assertTeacherCanAccessExamSubject(
     .where(and(...clauses))
     .limit(1);
 
-  if (!assignment) {
+  if (assignment) return;
+
+  const [directSubject] = await db
+    .select({ id: examSubjects.id })
+    .from(examSubjects)
+    .where(
+      and(
+        eq(examSubjects.id, subjectId),
+        eq(examSubjects.teacherId, profile.id),
+        eq(examSubjects.active, true),
+      ),
+    )
+    .limit(1);
+
+  if (!directSubject) {
     throw new HttpError(
       "You are only authorized to enter marks for your assigned subjects.",
       403,

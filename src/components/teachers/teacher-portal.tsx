@@ -188,7 +188,10 @@ export function TeacherPortal() {
           )}
           {tab === "exams" && <ExamsTab data={exams} isUrdu={isUrdu} />}
           {tab === "attendance" && (
-            <AttendanceTab assignments={dashboard.assignments} isUrdu={isUrdu} />
+            <AttendanceTab
+              assignments={classes && classes.length > 0 ? classes : dashboard.assignments}
+              isUrdu={isUrdu}
+            />
           )}
           {tab === "reports" && <ReportsTab data={reports} isUrdu={isUrdu} />}
           {tab === "profile" && (
@@ -225,7 +228,7 @@ function DashboardView({
         <Metric
           icon={BookOpen}
           label={isUrdu ? "فعال کلاسز" : "Active Classes"}
-          value={dashboard.assignments.length}
+          value={classAssignments.length || dashboard.assignments.length}
         />
         <Metric
           icon={CalendarClock}
@@ -624,7 +627,7 @@ function AttendanceTab({
   assignments,
   isUrdu,
 }: {
-  assignments: TeacherAssignment[];
+  assignments: (TeacherAssignment | TeacherClassAssignment)[];
   isUrdu: boolean;
 }) {
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -647,14 +650,14 @@ function AttendanceTab({
     try {
       let data: AttendanceRosterPayload;
       if (selected.system === "school") {
-        if (!selected.schoolClassId || !selected.schoolSectionId) {
+        if (!selected.schoolClassId) {
           setRoster(null);
           return;
         }
         data = await getSchoolAttendanceRoster({
           date,
           classId: selected.schoolClassId,
-          sectionId: selected.schoolSectionId,
+          sectionId: (selected as any).schoolSectionId || undefined,
         });
       } else {
         if (!selected.institutionId || !selected.madrassaSubcategoryId) {
@@ -729,7 +732,7 @@ function AttendanceTab({
         await markSchoolAttendance({
           date,
           classId: selected.schoolClassId!,
-          sectionId: selected.schoolSectionId!,
+          sectionId: (selected as any).schoolSectionId || undefined,
           rows,
         });
       } else {
@@ -986,27 +989,61 @@ function ShortcutButtons({
 
 function placementLabelForClasses(assignment: TeacherClassAssignment, isUrdu: boolean) {
   if (assignment.system === "school") {
-    const className = assignment.schoolClassName ?? assignment.schoolClassId ?? "Class";
-    const sectionName = assignment.schoolSectionName ?? assignment.schoolSectionId ?? "Section";
-    return isUrdu ? `${className} · سیکشن ${sectionName}` : `${className} · Section ${sectionName}`;
+    const className =
+      (isUrdu && assignment.schoolClassNameUrdu) ||
+      assignment.schoolClassName ||
+      assignment.schoolClassId ||
+      (isUrdu ? "کلاس" : "Class");
+    const sectionName = assignment.schoolSectionName || assignment.schoolSectionId;
+    if (sectionName && sectionName !== "Section") {
+      return isUrdu ? `${className} · سیکشن ${sectionName}` : `${className} · Section ${sectionName}`;
+    }
+    return className;
   }
-  const categoryName = assignment.madrassaCategoryName ?? assignment.madrassaCategoryId ?? "Category";
-  const subcategoryName = assignment.madrassaSubcategoryName ?? assignment.madrassaSubcategoryId ?? "Darja";
+  const categoryName =
+    (isUrdu && assignment.madrassaCategoryNameUrdu) ||
+    assignment.madrassaCategoryName ||
+    assignment.madrassaCategoryId ||
+    (isUrdu ? "شعبہ" : "Category");
+  const subcategoryName =
+    (isUrdu && assignment.madrassaSubcategoryNameUrdu) ||
+    assignment.madrassaSubcategoryName ||
+    assignment.madrassaSubcategoryId ||
+    (isUrdu ? "درجہ" : "Darja");
   return `${categoryName} · ${subcategoryName}`;
 }
 
 function placementLabel(
-  assignment: TeacherAssignment | TeacherTimetablePeriod,
+  assignment: TeacherAssignment | TeacherTimetablePeriod | TeacherClassAssignment,
   isUrdu: boolean,
 ) {
+  const item = assignment as TeacherClassAssignment;
   if (assignment.system === "school") {
-    const classId = assignment.schoolClassId ?? "Class";
-    const sectionId = assignment.schoolSectionId ?? "Section";
-    return isUrdu ? `اسکول · ${classId} / ${sectionId}` : `School · ${classId} / ${sectionId}`;
+    const className =
+      (isUrdu && item.schoolClassNameUrdu) ||
+      item.schoolClassName ||
+      assignment.schoolClassId ||
+      (isUrdu ? "اسکول کلاس" : "School Class");
+    const section = item.schoolSectionName || item.schoolSectionId;
+    if (section && section !== "Section") {
+      return isUrdu ? `${className} · سیکشن ${section}` : `${className} · Section ${section}`;
+    }
+    return className;
   }
-  const categoryId = assignment.madrassaCategoryId ?? "Category";
-  const subcategoryId = assignment.madrassaSubcategoryId ?? "Darja";
-  return isUrdu ? `مدرسہ · ${categoryId} / ${subcategoryId}` : `Madrassa · ${categoryId} / ${subcategoryId}`;
+  const categoryName =
+    (isUrdu && item.madrassaCategoryNameUrdu) ||
+    item.madrassaCategoryName ||
+    assignment.madrassaCategoryId ||
+    "";
+  const subcategoryName =
+    (isUrdu && item.madrassaSubcategoryNameUrdu) ||
+    item.madrassaSubcategoryName ||
+    assignment.madrassaSubcategoryId ||
+    "";
+  if (categoryName && subcategoryName) {
+    return `${categoryName} · ${subcategoryName}`;
+  }
+  return categoryName || subcategoryName || (isUrdu ? "مدرسہ درجہ" : "Madrassa Class");
 }
 
 function Info({ label, value }: { label: string; value: string }) {

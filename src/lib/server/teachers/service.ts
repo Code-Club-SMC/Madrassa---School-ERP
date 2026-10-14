@@ -20,7 +20,8 @@ import {
   teacherProfiles,
   teacherTimetablePeriods,
 } from "@/db/schema/teachers";
-import { madrassaTimetablePeriods, madrassaTimetableSlots } from "@/db/schema/timetable";
+import { madrassaTimetablePeriods, madrassaTimetableSlots, schoolTimetablePeriods, schoolTimetableSlots } from "@/db/schema/timetable";
+import { getActiveAcademicYear } from "@/lib/server/academic-years/service";
 import { createUser, deleteUser } from "@/lib/server/auth/users";
 import { generateSecurePassword } from "@/lib/generate-password";
 import { ROLE_DEFAULTS } from "@/lib/permissions/role-defaults";
@@ -681,8 +682,30 @@ export async function setTeacherTimetablePeriodActive(
 
 async function resolveTeacherProfile(actor: { id: string; email?: string | null }) {
   let [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
+  if (!profile) {
+    const [userRecord] = await db
+      .select({ linkedTeacherId: authUser.linkedTeacherId })
+      .from(authUser)
+      .where(eq(authUser.id, actor.id))
+      .limit(1);
+    if (userRecord?.linkedTeacherId) {
+      [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.id, userRecord.linkedTeacherId)).limit(1);
+    }
+  }
   if (!profile && actor.email) {
-    [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.email, actor.email)).limit(1);
+    const [userRecord] = await db
+      .select({ id: authUser.id, linkedTeacherId: authUser.linkedTeacherId })
+      .from(authUser)
+      .where(eq(authUser.email, actor.email))
+      .limit(1);
+    if (userRecord) {
+      if (userRecord.linkedTeacherId) {
+        [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.id, userRecord.linkedTeacherId)).limit(1);
+      }
+      if (!profile) {
+        [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, userRecord.id)).limit(1);
+      }
+    }
   }
   if (!profile) {
     [profile] = await db.select().from(teacherProfiles).limit(1);
@@ -695,8 +718,12 @@ export async function getMyTeacherDashboard(request: Request) {
   if (actor.role !== "teacher") throw new HttpError("Teacher dashboard is only available to teacher accounts", 403);
 
   const profile = await resolveTeacherProfile(actor);
-  console.log("[teachers] getMyTeacherDashboard profile", { actorId: actor.id, profileId: profile?.id, hasProfile: Boolean(profile) });
   if (!profile) throw new HttpError("Teacher profile not found", 404);
+
+  const [activeSchoolYear, activeMadrassaYear] = await Promise.all([
+    getActiveAcademicYear("school").catch(() => ({ name: "2026-2027" })),
+    getActiveAcademicYear("madrassa").catch(() => ({ name: "2026-2027" })),
+  ]);
 
   const [assignments, timetable] = await Promise.all([
     db
@@ -711,27 +738,71 @@ export async function getMyTeacherDashboard(request: Request) {
       .orderBy(asc(teacherTimetablePeriods.weekday), asc(teacherTimetablePeriods.startTime)),
   ]);
 
-  const madrassaSubcategoryIds = assignments
-    .filter((a) => a.system === "madrassa" && a.madrassaSubcategoryId)
-    .map((a) => a.madrassaSubcategoryId as string);
-
-  const subjectAssignments = await db
-    .select({ madrassaSubcategoryId: examSubjects.madrassaSubcategoryId })
+  const directSubjects = await db
+    .select({
+      id: examSubjects.id,
+      system: examSubjects.system,
+      schoolClassId: examSubjects.schoolClassId,
+      madrassaSubcategoryId: examSubjects.madrassaSubcategoryId,
+      madrassaCategoryId: madrassaCategories.id,
+      institutionId: schoolClasses.institutionId,
+      subjectName: examSubjects.name,
+      subjectNameUrdu: examSubjects.nameUrdu,
+    })
     .from(examSubjects)
-    .where(
-      and(
-        eq(examSubjects.teacherId, profile.id),
-        eq(examSubjects.system, "madrassa"),
-      ),
-    );
+    .leftJoin(schoolClasses, eq(schoolClasses.id, examSubjects.schoolClassId))
+    .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, examSubjects.madrassaSubcategoryId))
+    .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+    .where(and(eq(examSubjects.teacherId, profile.id), eq(examSubjects.active, true)));
 
-  const subjectSubcategoryIds = subjectAssignments
-    .map((row) => row.madrassaSubcategoryId)
-    .filter((id): id is string => Boolean(id));
+  const assignedSubjectIds = new Set(assignments.map((a) => a.subjectId).filter(Boolean));
+  const synthesizedAssignments = directSubjects
+    .filter((s) => !assignedSubjectIds.has(s.id))
+    .map((s) => ({
+      id: `sub_${s.id}`,
+      teacherProfileId: profile.id,
+      system: s.system,
+      institutionId: s.institutionId ?? (s.system === "school" ? "al_qasim_academy" : "jamia_qasmia_baneen"),
+      programId: "",
+      schoolClassId: s.schoolClassId ?? null,
+      madrassaCategoryId: s.madrassaCategoryId ?? null,
+      madrassaSubcategoryId: s.madrassaSubcategoryId ?? null,
+      subjectId: s.id,
+      academicYear: s.system === "madrassa" ? activeMadrassaYear.name : activeSchoolYear.name,
+      effectiveFrom: null,
+      effectiveTo: null,
+      active: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
 
-  const combinedSubcategoryIds = Array.from(new Set([...madrassaSubcategoryIds, ...subjectSubcategoryIds]));
+  const allAssignments = [...assignments, ...synthesizedAssignments];
 
-  const classTimetable = combinedSubcategoryIds.length > 0
+  const madrassaSubcategoryIds = Array.from(
+    new Set(
+      allAssignments
+        .filter((a) => a.system === "madrassa" && a.madrassaSubcategoryId)
+        .map((a) => a.madrassaSubcategoryId as string),
+    ),
+  );
+
+  const schoolClassIds = Array.from(
+    new Set(
+      allAssignments
+        .filter((a) => a.system === "school" && a.schoolClassId)
+        .map((a) => a.schoolClassId as string),
+    ),
+  );
+
+  const teacherSubjectIds = new Set([
+    ...allAssignments.map((a) => a.subjectId).filter(Boolean),
+    ...directSubjects.map((s) => s.id),
+  ]);
+
+  const adminDayToTeacherWeekday = (adminDay: number) => (adminDay === 0 ? 6 : adminDay - 1);
+
+  // 1. Fetch madrassa timetable periods
+  const madrassaClassTimetable = madrassaSubcategoryIds.length > 0
     ? await db
         .select({
           id: madrassaTimetablePeriods.id,
@@ -745,48 +816,104 @@ export async function getMyTeacherDashboard(request: Request) {
           subjectId: madrassaTimetableSlots.subjectId,
           subjectName: examSubjects.name,
           subjectNameUrdu: examSubjects.nameUrdu,
+          subjectTeacherId: examSubjects.teacherId,
         })
         .from(madrassaTimetablePeriods)
         .innerJoin(madrassaTimetableSlots, eq(madrassaTimetableSlots.periodId, madrassaTimetablePeriods.id))
         .leftJoin(examSubjects, eq(examSubjects.id, madrassaTimetableSlots.subjectId))
-        .where(
-          inArray(madrassaTimetablePeriods.madrassaSubcategoryId, combinedSubcategoryIds),
-        )
+        .where(inArray(madrassaTimetablePeriods.madrassaSubcategoryId, madrassaSubcategoryIds))
         .orderBy(asc(madrassaTimetableSlots.dayOfWeek), asc(madrassaTimetablePeriods.timeStart))
     : [];
 
-  const activeClassTimetable = classTimetable.filter((row) => row.subjectId !== null && row.subjectId !== undefined);
+  // 2. Fetch school timetable periods
+  const schoolClassTimetable = schoolClassIds.length > 0
+    ? await db
+        .select({
+          id: schoolTimetablePeriods.id,
+          schoolClassId: schoolTimetablePeriods.schoolClassId,
+          timeStart: schoolTimetablePeriods.timeStart,
+          timeEnd: schoolTimetablePeriods.timeEnd,
+          label: schoolTimetablePeriods.label,
+          labelUrdu: schoolTimetablePeriods.labelUrdu,
+          isBreak: schoolTimetablePeriods.isBreak,
+          dayOfWeek: schoolTimetableSlots.dayOfWeek,
+          subjectId: schoolTimetableSlots.subjectId,
+          subjectName: examSubjects.name,
+          subjectNameUrdu: examSubjects.nameUrdu,
+          subjectTeacherId: examSubjects.teacherId,
+        })
+        .from(schoolTimetablePeriods)
+        .innerJoin(schoolTimetableSlots, eq(schoolTimetableSlots.periodId, schoolTimetablePeriods.id))
+        .leftJoin(examSubjects, eq(examSubjects.id, schoolTimetableSlots.subjectId))
+        .where(inArray(schoolTimetablePeriods.schoolClassId, schoolClassIds))
+        .orderBy(asc(schoolTimetableSlots.dayOfWeek), asc(schoolTimetablePeriods.timeStart))
+    : [];
 
-  const classTimetablePeriods = activeClassTimetable.map((row) => {
-    const assignment = assignments.find((a) => a.madrassaSubcategoryId === row.madrassaSubcategoryId);
-    const adminDayToTeacherWeekday = (adminDay: number) => (adminDay === 0 ? 6 : adminDay - 1);
-    return {
-      id: row.id,
-      assignmentId: assignment?.id ?? null,
-      system: assignment?.system ?? "madrassa",
-      institutionId: assignment?.institutionId ?? "",
-      programId: assignment?.programId ?? "",
-      schoolClassId: null,
-      madrassaCategoryId: assignment?.madrassaCategoryId ?? null,
-      madrassaSubcategoryId: row.madrassaSubcategoryId,
-      subjectId: row.subjectId,
-      subjectName: row.subjectName ?? null,
-      subjectNameUrdu: row.subjectNameUrdu ?? null,
-      academicYear: assignment?.academicYear ?? "",
-      effectiveFrom: null,
-      effectiveTo: null,
-      active: !row.isBreak,
-      weekday: adminDayToTeacherWeekday(row.dayOfWeek),
-      startTime: row.timeStart,
-      endTime: row.timeEnd,
-      room: null,
-    };
-  });
+  const filterForTeacher = (row: { subjectId: string | null; subjectTeacherId?: string | null }) => {
+    if (!row.subjectId) return false;
+    return row.subjectTeacherId === profile.id || teacherSubjectIds.has(row.subjectId);
+  };
 
-  console.log("[teachers] getMyTeacherDashboard raw timetable", timetable);
-  console.log("[teachers] getMyTeacherDashboard class timetable", classTimetablePeriods.length);
-  console.log("[teachers] getMyTeacherDashboard result", { assignments: assignments.length, timetable: timetable.length, classTimetable: classTimetablePeriods.length });
-  return { profile, account: publicAccount(actor), assignments, timetable: [...timetable, ...classTimetablePeriods] };
+  const madrassaPeriods = madrassaClassTimetable
+    .filter(filterForTeacher)
+    .map((row) => {
+      const assignment = allAssignments.find((a) => a.madrassaSubcategoryId === row.madrassaSubcategoryId);
+      return {
+        id: `${row.id}_${row.dayOfWeek}`,
+        assignmentId: assignment?.id ?? null,
+        system: (assignment?.system ?? "madrassa") as "school" | "madrassa",
+        institutionId: assignment?.institutionId ?? "",
+        programId: assignment?.programId ?? "",
+        schoolClassId: null,
+        madrassaCategoryId: assignment?.madrassaCategoryId ?? null,
+        madrassaSubcategoryId: row.madrassaSubcategoryId,
+        subjectId: row.subjectId,
+        subjectName: row.subjectName ?? null,
+        subjectNameUrdu: row.subjectNameUrdu ?? null,
+        academicYear: assignment?.academicYear ?? activeMadrassaYear.name,
+        effectiveFrom: null,
+        effectiveTo: null,
+        active: !row.isBreak,
+        weekday: adminDayToTeacherWeekday(row.dayOfWeek),
+        startTime: row.timeStart,
+        endTime: row.timeEnd,
+        room: null,
+      };
+    });
+
+  const schoolPeriods = schoolClassTimetable
+    .filter(filterForTeacher)
+    .map((row) => {
+      const assignment = allAssignments.find((a) => a.schoolClassId === row.schoolClassId);
+      return {
+        id: `${row.id}_${row.dayOfWeek}`,
+        assignmentId: assignment?.id ?? null,
+        system: "school" as const,
+        institutionId: assignment?.institutionId ?? "",
+        programId: assignment?.programId ?? "",
+        schoolClassId: row.schoolClassId,
+        madrassaCategoryId: null,
+        madrassaSubcategoryId: null,
+        subjectId: row.subjectId,
+        subjectName: row.subjectName ?? null,
+        subjectNameUrdu: row.subjectNameUrdu ?? null,
+        academicYear: assignment?.academicYear ?? activeSchoolYear.name,
+        effectiveFrom: null,
+        effectiveTo: null,
+        active: !row.isBreak,
+        weekday: adminDayToTeacherWeekday(row.dayOfWeek),
+        startTime: row.timeStart,
+        endTime: row.timeEnd,
+        room: null,
+      };
+    });
+
+  return {
+    profile,
+    account: publicAccount(actor),
+    assignments: allAssignments,
+    timetable: [...timetable, ...madrassaPeriods, ...schoolPeriods],
+  };
 }
 
 export async function assertTeacherCanAccessAttendancePlacement(
@@ -794,17 +921,17 @@ export async function assertTeacherCanAccessAttendancePlacement(
   system: "school" | "madrassa",
   filters: { classId?: string; sectionId?: string; institutionId?: string; subcategoryId?: string },
 ) {
-  const [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actorUserId)).limit(1);
+  const profile = await resolveTeacherProfile({ id: actorUserId });
   if (!profile || profile.employmentStatus !== "active") throw new HttpError("Teacher profile is not active", 403);
 
   const clauses = [
     eq(teacherAssignments.teacherProfileId, profile.id),
     eq(teacherAssignments.active, true),
     eq(teacherAssignments.system, system),
-    system === "school" ? eq(teacherAssignments.schoolClassId, filters.classId ?? "") : undefined,
-    system === "madrassa" ? eq(teacherAssignments.institutionId, filters.institutionId ?? "") : undefined,
-    system === "madrassa" ? eq(teacherAssignments.madrassaSubcategoryId, filters.subcategoryId ?? "") : undefined,
-  ].filter(Boolean);
+    system === "school" && filters.classId ? eq(teacherAssignments.schoolClassId, filters.classId) : undefined,
+    system === "madrassa" && filters.institutionId ? eq(teacherAssignments.institutionId, filters.institutionId) : undefined,
+    system === "madrassa" && filters.subcategoryId ? eq(teacherAssignments.madrassaSubcategoryId, filters.subcategoryId) : undefined,
+  ].filter(Boolean) as SQL[];
 
   const [assignment] = await db
     .select({ id: teacherAssignments.id })
@@ -812,7 +939,23 @@ export async function assertTeacherCanAccessAttendancePlacement(
     .where(and(...clauses))
     .limit(1);
 
-  if (!assignment) throw new HttpError("Teacher is not assigned to this attendance group", 403);
+  if (assignment) return;
+
+  const subjectClauses = [
+    eq(examSubjects.teacherId, profile.id),
+    eq(examSubjects.active, true),
+    eq(examSubjects.system, system),
+    system === "school" && filters.classId ? eq(examSubjects.schoolClassId, filters.classId) : undefined,
+    system === "madrassa" && filters.subcategoryId ? eq(examSubjects.madrassaSubcategoryId, filters.subcategoryId) : undefined,
+  ].filter(Boolean) as SQL[];
+
+  const [subject] = await db
+    .select({ id: examSubjects.id })
+    .from(examSubjects)
+    .where(and(...subjectClauses))
+    .limit(1);
+
+  if (!subject) throw new HttpError("Teacher is not assigned to this attendance group", 403);
 }
 
 async function loadTeacherDetail(id: string) {
@@ -1019,8 +1162,12 @@ export async function getMyTeacherClasses(request: Request) {
   if (actor.role !== "teacher") throw new HttpError("Teacher portal is only available to teacher accounts", 403);
 
   const profile = await resolveTeacherProfile(actor);
-  console.log("[teachers] getMyTeacherClasses profile", { actorId: actor.id, profileId: profile?.id, hasProfile: Boolean(profile) });
   if (!profile) throw new HttpError("Teacher profile not found", 404);
+
+  const [activeSchoolYear, activeMadrassaYear] = await Promise.all([
+    getActiveAcademicYear("school").catch(() => ({ name: "2026-2027" })),
+    getActiveAcademicYear("madrassa").catch(() => ({ name: "2026-2027" })),
+  ]);
 
   const assignments = await db
     .select({
@@ -1051,8 +1198,8 @@ export async function getMyTeacherClasses(request: Request) {
       subjectCode: examSubjects.code,
     })
     .from(teacherAssignments)
-    .innerJoin(institutions, eq(institutions.id, teacherAssignments.institutionId))
-    .innerJoin(programs, eq(programs.id, teacherAssignments.programId))
+    .leftJoin(institutions, eq(institutions.id, teacherAssignments.institutionId))
+    .leftJoin(programs, eq(programs.id, teacherAssignments.programId))
     .leftJoin(schoolClasses, eq(schoolClasses.id, teacherAssignments.schoolClassId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, teacherAssignments.madrassaCategoryId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, teacherAssignments.madrassaSubcategoryId))
@@ -1066,25 +1213,20 @@ export async function getMyTeacherClasses(request: Request) {
     .select({
       id: examSubjects.id,
       system: examSubjects.system,
-      institutionId: sql<string>`null`.as("institutionId"),
-      institutionName: sql<string>`null`.as("institutionName"),
-      institutionNameUrdu: sql<string>`null`.as("institutionNameUrdu"),
-      programId: sql<string>`null`.as("programId"),
-      programName: sql<string>`null`.as("programName"),
-      programNameUrdu: sql<string>`null`.as("programNameUrdu"),
       schoolClassId: examSubjects.schoolClassId,
       schoolClassName: schoolClasses.name,
       schoolClassNameUrdu: schoolClasses.nameUrdu,
+      schoolClassInstitutionId: schoolClasses.institutionId,
+      schoolInstitutionName: institutions.name,
+      schoolInstitutionNameUrdu: institutions.nameUrdu,
       madrassaCategoryId: madrassaCategories.id,
       madrassaCategoryName: madrassaCategories.name,
       madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
       madrassaSubcategoryId: examSubjects.madrassaSubcategoryId,
       madrassaSubcategoryName: madrassaSubcategories.name,
       madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
+      madrassaSection: madrassaSubcategories.section,
       subjectId: examSubjects.id,
-      academicYear: sql<string>`null`.as("academicYear"),
-      effectiveFrom: sql<string>`null`.as("effectiveFrom"),
-      effectiveTo: sql<string>`null`.as("effectiveTo"),
       active: examSubjects.active,
       subjectName: examSubjects.name,
       subjectNameUrdu: examSubjects.nameUrdu,
@@ -1092,20 +1234,57 @@ export async function getMyTeacherClasses(request: Request) {
     })
     .from(examSubjects)
     .leftJoin(schoolClasses, eq(schoolClasses.id, examSubjects.schoolClassId))
+    .leftJoin(institutions, eq(institutions.id, schoolClasses.institutionId))
     .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, examSubjects.madrassaSubcategoryId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
     .where(and(eq(examSubjects.teacherId, profile.id), eq(examSubjects.active, true)))
     .orderBy(asc(examSubjects.system));
 
-  const merged = [
-    ...assignments,
-    ...directSubjects.filter((subject) => !assignedSubjectIds.has(subject.subjectId)),
-  ];
+  const mappedDirect = directSubjects
+    .filter((subject) => !assignedSubjectIds.has(subject.subjectId))
+    .map((s) => {
+      const isMadrassa = s.system === "madrassa";
+      const isFemaleMadrassa = s.madrassaSection === "female";
+      const instId = isMadrassa
+        ? (isFemaleMadrassa ? "jamia_zainab_banat" : "jamia_qasmia_baneen")
+        : (s.schoolClassInstitutionId ?? "al_qasim_academy");
+      const instName = isMadrassa
+        ? (isFemaleMadrassa ? "Jamia Al-Zainab Lil-Banat" : "Jamia Dar-ul-Uloom Al-Qasmia")
+        : (s.schoolInstitutionName ?? "Al-Qasim Academy");
+      const instNameUrdu = isMadrassa
+        ? (isFemaleMadrassa ? "جامعہ زینب للبنات" : "جامعہ دارالعلوم القاسمیہ")
+        : (s.schoolInstitutionNameUrdu ?? "القاسم اکیڈمی");
 
-  console.log("[teachers] getMyTeacherClasses raw assignments", assignments.map((a) => ({ id: a.id, system: a.system, subjectId: a.subjectId, academicYear: a.academicYear, schoolClassId: a.schoolClassId, madrassaCategoryId: a.madrassaCategoryId, madrassaSubcategoryId: a.madrassaSubcategoryId })));
-  console.log("[teachers] getMyTeacherClasses raw directSubjects", directSubjects.map((a) => ({ id: a.id, system: a.system, subjectId: a.subjectId })));
-  console.log("[teachers] getMyTeacherClasses result", merged.length, merged.map((a) => ({ id: a.id, system: a.system, subjectId: a.subjectId })));
-  return merged;
+      return {
+        id: `sub_${s.id}`,
+        system: s.system,
+        institutionId: instId,
+        institutionName: instName,
+        institutionNameUrdu: instNameUrdu,
+        programId: "",
+        programName: null,
+        programNameUrdu: null,
+        schoolClassId: s.schoolClassId,
+        schoolClassName: s.schoolClassName,
+        schoolClassNameUrdu: s.schoolClassNameUrdu,
+        madrassaCategoryId: s.madrassaCategoryId,
+        madrassaCategoryName: s.madrassaCategoryName,
+        madrassaCategoryNameUrdu: s.madrassaCategoryNameUrdu,
+        madrassaSubcategoryId: s.madrassaSubcategoryId,
+        madrassaSubcategoryName: s.madrassaSubcategoryName,
+        madrassaSubcategoryNameUrdu: s.madrassaSubcategoryNameUrdu,
+        subjectId: s.subjectId,
+        academicYear: isMadrassa ? activeMadrassaYear.name : activeSchoolYear.name,
+        effectiveFrom: null,
+        effectiveTo: null,
+        active: s.active,
+        subjectName: s.subjectName,
+        subjectNameUrdu: s.subjectNameUrdu,
+        subjectCode: s.subjectCode,
+      };
+    });
+
+  return [...assignments, ...mappedDirect];
 }
 
 export async function getMyTeacherExams(request: Request) {
@@ -1114,6 +1293,11 @@ export async function getMyTeacherExams(request: Request) {
 
   const profile = await resolveTeacherProfile(actor);
   if (!profile) throw new HttpError("Teacher profile not found", 404);
+
+  const [activeSchoolYear, activeMadrassaYear] = await Promise.all([
+    getActiveAcademicYear("school").catch(() => ({ name: "2026-2027" })),
+    getActiveAcademicYear("madrassa").catch(() => ({ name: "2026-2027" })),
+  ]);
 
   const assignments = await db
     .select({
@@ -1142,14 +1326,50 @@ export async function getMyTeacherExams(request: Request) {
     .where(and(eq(teacherAssignments.teacherProfileId, profile.id), eq(teacherAssignments.active, true)))
     .orderBy(asc(teacherAssignments.system), asc(teacherAssignments.academicYear));
 
-  const subjectIds = uniqueStrings(assignments.map((a) => a.subjectId).filter(Boolean) as string[]);
+  const directSubjects = await db
+    .select({
+      id: examSubjects.id,
+      system: examSubjects.system,
+      subjectId: examSubjects.id,
+      schoolClassId: examSubjects.schoolClassId,
+      madrassaCategoryId: madrassaCategories.id,
+      madrassaSubcategoryId: examSubjects.madrassaSubcategoryId,
+      subjectName: examSubjects.name,
+      subjectNameUrdu: examSubjects.nameUrdu,
+      subjectCode: examSubjects.code,
+      schoolClassName: schoolClasses.name,
+      schoolClassNameUrdu: schoolClasses.nameUrdu,
+      madrassaCategoryName: madrassaCategories.name,
+      madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
+      madrassaSubcategoryName: madrassaSubcategories.name,
+      madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
+    })
+    .from(examSubjects)
+    .leftJoin(schoolClasses, eq(schoolClasses.id, examSubjects.schoolClassId))
+    .leftJoin(madrassaSubcategories, eq(madrassaSubcategories.id, examSubjects.madrassaSubcategoryId))
+    .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+    .where(and(eq(examSubjects.teacherId, profile.id), eq(examSubjects.active, true)))
+    .orderBy(asc(examSubjects.system));
+
+  const assignedSubjectIds = new Set(assignments.map((a) => a.subjectId).filter(Boolean));
+  const mappedDirect = directSubjects
+    .filter((s) => !assignedSubjectIds.has(s.subjectId))
+    .map((s) => ({
+      ...s,
+      id: `sub_${s.id}`,
+      academicYear: s.system === "madrassa" ? activeMadrassaYear.name : activeSchoolYear.name,
+    }));
+
+  const allAssignments = [...assignments, ...mappedDirect];
+
+  const subjectIds = uniqueStrings(allAssignments.map((a) => a.subjectId).filter(Boolean) as string[]);
   const classKeys = uniqueStrings(
-    assignments
+    allAssignments
       .filter((a) => a.system === "school" && a.schoolClassId)
       .map((a) => a.schoolClassId as string),
   );
   const madrassaKeys = uniqueStrings(
-    assignments
+    allAssignments
       .filter((a) => a.system === "madrassa" && a.madrassaSubcategoryId)
       .map((a) => a.madrassaSubcategoryId as string),
   );
@@ -1171,9 +1391,24 @@ export async function getMyTeacherExams(request: Request) {
       )!,
     );
   }
+  if (subjectIds.length > 0) {
+    scopeConditions.push(
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(examSessionSubjects)
+          .where(
+            and(
+              eq(examSessionSubjects.examId, examSessions.id),
+              inArray(examSessionSubjects.subjectId, subjectIds),
+            ),
+          ),
+      )!,
+    );
+  }
 
-  if (scopeConditions.length === 0 || subjectIds.length === 0) {
-    return { assignments, sessions: [] };
+  if (scopeConditions.length === 0) {
+    return { assignments: allAssignments, sessions: [] };
   }
 
   const sessionRows = await db
@@ -1198,13 +1433,6 @@ export async function getMyTeacherExams(request: Request) {
       madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
     })
     .from(examSessions)
-    .innerJoin(
-      examSessionSubjects,
-      and(
-        eq(examSessionSubjects.examId, examSessions.id),
-        inArray(examSessionSubjects.subjectId, subjectIds),
-      ),
-    )
     .leftJoin(schoolClasses, eq(schoolClasses.id, examSessions.schoolClassId))
     .leftJoin(madrassaCategories, eq(madrassaCategories.id, examSessions.madrassaCategoryId))
     .leftJoin(
@@ -1223,7 +1451,7 @@ export async function getMyTeacherExams(request: Request) {
     }
   }
 
-  return { assignments, sessions };
+  return { assignments: allAssignments, sessions };
 }
 
 export async function getMyTeacherReports(request: Request) {
@@ -1239,12 +1467,34 @@ export async function getMyTeacherReports(request: Request) {
     .where(and(eq(teacherAssignments.teacherProfileId, profile.id), eq(teacherAssignments.active, true)))
     .orderBy(asc(teacherAssignments.system), asc(teacherAssignments.academicYear));
 
+  const directSubjects = await db
+    .select({
+      id: examSubjects.id,
+      system: examSubjects.system,
+      subjectId: examSubjects.id,
+      schoolClassId: examSubjects.schoolClassId,
+      madrassaSubcategoryId: examSubjects.madrassaSubcategoryId,
+    })
+    .from(examSubjects)
+    .where(and(eq(examSubjects.teacherId, profile.id), eq(examSubjects.active, true)));
+
+  const assignedSubjectIds = new Set(assignments.map((a) => a.subjectId).filter(Boolean));
+  const newSubjects = directSubjects.filter((s) => !assignedSubjectIds.has(s.id));
+
+  const totalClasses = assignments.length + newSubjects.length;
+  const totalSchool =
+    assignments.filter((a) => a.system === "school").length +
+    newSubjects.filter((s) => s.system === "school").length;
+  const totalMadrassa =
+    assignments.filter((a) => a.system === "madrassa").length +
+    newSubjects.filter((s) => s.system === "madrassa").length;
+
   return {
     profile,
     assignments,
-    totalClasses: assignments.length,
-    totalSchool: assignments.filter((a) => a.system === "school").length,
-    totalMadrassa: assignments.filter((a) => a.system === "madrassa").length,
+    totalClasses,
+    totalSchool,
+    totalMadrassa,
   };
 }
 

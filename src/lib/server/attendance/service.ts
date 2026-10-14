@@ -12,6 +12,7 @@ import {
 import { user as authUser } from "@/db/schema/auth";
 import { studentAttendance, type StudentAttendanceStatus } from "@/db/schema/attendance";
 import { studentEnrollments, students } from "@/db/schema/students";
+import { examSubjects } from "@/db/schema/exams";
 import { teacherAssignments, teacherProfiles } from "@/db/schema/teachers";
 import {
   madrassaTimetablePeriods,
@@ -31,7 +32,7 @@ const attendanceStatuses = ["present", "absent", "late", "leave"] as const;
 export const schoolAttendanceRosterQuerySchema = z.object({
   date: z.string().trim().min(1),
   classId: z.string().trim().min(1),
-  sectionId: z.string().trim().min(1),
+  sectionId: z.string().trim().optional(),
 });
 
 export const madrassaAttendanceRosterQuerySchema = z.object({
@@ -216,7 +217,26 @@ export async function getDesignatedFirstPeriodTeacher(
       )
       .limit(1);
 
-    return assignment ?? null;
+    if (assignment) return assignment;
+
+    const [subjectTeacher] = await db
+      .select({
+        teacherProfileId: examSubjects.teacherId,
+        userId: teacherProfiles.userId,
+        name: authUser.name,
+      })
+      .from(examSubjects)
+      .innerJoin(teacherProfiles, eq(teacherProfiles.id, examSubjects.teacherId))
+      .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
+      .where(
+        and(
+          eq(examSubjects.id, slot.subjectId),
+          eq(examSubjects.active, true),
+        ),
+      )
+      .limit(1);
+
+    return subjectTeacher ?? null;
   }
 
   if (system === "madrassa" && filters.subcategoryId) {
@@ -255,7 +275,26 @@ export async function getDesignatedFirstPeriodTeacher(
       )
       .limit(1);
 
-    return assignment ?? null;
+    if (assignment) return assignment;
+
+    const [subjectTeacher] = await db
+      .select({
+        teacherProfileId: examSubjects.teacherId,
+        userId: teacherProfiles.userId,
+        name: authUser.name,
+      })
+      .from(examSubjects)
+      .innerJoin(teacherProfiles, eq(teacherProfiles.id, examSubjects.teacherId))
+      .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
+      .where(
+        and(
+          eq(examSubjects.id, slot.subjectId),
+          eq(examSubjects.active, true),
+        ),
+      )
+      .limit(1);
+
+    return subjectTeacher ?? null;
   }
 
   return null;
