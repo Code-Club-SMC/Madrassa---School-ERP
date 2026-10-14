@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/reports/annual")({
   component: AnnualReport,
 });
 
-export function AnnualReport() {
+function AnnualReport() {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
 
