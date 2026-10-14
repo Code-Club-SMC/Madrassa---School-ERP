@@ -163,13 +163,13 @@ export function ExamResults({ system }: Props) {
             <Label className="mb-1.5 block text-xs text-muted-foreground">
               {lang === "ur" ? "امتحان منتخب کریں" : "Select Exam"}
             </Label>
-            <Select value={selectedExamId} onValueChange={handleExamChange}>
+            <Select value={selectedExamId || "none"} onValueChange={(val) => { if (val !== "none") handleExamChange(val); }}>
               <SelectTrigger>
                 <SelectValue placeholder={lang === "ur" ? "امتحان چُنں" : "Choose exam"} />
               </SelectTrigger>
               <SelectContent>
                 {publishedExams.length === 0 ? (
-                  <SelectItem value="" disabled>
+                  <SelectItem value="none" disabled>
                     {lang === "ur" ? "کوئی امتحان نہیں ملا" : "No published exams"}
                   </SelectItem>
                 ) : (

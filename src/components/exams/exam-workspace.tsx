@@ -352,12 +352,12 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
       />
 
       <div className="mb-4 flex items-center gap-2">
-        <Select value={form.scopeId} onValueChange={(value) => setForm({ ...form, scopeId: value })}>
+        <Select value={form.scopeId || "all"} onValueChange={(value) => setForm({ ...form, scopeId: value === "all" ? "" : value })}>
           <SelectTrigger className="h-9 w-48">
             <SelectValue placeholder={system === "school" ? "All classes" : "All darjas"} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">{system === "school" ? "All Classes" : "All Darjas"}</SelectItem>
+            <SelectItem value="all">{system === "school" ? "All Classes" : "All Darjas"}</SelectItem>
             {system === "school"
               ? options.classes.map((item) => (
                   <SelectItem key={item.id} value={item.id}>
@@ -466,12 +466,12 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
               </Select>
             </Field>
             <Field label="Assigned Teacher">
-              <Select value={form.teacherId} onValueChange={(value) => setForm({ ...form, teacherId: value })}>
+              <Select value={form.teacherId || "none"} onValueChange={(value) => setForm({ ...form, teacherId: value === "none" ? "" : value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select teacher" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No teacher</SelectItem>
+                  <SelectItem value="none">No teacher</SelectItem>
                   {visibleTeachers.map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       {teacher.name}

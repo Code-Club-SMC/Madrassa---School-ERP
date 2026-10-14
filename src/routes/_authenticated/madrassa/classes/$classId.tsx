@@ -523,12 +523,12 @@ function ClassDetailPage() {
            </div>
            <div className="grid gap-3 sm:grid-cols-2">
              <BilingualLabel urdu="استاد" english="Teacher">
-               <Select value={form.teacherId} onValueChange={(value) => setForm({ ...form, teacherId: value })}>
+               <Select value={form.teacherId || "none"} onValueChange={(value) => setForm({ ...form, teacherId: value === "none" ? "" : value })}>
                  <SelectTrigger>
                    <SelectValue placeholder={t("Select teacher", "استاد منتخب کریں")} />
                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t("No teacher", "کوئی استاد نہیں")}</SelectItem>
+                    <SelectItem value="none">{t("No teacher", "کوئی استاد نہیں")}</SelectItem>
                     {visibleTeachers.map((teacher) => (
                       <SelectItem key={teacher.id} value={teacher.id}>
                         {teacher.name}
@@ -612,12 +612,12 @@ function ClassDetailPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <BilingualLabel urdu="استاد" english="Teacher">
-              <Select value={editForm.teacherId} onValueChange={(value) => setEditForm({ ...editForm, teacherId: value })}>
+              <Select value={editForm.teacherId || "none"} onValueChange={(value) => setEditForm({ ...editForm, teacherId: value === "none" ? "" : value })}>
                 <SelectTrigger>
                   <SelectValue placeholder={t("Select teacher", "استاد منتخب کریں")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t("No teacher", "کوئی استاد نہیں")}</SelectItem>
+                  <SelectItem value="none">{t("No teacher", "کوئی استاد نہیں")}</SelectItem>
                   {visibleTeachers.map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       {teacher.name}
