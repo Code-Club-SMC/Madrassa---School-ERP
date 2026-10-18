@@ -88,6 +88,12 @@ type TeacherDashboardRow = {
     subjectId: string | null;
     subjectName: string | null;
     subjectNameUrdu: string | null;
+    schoolClassName?: string | null;
+    schoolClassNameUrdu?: string | null;
+    madrassaCategoryName?: string | null;
+    madrassaCategoryNameUrdu?: string | null;
+    madrassaSubcategoryName?: string | null;
+    madrassaSubcategoryNameUrdu?: string | null;
     active: boolean;
   }>;
   timetable: Array<{
@@ -169,6 +175,8 @@ function HRHub() {
 
   const activeStaff = staff.filter((s) => s.status === "active").length;
   const activeTeachers = teachers.filter((t) => t.employmentStatus === "active").length;
+  const nonTeachingStaff = staff.filter((s) => s.staffType !== "teacher" && s.status === "active").length;
+  const totalWorkforce = Math.max(activeStaff, activeTeachers + nonTeachingStaff);
   const activeUsers = usersCount.active;
   const pendingLeaves = leaves.filter((l) => l.status === "pending").length;
 
@@ -256,10 +264,10 @@ function HRHub() {
     {
       label: "Total Workforce",
       urdu: "کل عملہ",
-      value: staff.length + activeTeachers,
+      value: totalWorkforce,
       icon: UsersIcon,
-      hint: `${activeStaff + activeTeachers} active`,
-      hintUrdu: `${activeStaff + activeTeachers} فعال`,
+      hint: `${totalWorkforce} active`,
+      hintUrdu: `${totalWorkforce} فعال`,
     },
     {
       label: "Teaching Faculty",
@@ -903,11 +911,18 @@ function HRHub() {
                           <SelectValue placeholder={lang === "ur" ? "کلاس منتخب کریں" : "Select class"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {activeManageTeacher.assignments.map((a) => (
-                            <SelectItem key={a.id} value={a.id} className="text-xs">
-                              {a.subjectName ?? a.subjectNameUrdu ?? "Subject"} ({a.system})
-                            </SelectItem>
-                          ))}
+                          {activeManageTeacher.assignments.map((a) => {
+                            const className = a.system === "school"
+                              ? (lang === "ur" ? a.schoolClassNameUrdu || a.schoolClassName : a.schoolClassName || a.schoolClassNameUrdu)
+                              : (lang === "ur" ? a.madrassaSubcategoryNameUrdu || a.madrassaSubcategoryName : a.madrassaSubcategoryName || a.madrassaSubcategoryNameUrdu);
+                            const subjName = lang === "ur" ? a.subjectNameUrdu || a.subjectName : a.subjectName || a.subjectNameUrdu;
+                            const label = [className, subjName].filter(Boolean).join(" — ") || (a.system === "school" ? "School Class" : "Madrassa Darja");
+                            return (
+                              <SelectItem key={a.id} value={a.id} className="text-xs">
+                                {label} ({a.system})
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     )}

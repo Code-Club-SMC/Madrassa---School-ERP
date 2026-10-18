@@ -263,6 +263,7 @@ async function main() {
       mustChangePassword: false,
       department: PLACEMENT_SYSTEM[t.placement] === "school" ? "School" : "Madrassa",
       designation: t.role === "teacher" ? "Teacher" : t.role === "principal" ? "Principal" : "Accountant",
+      initialPassword: "Teacher@123",
     });
     accountRows.push({
       id: `${PREFIX}_acct_teacher_${i + 1}`,

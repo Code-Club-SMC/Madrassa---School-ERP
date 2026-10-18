@@ -178,11 +178,16 @@ export function TeacherPortal() {
               isUrdu={isUrdu}
             />
           )}
-          {tab === "classes" && <ClassesTab assignments={classes ?? []} isUrdu={isUrdu} />}
+          {tab === "classes" && (
+            <ClassesTab
+              assignments={classes && classes.length > 0 ? classes : (dashboard.assignments as any[])}
+              isUrdu={isUrdu}
+            />
+          )}
           {tab === "timetable" && (
             <TimetableTab
               periods={dashboard.timetable}
-              assignments={classes ?? []}
+              assignments={classes && classes.length > 0 ? classes : (dashboard.assignments as any[])}
               isUrdu={isUrdu}
             />
           )}
@@ -222,13 +227,15 @@ function DashboardView({
 }) {
   const dayName = isUrdu ? weekdaysUr[today] : weekdaysEn[today];
 
+  const displayAssignments = classAssignments.length > 0 ? classAssignments : (dashboard.assignments as any[]);
+
   return (
     <div className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <Metric
           icon={BookOpen}
           label={isUrdu ? "فعال کلاسز" : "Active Classes"}
-          value={classAssignments.length || dashboard.assignments.length}
+          value={displayAssignments.length}
         />
         <Metric
           icon={CalendarClock}
@@ -292,13 +299,13 @@ function DashboardView({
                 : "Student attendance and exam access is limited to these groups."}
             </p>
           </div>
-          {classAssignments.length === 0 ? (
+          {displayAssignments.length === 0 ? (
             <p className={cn("rounded-md bg-muted/40 p-4 text-sm text-muted-foreground", isUrdu && "font-urdu")}>
               {isUrdu ? "ابھی کوئی گروپ تفویض نہیں ہے۔" : "No active assignments yet."}
             </p>
           ) : (
             <div className="space-y-2">
-              {classAssignments.map((assignment) => (
+              {displayAssignments.map((assignment) => (
                 <div key={assignment.id} className="rounded-md border p-3">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge variant="secondary">{assignment.system}</Badge>

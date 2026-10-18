@@ -38,6 +38,7 @@ async function seedAdmin() {
     status: "active",
     systemAccess: "both",
     mustChangePassword: true,
+    initialPassword: DEFAULT_ADMIN.password,
   });
 
   await db.insert(account).values({

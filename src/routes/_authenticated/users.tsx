@@ -158,6 +158,7 @@ function UsersPage() {
       const savedUser: User = {
         ...user,
         id: result.user.id,
+        initialPassword: _password,
         createdAt: result.user.createdAt ?? user.createdAt,
       };
 
@@ -241,7 +242,8 @@ function UsersPage() {
         body: JSON.stringify({ password: pwd, mustChangePassword: true }),
       });
 
-      setList((l) => l.map((x) => (x.id === resetUser.id ? { ...x, mustChangePassword: true } : x)));
+      setList((l) => l.map((x) => (x.id === resetUser.id ? { ...x, initialPassword: pwd, mustChangePassword: true } : x)));
+      setDetailUser((prev) => prev && prev.id === resetUser.id ? { ...prev, initialPassword: pwd, mustChangePassword: true } : prev);
       setCreds({
         nameUrdu: resetUser.nameUrdu ?? resetUser.name ?? "",
         nameEnglish: resetUser.name ?? "",
@@ -518,7 +520,14 @@ function UsersPage() {
 
       <CreateUserStepper open={createOpen} onOpenChange={setCreateOpen} onCreate={handleCreate} />
       <CreateUserStepper open={!!editUser} onOpenChange={(v) => !v && setEditUser(null)} mode="edit" initial={editUser} onUpdate={handleUpdate} />
-      <UserDetailSheet user={detailUser} onClose={() => setDetailUser(null)} />
+      <UserDetailSheet
+        user={detailUser}
+        onClose={() => setDetailUser(null)}
+        onUserUpdated={(updated) => {
+          setList((l) => l.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)));
+          setDetailUser(updated);
+        }}
+      />
       <CredentialsOverlay creds={creds} onClose={() => setCreds(null)} />
 
       {/* Reset password dialog */}

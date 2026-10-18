@@ -39,6 +39,7 @@ export const user = pgTable(
     permissions: jsonb("permissions"),
     department: text("department"),
     designation: text("designation"),
+    initialPassword: text("initial_password"),
   },
   (table) => [
     uniqueIndex("user_single_super_admin_idx")

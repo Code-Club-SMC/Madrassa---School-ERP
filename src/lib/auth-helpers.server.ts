@@ -59,7 +59,8 @@ export async function ensureUserColumns() {
         ADD COLUMN IF NOT EXISTS "linked_student_ids" text[],
         ADD COLUMN IF NOT EXISTS "permissions" jsonb,
         ADD COLUMN IF NOT EXISTS "department" text,
-        ADD COLUMN IF NOT EXISTS "designation" text;
+        ADD COLUMN IF NOT EXISTS "designation" text,
+        ADD COLUMN IF NOT EXISTS "initial_password" text;
     `);
     userSchemaChecked = true;
   } catch (e) {

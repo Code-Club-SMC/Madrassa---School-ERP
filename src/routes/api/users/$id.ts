@@ -1,14 +1,15 @@
 import { db } from "@/db";
-import { user } from "@/db/schema/auth";
+import { user, account } from "@/db/schema/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { createFileRoute } from "@tanstack/react-router";
 import { errorResponse } from "@/lib/server/http";
 import { ensureUserColumns } from "@/lib/auth-helpers.server";
+import { hashPassword } from "@/lib/server/password";
 
 const updateSchema = z.object({
   email: z.string().email().optional(),
-  password: z.string().min(8).optional(),
+  password: z.string().min(6).optional(),
   name: z.string().min(1).optional(),
   role: z.string().min(1).optional(),
   nameUrdu: z.string().optional(),
@@ -54,7 +55,32 @@ export const Route = createFileRoute("/api/users/$id")({
           if (data.designation !== undefined) updates.designation = data.designation;
 
           await ensureUserColumns().catch(() => {});
-          await db.update(user).set(updates).where(eq(user.id, params.id));
+
+          if (data.password && data.password.trim().length >= 6) {
+            const hashedPassword = await hashPassword(data.password.trim());
+            updates.initialPassword = data.password.trim();
+
+            const existingAccount = await db.select().from(account).where(eq(account.userId, params.id)).limit(1);
+            if (existingAccount[0]) {
+              await db
+                .update(account)
+                .set({ password: hashedPassword, updatedAt: new Date() })
+                .where(eq(account.id, existingAccount[0].id));
+            } else {
+              const [u] = await db.select().from(user).where(eq(user.id, params.id)).limit(1);
+              await db.insert(account).values({
+                id: `a${Date.now()}`,
+                userId: params.id,
+                accountId: u?.email || params.id,
+                providerId: "credential",
+                password: hashedPassword,
+              });
+            }
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await db.update(user).set(updates).where(eq(user.id, params.id));
+          }
           const updated = await db.select().from(user).where(eq(user.id, params.id)).limit(1);
           return new Response(JSON.stringify({ user: updated[0] }), {
             status: 200,

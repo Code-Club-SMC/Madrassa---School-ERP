@@ -32,7 +32,7 @@ function LeavePage() {
   const isUrdu = lang === "ur";
 
   const getStaffName = (id: string) => {
-    const s = staff.find((x) => x.id === id);
+    const s = staff.find((x) => x.id === id || (x.userId && x.userId === id));
     if (!s) return id;
     return getUserDisplayName({ name: s.fullName }, isUrdu ? "ur" : "en") || s.fullName;
   };

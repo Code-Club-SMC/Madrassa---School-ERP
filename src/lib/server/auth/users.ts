@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { user, account } from "@/db/schema/auth";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "@/lib/server/password";
+import { ensureUserColumns } from "@/lib/auth-helpers.server";
 
 export async function createUser({
   name,
@@ -22,6 +23,7 @@ export async function createUser({
   const userId = `user_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const accountId = `account_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
+  await ensureUserColumns().catch(() => {});
   await db.insert(user).values({
     id: userId,
     name,
@@ -32,6 +34,7 @@ export async function createUser({
     status: "active",
     systemAccess: "both",
     mustChangePassword: true,
+    initialPassword: password,
     ...data,
   } as any);
 

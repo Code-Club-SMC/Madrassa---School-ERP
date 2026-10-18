@@ -189,7 +189,17 @@ function ShortcutButtons({ assignment }: { assignment: TeacherAssignment | Teach
 
 function placementLabel(assignment: TeacherAssignment | TeacherTimetablePeriod) {
   if (assignment.system === "school") {
-    return `School · ${assignment.schoolClassId ?? "Class"} / ${assignment.schoolSectionId ?? "Section"}`;
+    const cls = assignment.schoolClassName || assignment.schoolClassNameUrdu;
+    const sub = assignment.subjectName || assignment.subjectNameUrdu;
+    if (cls && sub) return `School · ${cls} (${sub})`;
+    if (cls) return `School · ${cls}`;
+    return `School · ${assignment.schoolClassId ?? "Class"}`;
   }
-  return `Madrassa · ${assignment.madrassaCategoryId ?? "Category"} / ${assignment.madrassaSubcategoryId ?? "Darja"}`;
+  const cat = assignment.madrassaCategoryName || assignment.madrassaCategoryNameUrdu;
+  const subcat = assignment.madrassaSubcategoryName || assignment.madrassaSubcategoryNameUrdu;
+  const sub = assignment.subjectName || assignment.subjectNameUrdu;
+  const parts = [cat, subcat].filter(Boolean).join(" · ");
+  if (parts && sub) return `Madrassa · ${parts} (${sub})`;
+  if (parts) return `Madrassa · ${parts}`;
+  return `Madrassa · ${assignment.madrassaCategoryId ?? "Category"}`;
 }

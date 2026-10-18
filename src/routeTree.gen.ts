@@ -102,7 +102,6 @@ import { Route as ApiTeachersIdRouteImport } from './routes/api/teachers/$id'
 import { Route as ApiTeachersDashboardRouteImport } from './routes/api/teachers/dashboard'
 import { Route as ApiUsersIndexRouteImport } from './routes/api/users/index'
 import { Route as ApiUsersIdRouteImport } from './routes/api/users/$id'
-import { Route as VerySecretDataRouteImport } from './routes/very/secret/data'
 import { Route as AuthenticatedMadrassaCategoriesIndexRouteImport } from './routes/_authenticated/madrassa/categories/index'
 import { Route as AuthenticatedMadrassaClassesClassIdRouteImport } from './routes/_authenticated/madrassa/classes/$classId'
 import { Route as AuthenticatedMadrassaExamsIndexRouteImport } from './routes/_authenticated/madrassa/exams/index'
@@ -690,11 +689,6 @@ const ApiUsersIdRoute = ApiUsersIdRouteImport.update({
   path: '/api/users/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const VerySecretDataRoute = VerySecretDataRouteImport.update({
-  id: '/very/secret/data',
-  path: '/very/secret/data',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedMadrassaCategoriesIndexRoute =
   AuthenticatedMadrassaCategoriesIndexRouteImport.update({
     id: '/categories/',
@@ -1255,7 +1249,6 @@ export interface FileRoutesByFullPath {
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
   '/api/teachers/dashboard': typeof ApiTeachersDashboardRoute
   '/api/users/$id': typeof ApiUsersIdRoute
-  '/very/secret/data': typeof VerySecretDataRoute
   '/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/finance/': typeof AuthenticatedFinanceIndexRoute
   '/hr/': typeof AuthenticatedHrIndexRoute
@@ -1424,7 +1417,6 @@ export interface FileRoutesByTo {
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
   '/api/teachers/dashboard': typeof ApiTeachersDashboardRoute
   '/api/users/$id': typeof ApiUsersIdRoute
-  '/very/secret/data': typeof VerySecretDataRoute
   '/admission': typeof AuthenticatedAdmissionIndexRoute
   '/finance': typeof AuthenticatedFinanceIndexRoute
   '/hr': typeof AuthenticatedHrIndexRoute
@@ -1604,7 +1596,6 @@ export interface FileRoutesById {
   '/api/teachers/$id': typeof ApiTeachersIdRouteWithChildren
   '/api/teachers/dashboard': typeof ApiTeachersDashboardRoute
   '/api/users/$id': typeof ApiUsersIdRoute
-  '/very/secret/data': typeof VerySecretDataRoute
   '/_authenticated/admission/': typeof AuthenticatedAdmissionIndexRoute
   '/_authenticated/finance/': typeof AuthenticatedFinanceIndexRoute
   '/_authenticated/hr/': typeof AuthenticatedHrIndexRoute
@@ -1784,7 +1775,6 @@ export interface FileRouteTypes {
     | '/api/teachers/$id'
     | '/api/teachers/dashboard'
     | '/api/users/$id'
-    | '/very/secret/data'
     | '/admission/'
     | '/finance/'
     | '/hr/'
@@ -1953,7 +1943,6 @@ export interface FileRouteTypes {
     | '/api/teachers/$id'
     | '/api/teachers/dashboard'
     | '/api/users/$id'
-    | '/very/secret/data'
     | '/admission'
     | '/finance'
     | '/hr'
@@ -2132,7 +2121,6 @@ export interface FileRouteTypes {
     | '/api/teachers/$id'
     | '/api/teachers/dashboard'
     | '/api/users/$id'
-    | '/very/secret/data'
     | '/_authenticated/admission/'
     | '/_authenticated/finance/'
     | '/_authenticated/hr/'
@@ -2259,7 +2247,6 @@ export interface RootRouteChildren {
   ApiTeachersIdRoute: typeof ApiTeachersIdRouteWithChildren
   ApiTeachersDashboardRoute: typeof ApiTeachersDashboardRoute
   ApiUsersIdRoute: typeof ApiUsersIdRoute
-  VerySecretDataRoute: typeof VerySecretDataRoute
   ApiAcademicYearsIndexRoute: typeof ApiAcademicYearsIndexRoute
   ApiNotificationsIndexRoute: typeof ApiNotificationsIndexRoute
   ApiTeachersIndexRoute: typeof ApiTeachersIndexRoute
@@ -2945,13 +2932,6 @@ declare module '@tanstack/react-router' {
       path: '/api/users/$id'
       fullPath: '/api/users/$id'
       preLoaderRoute: typeof ApiUsersIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/very/secret/data': {
-      id: '/very/secret/data'
-      path: '/very/secret/data'
-      fullPath: '/very/secret/data'
-      preLoaderRoute: typeof VerySecretDataRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/madrassa/categories/': {
@@ -4251,7 +4231,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTeachersIdRoute: ApiTeachersIdRouteWithChildren,
   ApiTeachersDashboardRoute: ApiTeachersDashboardRoute,
   ApiUsersIdRoute: ApiUsersIdRoute,
-  VerySecretDataRoute: VerySecretDataRoute,
   ApiAcademicYearsIndexRoute: ApiAcademicYearsIndexRoute,
   ApiNotificationsIndexRoute: ApiNotificationsIndexRoute,
   ApiTeachersIndexRoute: ApiTeachersIndexRoute,

@@ -413,6 +413,7 @@ export type User = {
   permissions?: import("@/lib/permissions/module-registry").UserPermissions;
   department?: string;
   designation?: string;
+  initialPassword?: string;
 };
 
 // ---------- Announcements ----------

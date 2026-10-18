@@ -5,6 +5,7 @@ export type StaffModule = "school" | "madrassa" | "shared";
 
 export type StaffMember = {
   id: string;
+  userId?: string;
   fullName: string;
   cnic: string;
   dob: string;

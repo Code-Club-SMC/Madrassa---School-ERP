@@ -4,7 +4,7 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --host localhost --port 3000 --strictPort",
+    "dev": "vite dev --force --host localhost --port 3000 --strictPort",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "vercel-build": "NITRO_PRESET=vercel vite build",
@@ -106,9 +106,24 @@
     "typescript": "^7",
     "vite": "^8"
   },
+  "resolutions": {
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@tanstack/react-router": "1.170.21",
+    "@tanstack/react-start": "1.168.60",
+    "@tanstack/react-start-client": "1.168.19",
+    "@tanstack/react-start-server": "1.167.26",
+    "@tanstack/router-plugin": "1.168.26",
+    "@tanstack/start-plugin-core": "1.171.29",
+    "@tanstack/react-start-rsc": "0.1.57"
+  },
   "overrides": {
     "react": "19.2.5",
     "react-dom": "19.2.5",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
     "@tanstack/react-router": "1.170.21",
     "@tanstack/react-start": "1.168.60",
     "@tanstack/react-start-client": "1.168.19",

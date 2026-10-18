@@ -144,6 +144,7 @@ export async function createFirstSuperAdmin(input: z.infer<typeof bootstrapSuper
     designation: input.designation,
     systemAccess: "both",
     mustChangePassword: input.mustChangePassword ?? true,
+    initialPassword: input.password,
   } as any).returning();
 
   await db.insert(account).values({
@@ -166,7 +167,7 @@ export async function recoverSuperAdminPassword(input: z.infer<typeof recoverSup
 
   const hashedPassword = await hashPassword(input.newPassword);
   await db.update(account).set({ password: hashedPassword }).where(eq(account.userId, current.superAdmin.id));
-  await db.update(user).set({ mustChangePassword: true, updatedAt: new Date() }).where(eq(user.id, current.superAdmin.id));
+  await db.update(user).set({ mustChangePassword: true, initialPassword: input.newPassword, updatedAt: new Date() }).where(eq(user.id, current.superAdmin.id));
 
   return json({ status: true, userId: current.superAdmin.id, mustChangePassword: true });
 }

@@ -42,6 +42,12 @@ export type TeacherAssignment = {
   effectiveFrom: string | null;
   effectiveTo: string | null;
   active: boolean;
+  schoolClassName?: string | null;
+  schoolClassNameUrdu?: string | null;
+  madrassaCategoryName?: string | null;
+  madrassaCategoryNameUrdu?: string | null;
+  madrassaSubcategoryName?: string | null;
+  madrassaSubcategoryNameUrdu?: string | null;
 };
 
 export type TeacherTimetablePeriod = Omit<TeacherAssignment, "id"> & {
@@ -51,6 +57,12 @@ export type TeacherTimetablePeriod = Omit<TeacherAssignment, "id"> & {
   startTime: string;
   endTime: string;
   room: string | null;
+  schoolClassName?: string | null;
+  schoolClassNameUrdu?: string | null;
+  madrassaCategoryName?: string | null;
+  madrassaCategoryNameUrdu?: string | null;
+  madrassaSubcategoryName?: string | null;
+  madrassaSubcategoryNameUrdu?: string | null;
 };
 
 export type TeacherProfile = {

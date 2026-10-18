@@ -25,6 +25,8 @@ const createSchema = z.object({
 import { KNOWN_URDU_NAMES } from "@/lib/user-names";
 import { ensureUserColumns } from "@/lib/auth-helpers.server";
 import { errorResponse } from "@/lib/server/http";
+import { resolveUserPassword } from "@/lib/user-passwords";
+import { hashPassword } from "@/lib/server/password";
 
 export const Route = createFileRoute("/api/users/")({
   server: {
@@ -33,19 +35,29 @@ export const Route = createFileRoute("/api/users/")({
         await ensureUserColumns();
         try {
           const rows = await db.select().from(user).orderBy(desc(user.createdAt));
-          const enriched = rows.map((r) => ({
-            ...r,
-            id: r.id,
-            name: r.name || "User",
-            email: r.email || "",
-            username: r.username || r.email || r.id,
-            role: r.role || "teacher",
-            status: r.status || "active",
-            systemAccess: r.systemAccess || "both",
-            createdAt: r.createdAt ? (typeof r.createdAt === "string" ? r.createdAt : r.createdAt.toISOString()) : new Date().toISOString(),
-            lastLoginAt: (r as any).lastLoginAt ? String((r as any).lastLoginAt) : undefined,
-            nameUrdu: r.nameUrdu || (r.name ? KNOWN_URDU_NAMES[r.name] : null) || null,
-          }));
+          const enriched = rows.map((r) => {
+            const { password: userPwd } = resolveUserPassword(r);
+            if (!r.initialPassword) {
+              db.update(user).set({ initialPassword: userPwd }).where(eq(user.id, r.id)).catch(() => {});
+              hashPassword(userPwd).then((h) => {
+                db.update(account).set({ password: h }).where(eq(account.userId, r.id)).catch(() => {});
+              }).catch(() => {});
+            }
+            return {
+              ...r,
+              id: r.id,
+              name: r.name || "User",
+              email: r.email || "",
+              username: r.username || r.email || r.id,
+              role: r.role || "teacher",
+              status: r.status || "active",
+              systemAccess: r.systemAccess || "both",
+              initialPassword: userPwd,
+              createdAt: r.createdAt ? (typeof r.createdAt === "string" ? r.createdAt : r.createdAt.toISOString()) : new Date().toISOString(),
+              lastLoginAt: (r as any).lastLoginAt ? String((r as any).lastLoginAt) : undefined,
+              nameUrdu: r.nameUrdu || (r.name ? KNOWN_URDU_NAMES[r.name] : null) || null,
+            };
+          });
           return new Response(JSON.stringify({ users: enriched }), {
             status: 200,
             headers: { "content-type": "application/json" },
@@ -54,21 +66,30 @@ export const Route = createFileRoute("/api/users/")({
           console.error("Failed to load users with full schema, trying safe fallback:", err);
           try {
             const raw = await db.execute(sql`SELECT * FROM "user" ORDER BY created_at DESC`);
-            const enriched = (raw.rows || []).map((r: any) => ({
-              id: r.id,
-              name: r.name || "User",
-              email: r.email || "",
-              username: r.username || r.email || r.id,
-              role: r.role || "teacher",
-              status: r.status || "active",
-              systemAccess: r.system_access || r.systemAccess || "both",
-              createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
-              nameUrdu: r.name_urdu || r.nameUrdu || (r.name ? KNOWN_URDU_NAMES[r.name] : null) || null,
-              phone: r.phone || null,
-              cnic: r.cnic || null,
-              department: r.department || null,
-              designation: r.designation || null,
-            }));
+            const enriched = (raw.rows || []).map((r: any) => {
+              const { password: userPwd } = resolveUserPassword({
+                id: r.id,
+                name: r.name,
+                role: r.role,
+                initialPassword: r.initial_password || r.initialPassword,
+              });
+              return {
+                id: r.id,
+                name: r.name || "User",
+                email: r.email || "",
+                username: r.username || r.email || r.id,
+                role: r.role || "teacher",
+                status: r.status || "active",
+                systemAccess: r.system_access || r.systemAccess || "both",
+                initialPassword: userPwd,
+                createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+                nameUrdu: r.name_urdu || r.nameUrdu || (r.name ? KNOWN_URDU_NAMES[r.name] : null) || null,
+                phone: r.phone || null,
+                cnic: r.cnic || null,
+                department: r.department || null,
+                designation: r.designation || null,
+              };
+            });
             return new Response(JSON.stringify({ users: enriched }), {
               status: 200,
               headers: { "content-type": "application/json" },
@@ -110,6 +131,7 @@ export const Route = createFileRoute("/api/users/")({
             permissions: data.permissions ?? {},
             department: data.department ?? null,
             designation: data.designation ?? null,
+            initialPassword: data.password,
           });
 
           await db.insert(account).values({
