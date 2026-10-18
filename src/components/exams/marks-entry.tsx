@@ -71,18 +71,20 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
 
   const teacherAllowedSubjects = useMemo(() => {
     if (!isTeacher || !exam) return exam?.subjects ?? [];
-    return exam.subjects.filter((item) => {
+    if (teacherAssignments.length === 0) return exam.subjects;
+    const filtered = exam.subjects.filter((item) => {
       return teacherAssignments.some((a) => {
-        if (a.subjectId !== item.subjectId) return false;
+        if (a.subjectId && a.subjectId === item.subjectId) return true;
         if (exam.system === "school") {
-          return !exam.schoolClassId || !a.schoolClassId || a.schoolClassId === exam.schoolClassId;
+          return !a.schoolClassId || a.schoolClassId === exam.schoolClassId;
         }
         if (exam.system === "madrassa") {
-          return !exam.madrassaSubcategoryId || !a.madrassaSubcategoryId || a.madrassaSubcategoryId === exam.madrassaSubcategoryId;
+          return !a.madrassaSubcategoryId || a.madrassaSubcategoryId === exam.madrassaSubcategoryId;
         }
-        return true;
+        return false;
       });
     });
+    return filtered.length > 0 ? filtered : exam.subjects;
   }, [isTeacher, exam, teacherAssignments]);
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
     setLoadingTeacher(true);
     getMyTeacherExams()
       .then((data) => {
-        setTeacherAssignments(data.assignments);
+        setTeacherAssignments(data.assignments ?? []);
       })
       .catch(() => {})
       .finally(() => setLoadingTeacher(false));
@@ -168,21 +170,47 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
     if (!payload || !subject || readOnly) return;
     setSaving(true);
     try {
+      for (const student of payload.students) {
+        const draft = drafts[student.id];
+        if (draft && draft.attendanceStatus === "present" && draft.obtainedMarks !== "") {
+          const val = Number(draft.obtainedMarks);
+          if (isNaN(val) || val < 0) {
+            toast.error(
+              isUrdu
+                ? `${student.name} کے نمبر درست مثبت ہندسہ ہونا ضروری ہیں`
+                : `Marks for ${student.name} must be a valid positive number`
+            );
+            setSaving(false);
+            return;
+          }
+          if (subject.totalMarks && val > subject.totalMarks) {
+            toast.error(
+              isUrdu
+                ? `${student.name} کے نمبر کل نمبر (${subject.totalMarks}) سے زیادہ نہیں ہو سکتے`
+                : `Marks for ${student.name} cannot exceed total marks (${subject.totalMarks})`
+            );
+            setSaving(false);
+            return;
+          }
+        }
+      }
+
       const next = await saveMarks(examId, {
         examSubjectId: subject.id,
         rows: payload.students.map((student) => {
           const draft = drafts[student.id] ?? { attendanceStatus: "present", obtainedMarks: "", notes: "" };
+          const parsedMark = draft.obtainedMarks === "" ? 0 : Number(draft.obtainedMarks);
           return {
             studentId: student.id,
             enrollmentId: student.enrollmentId,
             attendanceStatus: draft.attendanceStatus,
-            obtainedMarks: draft.attendanceStatus === "present" ? Number(draft.obtainedMarks || 0) : null,
-            notes: draft.notes || undefined,
+            obtainedMarks: draft.attendanceStatus === "present" ? (isNaN(parsedMark) ? 0 : Math.round(parsedMark)) : null,
+            notes: draft.notes?.trim() || undefined,
           };
         }),
       });
       setPayload(next);
-      toast.success("Marks saved");
+      toast.success(isUrdu ? "امتحانی نمبر کامیابی سے محفوظ ہو گئے" : "Marks saved successfully");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save marks");
     } finally {

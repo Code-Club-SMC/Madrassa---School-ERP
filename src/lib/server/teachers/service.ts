@@ -939,7 +939,7 @@ export async function setTeacherTimetablePeriodActive(
   return loadTeacherDetail(teacherId);
 }
 
-async function resolveTeacherProfile(actor: { id: string; email?: string | null }) {
+export async function resolveTeacherProfile(actor: { id: string; email?: string | null }) {
   let [profile] = await db.select().from(teacherProfiles).where(eq(teacherProfiles.userId, actor.id)).limit(1);
   if (!profile) {
     const [userRecord] = await db

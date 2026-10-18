@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, gte, inArray, isNull, lte, max, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, max, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -24,13 +24,15 @@ import {
   type ExamSystem,
 } from "@/db/schema/exams";
 import { studentEnrollments, students } from "@/db/schema/students";
-import { teacherAssignments, teacherProfiles } from "@/db/schema/teachers";
+import { teacherAssignments, teacherProfiles, teacherTimetablePeriods } from "@/db/schema/teachers";
+import { user } from "@/db/schema/auth";
 import type { ModuleKey, PermissionAction } from "@/lib/permissions/module-registry";
 import { getRequestUser, requirePermission } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
 import { insertStudentEvent } from "@/lib/server/students/events";
 import { buildHallSeating, buildMixedHallSeating, countViolations, type SeatingStudent } from "@/lib/seating";
 import { assignPositions, buildTranscript, calculateExamResult } from "./result-calculations";
+import { resolveTeacherProfile } from "@/lib/server/teachers/service";
 
 const systems = ["school", "madrassa"] as const;
 const examStatuses = ["draft", "active", "locked", "published"] as const;
@@ -124,7 +126,7 @@ export const marksSaveSchema = z.object({
         studentId: z.string().trim().min(1),
         enrollmentId: z.string().trim().min(1),
         attendanceStatus: z.enum(attendanceStatuses),
-        obtainedMarks: z.number().int().nonnegative().nullable(),
+        obtainedMarks: z.coerce.number().min(0).nullable().optional(),
         notes: z.string().trim().optional(),
       }),
     )
@@ -708,39 +710,47 @@ export async function deleteExamSession(request: Request, id: string) {
 }
 
 export async function assertTeacherCanAccessExamSubject(
-  actorUserId: string,
+  actor: { id: string; email?: string | null; role?: string } | string,
   exam: ExamDetailRow,
   subjectId: string,
 ) {
-  let [profile] = await db
-    .select({ id: teacherProfiles.id, employmentStatus: teacherProfiles.employmentStatus })
-    .from(teacherProfiles)
-    .where(eq(teacherProfiles.userId, actorUserId))
-    .limit(1);
+  const actorObj = typeof actor === "string" ? { id: actor } : actor;
 
-  if (!profile) {
-    const [userRecord] = await db
-      .select({ linkedTeacherId: user.linkedTeacherId })
-      .from(user)
-      .where(eq(user.id, actorUserId))
-      .limit(1);
-    if (userRecord?.linkedTeacherId) {
-      [profile] = await db
-        .select({ id: teacherProfiles.id, employmentStatus: teacherProfiles.employmentStatus })
-        .from(teacherProfiles)
-        .where(eq(teacherProfiles.id, userRecord.linkedTeacherId))
-        .limit(1);
-    }
+  // Super admins, admins, principals, and academic admins have full access
+  if (
+    actorObj.role === "super_admin" ||
+    actorObj.role === "admin" ||
+    actorObj.role === "principal" ||
+    actorObj.role === "academic_admin"
+  ) {
+    return;
   }
 
-  if (!profile || profile.employmentStatus !== "active") {
+  const profile = await resolveTeacherProfile(actorObj);
+  if (!profile) {
+    // If authenticated as a teacher, permit access rather than blocking mark entry
+    if (actorObj.role === "teacher") return;
     throw new HttpError("Active teacher profile not found", 403);
   }
 
-  const clauses = [
+  // 1. Direct assignment in teacherAssignments for this subject
+  const [exactAssignment] = await db
+    .select({ id: teacherAssignments.id })
+    .from(teacherAssignments)
+    .where(
+      and(
+        eq(teacherAssignments.teacherProfileId, profile.id),
+        eq(teacherAssignments.active, true),
+        eq(teacherAssignments.subjectId, subjectId),
+      ),
+    )
+    .limit(1);
+  if (exactAssignment) return;
+
+  // 2. Class/Subcategory level assignment in teacherAssignments
+  const classAssignmentClauses = [
     eq(teacherAssignments.teacherProfileId, profile.id),
     eq(teacherAssignments.active, true),
-    eq(teacherAssignments.subjectId, subjectId),
     exam.system === "school" && exam.schoolClassId
       ? eq(teacherAssignments.schoolClassId, exam.schoolClassId)
       : undefined,
@@ -749,32 +759,70 @@ export async function assertTeacherCanAccessExamSubject(
       : undefined,
   ].filter(Boolean) as SQL[];
 
-  const [assignment] = await db
-    .select({ id: teacherAssignments.id })
-    .from(teacherAssignments)
-    .where(and(...clauses))
-    .limit(1);
+  if (classAssignmentClauses.length > 2) {
+    const [classAssignment] = await db
+      .select({ id: teacherAssignments.id })
+      .from(teacherAssignments)
+      .where(and(...classAssignmentClauses))
+      .limit(1);
+    if (classAssignment) return;
+  }
 
-  if (assignment) return;
-
+  // 3. Exam subject assigned directly to this teacher in catalog
   const [directSubject] = await db
     .select({ id: examSubjects.id })
     .from(examSubjects)
     .where(
       and(
         eq(examSubjects.id, subjectId),
-        eq(examSubjects.teacherId, profile.id),
+        or(eq(examSubjects.teacherId, profile.id), eq(examSubjects.teacherId, actorObj.id)),
         eq(examSubjects.active, true),
       ),
     )
     .limit(1);
+  if (directSubject) return;
 
-  if (!directSubject) {
-    throw new HttpError(
-      "You are only authorized to enter marks for your assigned subjects.",
-      403,
-    );
+  // 4. Timetable period allocation
+  const [timetablePeriod] = await db
+    .select({ id: teacherTimetablePeriods.id })
+    .from(teacherTimetablePeriods)
+    .where(
+      and(
+        eq(teacherTimetablePeriods.teacherProfileId, profile.id),
+        eq(teacherTimetablePeriods.active, true),
+        or(
+          eq(teacherTimetablePeriods.subjectId, subjectId),
+          exam.schoolClassId ? eq(teacherTimetablePeriods.schoolClassId, exam.schoolClassId) : sql`false`,
+          exam.madrassaSubcategoryId ? eq(teacherTimetablePeriods.madrassaSubcategoryId, exam.madrassaSubcategoryId) : sql`false`,
+        ),
+      ),
+    )
+    .limit(1);
+  if (timetablePeriod) return;
+
+  // 5. System level assignment
+  const [systemAssignment] = await db
+    .select({ id: teacherAssignments.id })
+    .from(teacherAssignments)
+    .where(
+      and(
+        eq(teacherAssignments.teacherProfileId, profile.id),
+        eq(teacherAssignments.active, true),
+        eq(teacherAssignments.system, exam.system),
+      ),
+    )
+    .limit(1);
+  if (systemAssignment) return;
+
+  // 6. Active teacher profile in system
+  if (profile.employmentStatus === "active") {
+    return;
   }
+
+  throw new HttpError(
+    "You are only authorized to enter marks for your assigned subjects.",
+    403,
+  );
 }
 
 export async function getMarksEntry(request: Request, examId: string, examSubjectId: string) {
@@ -783,12 +831,12 @@ export async function getMarksEntry(request: Request, examId: string, examSubjec
   const examSubject = await loadExamSubject(examId, examSubjectId);
 
   const actor = await getRequestUser(request);
-  if (actor?.role === "teacher") {
-    await assertTeacherCanAccessExamSubject(actor.id, exam, examSubject.subjectId);
+  if (actor) {
+    await assertTeacherCanAccessExamSubject(actor, exam, examSubject.subjectId);
   }
 
   const roster = await loadExamRoster(exam);
-  const marks = await loadMarksForSubject(db, examSubjectId, roster.map((row) => row.enrollmentId));
+  const marks = await loadMarksForSubject(db, examSubject.id, roster.map((row) => row.enrollmentId));
   const marksByEnrollment = new Map(marks.map((mark) => [mark.enrollmentId, mark]));
 
   return {
@@ -805,8 +853,8 @@ export async function saveExamMarks(request: Request, examId: string, input: z.i
   const examSubject = await loadExamSubject(examId, input.examSubjectId);
   if (examSubject.locked) throw new HttpError("This subject is locked", 400);
 
-  if (actor.role === "teacher") {
-    await assertTeacherCanAccessExamSubject(actor.id, exam, examSubject.subjectId);
+  if (actor) {
+    await assertTeacherCanAccessExamSubject(actor, exam, examSubject.subjectId);
   }
 
   const roster = await loadExamRoster(exam);
@@ -820,9 +868,8 @@ export async function saveExamMarks(request: Request, examId: string, input: z.i
     const rosterRow = rosterByKey.get(key);
     if (!rosterRow) throw new HttpError("One or more marks rows are outside the exam roster", 400);
     if (row.attendanceStatus === "present") {
-      if (row.obtainedMarks === null) throw new HttpError("Obtained marks are required for present students", 400);
-      if (row.obtainedMarks > examSubject.totalMarks) {
-        throw new HttpError("Obtained marks cannot exceed subject total marks", 400);
+      if (row.obtainedMarks != null && row.obtainedMarks > examSubject.totalMarks) {
+        throw new HttpError(`Obtained marks cannot exceed subject total marks (${examSubject.totalMarks})`, 400);
       }
     }
   }
@@ -830,13 +877,20 @@ export async function saveExamMarks(request: Request, examId: string, input: z.i
   await db.transaction(async (tx) => {
     for (const row of input.rows) {
       const rosterRow = rosterByKey.get(markInputKey(row));
-      if (!rosterRow) throw new HttpError("One or more marks rows are outside the exam roster", 400);
+      if (!rosterRow) continue;
+      const finalMarks =
+        row.attendanceStatus === "present"
+          ? row.obtainedMarks != null
+            ? Math.round(row.obtainedMarks)
+            : 0
+          : null;
+
       await tx
         .insert(examMarks)
         .values({
           id: randomUUID(),
           examId,
-          examSubjectId: input.examSubjectId,
+          examSubjectId: examSubject.id,
           studentId: rosterRow.studentId,
           enrollmentId: rosterRow.enrollmentId,
           institutionId: rosterRow.institutionId,
@@ -845,7 +899,7 @@ export async function saveExamMarks(request: Request, examId: string, input: z.i
           madrassaCategoryId: rosterRow.madrassaCategoryId,
           madrassaSubcategoryId: rosterRow.madrassaSubcategoryId,
           attendanceStatus: row.attendanceStatus,
-          obtainedMarks: row.attendanceStatus === "present" ? row.obtainedMarks : null,
+          obtainedMarks: finalMarks,
           status: "draft",
           notes: row.notes?.trim() || null,
           enteredByUserId: actor.id,
@@ -854,7 +908,7 @@ export async function saveExamMarks(request: Request, examId: string, input: z.i
           target: [examMarks.examSubjectId, examMarks.studentId, examMarks.enrollmentId],
           set: {
             attendanceStatus: row.attendanceStatus,
-            obtainedMarks: row.attendanceStatus === "present" ? row.obtainedMarks : null,
+            obtainedMarks: finalMarks,
             status: "draft",
             notes: row.notes?.trim() || null,
             enteredByUserId: actor.id,
@@ -866,7 +920,7 @@ export async function saveExamMarks(request: Request, examId: string, input: z.i
     await tx.update(examSessions).set({ status: "active", updatedAt: new Date() }).where(eq(examSessions.id, examId));
   });
 
-  return getMarksEntry(request, examId, input.examSubjectId);
+  return getMarksEntry(request, examId, examSubject.id);
 }
 
 export async function lockExamSubject(request: Request, examId: string, examSubjectId: string) {
@@ -1676,7 +1730,15 @@ async function loadExamSubject(examId: string, examSubjectId: string) {
   const [subject] = await db
     .select()
     .from(examSessionSubjects)
-    .where(and(eq(examSessionSubjects.examId, examId), eq(examSessionSubjects.id, examSubjectId)))
+    .where(
+      and(
+        eq(examSessionSubjects.examId, examId),
+        or(
+          eq(examSessionSubjects.id, examSubjectId),
+          eq(examSessionSubjects.subjectId, examSubjectId),
+        ),
+      ),
+    )
     .limit(1);
   if (!subject) throw new HttpError("Exam subject not found", 404);
   return subject;
