@@ -33,8 +33,115 @@ export function isDatabaseOrInternalError(raw: string): boolean {
     lower.includes("duplicate key") ||
     lower.includes("not-null") ||
     lower.includes("connection terminated") ||
-    lower.includes("socket closed")
+    lower.includes("socket closed") ||
+    lower.includes("econnrefused") ||
+    lower.includes("etimeout") ||
+    lower.includes("etimedout") ||
+    lower.includes("enotfound") ||
+    lower.includes("ehostunreach") ||
+    lower.includes("econnreset") ||
+    lower.includes("getaddrinfo") ||
+    lower.includes("password authentication failed")
   );
+}
+
+export function formatDatabaseError(
+  error: unknown,
+  fallback = "Database service is temporarily unavailable. Please try again in a few moments.",
+): string {
+  const parts: string[] = [];
+  const visited = new Set<unknown>();
+  let current: any = error;
+  let depth = 0;
+
+  while (current && depth < 6 && !visited.has(current)) {
+    visited.add(current);
+    if (typeof current.message === "string") parts.push(current.message);
+    if (typeof current.code === "string") parts.push(current.code);
+    if (typeof current.detail === "string") parts.push(current.detail);
+    if (typeof current.syscall === "string") parts.push(current.syscall);
+    if (typeof current.name === "string") parts.push(current.name);
+    current = current.cause;
+    depth++;
+  }
+
+  const combined = parts.join(" ").toLowerCase();
+
+  // 1. Connection / Network / DNS / Host Unreachable / Timeout
+  if (
+    combined.includes("econnrefused") ||
+    combined.includes("etimeout") ||
+    combined.includes("etimedout") ||
+    combined.includes("enotfound") ||
+    combined.includes("ehostunreach") ||
+    combined.includes("econnreset") ||
+    combined.includes("getaddrinfo") ||
+    combined.includes("connection terminated") ||
+    combined.includes("connection closed") ||
+    combined.includes("socket closed") ||
+    combined.includes("connection refused") ||
+    combined.includes("timeout") ||
+    combined.includes("timed out")
+  ) {
+    return "Database connection unavailable. Please check your internet connection or verify the database service is running.";
+  }
+
+  // 2. SSL / Handshake issues
+  if (combined.includes("ssl") || combined.includes("certificate") || combined.includes("handshake")) {
+    return "Database connection SSL error. Please verify the database connection configuration.";
+  }
+
+  // 3. Database Credentials / Auth failure
+  if (
+    combined.includes("password authentication failed") ||
+    combined.includes("pg_hba.conf") ||
+    combined.includes("28p01")
+  ) {
+    return "Database authentication failed. Please verify database credentials in server configuration.";
+  }
+
+  // 4. Missing columns / tables (pending migrations)
+  if (
+    combined.includes("does not exist") ||
+    combined.includes("undefined_table") ||
+    combined.includes("undefined_column") ||
+    combined.includes("42703") ||
+    combined.includes("42p01")
+  ) {
+    return "Database schema update required. Please ensure database migrations have been applied.";
+  }
+
+  // 5. Connection pool limit / capacity
+  if (
+    combined.includes("remaining connection slots") ||
+    combined.includes("too many clients") ||
+    combined.includes("max_connections")
+  ) {
+    return "Database server is busy with maximum connections. Please wait a moment and try again.";
+  }
+
+  // 6. Constraint violations
+  if (combined.includes("23505") || combined.includes("unique constraint") || combined.includes("duplicate key")) {
+    return "This record already exists.";
+  }
+  if (combined.includes("23503") || combined.includes("foreign key")) {
+    return "Related record not found.";
+  }
+  if (combined.includes("23502") || combined.includes("not-null")) {
+    return "Required fields are missing.";
+  }
+
+  // If it contains any query syntax, failed query, or SQL leakage, NEVER leak raw query
+  if (isDatabaseOrInternalError(combined)) {
+    return fallback;
+  }
+
+  // If error has a simple clean user-facing message that is not a query
+  if (error instanceof Error && error.message && !isDatabaseOrInternalError(error.message)) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 export function errorResponse(error: unknown, fallback = "Request failed") {
@@ -47,36 +154,12 @@ export function errorResponse(error: unknown, fallback = "Request failed") {
 
   console.error("[api-error]", error);
 
-  let message = fallback;
-  const raw =
-    error instanceof Error
-      ? error.message
-      : typeof error === "object" && error && "message" in error
-        ? String((error as any).message)
-        : "";
-
-  if (raw) {
-    if (isDatabaseOrInternalError(raw)) {
-      if (
-        raw.includes("23505") ||
-        raw.toLowerCase().includes("unique constraint") ||
-        raw.toLowerCase().includes("duplicate key")
-      ) {
-        message = "یہ ریکارڈ پہلے سے موجود ہے · This record already exists.";
-      } else if (raw.includes("23503") || raw.toLowerCase().includes("foreign key")) {
-        message = "متعلقہ ریکارڈ موجود نہیں ہے · Related record not found.";
-      } else if (raw.includes("23502") || raw.toLowerCase().includes("not-null")) {
-        message = "تمام ضروری معلومات درج کرنا لازمی ہیں · Required fields are missing.";
-      } else if (fallback && fallback !== "Request failed") {
-        message = fallback;
-      } else {
-        message =
-          "درخواست پر کارروائی نہیں ہو سکی، براہ کرم دوبارہ کوشش کریں · Request could not be processed, please try again.";
-      }
-    } else {
-      message = raw;
-    }
-  }
+  const message = formatDatabaseError(
+    error,
+    fallback && fallback !== "Request failed"
+      ? fallback
+      : "درخواست پر کارروائی نہیں ہو سکی، براہ کرم دوبارہ کوشش کریں · Request could not be processed, please try again.",
+  );
 
   return new Response(JSON.stringify({ error: message }), {
     status: 500,

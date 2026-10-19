@@ -24,6 +24,62 @@ const institutionUnits = [
   "شعبہ سکول معاونت",
 ];
 
+function formatLoginClientError(raw: string, lang: "en" | "ur"): string {
+  const lower = (raw || "").toLowerCase();
+
+  // 1. Invalid credentials
+  if (lower.includes("invalid credentials")) {
+    return lang === "ur"
+      ? "غلط ای میل، یوزر نیم یا پاس ورڈ درج کیا گیا ہے"
+      : "Invalid credentials. Please check your username/email and password.";
+  }
+
+  // 2. Database connection, network, or raw query leaks
+  if (
+    lower.includes("failed query") ||
+    lower.includes("select ") ||
+    lower.includes('from "user"') ||
+    lower.includes("params:") ||
+    lower.includes("econnrefused") ||
+    lower.includes("etimeout") ||
+    lower.includes("getaddrinfo") ||
+    lower.includes("connection unavailable") ||
+    lower.includes("connection refused") ||
+    lower.includes("database error") ||
+    lower.includes("database connection")
+  ) {
+    return lang === "ur"
+      ? "ڈیٹا بیس سے رابطہ قائم نہیں ہو سکا۔ برائے مہربانی اپنا انٹرنیٹ کنکشن چیک کریں یا دوبارہ کوشش کریں۔"
+      : "Unable to connect to the database. Please check your internet connection and try again.";
+  }
+
+  // 3. Schema or migration issues
+  if (
+    lower.includes("schema update") ||
+    lower.includes("does not exist") ||
+    lower.includes("undefined_column") ||
+    lower.includes("undefined_table")
+  ) {
+    return lang === "ur"
+      ? "ڈیٹا بیس اپ ڈیٹ درکار ہے۔ برائے مہربانی سسٹم ایڈمنسٹریٹر سے رابطہ کریں۔"
+      : "Database schema update required. Please contact your system administrator.";
+  }
+
+  // 4. Database authentication
+  if (lower.includes("authentication failed") || lower.includes("password authentication")) {
+    return lang === "ur"
+      ? "ڈیٹا بیس تصدیق میں مسئلہ ہے۔ براہِ کرم ایڈمنسٹریٹر سے رابطہ کریں۔"
+      : "Database service authentication failed. Please contact your system administrator.";
+  }
+
+  // 5. Default fallback
+  if (lang === "ur") {
+    return "لاگ اِن نہیں ہو سکا، براہِ کرم دوبارہ کوشش کریں";
+  }
+
+  return raw || "Login failed, please check your credentials and try again";
+}
+
 function LoginPage() {
   const navigate = useNavigate();
   const { lang, setLang } = useLanguage();
@@ -78,13 +134,8 @@ function LoginPage() {
       setPassword("");
       navigate({ to: destination });
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : lang === "ur"
-            ? "لاگ اِن نہیں ہو سکا، دوبارہ کوشش کریں"
-            : "Login failed, please check your credentials and try again",
-      );
+      const raw = err instanceof Error ? err.message : String(err);
+      setError(formatLoginClientError(raw, lang));
     } finally {
       setSubmitting(false);
     }

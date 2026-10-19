@@ -27,6 +27,12 @@ const isSsl =
 export const pool = new Pool({
   connectionString,
   ssl: isSsl ? { rejectUnauthorized: false } : undefined,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+});
+
+pool.on("error", (err) => {
+  console.error("Unexpected database pool client error:", err);
 });
 
 export const db = drizzle(pool, {

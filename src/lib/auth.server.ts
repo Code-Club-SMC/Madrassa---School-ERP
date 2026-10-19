@@ -8,6 +8,7 @@ import { getCookie, setCookie, deleteCookie } from "@tanstack/react-start/server
 import { createHmac } from "node:crypto";
 import { ensureUserColumns } from "@/lib/auth-helpers.server";
 import { resolveUserPassword } from "@/lib/user-passwords";
+import { formatDatabaseError } from "@/lib/server/http";
 
 const SESSION_SECRET =
   process.env.SESSION_SECRET || "msmis_erp_fallback_secret_key_2026_super_secure";
@@ -211,20 +212,11 @@ export const loginServer = createServerFn({ method: "POST" })
       return { user: userResponse(foundUser) };
     } catch (err) {
       console.error("loginServer error:", err);
-      const message = err instanceof Error ? err.message : String(err);
-      if (message.includes("ECONNREFUSED") || message.includes("connect")) {
-        return {
-          error:
-            "Database connection refused. Please ensure PostgreSQL is running (e.g. 'docker compose up -d postgres').",
-        };
-      }
-      if (message.includes("does not exist")) {
-        return {
-          error:
-            "Database table missing. Please run migrations: 'npm run db:migrate' or 'npm run db:push'.",
-        };
-      }
-      return { error: `Database error: ${message}` };
+      const friendlyError = formatDatabaseError(
+        err,
+        "Unable to sign in due to a service error. Please try again shortly or contact your administrator.",
+      );
+      return { error: friendlyError };
     }
   });
 
@@ -332,7 +324,8 @@ export const changePasswordServer = createServerFn({ method: "POST" })
       return { success: true, message: "Password updated successfully" };
     } catch (err) {
       console.error("changePasswordServer error:", err);
-      return { error: "Failed to update password: " + (err instanceof Error ? err.message : String(err)) };
+      const friendlyError = formatDatabaseError(err, "Failed to update password. Please try again shortly.");
+      return { error: friendlyError };
     }
   });
 
@@ -386,7 +379,8 @@ export const updateProfileServer = createServerFn({ method: "POST" })
       return { success: true, user: userResponse(userObj) };
     } catch (err) {
       console.error("updateProfileServer error:", err);
-      return { error: "Failed to update profile: " + (err instanceof Error ? err.message : String(err)) };
+      const friendlyError = formatDatabaseError(err, "Failed to update profile. Please try again shortly.");
+      return { error: friendlyError };
     }
   });
 
