@@ -91,39 +91,60 @@ export const loginServer = createServerFn({ method: "POST" })
     try {
       const trimmed = data.identifier.trim();
       const lower = trimmed.toLowerCase();
-      let [foundUser] = await db
-        .select()
-        .from(user)
-        .where(
-          or(
-            sql`lower(${user.email}) = ${lower}`,
-            sql`lower(${user.username}) = ${lower}`,
-            sql`lower(${user.name}) = ${lower}`,
-            eq(user.email, trimmed),
-            eq(user.username, trimmed),
-            eq(user.name, trimmed),
-            eq(user.phone, trimmed),
-          ),
-        )
-        .limit(1);
+      let foundUser: typeof user.$inferSelect | undefined;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const rows = await db
+            .select()
+            .from(user)
+            .where(
+              or(
+                sql`lower(${user.email}) = ${lower}`,
+                sql`lower(${user.username}) = ${lower}`,
+                sql`lower(${user.name}) = ${lower}`,
+                eq(user.email, trimmed),
+                eq(user.username, trimmed),
+                eq(user.name, trimmed),
+                eq(user.phone, trimmed),
+              ),
+            )
+            .limit(1);
+          foundUser = rows[0];
 
-      if (!foundUser && (lower === "admin@msmis.pk" || lower === "admin")) {
-        [foundUser] = await db
-          .select()
-          .from(user)
-          .where(eq(user.role, "super_admin"))
-          .limit(1);
+          if (!foundUser && (lower === "admin@msmis.pk" || lower === "admin")) {
+            const adminRows = await db
+              .select()
+              .from(user)
+              .where(eq(user.role, "super_admin"))
+              .limit(1);
+            foundUser = adminRows[0];
+          }
+          break;
+        } catch (dbErr) {
+          if (attempt === 2) throw dbErr;
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
       }
 
       if (!foundUser) {
         return { error: "Invalid credentials" };
       }
 
-      const [foundAccount] = await db
-        .select()
-        .from(account)
-        .where(eq(account.userId, foundUser.id))
-        .limit(1);
+      let foundAccount: typeof account.$inferSelect | undefined;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const accRows = await db
+            .select()
+            .from(account)
+            .where(eq(account.userId, foundUser.id))
+            .limit(1);
+          foundAccount = accRows[0];
+          break;
+        } catch (dbErr) {
+          if (attempt === 2) throw dbErr;
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
 
       const storedPassword = foundAccount?.password ?? "";
       let valid = false;
@@ -239,12 +260,35 @@ export const getUserServer = createServerFn({ method: "GET" }).handler(async () 
       return { user: null };
     }
 
-    const [foundUser] = await db.select().from(user).where(eq(user.id, payload.userId)).limit(1);
-    if (!foundUser) {
-      return { user: null };
+    try {
+      const [foundUser] = await db.select().from(user).where(eq(user.id, payload.userId)).limit(1);
+      if (foundUser) {
+        return { user: userResponse(foundUser) };
+      }
+    } catch (dbErr) {
+      console.warn("getUserServer database lookup failed, using verified session payload:", dbErr);
     }
 
-    return { user: userResponse(foundUser) };
+    // Fallback: use cryptographically verified HMAC session payload
+    return {
+      user: {
+        id: payload.userId,
+        name: payload.name,
+        email: payload.email,
+        username: payload.email,
+        role: (payload.role ?? "teacher") as any,
+        status: "active" as const,
+        nameUrdu: payload.nameUrdu,
+        phone: payload.phone,
+        cnic: payload.cnic,
+        systemAccess: (payload.systemAccess ?? "both") as any,
+        mustChangePassword: payload.mustChangePassword,
+        department: payload.department,
+        designation: payload.designation,
+        createdAt: new Date().toISOString(),
+        createdBy: payload.userId,
+      },
+    };
   } catch (err) {
     console.error("getUserServer error:", err);
     return { user: null };

@@ -27,8 +27,11 @@ const isSsl =
 export const pool = new Pool({
   connectionString,
   ssl: isSsl ? { rejectUnauthorized: false } : undefined,
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
+  max: 10,
+  connectionTimeoutMillis: 20000,
+  idleTimeoutMillis: 60000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 });
 
 pool.on("error", (err) => {

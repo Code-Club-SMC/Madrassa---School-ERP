@@ -127,29 +127,41 @@ export async function getSessionUser(request?: Request): Promise<{
         `);
         foundUser = rows.rows?.[0];
       } catch (inner) {
-        console.error("[getSessionUser] User query error:", inner);
-        return null;
+        console.warn("[getSessionUser] User query error, using verified session payload:", inner);
       }
     }
   }
 
-  if (!foundUser) return null;
+  const effectiveUser = foundUser ?? {
+    id: payload.userId,
+    name: payload.name,
+    nameUrdu: payload.nameUrdu,
+    email: payload.email,
+    role: payload.role ?? "teacher",
+    status: "active",
+    phone: payload.phone,
+    cnic: payload.cnic,
+    systemAccess: payload.systemAccess ?? "both",
+    mustChangePassword: payload.mustChangePassword,
+    department: payload.department,
+    designation: payload.designation,
+  };
 
   return {
-    id: foundUser.id,
-    name: foundUser.name,
-    nameUrdu: foundUser.nameUrdu ?? undefined,
-    email: foundUser.email,
-    username: foundUser.email,
-    role: foundUser.role ?? "teacher",
-    status: (foundUser.status ?? "active") as User["status"],
-    createdBy: foundUser.id,
+    id: effectiveUser.id,
+    name: effectiveUser.name,
+    nameUrdu: effectiveUser.nameUrdu ?? undefined,
+    email: effectiveUser.email,
+    username: effectiveUser.email,
+    role: effectiveUser.role ?? "teacher",
+    status: (effectiveUser.status ?? "active") as User["status"],
+    createdBy: effectiveUser.id,
     createdAt: new Date().toISOString(),
-    phone: foundUser.phone ?? undefined,
-    cnic: foundUser.cnic ?? undefined,
-    systemAccess: foundUser.systemAccess as any,
-    mustChangePassword: foundUser.mustChangePassword ?? undefined,
-    department: foundUser.department ?? undefined,
-    designation: foundUser.designation ?? undefined,
+    phone: effectiveUser.phone ?? undefined,
+    cnic: effectiveUser.cnic ?? undefined,
+    systemAccess: effectiveUser.systemAccess as any,
+    mustChangePassword: effectiveUser.mustChangePassword ?? undefined,
+    department: effectiveUser.department ?? undefined,
+    designation: effectiveUser.designation ?? undefined,
   };
 }

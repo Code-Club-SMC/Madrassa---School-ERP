@@ -18,6 +18,28 @@ export default defineConfig({
       port: 3000,
       strictPort: true,
     },
+    optimizeDeps: {
+      include: [
+        "react",
+        "react-dom",
+        "lucide-react",
+        "vaul",
+        "cmdk",
+        "sonner",
+        "date-fns",
+        "@radix-ui/react-dialog",
+        "@radix-ui/react-dropdown-menu",
+        "@radix-ui/react-select",
+        "@radix-ui/react-alert-dialog",
+        "@radix-ui/react-tabs",
+        "@radix-ui/react-popover",
+        "@radix-ui/react-tooltip",
+        "@radix-ui/react-accordion",
+        "@radix-ui/react-checkbox",
+        "@radix-ui/react-radio-group",
+        "@radix-ui/react-avatar",
+      ],
+    },
   },
 });
 
