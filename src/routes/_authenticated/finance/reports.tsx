@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useLanguage } from "@/components/language-context";
 import {
   aggregateByCategory,
   aggregateByMonth,
@@ -49,6 +50,8 @@ function today() {
 }
 
 function FinanceReportsPage() {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const [report, setReport] = useState<FinanceReportType>("income");
   const [period, setPeriod] = useState<FinancePeriod>("annually");
   const [system, setSystem] = useState<FinanceScope>("both");
@@ -372,11 +375,11 @@ function FinanceReportsPage() {
               <TabsList className="h-9 bg-muted/60 p-1">
                 <TabsTrigger value="income" className="text-xs gap-1.5 data-[state=active]:font-semibold">
                   <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                  Income · آمدنی
+                  {isUrdu ? "آمدنی" : "Income"}
                 </TabsTrigger>
                 <TabsTrigger value="expenses" className="text-xs gap-1.5 data-[state=active]:font-semibold">
                   <TrendingDown className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
-                  Expenses · اخراجات
+                  {isUrdu ? "اخراجات" : "Expenses"}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -388,13 +391,13 @@ function FinanceReportsPage() {
             <Tabs value={period} onValueChange={(v) => setPeriod(v as FinancePeriod)}>
               <TabsList className="h-9 bg-muted/60 p-1">
                 <TabsTrigger value="annually" className="text-xs">
-                  Annually · سالانہ
+                  {isUrdu ? "سالانہ" : "Annually"}
                 </TabsTrigger>
                 <TabsTrigger value="monthly" className="text-xs">
-                  Monthly · ماہانہ
+                  {isUrdu ? "ماہانہ" : "Monthly"}
                 </TabsTrigger>
                 <TabsTrigger value="daily" className="text-xs">
-                  Daily · روزانہ
+                  {isUrdu ? "روزانہ" : "Daily"}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -403,13 +406,13 @@ function FinanceReportsPage() {
             <Tabs value={system} onValueChange={(v) => setSystem(v as FinanceScope)}>
               <TabsList className="h-9 bg-muted/60 p-1">
                 <TabsTrigger value="both" className="text-xs">
-                  Both
+                  {isUrdu ? "مشترکہ" : "Both"}
                 </TabsTrigger>
                 <TabsTrigger value="school" className="text-xs">
-                  School
+                  {isUrdu ? "اسکول" : "School"}
                 </TabsTrigger>
                 <TabsTrigger value="madrassa" className="text-xs">
-                  Madrassa
+                  {isUrdu ? "مدرسہ" : "Madrassa"}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -482,6 +485,9 @@ function IncomeReportView({
   monthlyBreakdown: Array<{ monthNumber: number; monthName: string; monthNameUrdu: string; total: number; count: number }>;
   transactions: ComprehensiveTransaction[];
 }) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
+
   const feeIncome = useMemo(() => {
     return transactions
       .filter((t) => t.category.includes("fee"))
@@ -501,37 +507,37 @@ function IncomeReportView({
         <Card className="p-4 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border-emerald-500/20">
           <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">
             <TrendingUp className="h-4 w-4" />
-            Total Revenue · کل آمدنی
+            {isUrdu ? "کل آمدنی" : "Total Revenue"}
           </div>
           <p className="font-heading text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-2 font-mono">
             {formatRupees(totalIncome)}
           </p>
           <p className="text-[11px] text-muted-foreground mt-1">
-            {transactions.length} receipts & vouchers in period
+            {transactions.length} {isUrdu ? "رسیدات و واؤچرز" : "receipts & vouchers in period"}
           </p>
         </Card>
 
         <Card className="p-4">
           <div className="text-xs font-medium text-muted-foreground">
-            Student Fees · طلبہ کی فیسیں
+            {isUrdu ? "طلبہ کی فیسیں" : "Student Fees"}
           </div>
           <p className="font-heading text-xl font-bold mt-2 font-mono text-foreground">
             {formatRupees(feeIncome)}
           </p>
           <p className="text-[11px] text-muted-foreground mt-1">
-            Tuition, admission, exams, transport
+            {isUrdu ? "ٹیوشن، داخلہ، امتحانات، ٹرانسپورٹ" : "Tuition, admission, exams, transport"}
           </p>
         </Card>
 
         <Card className="p-4">
           <div className="text-xs font-medium text-muted-foreground">
-            Donations & Charity · عطیات و صدقات
+            {isUrdu ? "عطیات و صدقات" : "Donations & Charity"}
           </div>
           <p className="font-heading text-xl font-bold mt-2 font-mono text-purple-700 dark:text-purple-300">
             {formatRupees(donationIncome)}
           </p>
           <p className="text-[11px] text-muted-foreground mt-1">
-            Zakat, Sadqa, Fitrana, Building Fund
+            {isUrdu ? "زکوٰۃ، صدقہ، فطرانہ، تعمیراتی فنڈ" : "Zakat, Sadqa, Fitrana, Building Fund"}
           </p>
         </Card>
 
@@ -563,17 +569,17 @@ function IncomeReportView({
         <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted/40">
-              <TableHead className="w-[44%] text-start">Account Head · عنوان کھاتہ</TableHead>
-              <TableHead className="w-[16%] text-center">Vouchers</TableHead>
-              <TableHead className="w-[24%] text-end">Amount (PKR)</TableHead>
-              <TableHead className="w-[16%] text-end">Share</TableHead>
+              <TableHead className="w-[44%] text-start">{isUrdu ? "عنوان کھاتہ" : "Account Head"}</TableHead>
+              <TableHead className="w-[16%] text-center">{isUrdu ? "واؤچرز" : "Vouchers"}</TableHead>
+              <TableHead className="w-[24%] text-end">{isUrdu ? "رقم (روپے)" : "Amount (PKR)"}</TableHead>
+              <TableHead className="w-[16%] text-end">{isUrdu ? "حصہ" : "Share"}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {categories.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-6 text-sm text-muted-foreground">
-                  No income transactions recorded for the selected period.
+                  {isUrdu ? "منتخب مدت میں کوئی آمدنی درج نہیں ہے۔" : "No income transactions recorded for the selected period."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -581,10 +587,9 @@ function IncomeReportView({
                 <TableRow key={c.label}>
                   <TableCell className="font-medium text-sm text-start">
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${c.tone}`}>
-                        {c.label}
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${c.tone} ${isUrdu ? "font-urdu" : ""}`}>
+                        {isUrdu ? (c.labelUrdu || c.label) : c.label}
                       </span>
-                      <span className="text-xs text-muted-foreground font-urdu">{c.labelUrdu}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-xs font-mono">
@@ -724,6 +729,9 @@ function ExpenseReportView({
   monthlyBreakdown: Array<{ monthNumber: number; monthName: string; monthNameUrdu: string; total: number; count: number }>;
   transactions: ComprehensiveTransaction[];
 }) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
+
   const payrollTotal = useMemo(() => {
     return transactions
       .filter((t) => t.category.includes("salary"))
@@ -743,37 +751,37 @@ function ExpenseReportView({
         <Card className="p-4 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent border-rose-500/20">
           <div className="flex items-center gap-2 text-xs font-medium text-rose-700 dark:text-rose-300">
             <TrendingDown className="h-4 w-4" />
-            Total Expenditure · کل اخراجات
+            {isUrdu ? "کل اخراجات" : "Total Expenditure"}
           </div>
           <p className="font-heading text-2xl font-bold text-rose-700 dark:text-rose-300 mt-2 font-mono">
             {formatRupees(totalExpense)}
           </p>
           <p className="text-[11px] text-muted-foreground mt-1">
-            {transactions.length} vouchers disbursed in period
+            {transactions.length} {isUrdu ? "واؤچرز ادا کیے گئے" : "vouchers disbursed in period"}
           </p>
         </Card>
 
         <Card className="p-4">
           <div className="text-xs font-medium text-muted-foreground">
-            Staff & Faculty Payroll · تنخواہیں
+            {isUrdu ? "اساتذہ و عملہ کی تنخواہیں" : "Staff & Faculty Payroll"}
           </div>
           <p className="font-heading text-xl font-bold mt-2 font-mono text-foreground">
             {formatRupees(payrollTotal)}
           </p>
           <p className="text-[11px] text-muted-foreground mt-1">
-            School teachers, Qaris, Mudarris, Admin
+            {isUrdu ? "اسکول اساتذہ، قراء، مدرسین اور انتظامیہ" : "School teachers, Qaris, Mudarris, Admin"}
           </p>
         </Card>
 
         <Card className="p-4">
           <div className="text-xs font-medium text-muted-foreground">
-            Operations, Utilities & Mess · معمول کے اخراجات
+            {isUrdu ? "معمول کے اخراجات و یوٹیلیٹیز" : "Operations, Utilities & Mess"}
           </div>
           <p className="font-heading text-xl font-bold mt-2 font-mono text-amber-700 dark:text-amber-300">
             {formatRupees(operationsTotal)}
           </p>
           <p className="text-[11px] text-muted-foreground mt-1">
-            WAPDA, Gas, Mess Ration, Maintenance, Books
+            {isUrdu ? "بجلی، گیس، میس راشن، مرمت اور کتب" : "WAPDA, Gas, Mess Ration, Maintenance, Books"}
           </p>
         </Card>
 
@@ -805,17 +813,17 @@ function ExpenseReportView({
         <Table className="table-fixed">
           <TableHeader>
             <TableRow className="bg-muted/40">
-              <TableHead className="w-[44%] text-start">Expense Head · مد خرچ</TableHead>
-              <TableHead className="w-[16%] text-center">Vouchers</TableHead>
-              <TableHead className="w-[24%] text-end">Amount (PKR)</TableHead>
-              <TableHead className="w-[16%] text-end">Share</TableHead>
+              <TableHead className="w-[44%] text-start">{isUrdu ? "مد خرچ" : "Expense Head"}</TableHead>
+              <TableHead className="w-[16%] text-center">{isUrdu ? "واؤچرز" : "Vouchers"}</TableHead>
+              <TableHead className="w-[24%] text-end">{isUrdu ? "رقم (روپے)" : "Amount (PKR)"}</TableHead>
+              <TableHead className="w-[16%] text-end">{isUrdu ? "حصہ" : "Share"}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {categories.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-6 text-sm text-muted-foreground">
-                  No expense records found for the selected period.
+                  {isUrdu ? "منتخب مدت میں کوئی اخراجات درج نہیں ہیں۔" : "No expense records found for the selected period."}
                 </TableCell>
               </TableRow>
             ) : (
@@ -823,10 +831,9 @@ function ExpenseReportView({
                 <TableRow key={c.label}>
                   <TableCell className="font-medium text-sm text-start">
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${c.tone}`}>
-                        {c.label}
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${c.tone} ${isUrdu ? "font-urdu" : ""}`}>
+                        {isUrdu ? (c.labelUrdu || c.label) : c.label}
                       </span>
-                      <span className="text-xs text-muted-foreground font-urdu">{c.labelUrdu}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-xs font-mono">

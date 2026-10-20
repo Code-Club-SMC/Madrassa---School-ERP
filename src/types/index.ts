@@ -388,8 +388,10 @@ export type FinanceRecord = {
   category: FinanceCategory;
   categoryUrdu: string;
   description: string;
+  descriptionUrdu?: string;
   amountPaisa: number;
   source: string;
+  sourceUrdu?: string;
 };
 
 // ---------- Users ----------

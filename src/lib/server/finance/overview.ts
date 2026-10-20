@@ -168,16 +168,20 @@ export async function getFinanceOverview(request: Request) {
   // 6. Recent transactions
   const recentTransactions = payments.map((p) => {
     const isMadrassa = p.programSystem === "madrassa" || p.institutionSystem === "madrassa";
-    const displayName = p.studentNameUrdu || p.studentName;
+    const studentEn = p.studentName || p.studentNameUrdu;
+    const studentUr = p.studentNameUrdu || p.studentName;
+    const rollPart = p.rollNo ? ` (${p.rollNo})` : "";
     return {
       id: p.id,
       date: p.receivedAt instanceof Date ? p.receivedAt.toISOString().slice(0, 10) : String(p.receivedAt).slice(0, 10),
       type: "income" as const,
       category: "fees" as const,
       categoryUrdu: "فیس طلباء",
-      description: `فیس وصولی: رسید #${p.receiptNo} · ${displayName}${p.rollNo ? ` (${p.rollNo})` : ""}`,
+      description: `Fee Collection: Receipt #${p.receiptNo} · ${studentEn}${rollPart}`,
+      descriptionUrdu: `فیس وصولی: رسید #${p.receiptNo} · ${studentUr}${rollPart}`,
       amount: Math.round(p.amountPaisa / 100),
-      source: p.method === "cash" ? "Cash · نقد" : p.method === "bank" ? "Bank · بینک" : "Online · آن لائن",
+      source: p.method === "cash" ? "Cash" : p.method === "bank" ? "Bank" : "Online",
+      sourceUrdu: p.method === "cash" ? "نقد" : p.method === "bank" ? "بینک" : "آن لائن",
       system: (isMadrassa ? "madrassa" : "school") as "school" | "madrassa" | "both",
     };
   });

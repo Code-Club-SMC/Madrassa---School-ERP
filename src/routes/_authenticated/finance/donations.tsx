@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { formatPKR, formatDate } from "@/lib/format";
 import { toast } from "sonner";
+import { useLanguage } from "@/components/language-context";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/finance/donations")({
   component: DonationsPage,
@@ -48,6 +50,8 @@ const SEED: Donation[] = [
 ];
 
 function DonationsPage() {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const [items, setItems] = useState<Donation[]>(SEED);
   const [open, setOpen] = useState(false);
   const [printId, setPrintId] = useState<string | null>(null);
@@ -76,13 +80,18 @@ function DonationsPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
         <Card className="p-3 col-span-2 lg:col-span-2 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground"><HandCoins className="h-3.5 w-3.5" />Total Received · <span className="font-urdu">کل وصول</span></div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <HandCoins className="h-3.5 w-3.5" />
+            <span className={cn(isUrdu && "font-urdu")}>{isUrdu ? "کل وصولی" : "Total Received"}</span>
+          </div>
           <p className="font-heading text-2xl font-bold text-primary mt-1">{formatPKR(totals.all / 100)}</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">{items.length} receipts issued</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{items.length} {isUrdu ? "رسیدات جاری ہوئیں" : "receipts issued"}</p>
         </Card>
         {(Object.keys(TYPE_META) as DonationType[]).map((t) => (
           <Card key={t} className="p-3">
-            <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${TYPE_META[t].tone}`}>{TYPE_META[t].en}</div>
+            <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${TYPE_META[t].tone} ${isUrdu ? "font-urdu" : ""}`}>
+              {isUrdu ? TYPE_META[t].ur : TYPE_META[t].en}
+            </div>
             <p className="font-heading text-sm font-bold mt-1.5 font-mono">{formatPKR((totals[t] ?? 0) / 100)}</p>
           </Card>
         ))}
@@ -92,12 +101,12 @@ function DonationsPage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead>Receipt No</TableHead>
-              <TableHead>Donor</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className="hidden md:table-cell">Purpose</TableHead>
-              <TableHead>Method</TableHead>
-              <TableHead className="text-end">Amount</TableHead>
+              <TableHead>{isUrdu ? "رسید نمبر" : "Receipt No"}</TableHead>
+              <TableHead>{isUrdu ? "عطیہ دہندہ" : "Donor"}</TableHead>
+              <TableHead>{isUrdu ? "نوعیت" : "Type"}</TableHead>
+              <TableHead className="hidden md:table-cell">{isUrdu ? "مقصد" : "Purpose"}</TableHead>
+              <TableHead>{isUrdu ? "طریقہ" : "Method"}</TableHead>
+              <TableHead className="text-end">{isUrdu ? "رقم" : "Amount"}</TableHead>
               <TableHead className="text-end w-[80px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -105,8 +114,16 @@ function DonationsPage() {
             {items.map((d) => (
               <TableRow key={d.id}>
                 <TableCell><div className="font-mono text-xs">{d.receiptNo}</div><div className="text-[10px] text-muted-foreground">{formatDate(d.date)}</div></TableCell>
-                <TableCell><p className="font-urdu text-sm font-semibold leading-tight">{d.donorUrdu}</p><p className="text-[11px] text-muted-foreground">{d.donor}</p></TableCell>
-                <TableCell><Badge className={`${TYPE_META[d.type].tone} border-0`}>{TYPE_META[d.type].en} · <span className="font-urdu ms-1">{TYPE_META[d.type].ur}</span></Badge></TableCell>
+                <TableCell>
+                  <p className={cn("text-sm font-semibold leading-tight", isUrdu && "font-urdu")}>
+                    {isUrdu ? (d.donorUrdu || d.donor) : d.donor}
+                  </p>
+                </TableCell>
+                <TableCell>
+                  <Badge className={`${TYPE_META[d.type].tone} border-0 ${isUrdu ? "font-urdu" : ""}`}>
+                    {isUrdu ? TYPE_META[d.type].ur : TYPE_META[d.type].en}
+                  </Badge>
+                </TableCell>
                 <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{d.purpose}</TableCell>
                 <TableCell className="text-xs uppercase">{d.method}</TableCell>
                 <TableCell className="text-end font-mono font-bold text-primary">{formatPKR(d.amountPaisa / 100)}</TableCell>
@@ -129,6 +146,8 @@ function DonationsPage() {
 }
 
 function RecordDialog({ open, onOpenChange, onSave }: { open: boolean; onOpenChange: (v: boolean) => void; onSave: (d: Omit<Donation, "id" | "receiptNo">) => void }) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const [donor, setDonor] = useState("");
   const [donorUrdu, setDonorUrdu] = useState("");
   const [phone, setPhone] = useState("");
@@ -170,8 +189,12 @@ function RecordDialog({ open, onOpenChange, onSave }: { open: boolean; onOpenCha
     <Dialog open={open} onOpenChange={(v) => { if (!submitting) onOpenChange(v); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-heading">Record Donation <span className="font-urdu text-base text-muted-foreground ms-2">عطیہ درج کریں</span></DialogTitle>
-          <DialogDescription>An auto-numbered receipt (DR-YYYY-####) will be created and printable.</DialogDescription>
+          <DialogTitle className={cn("font-heading", isUrdu && "font-urdu")}>
+            {isUrdu ? "عطیہ درج کریں" : "Record Donation"}
+          </DialogTitle>
+          <DialogDescription className={cn(isUrdu && "font-urdu")}>
+            {isUrdu ? "ایک خودکار نمبر والی رسید بنائی جائے گی جسے پرنٹ بھی کیا جا سکتا ہے۔" : "An auto-numbered receipt (DR-YYYY-####) will be created and printable."}
+          </DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3 py-2">
           <BilingualLabel urdu="نام عطیہ دہندہ" english="Donor Name" required><Input value={donor} onChange={(e) => setDonor(e.target.value)} placeholder="Haji…" disabled={submitting} /></BilingualLabel>
@@ -182,11 +205,11 @@ function RecordDialog({ open, onOpenChange, onSave }: { open: boolean; onOpenCha
             <Select value={type} onValueChange={(v) => setType(v as DonationType)} disabled={submitting}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="zakat">Zakat · زکوٰۃ</SelectItem>
-                <SelectItem value="sadqa">Sadqa · صدقہ</SelectItem>
-                <SelectItem value="khairat">Khairat · خیرات</SelectItem>
-                <SelectItem value="fitra">Fitrana · فطرانہ</SelectItem>
-                <SelectItem value="general">General · عام</SelectItem>
+                <SelectItem value="zakat">{isUrdu ? "زکوٰۃ" : "Zakat"}</SelectItem>
+                <SelectItem value="sadqa">{isUrdu ? "صدقہ" : "Sadqa"}</SelectItem>
+                <SelectItem value="khairat">{isUrdu ? "خیرات" : "Khairat"}</SelectItem>
+                <SelectItem value="fitra">{isUrdu ? "فطرانہ" : "Fitrana"}</SelectItem>
+                <SelectItem value="general">{isUrdu ? "عام عطیات" : "General"}</SelectItem>
               </SelectContent>
             </Select>
           </BilingualLabel>

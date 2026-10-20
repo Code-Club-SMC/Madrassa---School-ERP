@@ -514,8 +514,10 @@ export type FinanceRecord = {
   category: FinanceCategory;
   categoryUrdu: string;
   description: string;
+  descriptionUrdu?: string;
   amount: number;
   source: string;
+  sourceUrdu?: string;
   system: System;
 };
 
