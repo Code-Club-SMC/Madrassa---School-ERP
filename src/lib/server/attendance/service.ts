@@ -25,7 +25,7 @@ import { attendanceTimelineEvent, summarizeAttendance } from "@/lib/server/atten
 import { getRequestUser, requirePermission } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
 import { insertStudentEvent } from "@/lib/server/students/events";
-import { assertTeacherCanAccessAttendancePlacement } from "@/lib/server/teachers/service";
+import { dateToTimetableDayOfWeek, parseMinutes } from "@/lib/server/academic/timetable-conflict";
 
 const attendanceStatuses = ["present", "absent", "late", "leave"] as const;
 
@@ -178,26 +178,64 @@ export async function getDesignatedFirstPeriodTeacher(
   filters: { classId?: string; subcategoryId?: string },
   dateString: string,
 ) {
-  const dateObj = new Date(dateString);
-  const dayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  const dayOfWeek = dateToTimetableDayOfWeek(dateString);
+  if (dayOfWeek === null) return null; // Friday (weekend/holiday) or invalid date
 
   if (system === "school" && filters.classId) {
-    const [firstPeriod] = await db
-      .select({ id: schoolTimetablePeriods.id, label: schoolTimetablePeriods.label })
+    const periods = await db
+      .select({
+        id: schoolTimetablePeriods.id,
+        label: schoolTimetablePeriods.label,
+        timeStart: schoolTimetablePeriods.timeStart,
+        displayOrder: schoolTimetablePeriods.displayOrder,
+      })
       .from(schoolTimetablePeriods)
-      .where(and(eq(schoolTimetablePeriods.schoolClassId, filters.classId), eq(schoolTimetablePeriods.isBreak, false)))
-      .orderBy(asc(schoolTimetablePeriods.displayOrder))
-      .limit(1);
+      .where(
+        and(
+          eq(schoolTimetablePeriods.schoolClassId, filters.classId),
+          eq(schoolTimetablePeriods.isBreak, false),
+        ),
+      )
+      .orderBy(asc(schoolTimetablePeriods.timeStart), asc(schoolTimetablePeriods.displayOrder));
 
-    if (!firstPeriod) return null;
+    if (periods.length === 0) return null;
 
-    const [slot] = await db
-      .select({ subjectId: schoolTimetableSlots.subjectId })
+    periods.sort(
+      (a, b) =>
+        parseMinutes(a.timeStart, "Start time") - parseMinutes(b.timeStart, "Start time") ||
+        a.displayOrder - b.displayOrder,
+    );
+
+    const periodIds = periods.map((p) => p.id);
+    const slots = await db
+      .select({
+        periodId: schoolTimetableSlots.periodId,
+        subjectId: schoolTimetableSlots.subjectId,
+      })
       .from(schoolTimetableSlots)
-      .where(and(eq(schoolTimetableSlots.periodId, firstPeriod.id), eq(schoolTimetableSlots.dayOfWeek, dayOfWeek)))
-      .limit(1);
+      .where(
+        and(
+          inArray(schoolTimetableSlots.periodId, periodIds),
+          eq(schoolTimetableSlots.dayOfWeek, dayOfWeek),
+        ),
+      );
 
-    if (!slot?.subjectId) return null;
+    const slotByPeriod = new Map(slots.map((s) => [s.periodId, s.subjectId]));
+
+    let firstSubjectId: string | null = null;
+    let firstPeriodLabel: string | null = null;
+    let firstTimeStart: string | null = null;
+    for (const p of periods) {
+      const subjectId = slotByPeriod.get(p.id);
+      if (subjectId) {
+        firstSubjectId = subjectId;
+        firstPeriodLabel = p.label;
+        firstTimeStart = p.timeStart;
+        break;
+      }
+    }
+
+    if (!firstSubjectId) return null;
 
     const [assignment] = await db
       .select({
@@ -211,13 +249,13 @@ export async function getDesignatedFirstPeriodTeacher(
       .where(
         and(
           eq(teacherAssignments.schoolClassId, filters.classId),
-          eq(teacherAssignments.subjectId, slot.subjectId),
+          eq(teacherAssignments.subjectId, firstSubjectId),
           eq(teacherAssignments.active, true),
         ),
       )
       .limit(1);
 
-    if (assignment) return assignment;
+    if (assignment) return { ...assignment, periodLabel: firstPeriodLabel, timeStart: firstTimeStart };
 
     const [subjectTeacher] = await db
       .select({
@@ -230,32 +268,70 @@ export async function getDesignatedFirstPeriodTeacher(
       .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
       .where(
         and(
-          eq(examSubjects.id, slot.subjectId),
+          eq(examSubjects.id, firstSubjectId),
           eq(examSubjects.active, true),
         ),
       )
       .limit(1);
 
-    return subjectTeacher ?? null;
+    return subjectTeacher ? { ...subjectTeacher, periodLabel: firstPeriodLabel, timeStart: firstTimeStart } : null;
   }
 
   if (system === "madrassa" && filters.subcategoryId) {
-    const [firstPeriod] = await db
-      .select({ id: madrassaTimetablePeriods.id, label: madrassaTimetablePeriods.label })
+    const periods = await db
+      .select({
+        id: madrassaTimetablePeriods.id,
+        label: madrassaTimetablePeriods.label,
+        timeStart: madrassaTimetablePeriods.timeStart,
+        displayOrder: madrassaTimetablePeriods.displayOrder,
+      })
       .from(madrassaTimetablePeriods)
-      .where(and(eq(madrassaTimetablePeriods.madrassaSubcategoryId, filters.subcategoryId), eq(madrassaTimetablePeriods.isBreak, false)))
-      .orderBy(asc(madrassaTimetablePeriods.displayOrder))
-      .limit(1);
+      .where(
+        and(
+          eq(madrassaTimetablePeriods.madrassaSubcategoryId, filters.subcategoryId),
+          eq(madrassaTimetablePeriods.isBreak, false),
+        ),
+      )
+      .orderBy(asc(madrassaTimetablePeriods.timeStart), asc(madrassaTimetablePeriods.displayOrder));
 
-    if (!firstPeriod) return null;
+    if (periods.length === 0) return null;
 
-    const [slot] = await db
-      .select({ subjectId: madrassaTimetableSlots.subjectId })
+    periods.sort(
+      (a, b) =>
+        parseMinutes(a.timeStart, "Start time") - parseMinutes(b.timeStart, "Start time") ||
+        a.displayOrder - b.displayOrder,
+    );
+
+    const periodIds = periods.map((p) => p.id);
+    const slots = await db
+      .select({
+        periodId: madrassaTimetableSlots.periodId,
+        subjectId: madrassaTimetableSlots.subjectId,
+      })
       .from(madrassaTimetableSlots)
-      .where(and(eq(madrassaTimetableSlots.periodId, firstPeriod.id), eq(madrassaTimetableSlots.dayOfWeek, dayOfWeek)))
-      .limit(1);
+      .where(
+        and(
+          inArray(madrassaTimetableSlots.periodId, periodIds),
+          eq(madrassaTimetableSlots.dayOfWeek, dayOfWeek),
+        ),
+      );
 
-    if (!slot?.subjectId) return null;
+    const slotByPeriod = new Map(slots.map((s) => [s.periodId, s.subjectId]));
+
+    let firstSubjectId: string | null = null;
+    let firstPeriodLabel: string | null = null;
+    let firstTimeStart: string | null = null;
+    for (const p of periods) {
+      const subjectId = slotByPeriod.get(p.id);
+      if (subjectId) {
+        firstSubjectId = subjectId;
+        firstPeriodLabel = p.label;
+        firstTimeStart = p.timeStart;
+        break;
+      }
+    }
+
+    if (!firstSubjectId) return null;
 
     const [assignment] = await db
       .select({
@@ -269,13 +345,13 @@ export async function getDesignatedFirstPeriodTeacher(
       .where(
         and(
           eq(teacherAssignments.madrassaSubcategoryId, filters.subcategoryId),
-          eq(teacherAssignments.subjectId, slot.subjectId),
+          eq(teacherAssignments.subjectId, firstSubjectId),
           eq(teacherAssignments.active, true),
         ),
       )
       .limit(1);
 
-    if (assignment) return assignment;
+    if (assignment) return { ...assignment, periodLabel: firstPeriodLabel, timeStart: firstTimeStart };
 
     const [subjectTeacher] = await db
       .select({
@@ -288,13 +364,13 @@ export async function getDesignatedFirstPeriodTeacher(
       .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
       .where(
         and(
-          eq(examSubjects.id, slot.subjectId),
+          eq(examSubjects.id, firstSubjectId),
           eq(examSubjects.active, true),
         ),
       )
       .limit(1);
 
-    return subjectTeacher ?? null;
+    return subjectTeacher ? { ...subjectTeacher, periodLabel: firstPeriodLabel, timeStart: firstTimeStart } : null;
   }
 
   return null;
@@ -341,13 +417,11 @@ export async function getSchoolAttendanceRoster(
 
   if (isTeacher) {
     if (existing.length > 0) {
-      if (existing[0]?.markedByUserId && existing[0]?.markedByUserId !== actor.id) {
-        canMark = false;
-        lockReason = `Attendance has already been marked by teacher ${markerName ?? "another teacher"}.`;
-      }
+      canMark = false;
+      lockReason = `Attendance for this class has already been recorded for this date (marked by ${markerName ?? "teacher"}). Attendance is taken only once per day.`;
     } else if (designatedTeacher && designatedTeacher.userId !== actor.id) {
       canMark = false;
-      lockReason = `Daily attendance is assigned to 1st period teacher: ${designatedTeacher.name}.`;
+      lockReason = `Daily attendance for this class must be taken by the 1st period teacher (${designatedTeacher.name}).`;
     }
   }
 
@@ -407,13 +481,11 @@ export async function getMadrassaAttendanceRoster(
 
   if (isTeacher) {
     if (existing.length > 0) {
-      if (existing[0]?.markedByUserId && existing[0]?.markedByUserId !== actor.id) {
-        canMark = false;
-        lockReason = `Attendance has already been marked by teacher ${markerName ?? "another teacher"}.`;
-      }
+      canMark = false;
+      lockReason = `Attendance for this darja has already been recorded for this date (marked by ${markerName ?? "teacher"}). Attendance is taken only once per day.`;
     } else if (designatedTeacher && designatedTeacher.userId !== actor.id) {
       canMark = false;
-      lockReason = `Daily attendance is assigned to 1st period teacher: ${designatedTeacher.name}.`;
+      lockReason = `Daily attendance for this class must be taken by the 1st period teacher (${designatedTeacher.name}).`;
     }
   }
 
@@ -591,18 +663,19 @@ async function markAttendance(
     // 1. If attendance has already been marked on this date for this class:
     if (existing.length > 0) {
       const markerId = existing[0]?.markedByUserId;
-      if (markerId && markerId !== actor.id) {
+      let markerName = "teacher";
+      if (markerId) {
         const [markerUser] = await db
           .select({ name: authUser.name })
           .from(authUser)
           .where(eq(authUser.id, markerId))
           .limit(1);
-        const markerName = markerUser?.name || "another teacher";
-        throw new HttpError(
-          `Attendance for this class on ${date} has already been recorded by teacher ${markerName}. Only they or an administrator can update it.`,
-          403,
-        );
+        if (markerUser?.name) markerName = markerUser.name;
       }
+      throw new HttpError(
+        `Attendance for this class on ${date} has already been recorded (marked by ${markerName}). Attendance is taken only once per day.`,
+        403,
+      );
     } else {
       // 2. If attendance has not been taken yet, verify actor is the designated 1st period teacher (if timetable is set)
       const designatedTeacher = await getDesignatedFirstPeriodTeacher(
@@ -740,6 +813,7 @@ async function assertTeacherAttendanceAccess(
 ) {
   const actor = await getRequestUser(request);
   if (actor?.role !== "teacher") return;
+  const { assertTeacherCanAccessAttendancePlacement } = await import("@/lib/server/teachers/service");
   await assertTeacherCanAccessAttendancePlacement(actor.id, system, filters);
 }
 

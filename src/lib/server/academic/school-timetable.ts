@@ -70,11 +70,33 @@ export async function listSchoolTimetableStatus(request: Request, schoolClassIds
   return map;
 }
 
+import {
+  assertNoClassPeriodOverlap,
+  assertNoTeacherTimetableConflict,
+  validatePeriodTimes,
+} from "./timetable-conflict";
+
 export async function createSchoolTimetablePeriod(
   request: Request,
   input: z.infer<typeof schoolTimetablePeriodInputSchema>,
 ) {
   await requirePermission(request, "school_timetable", "edit");
+
+  // Validate period times and ensure no overlap within the same class
+  await assertNoClassPeriodOverlap({
+    system: "school",
+    targetId: input.schoolClassId,
+    timeStart: input.timeStart,
+    timeEnd: input.timeEnd,
+  });
+
+  // Ensure assigned teachers have no schedule conflicts
+  await assertNoTeacherTimetableConflict({
+    timeStart: input.timeStart,
+    timeEnd: input.timeEnd,
+    slots: input.slots,
+    schoolClassId: input.schoolClassId,
+  });
 
   const id = `tt-${randomUUID().slice(0, 8)}`;
   const displayOrder = await nextSchoolTimetablePeriodOrder(input.schoolClassId);
@@ -137,6 +159,44 @@ export async function updateSchoolTimetablePeriod(
   if (existing.length === 0) {
     throw new HttpError("Timetable period not found", 404);
   }
+
+  const timeStart = input.timeStart ?? existing[0].timeStart;
+  const timeEnd = input.timeEnd ?? existing[0].timeEnd;
+  const schoolClassId = existing[0].schoolClassId;
+
+  // Validate period times and class overlap if time changed
+  if (input.timeStart !== undefined || input.timeEnd !== undefined) {
+    await assertNoClassPeriodOverlap({
+      system: "school",
+      targetId: schoolClassId,
+      timeStart,
+      timeEnd,
+      ignorePeriodId: periodId,
+    });
+  } else {
+    validatePeriodTimes(timeStart, timeEnd);
+  }
+
+  // Check teacher conflicts
+  let slotsToCheck = input.slots;
+  if (!slotsToCheck) {
+    const existingSlots = await db
+      .select({
+        dayOfWeek: schoolTimetableSlots.dayOfWeek,
+        subjectId: schoolTimetableSlots.subjectId,
+      })
+      .from(schoolTimetableSlots)
+      .where(eq(schoolTimetableSlots.periodId, periodId));
+    slotsToCheck = existingSlots;
+  }
+
+  await assertNoTeacherTimetableConflict({
+    timeStart,
+    timeEnd,
+    periodId,
+    slots: slotsToCheck,
+    schoolClassId,
+  });
 
   const updateData: Record<string, unknown> = { ...input, updatedAt: new Date() };
   const slots = input.slots;

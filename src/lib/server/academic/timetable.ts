@@ -70,11 +70,33 @@ export async function listTimetableStatus(request: Request, subcategoryIds: stri
   return map;
 }
 
+import {
+  assertNoClassPeriodOverlap,
+  assertNoTeacherTimetableConflict,
+  validatePeriodTimes,
+} from "./timetable-conflict";
+
 export async function createTimetablePeriod(
   request: Request,
   input: z.infer<typeof timetablePeriodInputSchema>,
 ) {
   await requirePermission(request, "madrassa_timetable", "create");
+
+  // Validate period times and ensure no overlap within the same darja
+  await assertNoClassPeriodOverlap({
+    system: "madrassa",
+    targetId: input.madrassaSubcategoryId,
+    timeStart: input.timeStart,
+    timeEnd: input.timeEnd,
+  });
+
+  // Ensure assigned teachers have no schedule conflicts
+  await assertNoTeacherTimetableConflict({
+    timeStart: input.timeStart,
+    timeEnd: input.timeEnd,
+    slots: input.slots,
+    madrassaSubcategoryId: input.madrassaSubcategoryId,
+  });
 
   const id = `tt-${randomUUID().slice(0, 8)}`;
   const displayOrder = await nextTimetablePeriodOrder(input.madrassaSubcategoryId);
@@ -149,6 +171,44 @@ export async function updateTimetablePeriod(
   if (input.madrassaSubcategoryId && input.madrassaSubcategoryId !== existing.madrassaSubcategoryId) {
     throw new HttpError("Cannot move a period to another class", 400);
   }
+
+  const timeStart = input.timeStart ?? existing.timeStart;
+  const timeEnd = input.timeEnd ?? existing.timeEnd;
+  const madrassaSubcategoryId = existing.madrassaSubcategoryId;
+
+  // Validate period times and class overlap if time changed
+  if (input.timeStart !== undefined || input.timeEnd !== undefined) {
+    await assertNoClassPeriodOverlap({
+      system: "madrassa",
+      targetId: madrassaSubcategoryId,
+      timeStart,
+      timeEnd,
+      ignorePeriodId: id,
+    });
+  } else {
+    validatePeriodTimes(timeStart, timeEnd);
+  }
+
+  // Check teacher conflicts
+  let slotsToCheck = input.slots;
+  if (!slotsToCheck) {
+    const existingSlots = await db
+      .select({
+        dayOfWeek: madrassaTimetableSlots.dayOfWeek,
+        subjectId: madrassaTimetableSlots.subjectId,
+      })
+      .from(madrassaTimetableSlots)
+      .where(eq(madrassaTimetableSlots.periodId, id));
+    slotsToCheck = existingSlots;
+  }
+
+  await assertNoTeacherTimetableConflict({
+    timeStart,
+    timeEnd,
+    periodId: id,
+    slots: slotsToCheck,
+    madrassaSubcategoryId,
+  });
 
   const validSubjectIds = input.slots
     ?.map((s) => s.subjectId)

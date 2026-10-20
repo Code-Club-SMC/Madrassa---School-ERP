@@ -138,15 +138,32 @@ export function TeacherProfileWorkspace() {
 
   if (!teacher || !display) {
     return (
-      <Card>
-        <EmptyState
-          icon={GraduationCap}
-          heading="Teacher unavailable"
-          headingUrdu="استاد دستیاب نہیں"
-          description={error ?? "The teacher profile could not be loaded."}
-          action={{ label: "Retry", onClick: () => void loadTeacher() }}
-        />
-      </Card>
+      <div className="space-y-4">
+        <Link
+          to="/teachers"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+          All teachers
+        </Link>
+        <Card className="p-6">
+          <EmptyState
+            icon={GraduationCap}
+            heading="Teacher unavailable"
+            headingUrdu="استاد کا پروفائل دستیاب نہیں"
+            description={error ?? "The teacher profile could not be loaded."}
+            action={{ label: "Retry", onClick: () => void loadTeacher() }}
+          />
+          <div className="flex flex-wrap items-center justify-center gap-2.5 pt-4">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/teacher-portal">My Teacher Portal</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/teachers">View All Teachers</Link>
+            </Button>
+          </div>
+        </Card>
+      </div>
     );
   }
 

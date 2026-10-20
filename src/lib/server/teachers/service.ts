@@ -33,6 +33,7 @@ import {
   validateTeacherPlacement,
   validateTimeRange,
 } from "@/lib/server/teachers/domain";
+import { assertTeacherTimetableConflictWithClassTimetables, normalizeTimeToHHMM } from "@/lib/server/academic/timetable-conflict";
 
 const systemScopeSchema = z.enum(["school", "madrassa", "all", "qasmia-both", "qasmia-madrassa", "qasmia-school", "zainab-both", "zainab-madrassa", "zainab-school"]);
 const paymentMethodSchema = z.enum(["cash", "bank"]);
@@ -545,8 +546,8 @@ export async function listTeachersWithTimetables(request: Request) {
         madrassaSubcategoryNameUrdu: row.madrassaSubcategoryNameUrdu ?? null,
         academicYear: activeMadrassaYear.name,
         weekday: adminDayToTeacherWeekday(row.dayOfWeek),
-        startTime: row.timeStart,
-        endTime: row.timeEnd,
+        startTime: normalizeTimeToHHMM(row.timeStart),
+        endTime: normalizeTimeToHHMM(row.timeEnd),
         room: null,
         active: true,
       }));
@@ -574,8 +575,8 @@ export async function listTeachersWithTimetables(request: Request) {
         madrassaSubcategoryNameUrdu: null,
         academicYear: activeSchoolYear.name,
         weekday: adminDayToTeacherWeekday(row.dayOfWeek),
-        startTime: row.timeStart,
-        endTime: row.timeEnd,
+        startTime: normalizeTimeToHHMM(row.timeStart),
+        endTime: normalizeTimeToHHMM(row.timeEnd),
         room: null,
         active: true,
       }));
@@ -604,7 +605,7 @@ export async function listTeachersWithTimetables(request: Request) {
 export async function getTeacher(request: Request, id: string) {
   const actor = await requirePermission(request, "teachers", "view");
   const detail = await loadTeacherDetail(id);
-  assertTeacherMayReadDetail(actor, detail.profile.userId);
+  assertTeacherMayReadDetail(actor, detail.profile.userId, detail.profile.id);
   return detail;
 }
 
@@ -1236,8 +1237,8 @@ export async function getMyTeacherDashboard(request: Request) {
         effectiveTo: null,
         active: !row.isBreak,
         weekday: adminDayToTeacherWeekday(row.dayOfWeek),
-        startTime: row.timeStart,
-        endTime: row.timeEnd,
+        startTime: normalizeTimeToHHMM(row.timeStart),
+        endTime: normalizeTimeToHHMM(row.timeEnd),
         room: null,
       };
     });
@@ -1269,8 +1270,8 @@ export async function getMyTeacherDashboard(request: Request) {
         effectiveTo: null,
         active: !row.isBreak,
         weekday: adminDayToTeacherWeekday(row.dayOfWeek),
-        startTime: row.timeStart,
-        endTime: row.timeEnd,
+        startTime: normalizeTimeToHHMM(row.timeStart),
+        endTime: normalizeTimeToHHMM(row.timeEnd),
         room: null,
       };
     });
@@ -1561,8 +1562,8 @@ async function loadTeacherDetail(id: string) {
       subjectNameUrdu: row.subjectNameUrdu ?? row.labelUrdu ?? null,
       academicYear: activeMadrassaYear.name,
       weekday: adminDayToTeacherWeekday(row.dayOfWeek),
-      startTime: row.timeStart,
-      endTime: row.timeEnd,
+      startTime: normalizeTimeToHHMM(row.timeStart),
+      endTime: normalizeTimeToHHMM(row.timeEnd),
       room: null,
       active: true,
     }));
@@ -1589,8 +1590,8 @@ async function loadTeacherDetail(id: string) {
       subjectNameUrdu: row.subjectNameUrdu ?? row.labelUrdu ?? null,
       academicYear: activeSchoolYear.name,
       weekday: adminDayToTeacherWeekday(row.dayOfWeek),
-      startTime: row.timeStart,
-      endTime: row.timeEnd,
+      startTime: normalizeTimeToHHMM(row.timeStart),
+      endTime: normalizeTimeToHHMM(row.timeEnd),
       room: null,
       active: true,
     }));
@@ -1663,6 +1664,8 @@ async function assertNoTimetableConflict(
   if (hasTimetableConflict(periods, next)) {
     throw new HttpError("Teacher already has a timetable period in this time range", 409);
   }
+
+  await assertTeacherTimetableConflictWithClassTimetables(teacherId, next);
 }
 
 async function cleanupAuthUser(userId: string) {
@@ -1718,9 +1721,17 @@ function hasAnyKey(value: object) {
   return Object.values(value).some((entry) => entry !== undefined);
 }
 
-function assertTeacherMayReadDetail(actor: { id: string; role: string }, teacherUserId: string) {
-  if (actor.role === "teacher" && actor.id !== teacherUserId) {
-    throw new HttpError("Teachers can only view their own teacher profile", 403);
+function assertTeacherMayReadDetail(
+  actor: { id: string; role: string; linkedTeacherId?: string },
+  teacherUserId: string,
+  teacherProfileId?: string,
+) {
+  if (actor.role === "teacher") {
+    const isOwnUser = actor.id === teacherUserId;
+    const isOwnProfile = Boolean(teacherProfileId && actor.linkedTeacherId === teacherProfileId);
+    if (!isOwnUser && !isOwnProfile) {
+      throw new HttpError("Teachers can only view their own teacher profile", 403);
+    }
   }
 }
 
@@ -1881,6 +1892,177 @@ export async function getMyTeacherClasses(request: Request) {
     });
 
   return [...assignments, ...mappedDirect];
+}
+
+export async function getMyTeacherAttendanceClasses(request: Request, date: string) {
+  const actor = await requirePermission(request, "dashboard", "view");
+  if (actor.role !== "teacher") throw new HttpError("Teacher portal is only available to teacher accounts", 403);
+
+  const profile = await resolveTeacherProfile(actor);
+  if (!profile) throw new HttpError("Teacher profile not found", 404);
+
+  const allClasses = await getMyTeacherClasses(request);
+
+  // Group / de-duplicate by unique class (school) or darja (madrassa)
+  const uniqueMap = new Map<string, typeof allClasses[0]>();
+  for (const c of allClasses) {
+    const key =
+      c.system === "school"
+        ? `school:${c.schoolClassId}`
+        : `madrassa:${c.institutionId}:${c.madrassaSubcategoryId}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, c);
+    }
+  }
+
+  const { getDesignatedFirstPeriodTeacher } = await import("@/lib/server/attendance/service");
+  const { studentAttendance } = await import("@/db/schema/attendance");
+
+  const eligibleClasses: Array<{
+    id: string;
+    system: "school" | "madrassa";
+    institutionId: string;
+    institutionName: string | null;
+    institutionNameUrdu: string | null;
+    schoolClassId: string | null;
+    schoolClassName: string | null;
+    schoolClassNameUrdu: string | null;
+    madrassaCategoryId: string | null;
+    madrassaCategoryName: string | null;
+    madrassaCategoryNameUrdu: string | null;
+    madrassaSubcategoryId: string | null;
+    madrassaSubcategoryName: string | null;
+    madrassaSubcategoryNameUrdu: string | null;
+    academicYear: string;
+    isDesignated: boolean;
+    designatedTeacherName: string | null;
+    periodLabel: string | null;
+    isAlreadyMarked: boolean;
+    markedByName: string | null;
+  }> = [];
+
+  for (const item of uniqueMap.values()) {
+    if (item.system === "school" && item.schoolClassId) {
+      const designated = await getDesignatedFirstPeriodTeacher(
+        "school",
+        { classId: item.schoolClassId },
+        date,
+      );
+
+      const [existing] = await db
+        .select({ markedByUserId: studentAttendance.markedByUserId })
+        .from(studentAttendance)
+        .where(
+          and(
+            eq(studentAttendance.attendanceDate, date),
+            eq(studentAttendance.schoolClassId, item.schoolClassId),
+          ),
+        )
+        .limit(1);
+
+      let markerName: string | null = null;
+      if (existing?.markedByUserId) {
+        const [marker] = await db
+          .select({ name: authUser.name })
+          .from(authUser)
+          .where(eq(authUser.id, existing.markedByUserId))
+          .limit(1);
+        markerName = marker?.name ?? null;
+      }
+
+      const isDesignated = Boolean(designated && designated.userId === actor.id);
+      if (isDesignated) {
+        eligibleClasses.push({
+          id: item.id,
+          system: "school",
+          institutionId: item.institutionId,
+          institutionName: item.institutionName,
+          institutionNameUrdu: item.institutionNameUrdu,
+          schoolClassId: item.schoolClassId,
+          schoolClassName: item.schoolClassName,
+          schoolClassNameUrdu: item.schoolClassNameUrdu,
+          madrassaCategoryId: null,
+          madrassaCategoryName: null,
+          madrassaCategoryNameUrdu: null,
+          madrassaSubcategoryId: null,
+          madrassaSubcategoryName: null,
+          madrassaSubcategoryNameUrdu: null,
+          academicYear: item.academicYear,
+          isDesignated,
+          designatedTeacherName: designated?.name ?? null,
+          periodLabel: designated?.periodLabel ?? null,
+          timeStart: (designated as any)?.timeStart ?? null,
+          isAlreadyMarked: Boolean(existing),
+          markedByName: markerName,
+        });
+      }
+    } else if (item.system === "madrassa" && item.madrassaSubcategoryId && item.institutionId) {
+      const designated = await getDesignatedFirstPeriodTeacher(
+        "madrassa",
+        { subcategoryId: item.madrassaSubcategoryId },
+        date,
+      );
+
+      const [existing] = await db
+        .select({ markedByUserId: studentAttendance.markedByUserId })
+        .from(studentAttendance)
+        .where(
+          and(
+            eq(studentAttendance.attendanceDate, date),
+            eq(studentAttendance.madrassaSubcategoryId, item.madrassaSubcategoryId),
+            eq(studentAttendance.institutionId, item.institutionId),
+          ),
+        )
+        .limit(1);
+
+      let markerName: string | null = null;
+      if (existing?.markedByUserId) {
+        const [marker] = await db
+          .select({ name: authUser.name })
+          .from(authUser)
+          .where(eq(authUser.id, existing.markedByUserId))
+          .limit(1);
+        markerName = marker?.name ?? null;
+      }
+
+      const isDesignated = Boolean(designated && designated.userId === actor.id);
+      if (isDesignated) {
+        eligibleClasses.push({
+          id: item.id,
+          system: "madrassa",
+          institutionId: item.institutionId,
+          institutionName: item.institutionName,
+          institutionNameUrdu: item.institutionNameUrdu,
+          schoolClassId: null,
+          schoolClassName: null,
+          schoolClassNameUrdu: null,
+          madrassaCategoryId: item.madrassaCategoryId,
+          madrassaCategoryName: item.madrassaCategoryName,
+          madrassaCategoryNameUrdu: item.madrassaCategoryNameUrdu,
+          madrassaSubcategoryId: item.madrassaSubcategoryId,
+          madrassaSubcategoryName: item.madrassaSubcategoryName,
+          madrassaSubcategoryNameUrdu: item.madrassaSubcategoryNameUrdu,
+          academicYear: item.academicYear,
+          isDesignated,
+          designatedTeacherName: designated?.name ?? null,
+          periodLabel: designated?.periodLabel ?? null,
+          timeStart: (designated as any)?.timeStart ?? null,
+          isAlreadyMarked: Boolean(existing),
+          markedByName: markerName,
+        });
+      }
+    }
+  }
+
+  const { parseMinutes } = await import("@/lib/server/academic/timetable-conflict");
+  eligibleClasses.sort((a, b) => {
+    const minA = a.timeStart ? parseMinutes(a.timeStart) : 9999;
+    const minB = b.timeStart ? parseMinutes(b.timeStart) : 9999;
+    return minA - minB;
+  });
+
+  // A teacher takes attendance for only ONE class per day — the earliest / beginning class of their day
+  return eligibleClasses.slice(0, 1);
 }
 
 export async function getMyTeacherExams(request: Request) {

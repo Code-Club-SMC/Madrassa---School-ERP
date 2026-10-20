@@ -331,8 +331,8 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 function assignmentLabel(assignment: TeacherAssignment) {
   const placement =
     assignment.system === "school"
-      ? `${assignment.schoolClassId ?? "class"} / ${assignment.schoolSectionId ?? "section"}`
-      : `${assignment.madrassaCategoryId ?? "category"} / ${assignment.madrassaSubcategoryId ?? "darja"}`;
+      ? (assignment.schoolClassName ?? assignment.schoolClassId ?? "class")
+      : (assignment.madrassaSubcategoryName ?? assignment.madrassaCategoryId ?? "darja");
   const subject = assignment.subjectName || assignment.subjectNameUrdu || "No subject";
   return `${subject} · ${assignment.system} · ${placement} · ${assignment.academicYear}`;
 }
@@ -340,8 +340,8 @@ function assignmentLabel(assignment: TeacherAssignment) {
 function periodLabel(period: TeacherTimetablePeriod, teacherName: string) {
   const placement =
     period.system === "school"
-      ? `${period.schoolClassId ?? "class"} / ${period.schoolSectionId ?? "section"}`
-      : `${period.madrassaCategoryId ?? "category"} / ${period.madrassaSubcategoryId ?? "darja"}`;
+      ? (period.schoolClassName ?? period.schoolClassId ?? "class")
+      : (period.madrassaSubcategoryName ?? period.madrassaCategoryId ?? "darja");
   const subject = period.subjectName || period.subjectNameUrdu || "No subject";
   return `${subject} · ${teacherName} · ${placement}`;
 }

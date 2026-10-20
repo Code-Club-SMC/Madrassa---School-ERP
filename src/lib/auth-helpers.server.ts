@@ -163,5 +163,7 @@ export async function getSessionUser(request?: Request): Promise<{
     mustChangePassword: effectiveUser.mustChangePassword ?? undefined,
     department: effectiveUser.department ?? undefined,
     designation: effectiveUser.designation ?? undefined,
+    linkedTeacherId: effectiveUser.linkedTeacherId ?? undefined,
+    permissions: effectiveUser.permissions ?? undefined,
   };
 }

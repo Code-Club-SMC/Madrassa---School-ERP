@@ -249,6 +249,17 @@ function SchoolTimetablePage() {
       return;
     }
 
+    const timeRegex = /^\d{2}:\d{2}$/;
+    if (!timeRegex.test(periodForm.timeStart.trim()) || !timeRegex.test(periodForm.timeEnd.trim())) {
+      toast.error(t("Time must use HH:mm format (e.g. 08:30)", "وقت HH:mm فارمیٹ میں ہونا چاہیے (مثلاً 08:30)"));
+      return;
+    }
+
+    if (periodForm.timeStart.trim() >= periodForm.timeEnd.trim()) {
+      toast.error(t("Start time must be before end time", "شروعات کا وقت اختتام کے وقت سے پہلے ہونا چاہیے"));
+      return;
+    }
+
     setSaving(true);
     try {
       if (editingPeriod) {

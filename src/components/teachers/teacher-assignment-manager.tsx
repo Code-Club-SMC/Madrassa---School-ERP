@@ -479,12 +479,24 @@ function placementLabel(assignment: TeacherAssignment, options: AcademicOptions 
   if (assignment.system === "school") {
     const schoolClass = options?.schoolClasses.find((item) => item.id === assignment.schoolClassId);
     const section = schoolClass?.sections.find((item) => item.id === assignment.schoolSectionId);
-    return [institution?.name, program?.name, schoolClass?.name, section?.name].filter(Boolean).join(" · ");
+    const parts = [
+      institution?.name,
+      program?.name,
+      schoolClass?.name || assignment.schoolClassName,
+      section?.name,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(" · ") : "School Placement";
   }
 
   const category = options?.madrassaCategories.find((item) => item.id === assignment.madrassaCategoryId);
   const subcategory = category?.subcategories?.find((item) => item.id === assignment.madrassaSubcategoryId);
-  return [institution?.name, program?.name, category?.name, subcategory?.name].filter(Boolean).join(" · ");
+  const parts = [
+    institution?.name,
+    program?.name,
+    category?.name || assignment.madrassaCategoryName,
+    subcategory?.name || assignment.madrassaSubcategoryName,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : "Madrassa Placement";
 }
 
 function subjectLabel(subjectId: string | null, subjects: ExamSubjectOption[]) {

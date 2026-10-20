@@ -31,7 +31,7 @@ export function generateUniquePasswordForUser(name: string, role: string, id: st
 export function resolveUserPassword(user: {
   id?: string;
   name?: string;
-  role?: string;
+  role?: string | null;
   initialPassword?: string | null;
 }): {
   password: string;

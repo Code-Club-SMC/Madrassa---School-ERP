@@ -175,6 +175,36 @@ export function getMyTeacherClasses() {
   });
 }
 
+export type TeacherAttendanceClassItem = {
+  id: string;
+  system: "school" | "madrassa";
+  institutionId: string;
+  institutionName: string | null;
+  institutionNameUrdu: string | null;
+  schoolClassId: string | null;
+  schoolClassName: string | null;
+  schoolClassNameUrdu: string | null;
+  madrassaCategoryId: string | null;
+  madrassaCategoryName: string | null;
+  madrassaCategoryNameUrdu: string | null;
+  madrassaSubcategoryId: string | null;
+  madrassaSubcategoryName: string | null;
+  madrassaSubcategoryNameUrdu: string | null;
+  academicYear: string;
+  isDesignated: boolean;
+  designatedTeacherName: string | null;
+  periodLabel: string | null;
+  timeStart?: string | null;
+  isAlreadyMarked: boolean;
+  markedByName: string | null;
+};
+
+export function getMyTeacherAttendanceClasses(date: string) {
+  return requestJson<TeacherAttendanceClassItem[]>(
+    `/api/teachers/me/attendance-classes?date=${encodeURIComponent(date)}`,
+  );
+}
+
 export function getMyTeacherExams() {
   return requestJson<{
     assignments: TeacherClassAssignment[];

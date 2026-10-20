@@ -145,6 +145,7 @@ import { Route as ApiStudentsIdStatusRouteImport } from './routes/api/students/$
 import { Route as ApiTeachersIdActiveRouteImport } from './routes/api/teachers/$id/active'
 import { Route as ApiTeachersIdAssignmentsRouteImport } from './routes/api/teachers/$id/assignments'
 import { Route as ApiTeachersIdTimetableRouteImport } from './routes/api/teachers/$id/timetable'
+import { Route as ApiTeachersMeAttendanceClassesRouteImport } from './routes/api/teachers/me/attendance-classes'
 import { Route as ApiTeachersMeClassesRouteImport } from './routes/api/teachers/me/classes'
 import { Route as ApiTeachersMeDashboardRouteImport } from './routes/api/teachers/me/dashboard'
 import { Route as ApiTeachersMeExamsRouteImport } from './routes/api/teachers/me/exams'
@@ -933,6 +934,12 @@ const ApiTeachersIdTimetableRoute = ApiTeachersIdTimetableRouteImport.update({
   path: '/timetable',
   getParentRoute: () => ApiTeachersIdRoute,
 } as any)
+const ApiTeachersMeAttendanceClassesRoute =
+  ApiTeachersMeAttendanceClassesRouteImport.update({
+    id: '/api/teachers/me/attendance-classes',
+    path: '/api/teachers/me/attendance-classes',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiTeachersMeClassesRoute = ApiTeachersMeClassesRouteImport.update({
   id: '/api/teachers/me/classes',
   path: '/api/teachers/me/classes',
@@ -1298,6 +1305,7 @@ export interface FileRoutesByFullPath {
   '/api/teachers/$id/active': typeof ApiTeachersIdActiveRoute
   '/api/teachers/$id/assignments': typeof ApiTeachersIdAssignmentsRouteWithChildren
   '/api/teachers/$id/timetable': typeof ApiTeachersIdTimetableRouteWithChildren
+  '/api/teachers/me/attendance-classes': typeof ApiTeachersMeAttendanceClassesRoute
   '/api/teachers/me/classes': typeof ApiTeachersMeClassesRoute
   '/api/teachers/me/dashboard': typeof ApiTeachersMeDashboardRoute
   '/api/teachers/me/exams': typeof ApiTeachersMeExamsRoute
@@ -1466,6 +1474,7 @@ export interface FileRoutesByTo {
   '/api/teachers/$id/active': typeof ApiTeachersIdActiveRoute
   '/api/teachers/$id/assignments': typeof ApiTeachersIdAssignmentsRouteWithChildren
   '/api/teachers/$id/timetable': typeof ApiTeachersIdTimetableRouteWithChildren
+  '/api/teachers/me/attendance-classes': typeof ApiTeachersMeAttendanceClassesRoute
   '/api/teachers/me/classes': typeof ApiTeachersMeClassesRoute
   '/api/teachers/me/dashboard': typeof ApiTeachersMeDashboardRoute
   '/api/teachers/me/exams': typeof ApiTeachersMeExamsRoute
@@ -1645,6 +1654,7 @@ export interface FileRoutesById {
   '/api/teachers/$id/active': typeof ApiTeachersIdActiveRoute
   '/api/teachers/$id/assignments': typeof ApiTeachersIdAssignmentsRouteWithChildren
   '/api/teachers/$id/timetable': typeof ApiTeachersIdTimetableRouteWithChildren
+  '/api/teachers/me/attendance-classes': typeof ApiTeachersMeAttendanceClassesRoute
   '/api/teachers/me/classes': typeof ApiTeachersMeClassesRoute
   '/api/teachers/me/dashboard': typeof ApiTeachersMeDashboardRoute
   '/api/teachers/me/exams': typeof ApiTeachersMeExamsRoute
@@ -1824,6 +1834,7 @@ export interface FileRouteTypes {
     | '/api/teachers/$id/active'
     | '/api/teachers/$id/assignments'
     | '/api/teachers/$id/timetable'
+    | '/api/teachers/me/attendance-classes'
     | '/api/teachers/me/classes'
     | '/api/teachers/me/dashboard'
     | '/api/teachers/me/exams'
@@ -1992,6 +2003,7 @@ export interface FileRouteTypes {
     | '/api/teachers/$id/active'
     | '/api/teachers/$id/assignments'
     | '/api/teachers/$id/timetable'
+    | '/api/teachers/me/attendance-classes'
     | '/api/teachers/me/classes'
     | '/api/teachers/me/dashboard'
     | '/api/teachers/me/exams'
@@ -2170,6 +2182,7 @@ export interface FileRouteTypes {
     | '/api/teachers/$id/active'
     | '/api/teachers/$id/assignments'
     | '/api/teachers/$id/timetable'
+    | '/api/teachers/me/attendance-classes'
     | '/api/teachers/me/classes'
     | '/api/teachers/me/dashboard'
     | '/api/teachers/me/exams'
@@ -2273,6 +2286,7 @@ export interface RootRouteChildren {
   ApiParentsAdminGuardianAccountsRoute: typeof ApiParentsAdminGuardianAccountsRoute
   ApiParentsMeDashboardRoute: typeof ApiParentsMeDashboardRoute
   ApiPromotionsRunsIdRoute: typeof ApiPromotionsRunsIdRouteWithChildren
+  ApiTeachersMeAttendanceClassesRoute: typeof ApiTeachersMeAttendanceClassesRoute
   ApiTeachersMeClassesRoute: typeof ApiTeachersMeClassesRoute
   ApiTeachersMeDashboardRoute: typeof ApiTeachersMeDashboardRoute
   ApiTeachersMeExamsRoute: typeof ApiTeachersMeExamsRoute
@@ -3234,6 +3248,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/teachers/$id/timetable'
       preLoaderRoute: typeof ApiTeachersIdTimetableRouteImport
       parentRoute: typeof ApiTeachersIdRoute
+    }
+    '/api/teachers/me/attendance-classes': {
+      id: '/api/teachers/me/attendance-classes'
+      path: '/api/teachers/me/attendance-classes'
+      fullPath: '/api/teachers/me/attendance-classes'
+      preLoaderRoute: typeof ApiTeachersMeAttendanceClassesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/teachers/me/classes': {
       id: '/api/teachers/me/classes'
@@ -4261,6 +4282,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiParentsAdminGuardianAccountsRoute: ApiParentsAdminGuardianAccountsRoute,
   ApiParentsMeDashboardRoute: ApiParentsMeDashboardRoute,
   ApiPromotionsRunsIdRoute: ApiPromotionsRunsIdRouteWithChildren,
+  ApiTeachersMeAttendanceClassesRoute: ApiTeachersMeAttendanceClassesRoute,
   ApiTeachersMeClassesRoute: ApiTeachersMeClassesRoute,
   ApiTeachersMeDashboardRoute: ApiTeachersMeDashboardRoute,
   ApiTeachersMeExamsRoute: ApiTeachersMeExamsRoute,

@@ -25,6 +25,8 @@ import {
   getMyTeacherClasses,
   getMyTeacherExams,
   getMyTeacherReports,
+  getMyTeacherAttendanceClasses,
+  type TeacherAttendanceClassItem,
 } from "./teacher-api";
 import {
   getSchoolAttendanceRoster,
@@ -194,7 +196,6 @@ export function TeacherPortal() {
           {tab === "exams" && <ExamsTab data={exams} isUrdu={isUrdu} />}
           {tab === "attendance" && (
             <AttendanceTab
-              assignments={classes && classes.length > 0 ? classes : dashboard.assignments}
               isUrdu={isUrdu}
             />
           )}
@@ -630,25 +631,52 @@ function ExamsTab({
   );
 }
 
-function AttendanceTab({
-  assignments,
-  isUrdu,
-}: {
-  assignments: (TeacherAssignment | TeacherClassAssignment)[];
-  isUrdu: boolean;
-}) {
+function AttendanceTab({ isUrdu }: { isUrdu: boolean }) {
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const [selectedId, setSelectedId] = useState<string>(assignments[0]?.id ?? "");
   const [date, setDate] = useState<string>(todayStr);
+  const [classes, setClasses] = useState<TeacherAttendanceClassItem[]>([]);
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [selectedId, setSelectedId] = useState<string>("");
   const [roster, setRoster] = useState<AttendanceRosterPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [marks, setMarks] = useState<Record<string, AttendanceStatus>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    let active = true;
+    setLoadingClasses(true);
+    getMyTeacherAttendanceClasses(date)
+      .then((data) => {
+        if (!active) return;
+        setClasses(data);
+        if (data.length > 0) {
+          setSelectedId((prev) => (data.some((d) => d.id === prev) ? prev : data[0].id));
+        } else {
+          setSelectedId("");
+          setRoster(null);
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        toast.error(err instanceof Error ? err.message : "Could not load attendance classes");
+        setClasses([]);
+        setSelectedId("");
+        setRoster(null);
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoadingClasses(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [date]);
+
   const selected = useMemo(
-    () => assignments.find((a) => a.id === selectedId) ?? assignments[0] ?? null,
-    [assignments, selectedId],
+    () => classes.find((c) => c.id === selectedId) ?? classes[0] ?? null,
+    [classes, selectedId],
   );
 
   const loadRoster = useCallback(async () => {
@@ -664,7 +692,6 @@ function AttendanceTab({
         data = await getSchoolAttendanceRoster({
           date,
           classId: selected.schoolClassId,
-          sectionId: (selected as any).schoolSectionId || undefined,
         });
       } else {
         if (!selected.institutionId || !selected.madrassaSubcategoryId) {
@@ -739,7 +766,6 @@ function AttendanceTab({
         await markSchoolAttendance({
           date,
           classId: selected.schoolClassId!,
-          sectionId: (selected as any).schoolSectionId || undefined,
           rows,
         });
       } else {
@@ -758,23 +784,6 @@ function AttendanceTab({
       setSaving(false);
     }
   };
-
-  if (assignments.length === 0) {
-    return (
-      <Card>
-        <EmptyState
-          icon={CalendarCheck}
-          heading={isUrdu ? "کوئی تفویض شدہ کلاس نہیں" : "No assignments available for attendance"}
-          headingUrdu="کوئی تفویض شدہ کلاس نہیں"
-          description={
-            isUrdu
-              ? "حاضری لگانے کے لیے آپ کو کسی کلاس کا تفویض ہونا ضروری ہے۔"
-              : "You must be assigned to at least one class to mark attendance."
-          }
-        />
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -803,47 +812,86 @@ function AttendanceTab({
         </div>
 
         {/* Assigned Class Pills */}
-        <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t">
-          {assignments.map((assignment) => {
-            const active = (selected?.id ?? "") === assignment.id;
-            return (
-              <button
-                key={assignment.id}
-                type="button"
-                onClick={() => setSelectedId(assignment.id)}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-                  active
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background hover:bg-muted text-muted-foreground border-border",
-                )}
-              >
-                <Badge variant={active ? "outline" : "secondary"} className="text-[10px] py-0">
-                  {assignment.system}
-                </Badge>
-                <span className={cn(isUrdu && "font-urdu")}>
-                  {placementLabel(assignment, isUrdu)}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {loadingClasses ? (
+          <div className="mt-3 flex items-center justify-center py-4 border-t text-xs text-muted-foreground gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>{isUrdu ? "کلاسز لوڈ ہو رہی ہیں..." : "Checking scheduled classes..."}</span>
+          </div>
+        ) : classes.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2 pt-2 border-t">
+            {classes.map((item) => {
+              const active = (selected?.id ?? "") === item.id;
+              const rawName =
+                item.system === "school"
+                  ? (isUrdu ? (item.schoolClassNameUrdu || item.schoolClassName || "کلاس") : (item.schoolClassName || "Class"))
+                  : (isUrdu ? (item.madrassaSubcategoryNameUrdu || item.madrassaSubcategoryName || "درجہ") : (item.madrassaSubcategoryName || "Darja"));
+              const displayClassName = isUrdu
+                ? rawName
+                : rawName
+                    .split(/[\s_]+/)
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                    .join(" ");
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSelectedId(item.id)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
+                    active
+                      ? "bg-secondary text-secondary-foreground border-foreground/20 font-semibold"
+                      : "bg-background text-muted-foreground hover:bg-muted/60 border-border/60",
+                  )}
+                >
+                  <span className={cn(isUrdu && "font-urdu")}>
+                    {displayClassName}
+                  </span>
+                  {item.isAlreadyMarked && (
+                    <span className="ml-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-normal">
+                      ✓
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-3 pt-3 border-t">
+            <EmptyState
+              icon={CalendarCheck}
+              heading={isUrdu ? "حاضری کے لیے کوئی کلاس دستیاب نہیں" : "No classes scheduled for attendance on this date"}
+              headingUrdu="حاضری کے لیے کوئی کلاس دستیاب نہیں"
+              description={
+                isUrdu
+                  ? "اس تاریخ پر کسی کلاس میں آپ کا پہلا پیریڈ نہیں ہے۔ روزانہ حاضری صرف پہلے پیریڈ کا استاد ایک بار لگاتا ہے۔"
+                  : "You do not have the 1st period scheduled for any class on this date. Daily attendance is taken once daily by the designated 1st period teacher."
+              }
+            />
+          </div>
+        )}
       </Card>
 
       {/* Roster & Attendance Marker */}
-      {selected && (
+      {selected && classes.length > 0 && (
         <AttendanceMarker
-          title={placementLabel(selected, isUrdu)}
+          title={
+            selected.system === "school"
+              ? (isUrdu ? (selected.schoolClassNameUrdu ?? selected.schoolClassName ?? "کلاس") : (selected.schoolClassName ?? "Class"))
+              : (isUrdu ? (selected.madrassaSubcategoryNameUrdu ?? selected.madrassaSubcategoryName ?? "درجہ") : (selected.madrassaSubcategoryName ?? "Darja"))
+          }
           subtitle={
             isUrdu
-              ? `تاریخ: ${date} · تعلیمی سال: ${selected.academicYear}`
-              : `Date: ${date} · Academic Year: ${selected.academicYear}`
+              ? `تاریخ: ${date} · تعلیمی سال: ${selected.academicYear} · پیریڈ: ${selected.periodLabel ?? "پہلا پیریڈ"}`
+              : `Date: ${date} · Academic Year: ${selected.academicYear} · Period: ${selected.periodLabel ?? "1st Period"}`
           }
           roster={roster}
           loading={loading}
           saving={saving}
           marks={marks}
           notes={notes}
+          hideLate={true}
+          hideHeaderDetails={true}
           onSetStatus={handleSetStatus}
           onSetNote={handleSetNote}
           onMarkAllPresent={handleMarkAllPresent}
