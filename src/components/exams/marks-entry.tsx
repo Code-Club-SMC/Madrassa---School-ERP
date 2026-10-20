@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, FileText, Loader2, Lock, Printer, Save, Send } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, FileText, Loader2, Lock, Printer, Save, Send } from "lucide-react";
 import { toast } from "sonner";
 import { DmcView } from "@/components/exams/dmc-view";
 import {
@@ -87,6 +87,15 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
     return filtered.length > 0 ? filtered : exam.subjects;
   }, [isTeacher, exam, teacherAssignments]);
 
+  const todayStr = useMemo(() => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date()), []);
+  const deadline = useMemo(() => exam?.marksEntryEndDate || exam?.endDate || "", [exam]);
+  const isExamOngoing = useMemo(() => !!(exam?.endDate && todayStr < exam.endDate), [exam?.endDate, todayStr]);
+  const isDeadlinePassed = useMemo(() => !!(deadline && todayStr > deadline), [deadline, todayStr]);
+  const isTeacherEditingBlocked = useMemo(
+    () => isTeacher && (isExamOngoing || isDeadlinePassed || exam?.status === "published"),
+    [isTeacher, isExamOngoing, isDeadlinePassed, exam?.status]
+  );
+
   useEffect(() => {
     if (!isTeacher) return;
     setLoadingTeacher(true);
@@ -167,7 +176,7 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
   }, [drafts, payload?.students, subject]);
 
   async function handleSave() {
-    if (!payload || !subject || readOnly) return;
+    if (!payload || !subject || readOnly || isTeacherEditingBlocked) return;
     setSaving(true);
     try {
       for (const student of payload.students) {
@@ -275,7 +284,7 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!subject || subject.locked || saving || (isTeacher && teacherAllowedSubjects.length === 0)}
+                disabled={!subject || subject.locked || saving || isTeacherEditingBlocked || (isTeacher && teacherAllowedSubjects.length === 0)}
                 onClick={() => void handleSave()}
               >
                 {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
@@ -300,6 +309,54 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
           )}
         </div>
       </div>
+
+      {isTeacher && isExamOngoing && (
+        <div className="mb-4 rounded-xl border border-sky-500/30 bg-sky-500/10 p-4 text-sm text-sky-800 dark:text-sky-300 flex items-start gap-3">
+          <Clock className="h-5 w-5 shrink-0 mt-0.5 text-sky-600" />
+          <div>
+            <p className="font-semibold text-sm">
+              {isUrdu ? "امتحان ابھی اختتام پذیر نہیں ہوا ہے" : "Examination Schedule Ongoing"}
+            </p>
+            <p className="mt-1 text-xs">
+              {isUrdu
+                ? `یہ امتحان ${exam.endDate} کو اختتام پذیر ہوگا۔ امتحان مکمل ہونے کے بعد نمبرات کا اندراج شروع ہوگا۔`
+                : `This exam is scheduled until ${exam.endDate}. Marks entry will open once the exam concludes.`}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isTeacher && isDeadlinePassed && (
+        <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-3">
+          <Lock className="h-5 w-5 shrink-0 mt-0.5 text-amber-600" />
+          <div>
+            <p className="font-semibold text-sm">
+              {isUrdu ? "نمبرات کے اندراج کی تاریخ ختم ہو چکی ہے" : "Marks Entry Deadline Passed"}
+            </p>
+            <p className="mt-1 text-xs">
+              {isUrdu
+                ? `نمبرات کے اندراج کی آخری تاریخ (${deadline}) گزر چکی ہے۔ اب نمبرات مقفل ہو چکے ہیں۔ کسی تبدیلی کے لیے ایڈمن سے رابطہ کریں۔`
+                : `The marks entry deadline was ${deadline}. Editing is now locked. Please contact administration for changes.`}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isTeacher && !isExamOngoing && !isDeadlinePassed && exam.status !== "published" && (
+        <div className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-800 dark:text-emerald-300 flex items-start gap-3">
+          <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5 text-emerald-600" />
+          <div>
+            <p className="font-semibold text-sm">
+              {isUrdu ? "اندراج نمبرات جاری ہے" : "Marks Entry Window Active"}
+            </p>
+            <p className="mt-1 text-xs">
+              {isUrdu
+                ? `آپ آخری تاریخ (${deadline}) تک اپنے طلباء کے نمبرات درج اور تبدیل کر سکتے ہیں۔`
+                : `You can enter and update marks until the deadline on ${deadline}.`}
+            </p>
+          </div>
+        </div>
+      )}
 
       {isTeacher && !loadingTeacher && teacherAllowedSubjects.length === 0 && (
         <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-3">

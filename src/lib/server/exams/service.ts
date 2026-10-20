@@ -78,6 +78,7 @@ export const examInputSchema = z.object({
   nameUrdu: z.string().trim().min(1),
   startDate: z.string().trim().min(1),
   endDate: z.string().trim().min(1),
+  marksEntryEndDate: z.string().trim().min(1).optional(),
   subjectIds: z.array(z.string().trim().min(1)).default([]),
 });
 
@@ -553,6 +554,13 @@ export async function createExamSession(request: Request, input: z.infer<typeof 
   const endDate = parseDateOnly(input.endDate, "endDate");
   if (startDate > endDate) throw new HttpError("Start date cannot be after end date", 400);
 
+  const marksEntryEndDate = input.marksEntryEndDate
+    ? parseDateOnly(input.marksEntryEndDate, "marksEntryEndDate")
+    : endDate;
+  if (marksEntryEndDate < endDate) {
+    throw new HttpError("Marks entry deadline cannot be earlier than exam end date", 400);
+  }
+
   let institutionId = input.institutionId;
   let programId = input.programId;
   let academicYear = input.academicYear;
@@ -599,6 +607,7 @@ export async function createExamSession(request: Request, input: z.infer<typeof 
       nameUrdu: input.nameUrdu,
       startDate,
       endDate,
+      marksEntryEndDate,
       status: "draft",
       createdByUserId: actor.id,
     });
@@ -689,6 +698,7 @@ export async function updateExamSession(
         nameUrdu: input.nameUrdu,
         startDate: input.startDate ? parseDateOnly(input.startDate, "startDate") : undefined,
         endDate: input.endDate ? parseDateOnly(input.endDate, "endDate") : undefined,
+        marksEntryEndDate: input.marksEntryEndDate ? parseDateOnly(input.marksEntryEndDate, "marksEntryEndDate") : undefined,
         status: input.status,
         updatedAt: new Date(),
       })
@@ -855,6 +865,22 @@ export async function saveExamMarks(request: Request, examId: string, input: z.i
 
   if (actor) {
     await assertTeacherCanAccessExamSubject(actor, exam, examSubject.subjectId);
+    if (actor.role === "teacher") {
+      const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date());
+      if (todayStr < exam.endDate) {
+        throw new HttpError(
+          `امتحان کے اختتام (${exam.endDate}) کے بعد نمبرات کا اندراج شروع ہوگا۔ / Marks entry opens after the exam concludes on ${exam.endDate}`,
+          400,
+        );
+      }
+      const deadline = exam.marksEntryEndDate || exam.endDate;
+      if (todayStr > deadline) {
+        throw new HttpError(
+          `نمبرات کے اندراج کی آخری تاریخ (${deadline}) گزر چکی ہے۔ / Marks entry deadline (${deadline}) has passed. Editing is closed.`,
+          400,
+        );
+      }
+    }
   }
 
   const roster = await loadExamRoster(exam);
@@ -952,7 +978,20 @@ export async function publishExamResults(request: Request, examId: string) {
   if (exam.status === "published") throw new HttpError("Exam has already been published", 400);
   const subjects = (await loadSessionSubjects([examId])).get(examId) ?? [];
   if (subjects.length === 0) throw new HttpError("Exam must have at least one subject", 400);
-  if (subjects.some((subject) => !subject.locked)) throw new HttpError("All exam subjects must be locked before publishing", 400);
+
+  // Auto-lock all subjects and marks when publishing
+  for (const subject of subjects) {
+    if (!subject.locked) {
+      await db
+        .update(examSessionSubjects)
+        .set({ locked: true, updatedAt: new Date() })
+        .where(eq(examSessionSubjects.id, subject.id));
+      await db
+        .update(examMarks)
+        .set({ status: "locked", updatedAt: new Date() })
+        .where(eq(examMarks.examSubjectId, subject.id));
+    }
+  }
 
   const roster = await loadExamRoster(exam);
   const marks = await loadMarksForExam(db, examId, roster.map((row) => row.enrollmentId));
@@ -1543,6 +1582,7 @@ function serializeExam(row: ExamDetailRow, subjects: ExamSessionSubjectRow[], st
     nameUrdu: row.nameUrdu,
     startDate: row.startDate,
     endDate: row.endDate,
+    marksEntryEndDate: row.marksEntryEndDate ?? row.endDate,
     status: row.status,
     groupLabel: groupLabelForExam(row),
     subjects: subjects.map(serializeSessionSubject),
@@ -1681,6 +1721,7 @@ async function fetchExamDetails(clauses: SQL[]): Promise<ExamDetailRow[]> {
       nameUrdu: examSessions.nameUrdu,
       startDate: examSessions.startDate,
       endDate: examSessions.endDate,
+      marksEntryEndDate: examSessions.marksEntryEndDate,
       status: examSessions.status,
       metadata: examSessions.metadata,
       createdByUserId: examSessions.createdByUserId,

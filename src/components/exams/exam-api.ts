@@ -115,6 +115,7 @@ export function createExamSession(input: {
   nameUrdu: string;
   startDate: string;
   endDate: string;
+  marksEntryEndDate?: string;
   subjectIds: string[];
 }) {
   return requestJson<{ exam: ExamSession }>("/api/exams/sessions", {

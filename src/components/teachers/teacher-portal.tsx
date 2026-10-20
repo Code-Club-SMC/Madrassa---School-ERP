@@ -10,6 +10,10 @@ import {
   User,
   BarChart3,
   Calendar,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  PenLine,
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -510,61 +514,92 @@ function ExamsTab({
     );
   }
 
+  const openSessions = data.sessions.filter((s) => s.isOpen);
+  const closedSessions = data.sessions.filter((s) => !s.isOpen);
+
   return (
-    <div className="space-y-4">
-      <Card className="p-5">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-5">
+      {/* Overview Stat Counters */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <Card className="p-4 border border-emerald-500/20 bg-emerald-500/5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+              <PenLine className="h-5 w-5" />
+            </div>
+            <div>
+              <p className={cn("text-xs text-muted-foreground", isUrdu && "font-urdu")}>
+                {isUrdu ? "اندراج کے لیے کھلے امتحانات" : "Open for Marks Entry"}
+              </p>
+              <p className="text-xl font-bold text-foreground">{openSessions.length}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 border border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <BookOpen className="h-5 w-5" />
+            </div>
+            <div>
+              <p className={cn("text-xs text-muted-foreground", isUrdu && "font-urdu")}>
+                {isUrdu ? "تفویض شدہ مضامین" : "Assigned Subjects"}
+              </p>
+              <p className="text-xl font-bold text-foreground">{data.assignments.length}</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-4 border border-border col-span-2 sm:col-span-1">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div>
+              <p className={cn("text-xs text-muted-foreground", isUrdu && "font-urdu")}>
+                {isUrdu ? "سابقہ / شائع شدہ" : "Past / Published"}
+              </p>
+              <p className="text-xl font-bold text-foreground">{closedSessions.length}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* 1. Open for Marks Entry */}
+      <Card className="p-5 border-emerald-500/30 shadow-xs">
+        <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <h3 className={cn("text-base font-semibold", isUrdu && "font-urdu")}>
-              {isUrdu ? "آپ کے تفویض شدہ مضامین" : "Your Assigned Exam Subjects"}
-            </h3>
-            <p className={cn("text-sm text-muted-foreground", isUrdu && "font-urdu")}>
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <h3 className={cn("text-base font-semibold text-foreground", isUrdu && "font-urdu")}>
+                {isUrdu ? "اندراج نمبرات برائے فعال امتحانات" : "Active Exams for Marks Entry"}
+              </h3>
+            </div>
+            <p className={cn("text-xs text-muted-foreground mt-0.5", isUrdu && "font-urdu")}>
               {isUrdu
-                ? "آپ صرف انہی مضامین کے امتحانی نمبر درج کر سکتے ہیں جو آپ کو تفویض ہیں۔"
-                : "Classes and subjects you teach — marks entry is restricted to these subjects."}
+                ? "امتحانات مکمل ہو چکے ہیں۔ براہ کرم آخری تاریخ سے قبل اپنے تفویض شدہ مضامین کے نمبر درج کریں۔"
+                : "Exams have concluded. Please submit student marks before the marks entry deadline."}
             </p>
           </div>
+          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-xs px-2.5 py-0.5 font-medium shrink-0">
+            {openSessions.length} {openSessions.length === 1 ? "Class" : "Classes"}
+          </Badge>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {data.assignments.map((assignment) => (
-            <div key={assignment.id} className="rounded-md border p-3">
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">{assignment.system}</Badge>
-                <span className="text-xs text-muted-foreground">{assignment.academicYear}</span>
-              </div>
-              <p className={cn("mt-2 text-sm font-medium", isUrdu && "font-urdu")}>
-                {placementLabelForClasses(assignment, isUrdu)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {assignment.subjectName ?? assignment.subjectCode ?? (isUrdu ? "کوئی مضمون نہیں" : "No subject")}
-              </p>
-            </div>
-          ))}
-          {data.assignments.length === 0 && (
-            <p className={cn("text-sm text-muted-foreground py-4 text-center sm:col-span-2", isUrdu && "font-urdu")}>
-              {isUrdu ? "کوئی مضمون تفویض نہیں ہے۔" : "No assigned subjects found."}
+        {openSessions.length === 0 ? (
+          <div className="p-6 text-center border border-dashed rounded-xl bg-muted/20">
+            <CheckCircle2 className="h-8 w-8 text-muted-foreground/60 mx-auto mb-2" />
+            <p className={cn("text-sm font-medium text-foreground", isUrdu && "font-urdu")}>
+              {isUrdu ? "فی الوقت کوئی امتحان نمبرات کے اندراج کے لیے موجود نہیں ہے" : "No exams currently open for marks entry"}
             </p>
-          )}
-        </div>
-      </Card>
-
-      <Card className="p-5">
-        <h3 className={cn("text-base font-semibold", isUrdu && "font-urdu")}>
-          {isUrdu ? "امتحانی سیشنز" : "Exam Sessions"}
-        </h3>
-        <p className={cn("text-sm text-muted-foreground", isUrdu && "font-urdu")}>
-          {isUrdu
-            ? "نمبر درج کرنے اور نتائج دیکھنے کے لیے سیشن منتخب کریں۔"
-            : "Available exam sessions for marks entry and grading."}
-        </p>
-        {data.sessions.length === 0 ? (
-          <p className={cn("mt-4 text-sm text-muted-foreground", isUrdu && "font-urdu")}>
-            {isUrdu ? "کوئی امتحانی سیشن دستیاب نہیں ہے۔" : "No exams available."}
-          </p>
+            <p className={cn("text-xs text-muted-foreground mt-1 max-w-md mx-auto", isUrdu && "font-urdu")}>
+              {isUrdu
+                ? "امتحان کا شیڈول ختم ہونے کے بعد امتحانی سیشن یہاں ظاہر ہوں گے اور آپ اپنے تفویض شدہ مضامین کے نمبر درج کر سکیں گے۔"
+                : "Internal examinations will appear here once the exam period concludes, allowing you to enter marks until the deadline."}
+            </p>
+          </div>
         ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {data.sessions.map((session) => {
+          <div className="grid gap-3.5 sm:grid-cols-2">
+            {openSessions.map((session) => {
               const classLabel =
                 session.system === "school"
                   ? (isUrdu ? session.schoolClassNameUrdu : session.schoolClassName) ||
@@ -582,43 +617,54 @@ function ExamsTab({
                       .join(" · ") || session.madrassaSubcategoryId;
 
               const isMadrassa = session.system === "madrassa";
+              const marksPath = isMadrassa
+                ? `/madrassa/exams/${session.id}/marks`
+                : `/school/exams/${session.id}/marks`;
 
               return (
-                <div key={session.id} className="rounded-md border p-3 flex flex-col justify-between">
+                <div
+                  key={session.id}
+                  className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.02] p-4 flex flex-col justify-between hover:border-emerald-500/40 hover:shadow-sm transition-all"
+                >
                   <div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">{session.name}</p>
-                      <Badge variant="outline">{session.status}</Badge>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-primary/10 text-primary border border-primary/20 mb-1.5">
+                          {classLabel}
+                        </span>
+                        <h4 className="font-semibold text-sm text-foreground truncate">{session.name}</h4>
+                        {session.nameUrdu && (
+                          <p className="text-xs text-muted-foreground font-urdu mt-0.5 truncate">{session.nameUrdu}</p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 shrink-0">
+                        {isUrdu ? "اندراج جاری" : "Open"}
+                      </Badge>
                     </div>
-                    {classLabel && (
-                      <p className={cn("text-xs font-semibold text-primary mt-1", isUrdu && "font-urdu")}>
-                        {classLabel}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-0.5">{session.academicYear}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {session.startDate} - {session.endDate}
-                    </p>
+
+                    <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5 text-muted-foreground/70" />
+                        <span>
+                          {isUrdu ? "امتحانی مدت:" : "Exam dates:"} {session.startDate} – {session.endDate}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 font-medium">
+                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          {isUrdu ? "آخری تاریخ برائے اندراج:" : "Marks Deadline:"}{" "}
+                          <strong>{session.marksEntryEndDate || session.endDate}</strong>
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-3 pt-2 border-t flex justify-end">
-                    <Button size="sm" variant="outline" asChild>
-                      {isMadrassa ? (
-                        <Link
-                          to="/madrassa/exams/$id/marks"
-                          params={{ id: session.id }}
-                        >
-                          <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
-                          {isUrdu ? "نمبر درج کریں" : "Enter Marks"}
-                        </Link>
-                      ) : (
-                        <Link
-                          to="/school/exams/$id/marks"
-                          params={{ id: session.id }}
-                        >
-                          <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
-                          {isUrdu ? "نمبر درج کریں" : "Enter Marks"}
-                        </Link>
-                      )}
+
+                  <div className="mt-4 pt-3 border-t border-border/60 flex justify-end">
+                    <Button size="sm" className="w-full sm:w-auto gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs" asChild>
+                      <Link to={marksPath as any}>
+                        <PenLine className="h-3.5 w-3.5" />
+                        {isUrdu ? "نمبرات درج کریں" : "Enter Marks"}
+                      </Link>
                     </Button>
                   </div>
                 </div>
@@ -626,6 +672,138 @@ function ExamsTab({
             })}
           </div>
         )}
+      </Card>
+
+      {/* 2. Past / Published Sessions */}
+      {closedSessions.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className={cn("text-base font-semibold", isUrdu && "font-urdu")}>
+                {isUrdu ? "سابقہ و شائع شدہ امتحانات" : "Past & Published Examinations"}
+              </h3>
+              <p className={cn("text-xs text-muted-foreground mt-0.5", isUrdu && "font-urdu")}>
+                {isUrdu
+                  ? "جن امتحانات کے اندراج کی تاریخ گزر چکی ہے یا نتائج شائع ہو چکے ہیں۔"
+                  : "Examinations where the marks deadline has passed or results are published."}
+              </p>
+            </div>
+            <Badge variant="secondary" className="text-xs">
+              {closedSessions.length}
+            </Badge>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {closedSessions.map((session) => {
+              const classLabel =
+                session.system === "school"
+                  ? (isUrdu ? session.schoolClassNameUrdu : session.schoolClassName) ||
+                    session.schoolClassName ||
+                    session.schoolClassId
+                  : [
+                      isUrdu
+                        ? session.madrassaCategoryNameUrdu || session.madrassaCategoryName
+                        : session.madrassaCategoryName,
+                      isUrdu
+                        ? session.madrassaSubcategoryNameUrdu || session.madrassaSubcategoryName
+                        : session.madrassaSubcategoryName,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || session.madrassaSubcategoryId;
+
+              const isMadrassa = session.system === "madrassa";
+              const marksPath = isMadrassa
+                ? `/madrassa/exams/${session.id}/marks`
+                : `/school/exams/${session.id}/marks`;
+              const isPublished = session.status === "published";
+
+              return (
+                <div key={session.id} className="rounded-xl border border-border/70 p-4 flex flex-col justify-between bg-card hover:bg-muted/20 transition-colors">
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-muted text-foreground mb-1">
+                          {classLabel}
+                        </span>
+                        <h4 className="font-semibold text-sm text-foreground truncate">{session.name}</h4>
+                        {session.nameUrdu && (
+                          <p className="text-xs text-muted-foreground font-urdu mt-0.5 truncate">{session.nameUrdu}</p>
+                        )}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] capitalize shrink-0",
+                          isPublished
+                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {isPublished ? (isUrdu ? "شائع شدہ" : "Published") : (isUrdu ? "اندراج بند" : "Closed")}
+                      </Badge>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {session.academicYear} · {session.startDate} – {session.endDate}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 pt-2.5 border-t border-border/50 flex justify-end">
+                    <Button size="sm" variant="outline" className="text-xs h-7.5" asChild>
+                      <Link to={marksPath as any}>
+                        <ClipboardList className="mr-1.5 h-3.5 w-3.5" />
+                        {isUrdu ? "ریکارڈ دیکھیں" : "View Record"}
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* 3. Assigned Subjects */}
+      <Card className="p-5">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-3">
+          <div>
+            <h3 className={cn("text-base font-semibold", isUrdu && "font-urdu")}>
+              {isUrdu ? "آپ کے تفویض شدہ مضامین" : "Your Assigned Exam Subjects"}
+            </h3>
+            <p className={cn("text-xs text-muted-foreground mt-0.5", isUrdu && "font-urdu")}>
+              {isUrdu
+                ? "آپ صرف انہی مضامین کے امتحانی نمبر درج کر سکتے ہیں جو آپ کو تفویض ہیں۔"
+                : "Marks entry is restricted strictly to your assigned classes and subjects."}
+            </p>
+          </div>
+          <Badge variant="outline" className="text-xs shrink-0 self-start sm:self-auto">
+            {data.assignments.length} {isUrdu ? "مضامین" : "Subjects"}
+          </Badge>
+        </div>
+
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {data.assignments.map((assignment) => (
+            <div key={assignment.id} className="rounded-lg border p-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 capitalize">
+                  {assignment.system}
+                </Badge>
+                <span className="text-[10px] text-muted-foreground">{assignment.academicYear}</span>
+              </div>
+              <p className={cn("mt-1.5 text-xs font-semibold text-foreground", isUrdu && "font-urdu")}>
+                {placementLabelForClasses(assignment, isUrdu)}
+              </p>
+              <p className="text-xs text-primary font-medium mt-0.5">
+                {assignment.subjectName ?? assignment.subjectCode ?? (isUrdu ? "کوئی مضمون نہیں" : "No subject")}
+              </p>
+            </div>
+          ))}
+          {data.assignments.length === 0 && (
+            <p className={cn("text-xs text-muted-foreground py-4 text-center sm:col-span-2 lg:col-span-3", isUrdu && "font-urdu")}>
+              {isUrdu ? "کوئی مضمون تفویض نہیں ہے۔" : "No assigned subjects found."}
+            </p>
+          )}
+        </div>
       </Card>
     </div>
   );

@@ -25,6 +25,10 @@ import {
   X,
   Filter,
   Building2,
+  Clock,
+  Send,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -35,6 +39,7 @@ import {
   getExamSession,
   listExamSessions,
   listExamSubjects,
+  publishExam,
 } from "@/components/exams/exam-api";
 import type { ExamReportPayload, ExamSession, ExamSubject, ExamSystem } from "@/components/exams/exam-types";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
@@ -84,7 +89,9 @@ export type GroupedExam = {
   institutionName: string | null;
   startDate: string;
   endDate: string;
+  marksEntryEndDate: string;
   status: "draft" | "active" | "locked" | "published";
+  phase: "upcoming" | "in_progress" | "marks_entry" | "ready_to_publish" | "published";
   sessions: ExamSession[];
   totalClasses: number;
   totalStudents: number;
@@ -92,6 +99,66 @@ export type GroupedExam = {
   classLabels: string[];
   allLocked: boolean;
 };
+
+export function getExamPhase(exam: {
+  startDate: string;
+  endDate: string;
+  marksEntryEndDate?: string | null;
+  status: string;
+}): {
+  phase: "upcoming" | "in_progress" | "marks_entry" | "ready_to_publish" | "published";
+  label: string;
+  labelUrdu: string;
+  tone: string;
+  dot: string;
+} {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date());
+  const deadline = exam.marksEntryEndDate || exam.endDate;
+
+  if (exam.status === "published") {
+    return {
+      phase: "published",
+      label: "Published",
+      labelUrdu: "شائع شدہ",
+      tone: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+      dot: "bg-emerald-500",
+    };
+  }
+  if (today < exam.startDate) {
+    return {
+      phase: "upcoming",
+      label: "Scheduled",
+      labelUrdu: "طے شدہ",
+      tone: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30",
+      dot: "bg-sky-500",
+    };
+  }
+  if (today <= exam.endDate) {
+    return {
+      phase: "in_progress",
+      label: "Exam in Progress",
+      labelUrdu: "امتحان جاری ہے",
+      tone: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30",
+      dot: "bg-blue-500 animate-pulse",
+    };
+  }
+  if (today <= deadline) {
+    return {
+      phase: "marks_entry",
+      label: "Marks Entry Open",
+      labelUrdu: "اندراج نمبرات جاری",
+      tone: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+      dot: "bg-amber-500",
+    };
+  }
+  return {
+    phase: "ready_to_publish",
+    label: "Ready to Publish",
+    labelUrdu: "اشاعت کے لیے تیار",
+    tone: "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30 font-semibold",
+    dot: "bg-purple-500 animate-pulse",
+  };
+}
 
 export function groupExamSessions(sessions: ExamSession[]): GroupedExam[] {
   const map = new Map<string, ExamSession[]>();
@@ -125,6 +192,14 @@ export function groupExamSessions(sessions: ExamSession[]): GroupedExam[] {
       (s) => s.subjects && s.subjects.length > 0 && s.subjects.every((sub) => sub.locked),
     );
 
+    const marksEntryEndDate = first.marksEntryEndDate || first.endDate;
+    const phaseInfo = getExamPhase({
+      startDate: first.startDate,
+      endDate: first.endDate,
+      marksEntryEndDate,
+      status,
+    });
+
     result.push({
       key,
       primaryId: first.id,
@@ -138,7 +213,9 @@ export function groupExamSessions(sessions: ExamSession[]): GroupedExam[] {
       institutionName: first.institutionName,
       startDate: first.startDate,
       endDate: first.endDate,
+      marksEntryEndDate,
       status,
+      phase: phaseInfo.phase,
       sessions: groupSessions,
       totalClasses: groupSessions.length,
       totalStudents,
@@ -516,6 +593,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
     nameUrdu: "",
     startDate: "",
     endDate: "",
+    marksEntryEndDate: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -701,6 +779,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
             nameUrdu: form.nameUrdu,
             startDate: form.startDate,
             endDate: form.endDate,
+            marksEntryEndDate: form.marksEntryEndDate || form.endDate,
           });
           createdCount++;
         }
@@ -746,6 +825,7 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
               nameUrdu: form.nameUrdu,
               startDate: form.startDate,
               endDate: form.endDate,
+              marksEntryEndDate: form.marksEntryEndDate || form.endDate,
             });
             createdCount++;
           }
@@ -1164,14 +1244,52 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
               </Select>
             </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Start Date">
-                <Input type="date" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} />
+              <Field label="Start Date · آغاز">
+                <Input
+                  type="date"
+                  value={form.startDate}
+                  onChange={(event) => {
+                    const s = event.target.value;
+                    setForm({
+                      ...form,
+                      startDate: s,
+                      endDate: form.endDate && form.endDate >= s ? form.endDate : s,
+                      marksEntryEndDate: form.marksEntryEndDate && form.marksEntryEndDate >= s ? form.marksEntryEndDate : s,
+                    });
+                  }}
+                />
               </Field>
-              <Field label="End Date">
-                <Input type="date" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} />
+              <Field label="End Date · اختتام">
+                <Input
+                  type="date"
+                  min={form.startDate}
+                  value={form.endDate}
+                  onChange={(event) => {
+                    const e = event.target.value;
+                    setForm({
+                      ...form,
+                      endDate: e,
+                      marksEntryEndDate: !form.marksEntryEndDate || form.marksEntryEndDate < e ? e : form.marksEntryEndDate,
+                    });
+                  }}
+                />
               </Field>
             </div>
           </div>
+
+          <Field label="Marks Entry Deadline · آخری تاریخ برائے اندراج نمبرات">
+            <div className="space-y-1">
+              <Input
+                type="date"
+                min={form.endDate || form.startDate}
+                value={form.marksEntryEndDate}
+                onChange={(event) => setForm({ ...form, marksEntryEndDate: event.target.value })}
+              />
+              <p className="text-[11px] text-muted-foreground font-urdu" dir="rtl">
+                اس تاریخ تک اساتذہ اپنے پورٹل سے نمبرات درج کر سکیں گے۔ اس تاریخ کے بعد ہی رزلٹ شائع کرنے کا بٹن ظاہر ہوگا۔
+              </p>
+            </div>
+          </Field>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" disabled={submitting} onClick={() => setOpen(false)}>Cancel</Button>
@@ -1211,6 +1329,42 @@ export function ExamDetailWorkspace({ examId, system }: { examId: string; system
   const [loading, setLoading] = useState(true);
   const [deleteSessionTarget, setDeleteSessionTarget] = useState<ExamSession | null>(null);
   const [deletingSession, setDeletingSession] = useState(false);
+  const [publishingAll, setPublishingAll] = useState(false);
+  const [confirmPublishAll, setConfirmPublishAll] = useState(false);
+
+  const examPhase = useMemo(() => {
+    if (!exam) return null;
+    return getExamPhase({
+      startDate: exam.startDate,
+      endDate: exam.endDate,
+      marksEntryEndDate: exam.marksEntryEndDate,
+      status: exam.status,
+    });
+  }, [exam]);
+
+  const handlePublishAll = async () => {
+    setPublishingAll(true);
+    try {
+      let count = 0;
+      for (const s of siblingSessions) {
+        if (s.status !== "published") {
+          await publishExam(s.id);
+          count++;
+        }
+      }
+      toast.success(
+        count > 0
+          ? `امتحانی نتائج کامیابی سے شائع کر دیے گئے۔ (${count} classes published)`
+          : "Results are already published.",
+      );
+      await loadExamAndSiblings();
+    } catch (err: any) {
+      toast.error(err instanceof Error ? err.message : "Failed to publish examination results");
+    } finally {
+      setPublishingAll(false);
+      setConfirmPublishAll(false);
+    }
+  };
 
   const loadExamAndSiblings = useCallback(async () => {
     setLoading(true);
@@ -1311,6 +1465,17 @@ export function ExamDetailWorkspace({ examId, system }: { examId: string; system
               <Printer className="h-3.5 w-3.5" />
               Print Date Sheet
             </Button>
+            {examPhase?.phase === "ready_to_publish" && (
+              <Button
+                size="sm"
+                disabled={publishingAll}
+                onClick={() => setConfirmPublishAll(true)}
+                className="gap-1.5 shadow-xs bg-purple-600 hover:bg-purple-700 text-white font-medium"
+              >
+                {publishingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                Publish Results · شائع کریں
+              </Button>
+            )}
             <Badge
               variant="outline"
               className={cn("capitalize text-xs font-medium px-2.5 py-1", statusTone[exam.status])}
@@ -1321,12 +1486,122 @@ export function ExamDetailWorkspace({ examId, system }: { examId: string; system
         }
       />
 
+      {/* Lifecycle & Result Publishing Banner */}
+      {exam.status === "published" ? (
+        <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-500/20">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                نتائج باضابطہ شائع شدہ ہیں · Examination Results Published
+                <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">
+                  Published
+                </Badge>
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                تمام شریک درجات کے نتائج شائع ہو چکے ہیں۔ آپ بروش شیٹ، گزٹ اور ڈی ایم سی کارڈز دیکھ اور پرنٹ کر سکتے ہیں۔
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button asChild size="sm" variant="outline" className="text-xs h-8">
+              <Link to={system === "school" ? `/school/exams/${currentSession.id}/results` : `/madrassa/exams/${currentSession.id}/results` as any}>
+                <FileText className="h-3.5 w-3.5 mr-1.5" />
+                Broad Sheet / Results
+              </Link>
+            </Button>
+          </div>
+        </div>
+      ) : examPhase?.phase === "ready_to_publish" ? (
+        <div className="p-4 rounded-xl border border-purple-500/40 bg-purple-500/5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0 border border-purple-500/30">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                اندراج نمبرات مکمل — نتائج شائع کرنے کے لیے تیار
+                <Badge variant="outline" className="text-[10px] bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 font-semibold animate-pulse">
+                  Ready to Publish
+                </Badge>
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                اساتذہ کے لیے نمبرات کے اندراج کی آخری تاریخ ({formatDate(exam.marksEntryEndDate || exam.endDate)}) گزر چکی ہے۔ اب تمام {aggregateStats.totalClasses} شریک جماعتوں کا نتیجہ باضابطہ شائع کریں۔
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            disabled={publishingAll}
+            onClick={() => setConfirmPublishAll(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-medium text-xs h-9 px-4 shadow-sm gap-2 shrink-0 cursor-pointer"
+          >
+            {publishingAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            امتحانی نتائج شائع کریں · Publish Results
+          </Button>
+        </div>
+      ) : examPhase?.phase === "marks_entry" ? (
+        <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 border border-amber-500/20">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                اساتذہ کا اندراج نمبرات جاری ہے (آخری تاریخ: {formatDate(exam.marksEntryEndDate || exam.endDate)})
+                <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">
+                  Marks Entry Window
+                </Badge>
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                اساتذہ اپنے پورٹل سے نمبرات درج کر رہے ہیں۔ مقررہ تاریخ گزرنے پر نتائج شائع کرنے کا بٹن فعال ہو جائے گا۔
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={publishingAll}
+            onClick={() => setConfirmPublishAll(true)}
+            className="text-xs h-8 text-muted-foreground hover:text-foreground shrink-0"
+            title="Force publish results ahead of deadline"
+          >
+            {publishingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3 mr-1" />}
+            Force Publish
+          </Button>
+        </div>
+      ) : (
+        <div className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/5 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 border border-blue-500/20">
+            <Calendar className="h-5 w-5" />
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+              امتحان جاری ہے · Examination in Progress
+              <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30">
+                Ongoing
+              </Badge>
+            </h4>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              امتحانی مدت: {formatDate(exam.startDate)} تا {formatDate(exam.endDate)}۔ امتحان ختم ہونے کے بعد اساتذہ کے لیے پورٹل میں نمبرات کا اندراج اوپن ہوگا۔
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Overview Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Stat
           icon={Calendar}
           label="Examination Schedule"
           value={`${formatDate(exam.startDate)} – ${formatDate(exam.endDate)}`}
+        />
+        <Stat
+          icon={Clock}
+          label="Marks Entry Deadline"
+          value={formatDate(exam.marksEntryEndDate || exam.endDate)}
         />
         <Stat
           icon={Layers}
@@ -1337,11 +1612,6 @@ export function ExamDetailWorkspace({ examId, system }: { examId: string; system
           icon={Users}
           label="Total Candidates"
           value={`${aggregateStats.totalStudents} Students`}
-        />
-        <Stat
-          icon={Award}
-          label="Total Subjects"
-          value={`${aggregateStats.totalSubjects} Subjects`}
         />
       </div>
 
@@ -1516,6 +1786,33 @@ export function ExamDetailWorkspace({ examId, system }: { examId: string; system
           </Table>
         </Card>
       </div>
+
+      {/* Publish All Classes Dialog */}
+      <AlertDialog
+        open={confirmPublishAll}
+        onOpenChange={(open) => !open && setConfirmPublishAll(false)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>نتائج شائع کریں · Publish Examination Results</AlertDialogTitle>
+            <AlertDialogDescription>
+              کیا آپ واقعی &ldquo;{cleanExamName(exam.name)}&rdquo; کے تمام {aggregateStats.totalClasses} شریک درجات کے امتحانی نتائج باضابطہ شائع کرنا چاہتے ہیں؟
+              <br /><br />
+              اشاعت کے بعد تمام درجات کے طلباء کے حاصل کردہ نمبرات، پوزیشنز اور DMCs حتمی ہو جائیں گے اور طلباء و اساتذہ کے لیے دستیاب ہوں گے۔
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={publishingAll}>منسوخ کریں (Cancel)</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handlePublishAll()}
+              disabled={publishingAll}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-medium"
+            >
+              {publishingAll ? "شائع ہو رہا ہے..." : "ہاں، نتائج شائع کریں (Publish Now)"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Single Class Dialog */}
       <AlertDialog
@@ -1699,10 +1996,10 @@ function GroupedExamTableView({
               <TableHead className="font-semibold text-xs">Exam Title</TableHead>
               <TableHead className="font-semibold text-xs text-center">Classes</TableHead>
               <TableHead className="font-semibold text-xs">Academic Year</TableHead>
-              <TableHead className="font-semibold text-xs">Date Range</TableHead>
+              <TableHead className="font-semibold text-xs">Dates & Deadline</TableHead>
               <TableHead className="font-semibold text-xs text-center">Total Subjects</TableHead>
               <TableHead className="font-semibold text-xs text-center">Total Students</TableHead>
-              <TableHead className="font-semibold text-xs text-center">Status</TableHead>
+              <TableHead className="font-semibold text-xs text-center">Status / Phase</TableHead>
               <TableHead className="font-semibold text-xs text-end pe-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -1712,6 +2009,7 @@ function GroupedExamTableView({
                 exam.system === "school"
                   ? `/school/exams/${exam.primaryId}`
                   : `/madrassa/exams/${exam.primaryId}`;
+              const phase = getExamPhase(exam);
               return (
                 <TableRow key={exam.key} className="hover:bg-muted/30 transition-colors">
                   <TableCell>
@@ -1739,7 +2037,11 @@ function GroupedExamTableView({
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{exam.academicYear}</TableCell>
                   <TableCell className="text-xs whitespace-nowrap">
-                    {formatDate(exam.startDate)} – {formatDate(exam.endDate)}
+                    <p>{formatDate(exam.startDate)} – {formatDate(exam.endDate)}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1 font-medium">
+                      <Clock className="h-2.5 w-2.5 text-amber-600" />
+                      Deadline: {formatDate(exam.marksEntryEndDate)}
+                    </p>
                   </TableCell>
                   <TableCell className="text-center font-medium text-xs">
                     {exam.totalSubjects}
@@ -1747,21 +2049,29 @@ function GroupedExamTableView({
                   <TableCell className="text-center font-semibold text-xs">
                     {exam.totalStudents}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center whitespace-nowrap">
                     <Badge
                       variant="outline"
-                      className={cn("capitalize text-[10px] font-medium px-2 py-0.5", statusTone[exam.status])}
+                      className={cn("capitalize text-[10px] font-medium px-2 py-0.5 inline-flex items-center gap-1", phase.tone)}
                     >
-                      {exam.status}
+                      <span className={cn("h-1.5 w-1.5 rounded-full", phase.dot)} />
+                      {phase.label}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-end pe-4">
                     <div className="flex items-center justify-end gap-1.5">
-                      <Button asChild size="sm" variant="outline" className="gap-1.5 text-xs h-8">
+                      <Button asChild size="sm" variant={exam.phase === "ready_to_publish" ? "outline" : "default"} className="gap-1.5 text-xs h-8">
                         <Link to={detailPath as any}>
                           <Eye className="h-3.5 w-3.5" /> Detail
                         </Link>
                       </Button>
+                      {exam.phase === "ready_to_publish" && (
+                        <Button asChild size="sm" className="gap-1.5 text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-xs">
+                          <Link to={detailPath as any}>
+                            <Send className="h-3.5 w-3.5" /> Publish
+                          </Link>
+                        </Button>
+                      )}
                       {onDelete && (
                         <Button
                           variant="ghost"
@@ -1796,6 +2106,7 @@ function GroupedExamCard({
     exam.system === "school"
       ? `/school/exams/${exam.primaryId}`
       : `/madrassa/exams/${exam.primaryId}`;
+  const phase = getExamPhase(exam);
 
   return (
     <Card className="flex flex-col p-5 border border-border/70 hover:border-primary/40 hover:shadow-md transition-all duration-200 group bg-card">
@@ -1816,21 +2127,10 @@ function GroupedExamCard({
         <div className="flex items-center gap-1.5 shrink-0">
           <Badge
             variant="outline"
-            className={cn("capitalize text-[11px] font-medium px-2 py-0.5 flex items-center gap-1.5", statusTone[exam.status])}
+            className={cn("capitalize text-[11px] font-medium px-2 py-0.5 inline-flex items-center gap-1.5", phase.tone)}
           >
-            <span
-              className={cn(
-                "h-1.5 w-1.5 rounded-full",
-                exam.status === "published"
-                  ? "bg-emerald-500"
-                  : exam.status === "active"
-                  ? "bg-sky-500"
-                  : exam.status === "locked"
-                  ? "bg-amber-500"
-                  : "bg-slate-400",
-              )}
-            />
-            {exam.status}
+            <span className={cn("h-1.5 w-1.5 rounded-full", phase.dot)} />
+            {phase.label}
           </Badge>
           {onDelete && (
             <Button
@@ -1899,11 +2199,11 @@ function GroupedExamCard({
 
         <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40">
           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-            <Award className="h-3 w-3" />
-            Status
+            <Clock className="h-3 w-3 text-amber-600" />
+            Marks Deadline
           </p>
-          <p className="font-medium text-foreground mt-0.5">
-            {exam.allLocked ? "Locked" : "Open for Marks"}
+          <p className="font-semibold text-foreground mt-0.5 truncate text-[11px]">
+            {formatDate(exam.marksEntryEndDate)}
           </p>
         </div>
       </div>
@@ -1926,12 +2226,19 @@ function GroupedExamCard({
         </div>
       )}
 
-      <div className="mt-4 pt-3 border-t border-border/60">
-        <Button asChild size="sm" className="w-full gap-1.5 text-xs h-8.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs font-medium">
+      <div className="mt-4 pt-3 border-t border-border/60 flex items-center gap-2">
+        <Button asChild size="sm" variant={exam.phase === "ready_to_publish" ? "outline" : "default"} className="flex-1 gap-1.5 text-xs h-8.5 font-medium">
           <Link to={detailPath as any}>
-            <Eye className="h-3.5 w-3.5" /> View Exam & Participating Classes ({exam.totalClasses})
+            <Eye className="h-3.5 w-3.5" /> View Exam & Classes ({exam.totalClasses})
           </Link>
         </Button>
+        {exam.phase === "ready_to_publish" && (
+          <Button asChild size="sm" className="gap-1.5 text-xs h-8.5 bg-purple-600 hover:bg-purple-700 text-white font-medium shadow-xs">
+            <Link to={detailPath as any}>
+              <Send className="h-3.5 w-3.5" /> Publish
+            </Link>
+          </Button>
+        )}
       </div>
     </Card>
   );

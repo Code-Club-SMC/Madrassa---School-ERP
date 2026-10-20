@@ -97,6 +97,7 @@ export const examSessions = pgTable(
     nameUrdu: text("name_urdu").notNull(),
     startDate: date("start_date", { mode: "string" }).notNull(),
     endDate: date("end_date", { mode: "string" }).notNull(),
+    marksEntryEndDate: date("marks_entry_end_date", { mode: "string" }),
     status: text("status").$type<ExamStatus>().default("draft").notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}).notNull(),
     createdByUserId: text("created_by_user_id").references(() => user.id, { onDelete: "set null" }),

@@ -2199,6 +2199,7 @@ export async function getMyTeacherExams(request: Request) {
       academicYear: examSessions.academicYear,
       startDate: examSessions.startDate,
       endDate: examSessions.endDate,
+      marksEntryEndDate: examSessions.marksEntryEndDate,
       publishedAt: examSessions.publishedAt,
       schoolClassId: examSessions.schoolClassId,
       schoolClassName: schoolClasses.name,
@@ -2220,13 +2221,29 @@ export async function getMyTeacherExams(request: Request) {
     .where(or(...scopeConditions))
     .orderBy(desc(examSessions.startDate));
 
+  const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi" }).format(new Date());
+
   const seenSessionIds = new Set<string>();
   const sessions = [];
   for (const row of sessionRows) {
-    if (!seenSessionIds.has(row.id)) {
-      seenSessionIds.add(row.id);
-      sessions.push(row);
-    }
+    if (seenSessionIds.has(row.id)) continue;
+    seenSessionIds.add(row.id);
+
+    // Rule: Do not show exam in teacher portal until exam has ended
+    const isEnded = todayStr >= row.endDate;
+    if (!isEnded) continue;
+
+    const deadline = row.marksEntryEndDate || row.endDate;
+    const isOpen = todayStr <= deadline && row.status !== "published";
+    const isClosed = todayStr > deadline || row.status === "published";
+
+    sessions.push({
+      ...row,
+      marksEntryEndDate: deadline,
+      isOpen,
+      isClosed,
+      phase: isOpen ? ("open" as const) : row.status === "published" ? ("published" as const) : ("closed" as const),
+    });
   }
 
   return { assignments: allAssignments, sessions };

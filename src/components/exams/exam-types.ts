@@ -52,6 +52,7 @@ export type ExamSession = {
   nameUrdu: string;
   startDate: string;
   endDate: string;
+  marksEntryEndDate?: string | null;
   status: ExamStatus;
   groupLabel: string;
   subjects: ExamSessionSubject[];

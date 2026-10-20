@@ -217,6 +217,10 @@ export function getMyTeacherExams() {
       academicYear: string;
       startDate: string;
       endDate: string;
+      marksEntryEndDate?: string | null;
+      isOpen?: boolean;
+      isClosed?: boolean;
+      phase?: "open" | "closed" | "published";
       publishedAt: string | null;
       schoolClassId?: string | null;
       schoolClassName?: string | null;
