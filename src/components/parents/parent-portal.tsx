@@ -15,6 +15,7 @@ import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { AppLoader } from "@/components/shared/app-loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -608,15 +609,9 @@ function MetricCard({
 
 function LoadingPanel({ label, compact }: { label: string; compact?: boolean }) {
   return (
-    <div
-      className={cn(
-        "flex items-center justify-center gap-2 text-sm text-muted-foreground",
-        compact ? "py-10" : "py-24",
-      )}
-    >
-      <Loader2 className="h-4 w-4 animate-spin" />
-      {label}
-    </div>
+    <Card className={cn("p-6", compact ? "py-8" : "py-12")}>
+      <AppLoader text={label} size={compact ? "sm" : "md"} />
+    </Card>
   );
 }
 

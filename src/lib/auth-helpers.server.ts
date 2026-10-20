@@ -35,6 +35,18 @@ function parseSessionToken(token: string): SessionPayload | null {
   }
 }
 
+// In-memory cache for verified session user records to eliminate redundant DB network trips
+const userSessionCache = new Map<string, { data: any; cachedAt: number }>();
+const SESSION_CACHE_TTL_MS = 45 * 1000; // 45 seconds
+
+export function invalidateSessionUserCache(userId?: string) {
+  if (userId) {
+    userSessionCache.delete(userId);
+  } else {
+    userSessionCache.clear();
+  }
+}
+
 let userSchemaChecked = false;
 
 export async function ensureUserColumns() {
@@ -110,6 +122,12 @@ export async function getSessionUser(request?: Request): Promise<{
   const payload = parseSessionToken(sessionCookie);
   if (!payload) return null;
 
+  const now = Date.now();
+  const cached = userSessionCache.get(payload.userId);
+  if (cached && now - cached.cachedAt < SESSION_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   let foundUser: any = null;
   try {
     const [u] = await db.select().from(user).where(eq(user.id, payload.userId)).limit(1);
@@ -147,7 +165,7 @@ export async function getSessionUser(request?: Request): Promise<{
     designation: payload.designation,
   };
 
-  return {
+  const result = {
     id: effectiveUser.id,
     name: effectiveUser.name,
     nameUrdu: effectiveUser.nameUrdu ?? undefined,
@@ -166,4 +184,11 @@ export async function getSessionUser(request?: Request): Promise<{
     linkedTeacherId: effectiveUser.linkedTeacherId ?? undefined,
     permissions: effectiveUser.permissions ?? undefined,
   };
+
+  userSessionCache.set(payload.userId, {
+    data: result,
+    cachedAt: now,
+  });
+
+  return result;
 }

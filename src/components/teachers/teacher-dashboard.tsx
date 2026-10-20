@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
+import { AppLoader } from "@/components/shared/app-loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,9 +54,8 @@ export function TeacherDashboard() {
 
   if (loading) {
     return (
-      <Card className="p-10 text-center text-sm text-muted-foreground">
-        <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
-        Loading teacher dashboard...
+      <Card className="p-12">
+        <AppLoader text="Loading teacher dashboard..." textUrdu="استاد کا ڈیش بورڈ لوڈ ہو رہا ہے..." />
       </Card>
     );
   }

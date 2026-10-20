@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { AppLoader } from "@/components/shared/app-loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -317,10 +318,9 @@ export function NotificationCenter() {
       </Tabs>
 
       {notificationsQuery.isLoading ? (
-        <div className="flex items-center justify-center gap-2 py-24 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading notifications
-        </div>
+        <Card className="p-12">
+          <AppLoader text="Loading notifications..." textUrdu="اعلانات لوڈ ہو رہے ہیں..." />
+        </Card>
       ) : notificationsQuery.isError ? (
         <EmptyState
           icon={Bell}

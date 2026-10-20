@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, gte, ilike, inArray, isNull, lte, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, isNull, lte, ne, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import {
@@ -9,6 +9,7 @@ import {
   programs,
   schoolClasses,
 } from "@/db/schema/academic";
+import { academicYears } from "@/db/schema/academic-years";
 import { user as authUser } from "@/db/schema/auth";
 import {
   feeAdjustments,
@@ -20,7 +21,13 @@ import {
   type FeePaymentMethod,
   type FeePaymentStatus,
 } from "@/db/schema/finance";
-import { guardians, studentEnrollments, studentGuardians, students } from "@/db/schema/students";
+import {
+  guardians,
+  studentEnrollments,
+  studentGuardians,
+  studentSiblings,
+  students,
+} from "@/db/schema/students";
 import type { ModuleKey } from "@/lib/permissions/module-registry";
 import { requirePermission } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
@@ -81,6 +88,36 @@ export const chargeAndCollectSchema = createFeeChargeSchema.extend({
   receivedAt: z.string().trim().optional(),
   payerName: z.string().trim().optional(),
   payerPhone: z.string().trim().optional(),
+});
+
+export const collectiveStudentEntrySchema = z.object({
+  studentId: z.string().trim().min(1),
+  allocations: z
+    .array(
+      z.object({
+        chargeId: z.string().trim().min(1),
+        amountPaisa: z.number().int().positive(),
+      }),
+    )
+    .default([]),
+  advanceMonths: z
+    .array(
+      z.object({
+        period: z.string().trim().min(1),
+        label: z.string().trim().min(1),
+        amountPaisa: z.number().int().positive(),
+      }),
+    )
+    .default([]),
+});
+
+export const collectCollectiveFeeSchema = z.object({
+  method: z.enum(paymentMethods),
+  receivedAt: z.string().trim().optional(),
+  payerName: z.string().trim().optional(),
+  payerPhone: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
+  students: z.array(collectiveStudentEntrySchema).min(1),
 });
 
 export const reverseChargeSchema = z.object({
@@ -146,6 +183,10 @@ type ActiveEnrollmentContext = {
   madrassaCategoryNameUrdu: string | null;
   guardianName: string | null;
   guardianPhone: string | null;
+  guardianCnic: string | null;
+  academicYearId: string | null;
+  schoolClassFee: number | null;
+  madrassaSubcategoryFee: number | null;
   system: FeeSystem;
 };
 
@@ -237,6 +278,10 @@ async function getActiveEnrollmentContext(studentId: string): Promise<ActiveEnro
       madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
       guardianName: guardians.name,
       guardianPhone: guardians.phone,
+      guardianCnic: guardians.cnic,
+      academicYearId: studentEnrollments.academicYearId,
+      schoolClassFee: schoolClasses.fee ?? null,
+      madrassaSubcategoryFee: madrassaSubcategories.fee ?? null,
     })
     .from(students)
     .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, students.id))
@@ -497,6 +542,157 @@ export async function chargeAndCollect(
   });
 }
 
+export async function collectCollectiveFeePayment(
+  request: Request,
+  input: z.infer<typeof collectCollectiveFeeSchema>,
+) {
+  const actor = await requirePermission(request, "finance", "create").catch(async () => {
+    return await requirePermission(request, "fees_school", "create").catch(async () => {
+      return await requirePermission(request, "fees_madrassa", "create");
+    });
+  });
+
+  return db.transaction(async (tx) => {
+    const results: Array<{
+      studentId: string;
+      studentName: string;
+      studentNameUrdu: string;
+      rollNo: string;
+      receiptNo: string;
+      paymentId: string;
+      amountPaisa: number;
+    }> = [];
+
+    let totalCollectedPaisa = 0;
+    const allCreatedReceiptNos: string[] = [];
+
+    for (const studentEntry of input.students) {
+      const studentAllocations = [...studentEntry.allocations];
+      const context = await getActiveEnrollmentContext(studentEntry.studentId);
+
+      // 1. Process advance months: create monthly charge for each
+      for (const adv of studentEntry.advanceMonths) {
+        const [charge] = await tx
+          .insert(feeCharges)
+          .values({
+            id: randomUUID(),
+            studentId: context.studentId,
+            enrollmentId: context.enrollmentId,
+            institutionId: context.institutionId,
+            programId: context.programId,
+            schoolClassId: context.schoolClassId,
+            madrassaSubcategoryId: context.madrassaSubcategoryId,
+            type: "monthly",
+            label: adv.label,
+            period: adv.period,
+            amountPaisa: adv.amountPaisa,
+            dueDate: parseOptionalDate(adv.period ? `${adv.period}-10` : undefined),
+            status: "paid",
+            notes: "Advance payment collected",
+            createdByUserId: actor.id,
+          })
+          .returning();
+
+        studentAllocations.push({
+          chargeId: charge.id,
+          amountPaisa: adv.amountPaisa,
+        });
+      }
+
+      if (studentAllocations.length === 0) continue;
+
+      const chargeIds = uniqueStrings(studentAllocations.map((a) => a.chargeId));
+      const ledgerData = await loadLedgerDataForChargeIds(tx, chargeIds);
+      const ledgerRows = buildChargeLedger(ledgerData);
+      const balanceByCharge = new Map(ledgerRows.map((row) => [row.chargeId, row.balancePaisa]));
+
+      for (const alloc of studentAllocations) {
+        const bal = balanceByCharge.get(alloc.chargeId) ?? 0;
+        if (alloc.amountPaisa > bal) {
+          throw new HttpError("Payment cannot exceed outstanding charge balance", 400);
+        }
+      }
+
+      const studentAmountPaisa = studentAllocations.reduce((sum, a) => sum + a.amountPaisa, 0);
+      if (studentAmountPaisa <= 0) continue;
+
+      totalCollectedPaisa += studentAmountPaisa;
+
+      const receiptNo = await nextFinanceNumber(tx, {
+        type: "fee_receipt",
+        institutionId: context.institutionId,
+        prefix: "FR",
+      });
+      allCreatedReceiptNos.push(receiptNo);
+
+      const [payment] = await tx
+        .insert(feePayments)
+        .values({
+          id: randomUUID(),
+          receiptNo,
+          studentId: context.studentId,
+          enrollmentId: context.enrollmentId,
+          institutionId: context.institutionId,
+          amountPaisa: studentAmountPaisa,
+          method: input.method as FeePaymentMethod,
+          receivedAt: parseReceivedAt(input.receivedAt),
+          receivedByUserId: actor.id,
+          payerName: input.payerName || null,
+          payerPhone: input.payerPhone || null,
+          notes: input.notes || null,
+          metadata: {
+            isCollective: input.students.length > 1,
+            totalStudents: input.students.length,
+            allReceiptNos: allCreatedReceiptNos,
+          },
+        })
+        .returning();
+
+      const allocValues = studentAllocations.map((a) => ({
+        id: randomUUID(),
+        paymentId: payment.id,
+        chargeId: a.chargeId,
+        amountPaisa: a.amountPaisa,
+        createdAt: new Date(),
+      }));
+
+      await tx.insert(feePaymentAllocations).values(allocValues);
+      await refreshChargeStatuses(tx, chargeIds);
+
+      await insertStudentEvent(tx, {
+        studentId: context.studentId,
+        enrollmentId: context.enrollmentId,
+        type: "fee_payment_recorded",
+        message: `Fee payment received: ${receiptNo}`,
+        metadata: { paymentId: payment.id, receiptNo, amountPaisa: studentAmountPaisa, method: payment.method },
+        actorUserId: actor.id,
+      });
+
+      results.push({
+        studentId: context.studentId,
+        studentName: context.studentName,
+        studentNameUrdu: context.studentNameUrdu,
+        rollNo: context.rollNo,
+        receiptNo,
+        paymentId: payment.id,
+        amountPaisa: studentAmountPaisa,
+      });
+    }
+
+    if (totalCollectedPaisa <= 0) {
+      throw new HttpError("No payment amounts were specified", 400);
+    }
+
+    return {
+      success: true,
+      totalAmountPaisa: totalCollectedPaisa,
+      receiptNos: allCreatedReceiptNos,
+      primaryReceiptNo: allCreatedReceiptNos[0] ?? "",
+      results,
+    };
+  });
+}
+
 export async function getOutstandingBalanceByStudentIds(
   executor: FeeExecutor,
   studentIds: string[],
@@ -624,6 +820,57 @@ export async function listFeeStudents(
 
   const summaries = await summarizeByStudentIds(rows.map((row) => row.studentId));
 
+  // Calculate sibling count for each student based on father/guardian CNIC and student_siblings table
+  const cnicCounts = new Map<string, number>();
+  const explicitSiblingCounts = new Map<string, number>();
+
+  const studentIds = rows.map((r) => r.studentId);
+  if (studentIds.length > 0) {
+    const cleanCnics = rows
+      .map((r) => r.guardianCnic?.trim().replace(/[^0-9]/g, ""))
+      .filter((c): c is string => Boolean(c && c.length >= 5));
+
+    if (cleanCnics.length > 0) {
+      const counts = await db
+        .select({
+          cleanCnic: sql<string>`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '')`,
+          totalStudents: sql<number>`count(DISTINCT ${studentGuardians.studentId})::int`,
+        })
+        .from(studentGuardians)
+        .innerJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
+        .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, studentGuardians.studentId))
+        .where(
+          and(
+            isNull(studentEnrollments.endedAt),
+            eq(studentEnrollments.status, "active"),
+            inArray(sql`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '')`, cleanCnics),
+          ),
+        )
+        .groupBy(sql`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '')`);
+
+      for (const c of counts) {
+        cnicCounts.set(c.cleanCnic, c.totalStudents);
+      }
+    }
+
+    const explicitLinks = await db
+      .select({
+        studentId: studentSiblings.studentId,
+        siblingId: studentSiblings.siblingId,
+      })
+      .from(studentSiblings)
+      .where(or(inArray(studentSiblings.studentId, studentIds), inArray(studentSiblings.siblingId, studentIds)));
+
+    for (const link of explicitLinks) {
+      if (studentIds.includes(link.studentId)) {
+        explicitSiblingCounts.set(link.studentId, (explicitSiblingCounts.get(link.studentId) ?? 0) + 1);
+      }
+      if (studentIds.includes(link.siblingId)) {
+        explicitSiblingCounts.set(link.siblingId, (explicitSiblingCounts.get(link.siblingId) ?? 0) + 1);
+      }
+    }
+  }
+
   return {
     students: rows.map((row) => ({
       id: row.studentId,
@@ -644,11 +891,178 @@ export async function listFeeStudents(
       groupLabel: groupLabelForRow(row),
       guardianName: row.guardianName,
       guardianPhone: row.guardianPhone,
+      guardianCnic: row.guardianCnic ?? null,
+      siblingCount: (() => {
+        const clean = row.guardianCnic?.trim().replace(/[^0-9]/g, "");
+        const byCnic = clean && cnicCounts.has(clean) ? (cnicCounts.get(clean)! - 1) : 0;
+        const byExplicit = explicitSiblingCounts.get(row.studentId) ?? 0;
+        return Math.max(0, byCnic, byExplicit);
+      })(),
       monthlyFee: row.programSystem === "madrassa" ? (row.madrassaSubcategoryFee ?? 0) : (row.schoolClassFee ?? 0),
       monthlyFeePaisa: ((row.programSystem === "madrassa" ? (row.madrassaSubcategoryFee ?? 0) : (row.schoolClassFee ?? 0)) * 100),
       summary: summaries.get(row.studentId) ?? emptySummary,
     })),
   };
+}
+
+async function findSiblingStudents(studentId: string, guardianCnic?: string | null) {
+  const siblingIds = new Set<string>();
+
+  if (guardianCnic && guardianCnic.trim().length >= 5) {
+    const cleanDigits = guardianCnic.trim().replace(/[^0-9]/g, "");
+    if (cleanDigits.length >= 5) {
+      const rows = await db
+        .select({ studentId: studentGuardians.studentId })
+        .from(studentGuardians)
+        .innerJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
+        .where(
+          and(
+            ne(studentGuardians.studentId, studentId),
+            sql`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '') = ${cleanDigits}`,
+          ),
+        );
+      for (const r of rows) {
+        if (r.studentId) siblingIds.add(r.studentId);
+      }
+    }
+  }
+
+  const explicitLinks = await db
+    .select({
+      studentId: studentSiblings.studentId,
+      siblingId: studentSiblings.siblingId,
+    })
+    .from(studentSiblings)
+    .where(or(eq(studentSiblings.studentId, studentId), eq(studentSiblings.siblingId, studentId)));
+
+  for (const link of explicitLinks) {
+    const otherId = link.studentId === studentId ? link.siblingId : link.studentId;
+    if (otherId && otherId !== studentId) {
+      siblingIds.add(otherId);
+    }
+  }
+
+  if (siblingIds.size === 0) return [];
+
+  const siblingRows = await db
+    .select(studentSearchSelection())
+    .from(students)
+    .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, students.id))
+    .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
+    .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
+    .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
+    .leftJoin(
+      madrassaSubcategories,
+      eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
+    )
+    .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+    .leftJoin(
+      studentGuardians,
+      and(eq(studentGuardians.studentId, students.id), eq(studentGuardians.isPrimary, true)),
+    )
+    .leftJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
+    .where(
+      and(
+        inArray(students.id, Array.from(siblingIds)),
+        isNull(studentEnrollments.endedAt),
+        eq(studentEnrollments.status, "active"),
+      ),
+    );
+
+  return siblingRows;
+}
+
+function generateAdvanceMonths(
+  existingCharges: Array<{ period?: string | null; status: string; ledger?: { balancePaisa: number } }>,
+  monthlyFeePaisa: number,
+  academicYearEndDate?: string | null,
+) {
+  const options: Array<{
+    period: string;
+    labelEn: string;
+    labelUrdu: string;
+    amountPaisa: number;
+    amountRupees: number;
+  }> = [];
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  let targetEndYear = currentYear;
+  let targetEndMonth = currentMonth + 5;
+
+  if (academicYearEndDate) {
+    try {
+      const endD = new Date(academicYearEndDate);
+      if (!isNaN(endD.getTime())) {
+        targetEndYear = endD.getFullYear();
+        targetEndMonth = endD.getMonth() + 1;
+      }
+    } catch {
+      // Fallback
+    }
+  } else {
+    if (currentMonth >= 4) {
+      targetEndYear = currentYear + 1;
+      targetEndMonth = 3;
+    } else {
+      targetEndYear = currentYear;
+      targetEndMonth = 3;
+    }
+  }
+
+  let totalMonthsToInspect = (targetEndYear - currentYear) * 12 + (targetEndMonth - currentMonth);
+  if (totalMonthsToInspect < 3) totalMonthsToInspect = 3;
+  if (totalMonthsToInspect > 12) totalMonthsToInspect = 12;
+
+  const MONTH_NAMES_EN: Record<string, string> = {
+    "01": "January", "02": "February", "03": "March", "04": "April",
+    "05": "May", "06": "June", "07": "July", "08": "August",
+    "09": "September", "10": "October", "11": "November", "12": "December",
+  };
+
+  const MONTH_NAMES_UR: Record<string, string> = {
+    "01": "جنوری", "02": "فروری", "03": "مارچ", "04": "اپریل",
+    "05": "مئی", "06": "جون", "07": "جولائی", "08": "اگست",
+    "09": "ستمبر", "10": "اکتوبر", "11": "نومبر", "12": "دسمبر",
+  };
+
+  let yr = currentYear;
+  let mo = currentMonth + 1;
+  if (mo > 12) {
+    mo = 1;
+    yr++;
+  }
+
+  for (let step = 0; step < totalMonthsToInspect; step++) {
+    const moStr = String(mo).padStart(2, "0");
+    const period = `${yr}-${moStr}`;
+
+    const existing = existingCharges.find(
+      (c) => c.period === period && c.status !== "reversed",
+    );
+
+    if (!existing) {
+      const nameEn = `${MONTH_NAMES_EN[moStr] || moStr} ${yr}`;
+      const nameUr = `${MONTH_NAMES_UR[moStr] || moStr} ${yr}`;
+      options.push({
+        period,
+        labelEn: nameEn,
+        labelUrdu: nameUr,
+        amountPaisa: monthlyFeePaisa,
+        amountRupees: Math.round(monthlyFeePaisa / 100),
+      });
+    }
+
+    mo++;
+    if (mo > 12) {
+      mo = 1;
+      yr++;
+    }
+  }
+
+  return options;
 }
 
 export async function getStudentFeeLedger(
@@ -660,11 +1074,116 @@ export async function getStudentFeeLedger(
   assertSystemMatches(query.system, context.system);
   await requirePermission(request, feeModuleForSystem(query.system), "view");
 
-  const ledgerData = await loadLedgerDataForStudentIds(db, [studentId]);
-  const ledgerRows = buildChargeLedger(ledgerData);
-  const ledgerByCharge = new Map(ledgerRows.map((row) => [row.chargeId, row]));
-  const summary = summarizeStudentLedger(ledgerData);
-  const allocationsByPayment = groupAllocationsByPayment(ledgerData.allocations);
+  const siblings = await findSiblingStudents(studentId, context.guardianCnic);
+  const siblingIds = siblings.map((s) => s.studentId);
+  const allStudentIds = [studentId, ...siblingIds];
+
+  const allLedgerData = await loadLedgerDataForStudentIds(db, allStudentIds);
+  const allLedgerRows = buildChargeLedger(allLedgerData);
+  const ledgerByCharge = new Map(allLedgerRows.map((row) => [row.chargeId, row]));
+  const allocationsByPayment = groupAllocationsByPayment(allLedgerData.allocations);
+
+  const studentCharges = allLedgerData.charges
+    .filter((c) => c.studentId === studentId)
+    .slice()
+    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+    .map((charge) => ({
+      ...serializeCharge(charge),
+      ledger: ledgerByCharge.get(charge.id) ?? emptyChargeLedger(charge),
+    }));
+
+  const studentPayments = allLedgerData.payments
+    .filter((p) => p.studentId === studentId)
+    .slice()
+    .sort((left, right) => right.receivedAt.getTime() - left.receivedAt.getTime())
+    .map((payment) => serializePayment(payment, allocationsByPayment.get(payment.id) ?? []));
+
+  const studentAdjustments = allLedgerData.adjustments
+    .filter((a) => a.studentId === studentId)
+    .slice()
+    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+    .map(serializeAdjustment);
+
+  const primarySummary = summarizeStudentLedger({
+    charges: allLedgerData.charges.filter((c) => c.studentId === studentId),
+    allocations: allLedgerData.allocations.filter((a) =>
+      allLedgerData.charges.some((c) => c.id === a.chargeId && c.studentId === studentId),
+    ),
+    adjustments: allLedgerData.adjustments.filter((a) => a.studentId === studentId),
+  });
+
+  const primaryMonthlyFeePaisa =
+    context.system === "madrassa"
+      ? (context.madrassaSubcategoryFee ?? 0) * 100
+      : (context.schoolClassFee ?? 0) * 100;
+
+  let academicYearEndDate: string | null = null;
+  if (context.academicYearId) {
+    const [ay] = await db
+      .select({ endDate: academicYears.endDate })
+      .from(academicYears)
+      .where(eq(academicYears.id, context.academicYearId))
+      .limit(1);
+    if (ay) academicYearEndDate = ay.endDate;
+  }
+
+  const primaryAdvanceMonths = generateAdvanceMonths(
+    studentCharges,
+    primaryMonthlyFeePaisa,
+    academicYearEndDate,
+  );
+
+  const siblingDetails = siblings.map((sibRow) => {
+    const sibSystem: FeeSystem = sibRow.programSystem === "madrassa" ? "madrassa" : "school";
+    const sibMonthlyFeePaisa =
+      sibSystem === "madrassa"
+        ? (sibRow.madrassaSubcategoryFee ?? 0) * 100
+        : (sibRow.schoolClassFee ?? 0) * 100;
+
+    const sibCharges = allLedgerData.charges
+      .filter((c) => c.studentId === sibRow.studentId)
+      .map((charge) => ({
+        ...serializeCharge(charge),
+        ledger: ledgerByCharge.get(charge.id) ?? emptyChargeLedger(charge),
+      }));
+
+    const sibOutstandingCharges = sibCharges.filter(
+      (c) => c.ledger.balancePaisa > 0 && c.status !== "reversed",
+    );
+
+    const sibSummary = summarizeStudentLedger({
+      charges: allLedgerData.charges.filter((c) => c.studentId === sibRow.studentId),
+      allocations: allLedgerData.allocations.filter((a) =>
+        allLedgerData.charges.some((c) => c.id === a.chargeId && c.studentId === sibRow.studentId),
+      ),
+      adjustments: allLedgerData.adjustments.filter((a) => a.studentId === sibRow.studentId),
+    });
+
+    const sibAdvanceMonths = generateAdvanceMonths(
+      sibCharges,
+      sibMonthlyFeePaisa,
+      null,
+    );
+
+    return {
+      id: sibRow.studentId,
+      name: sibRow.studentName,
+      nameUrdu: sibRow.studentNameUrdu,
+      fatherName: sibRow.fatherName,
+      rollNo: sibRow.rollNo,
+      admissionNo: sibRow.admissionNo,
+      system: sibSystem,
+      institutionId: sibRow.institutionId,
+      institutionName: sibRow.institutionName,
+      institutionNameUrdu: sibRow.institutionNameUrdu,
+      groupLabel: groupLabelForRow(sibRow),
+      monthlyFee: Math.round(sibMonthlyFeePaisa / 100),
+      monthlyFeePaisa: sibMonthlyFeePaisa,
+      summary: sibSummary,
+      outstandingCharges: sibOutstandingCharges,
+      advanceMonths: sibAdvanceMonths,
+    };
+  });
 
   return {
     student: {
@@ -675,29 +1194,28 @@ export async function getStudentFeeLedger(
       rollNo: context.rollNo,
       admissionNo: context.admissionNo,
       system: context.system,
+      institutionId: context.institutionId,
       institutionName: context.institutionName,
       institutionNameUrdu: context.institutionNameUrdu,
+      programId: context.programId,
+      classId: context.schoolClassId ?? undefined,
+      subcategoryId: context.madrassaSubcategoryId ?? undefined,
       groupLabel: groupLabelForRow(context),
       guardianName: context.guardianName,
       guardianPhone: context.guardianPhone,
-      summary,
+      guardianCnic: context.guardianCnic,
+      siblingCount: siblingDetails.length,
+      monthlyFee: Math.round(primaryMonthlyFeePaisa / 100),
+      monthlyFeePaisa: primaryMonthlyFeePaisa,
+      summary: primarySummary,
     },
-    charges: ledgerData.charges
-      .slice()
-      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
-      .map((charge) => ({
-        ...serializeCharge(charge),
-        ledger: ledgerByCharge.get(charge.id) ?? emptyChargeLedger(charge),
-      })),
-    payments: ledgerData.payments
-      .slice()
-      .sort((left, right) => right.receivedAt.getTime() - left.receivedAt.getTime())
-      .map((payment) => serializePayment(payment, allocationsByPayment.get(payment.id) ?? [])),
-    adjustments: ledgerData.adjustments
-      .slice()
-      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
-      .map(serializeAdjustment),
-    summary,
+    charges: studentCharges,
+    payments: studentPayments,
+    adjustments: studentAdjustments,
+    summary: primarySummary,
+    advanceMonths: primaryAdvanceMonths,
+    siblings: siblingDetails,
+    guardianCnic: context.guardianCnic,
   };
 }
 
@@ -1239,6 +1757,8 @@ function studentSearchSelection() {
     madrassaCategoryName: madrassaCategories.name,
     guardianName: guardians.name,
     guardianPhone: guardians.phone,
+    guardianCnic: guardians.cnic,
+    academicYearId: studentEnrollments.academicYearId,
   };
 }
 

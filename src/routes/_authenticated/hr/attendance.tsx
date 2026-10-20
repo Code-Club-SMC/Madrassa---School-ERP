@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { CheckCheck, Save, RotateCw, Search, Loader2, Users } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
+import { AppLoader } from "@/components/shared/app-loader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -235,11 +236,8 @@ function HRAttendancePage() {
       {/* Attendance Table or State */}
       <Card className="overflow-hidden">
         {isLoadingStaff && activeStaff.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-            <Loader2 className="h-7 w-7 animate-spin text-primary" />
-            <p className="text-sm font-medium">
-              {isUrdu ? "عملہ اور اساتذہ لوڈ ہو رہے ہیں..." : "Loading staff members and teachers..."}
-            </p>
+          <div className="py-12">
+            <AppLoader text="Loading staff members and teachers..." textUrdu="عملہ اور اساتذہ لوڈ ہو رہے ہیں..." />
           </div>
         ) : activeStaff.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4 text-center px-4">

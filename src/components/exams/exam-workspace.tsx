@@ -43,6 +43,7 @@ import {
 } from "@/components/exams/exam-api";
 import type { ExamReportPayload, ExamSession, ExamSubject, ExamSystem } from "@/components/exams/exam-types";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { AppLoader } from "@/components/shared/app-loader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -465,7 +466,9 @@ export function ExamSubjectWorkspace({ system }: { system: ExamSystem }) {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-muted-foreground">Loading subjects...</TableCell>
+                <TableCell colSpan={4} className="py-8">
+                  <AppLoader size="sm" text="Loading subjects..." textUrdu="مضامین لوڈ ہو رہے ہیں..." />
+                </TableCell>
               </TableRow>
             ) : subjects.length === 0 ? (
               <TableRow>
@@ -1050,8 +1053,8 @@ export function ExamWorkspace({ system }: { system: ExamSystem }) {
 
       {/* Content area */}
       {loading ? (
-        <Card className="p-12 text-center text-sm text-muted-foreground">
-          Loading examinations...
+        <Card className="p-12">
+          <AppLoader text="Loading examinations..." textUrdu="امتحانات لوڈ ہو رہے ہیں..." />
         </Card>
       ) : filteredGroups.length === 0 ? (
         <Card className="p-12 text-center border-dashed">
@@ -1448,7 +1451,13 @@ export function ExamDetailWorkspace({ examId, system }: { examId: string; system
     return { totalClasses, totalStudents, totalSubjects, allLocked };
   }, [siblingSessions]);
 
-  if (loading) return <Card className="p-8 text-center text-sm text-muted-foreground">Loading examination details...</Card>;
+  if (loading) {
+    return (
+      <Card className="p-12">
+        <AppLoader text="Loading examination details..." textUrdu="امتحان کی تفصیلات لوڈ ہو رہی ہیں..." />
+      </Card>
+    );
+  }
   if (!exam || !currentSession) return <Card className="p-8 text-center text-sm text-destructive">Examination not found.</Card>;
 
   return (
@@ -1904,7 +1913,11 @@ export function ExamReportWorkspace() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={4}>Loading report...</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={4} className="py-8">
+                  <AppLoader size="sm" text="Loading report..." textUrdu="رپورٹ لوڈ ہو رہی ہے..." />
+                </TableCell>
+              </TableRow>
             ) : !report || report.rows.length === 0 ? (
               <TableRow><TableCell colSpan={4} className="text-muted-foreground">No published results found.</TableCell></TableRow>
             ) : (

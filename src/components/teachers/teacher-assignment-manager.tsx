@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { AppLoader } from "@/components/shared/app-loader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -275,9 +276,8 @@ export function TeacherAssignmentManager({ teacher, onChange }: Props) {
       >
         <form onSubmit={handleSubmit} className="space-y-4 px-1 pb-1">
           {loadingOptions ? (
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
-              Loading academic options...
+            <div className="py-8">
+              <AppLoader size="sm" text="Loading academic options..." textUrdu="تعلیمی آپشنز لوڈ ہو رہے ہیں..." />
             </div>
           ) : (
             <>

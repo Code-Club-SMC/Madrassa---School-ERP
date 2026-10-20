@@ -479,11 +479,7 @@ function TimetablePage() {
   }
 
   if (loadingCategories) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-sm text-muted-foreground">{t("Loading classes...", "کلاسز لوڈ ہو رہی ہیں...")}</p>
-      </div>
-    );
+    return <BookLoader text={t("Loading classes...", "کلاسز لوڈ ہو رہی ہیں...")} className="h-96" />;
   }
 
   const hasTimetable = selectedSubcategoryId ? (timetableStatus[selectedSubcategoryId] ?? 0) > 0 : false;
@@ -713,8 +709,8 @@ function TimetablePage() {
             <TableBody>
               {loadingTimetable ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-muted-foreground text-center py-8">
-                    {t("Loading timetable...", "ٹائم ٹیبل لوڈ ہو رہا ہے...")}
+                  <TableCell colSpan={8} className="py-12">
+                    <BookLoader text={t("Loading timetable...", "ٹائم ٹیبل لوڈ ہو رہا ہے...")} />
                   </TableCell>
                 </TableRow>
               ) : periods.length === 0 ? (

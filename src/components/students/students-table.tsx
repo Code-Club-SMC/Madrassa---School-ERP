@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
+import { AppLoader } from "@/components/shared/app-loader";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -331,8 +332,8 @@ export function StudentsTable({ system, section, institutionId }: Props) {
     <TableBody>
       {loading ? (
         <TableRow>
-          <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
-            Loading students...
+          <TableCell colSpan={5} className="py-12">
+            <AppLoader text="Loading students..." textUrdu="طلبہ کا ریکارڈ لوڈ ہو رہا ہے..." />
           </TableCell>
         </TableRow>
       ) : students.length === 0 ? (

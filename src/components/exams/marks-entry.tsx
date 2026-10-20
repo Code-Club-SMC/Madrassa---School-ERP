@@ -33,6 +33,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage } from "@/components/language-context";
+import { AppLoader } from "@/components/shared/app-loader";
 
 type Props = {
   examId: string;
@@ -259,7 +260,13 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
     }
   }
 
-  if (!exam) return <Card className="p-6 text-sm text-muted-foreground">Loading exam...</Card>;
+  if (!exam) {
+    return (
+      <Card className="p-12">
+        <AppLoader text="Loading examination details..." textUrdu="امتحان کی تفصیلات لوڈ ہو رہی ہیں..." />
+      </Card>
+    );
+  }
 
   return (
     <div>
@@ -427,7 +434,11 @@ export function MarksEntry({ examId, system, readOnly }: Props) {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6}>Loading marks...</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={6} className="py-8">
+                  <AppLoader size="sm" text="Loading marks..." textUrdu="نمبرات لوڈ ہو رہے ہیں..." />
+                </TableCell>
+              </TableRow>
             ) : !payload || payload.students.length === 0 ? (
               <TableRow><TableCell colSpan={6} className="text-muted-foreground">No active students in this exam roster.</TableCell></TableRow>
             ) : (

@@ -87,6 +87,38 @@ export function collectPayment(input: {
   });
 }
 
+export function collectCollectivePayment(input: {
+  method: FeePaymentMethod;
+  receivedAt?: string;
+  payerName?: string;
+  payerPhone?: string;
+  notes?: string;
+  students: Array<{
+    studentId: string;
+    allocations: Array<{ chargeId: string; amountPaisa: number }>;
+    advanceMonths: Array<{ period: string; label: string; amountPaisa: number }>;
+  }>;
+}) {
+  return requestJson<{
+    success: boolean;
+    totalAmountPaisa: number;
+    receiptNos: string[];
+    primaryReceiptNo: string;
+    results: Array<{
+      studentId: string;
+      studentName?: string;
+      studentNameUrdu?: string;
+      rollNo?: string;
+      receiptNo: string;
+      paymentId: string;
+      amountPaisa: number;
+    }>;
+  }>("/api/fees/payments/collective", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export function reverseCharge(chargeId: string, reason: string) {
   return requestJson(`/api/fees/charges/${chargeId}/reverse`, {
     method: "POST",

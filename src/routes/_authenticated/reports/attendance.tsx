@@ -18,6 +18,7 @@ import {
 import type { AttendanceSummary } from "@/components/attendance/attendance-types";
 import { ChartCard, KpiCard } from "@/components/shared/chart-card";
 import { PageHeader } from "@/components/shared/page-header";
+import { AppLoader } from "@/components/shared/app-loader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -392,8 +393,8 @@ function AttendanceReport() {
             <TableBody>
               {reportQuery.isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="py-10 text-center text-sm text-muted-foreground">
-                    {isUrdu ? "حاضری رپورٹ لوڈ ہو رہی ہے..." : "Loading attendance report..."}
+                  <TableCell colSpan={9} className="py-12">
+                    <AppLoader text="Loading attendance report..." textUrdu="حاضری رپورٹ لوڈ ہو رہی ہے..." />
                   </TableCell>
                 </TableRow>
               ) : tableRows.length === 0 ? (

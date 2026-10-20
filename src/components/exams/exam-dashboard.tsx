@@ -517,7 +517,7 @@ export function ExamDashboard({ system }: Props) {
             <div className="space-y-4">
               <Label className="text-xs text-muted-foreground">{lang === "ur" ? "زمرے منتخب کریں" : "Select Categories"}</Label>
               {loadingCategories ? (
-                <p className="text-xs text-muted-foreground">{lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading categories..."}</p>
+                <BookLoader size="sm" text={lang === "ur" ? "زمرے لوڈ ہو رہے ہیں..." : "Loading categories..."} />
               ) : categories.length === 0 ? (
                 <p className="text-xs text-muted-foreground">{lang === "ur" ? "کوئی زمرہ نہیں ملا" : "No categories found"}</p>
               ) : (
@@ -561,7 +561,7 @@ export function ExamDashboard({ system }: Props) {
             <div className="space-y-4">
               <Label className="text-xs text-muted-foreground">{lang === "ur" ? "کلاس منتخب کریں" : "Select Classes"}</Label>
               {loadingCategories ? (
-                <p className="text-xs text-muted-foreground">{lang === "ur" ? "لوڈ ہو رہا ہے..." : "Loading classes..."}</p>
+                <BookLoader size="sm" text={lang === "ur" ? "کلاسز لوڈ ہو رہی ہیں..." : "Loading classes..."} />
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((classNum) => {

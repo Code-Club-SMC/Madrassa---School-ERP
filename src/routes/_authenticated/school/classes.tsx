@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
+import { AppLoader } from "@/components/shared/app-loader";
 import { useLanguage } from "@/components/language-context";
 import {
   AlertDialog,
@@ -215,8 +216,8 @@ function ClassesPage() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={4} className="p-6 text-center text-muted-foreground">
-                    {isUrdu ? "کلاسز لوڈ ہو رہی ہیں..." : "Loading classes..."}
+                  <td colSpan={4} className="py-12">
+                    <AppLoader text="Loading classes..." textUrdu="کلاسز لوڈ ہو رہی ہیں..." />
                   </td>
                 </tr>
               )}

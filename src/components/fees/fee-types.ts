@@ -30,6 +30,8 @@ export type FeeStudent = {
   groupLabel: string | null;
   guardianName: string | null;
   guardianPhone: string | null;
+  guardianCnic?: string | null;
+  siblingCount?: number;
   monthlyFee: number;
   monthlyFeePaisa: number;
   summary: FeeStudentSummary;
@@ -82,10 +84,40 @@ export type FeeAdjustment = {
   metadata: Record<string, unknown>;
 };
 
+export type AdvanceMonthOption = {
+  period: string; // "2026-11"
+  labelEn: string; // "November 2026"
+  labelUrdu: string; // "نومبر ۲۰۲۶"
+  amountPaisa: number;
+  amountRupees: number;
+};
+
+export type SiblingFeeInfo = {
+  id: string;
+  name: string;
+  nameUrdu: string;
+  fatherName: string;
+  rollNo: string;
+  admissionNo: string;
+  system: FeeSystem;
+  institutionId: string;
+  institutionName: string;
+  institutionNameUrdu: string;
+  groupLabel: string | null;
+  monthlyFee: number;
+  monthlyFeePaisa: number;
+  summary: FeeStudentSummary;
+  outstandingCharges: FeeCharge[];
+  advanceMonths: AdvanceMonthOption[];
+};
+
 export type FeeLedgerPayload = {
   student: FeeStudent;
   charges: FeeCharge[];
   payments: FeePayment[];
   adjustments: FeeAdjustment[];
   summary: FeeStudentSummary;
+  advanceMonths?: AdvanceMonthOption[];
+  siblings?: SiblingFeeInfo[];
+  guardianCnic?: string | null;
 };

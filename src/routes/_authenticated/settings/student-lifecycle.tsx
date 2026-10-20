@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { AppLoader } from "@/components/shared/app-loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -421,12 +422,14 @@ function StudentLifecyclePage() {
 
       {/* Loading or Error states */}
       {loadingArchive && (
-        <Card className="p-12 text-center text-muted-foreground">
-          <Clock className="h-8 w-8 animate-spin mx-auto mb-3 text-primary" />
-          <p className="font-medium">{isUrdu ? "طالب علم کا مکمل تعلیمی ریکارڈ لوڈ ہو رہا ہے..." : "Compiling entire student educational life archive..."}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {isUrdu ? "تاریخی داخلے، امتحانی اسناد، حاضری اور مالیات کا تجزیہ کیا جا رہا ہے" : "Synthesizing enrollment history, transcripts, attendance, and finance ledger."}
-          </p>
+        <Card className="p-12">
+          <AppLoader
+            text="Compiling entire student educational life archive..."
+            textUrdu="طالب علم کا مکمل تعلیمی ریکارڈ لوڈ ہو رہا ہے..."
+            subtitle="Synthesizing enrollment history, transcripts, attendance, and finance ledger."
+            subtitleUrdu="تاریخی داخلے، امتحانی اسناد، حاضری اور مالیات کا تجزیہ کیا جا رہا ہے"
+            icon="cap"
+          />
         </Card>
       )}
 

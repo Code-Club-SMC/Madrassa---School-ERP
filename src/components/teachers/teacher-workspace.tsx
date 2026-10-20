@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { AppLoader } from "@/components/shared/app-loader";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -256,9 +257,8 @@ export function TeacherWorkspace() {
       </Card>
 
       {loading ? (
-        <Card className="p-10 text-center text-sm text-muted-foreground">
-          <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
-          {isUrdu ? "اساتذہ لوڈ ہو رہے ہیں..." : "Loading teachers..."}
+        <Card className="p-8">
+          <AppLoader text="Loading teachers..." textUrdu="اساتذہ لوڈ ہو رہے ہیں..." />
         </Card>
       ) : teachers.length === 0 ? (
         <Card>

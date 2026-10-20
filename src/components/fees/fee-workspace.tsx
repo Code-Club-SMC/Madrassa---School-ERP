@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, HandCoins, Phone, RefreshCw, Search, User, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, HandCoins, Phone, RefreshCw, Search, User, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -18,6 +18,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { formatPKR } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-context";
 import { getFeeLedger, listFeeStudents } from "./fee-api";
 import { CollectPaymentDialog } from "./fee-dialogs";
 import type { FeeStudent, FeeSystem } from "./fee-types";
@@ -25,6 +26,8 @@ import type { FeeStudent, FeeSystem } from "./fee-types";
 type FeeStatusFilter = "all" | "due" | "clear";
 
 export function FeeWorkspace({ system, institutionId }: { system: FeeSystem; institutionId?: string }) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
   const [query, setQuery] = useState("");
   const [students, setStudents] = useState<FeeStudent[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<FeeStudent | null>(null);
@@ -261,6 +264,7 @@ export function FeeWorkspace({ system, institutionId }: { system: FeeSystem; ins
             ) : (
               students.map((student) => {
                 const isSubmitted = student.summary.outstandingPaisa <= 0;
+                const hasSiblings = (student.siblingCount ?? 0) > 0;
                 return (
                   <div
                     key={student.id}
@@ -273,32 +277,63 @@ export function FeeWorkspace({ system, institutionId }: { system: FeeSystem; ins
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {student.name}
-                          {student.nameUrdu && student.nameUrdu !== student.name && (
-                            <span className="font-urdu text-xs text-muted-foreground ml-1.5 font-normal">
-                              ({student.nameUrdu})
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate text-sm font-medium">
+                            {student.name}
+                            {student.nameUrdu && student.nameUrdu !== student.name && (
+                              <span className="font-urdu text-xs text-muted-foreground ml-1.5 font-normal">
+                                ({student.nameUrdu})
+                              </span>
+                            )}
+                          </p>
+                          {hasSiblings && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] bg-primary/10 text-primary border-primary/30 gap-1 font-normal py-0 h-4"
+                            >
+                              <Users className="h-2.5 w-2.5" />
+                              {student.siblingCount} {isUrdu ? "بہن بھائی" : "Siblings"}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="truncate text-xs text-muted-foreground mt-0.5">
+                          {student.rollNo} · {student.groupLabel ?? student.institutionName}
+                          {student.guardianCnic && (
+                            <span className="ms-2 font-mono text-[10px] opacity-75">
+                              {isUrdu ? "والد:" : "Father CNIC:"} {student.guardianCnic}
                             </span>
                           )}
                         </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {student.rollNo} · {student.groupLabel ?? student.institutionName}
-                        </p>
                         <div className="mt-1 flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
                           <span>{student.guardianPhone || "No phone"}</span>
-                          <span>{formatPKR(student.monthlyFeePaisa)}</span>
+                          <span>{formatPKR(student.monthlyFeePaisa)} / mo</span>
+                          {student.summary.outstandingPaisa > 0 && (
+                            <span className="text-destructive font-semibold">
+                              {isUrdu ? "بقایا:" : "Due:"} {formatPKR(student.summary.outstandingPaisa)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     <Button
                       size="sm"
+                      variant={isSubmitted ? "outline" : "default"}
                       className="h-8 shrink-0 gap-1.5 px-3 text-xs"
                       onClick={() => handleCollect(student)}
-                      disabled={isSubmitted}
                     >
                       <HandCoins className="h-3.5 w-3.5" />
-                      Collect
+                      {hasSiblings
+                        ? isUrdu
+                          ? "مشترکہ فیس"
+                          : "Family Fee"
+                        : isSubmitted
+                          ? isUrdu
+                            ? "پیشگی فیس"
+                            : "Advance"
+                          : isUrdu
+                            ? "فیس وصولی"
+                            : "Collect"}
                     </Button>
                   </div>
                 );

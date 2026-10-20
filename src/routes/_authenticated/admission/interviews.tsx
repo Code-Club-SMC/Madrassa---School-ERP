@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
+import { AppLoader } from "@/components/shared/app-loader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -195,12 +196,9 @@ function InterviewsPage() {
       />
 
       {loading ? (
-        <div className="flex items-center justify-center p-12">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <span className="ms-2 text-sm text-muted-foreground">
-            {isUrdu ? "لوڈ ہو رہا ہے..." : "Loading applications..."}
-          </span>
-        </div>
+        <Card className="p-12">
+          <AppLoader text="Loading applications..." textUrdu="درخواستیں لوڈ ہو رہی ہیں..." />
+        </Card>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">

@@ -827,9 +827,8 @@ function DashboardPage() {
         </div>
         <div className="h-72">
           {dataLoading ? (
-            <div className="h-full flex items-center justify-center text-muted-foreground text-xs gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              <span>{lang === "ur" ? "چارٹ ڈیٹا لوڈ ہو رہا ہے..." : "Loading trend data..."}</span>
+            <div className="h-full flex items-center justify-center">
+              <BookLoader text={lang === "ur" ? "چارٹ ڈیٹا لوڈ ہو رہا ہے..." : "Loading trend data..."} size="sm" />
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">

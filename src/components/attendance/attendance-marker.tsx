@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/components/language-context";
+import { AppLoader } from "@/components/shared/app-loader";
 import { cn } from "@/lib/utils";
 import type {
   AttendanceRosterPayload,
@@ -228,9 +229,8 @@ export function AttendanceMarker({
       </div>
 
       {loading ? (
-        <div className="p-8 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>{isUrdu ? "طلبہ کی فہرست لوڈ ہو رہی ہے..." : "Loading attendance roster..."}</span>
+        <div className="py-12">
+          <AppLoader text="Loading attendance roster..." textUrdu="طلبہ کی فہرست لوڈ ہو رہی ہے..." />
         </div>
       ) : !roster ? (
         <div className="p-8 text-center text-sm text-muted-foreground">

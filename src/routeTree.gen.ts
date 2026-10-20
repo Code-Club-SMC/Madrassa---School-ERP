@@ -129,6 +129,7 @@ import { Route as ApiExamsHallsIdRouteImport } from './routes/api/exams/halls/$i
 import { Route as ApiExamsReportsSummaryRouteImport } from './routes/api/exams/reports/summary'
 import { Route as ApiExamsSessionsIdRouteImport } from './routes/api/exams/sessions/$id'
 import { Route as ApiExamsSubjectsIdRouteImport } from './routes/api/exams/subjects/$id'
+import { Route as ApiFeesPaymentsCollectiveRouteImport } from './routes/api/fees/payments/collective'
 import { Route as ApiFeesReportsDailyCollectionRouteImport } from './routes/api/fees/reports/daily-collection'
 import { Route as ApiFeesReportsInstitutionSummaryRouteImport } from './routes/api/fees/reports/institution-summary'
 import { Route as ApiFeesReportsOutstandingDuesRouteImport } from './routes/api/fees/reports/outstanding-dues'
@@ -846,6 +847,12 @@ const ApiExamsSubjectsIdRoute = ApiExamsSubjectsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiExamsSubjectsRoute,
 } as any)
+const ApiFeesPaymentsCollectiveRoute =
+  ApiFeesPaymentsCollectiveRouteImport.update({
+    id: '/collective',
+    path: '/collective',
+    getParentRoute: () => ApiFeesPaymentsRoute,
+  } as any)
 const ApiFeesReportsDailyCollectionRoute =
   ApiFeesReportsDailyCollectionRouteImport.update({
     id: '/api/fees/reports/daily-collection',
@@ -1289,6 +1296,7 @@ export interface FileRoutesByFullPath {
   '/api/exams/reports/summary': typeof ApiExamsReportsSummaryRoute
   '/api/exams/sessions/$id': typeof ApiExamsSessionsIdRouteWithChildren
   '/api/exams/subjects/$id': typeof ApiExamsSubjectsIdRoute
+  '/api/fees/payments/collective': typeof ApiFeesPaymentsCollectiveRoute
   '/api/fees/reports/daily-collection': typeof ApiFeesReportsDailyCollectionRoute
   '/api/fees/reports/institution-summary': typeof ApiFeesReportsInstitutionSummaryRoute
   '/api/fees/reports/outstanding-dues': typeof ApiFeesReportsOutstandingDuesRoute
@@ -1458,6 +1466,7 @@ export interface FileRoutesByTo {
   '/api/exams/reports/summary': typeof ApiExamsReportsSummaryRoute
   '/api/exams/sessions/$id': typeof ApiExamsSessionsIdRouteWithChildren
   '/api/exams/subjects/$id': typeof ApiExamsSubjectsIdRoute
+  '/api/fees/payments/collective': typeof ApiFeesPaymentsCollectiveRoute
   '/api/fees/reports/daily-collection': typeof ApiFeesReportsDailyCollectionRoute
   '/api/fees/reports/institution-summary': typeof ApiFeesReportsInstitutionSummaryRoute
   '/api/fees/reports/outstanding-dues': typeof ApiFeesReportsOutstandingDuesRoute
@@ -1638,6 +1647,7 @@ export interface FileRoutesById {
   '/api/exams/reports/summary': typeof ApiExamsReportsSummaryRoute
   '/api/exams/sessions/$id': typeof ApiExamsSessionsIdRouteWithChildren
   '/api/exams/subjects/$id': typeof ApiExamsSubjectsIdRoute
+  '/api/fees/payments/collective': typeof ApiFeesPaymentsCollectiveRoute
   '/api/fees/reports/daily-collection': typeof ApiFeesReportsDailyCollectionRoute
   '/api/fees/reports/institution-summary': typeof ApiFeesReportsInstitutionSummaryRoute
   '/api/fees/reports/outstanding-dues': typeof ApiFeesReportsOutstandingDuesRoute
@@ -1818,6 +1828,7 @@ export interface FileRouteTypes {
     | '/api/exams/reports/summary'
     | '/api/exams/sessions/$id'
     | '/api/exams/subjects/$id'
+    | '/api/fees/payments/collective'
     | '/api/fees/reports/daily-collection'
     | '/api/fees/reports/institution-summary'
     | '/api/fees/reports/outstanding-dues'
@@ -1987,6 +1998,7 @@ export interface FileRouteTypes {
     | '/api/exams/reports/summary'
     | '/api/exams/sessions/$id'
     | '/api/exams/subjects/$id'
+    | '/api/fees/payments/collective'
     | '/api/fees/reports/daily-collection'
     | '/api/fees/reports/institution-summary'
     | '/api/fees/reports/outstanding-dues'
@@ -2166,6 +2178,7 @@ export interface FileRouteTypes {
     | '/api/exams/reports/summary'
     | '/api/exams/sessions/$id'
     | '/api/exams/subjects/$id'
+    | '/api/fees/payments/collective'
     | '/api/fees/reports/daily-collection'
     | '/api/fees/reports/institution-summary'
     | '/api/fees/reports/outstanding-dues'
@@ -3137,6 +3150,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExamsSubjectsIdRouteImport
       parentRoute: typeof ApiExamsSubjectsRoute
     }
+    '/api/fees/payments/collective': {
+      id: '/api/fees/payments/collective'
+      path: '/collective'
+      fullPath: '/api/fees/payments/collective'
+      preLoaderRoute: typeof ApiFeesPaymentsCollectiveRouteImport
+      parentRoute: typeof ApiFeesPaymentsRoute
+    }
     '/api/fees/reports/daily-collection': {
       id: '/api/fees/reports/daily-collection'
       path: '/api/fees/reports/daily-collection'
@@ -4038,11 +4058,13 @@ const ApiFeesChargesRouteWithChildren = ApiFeesChargesRoute._addFileChildren(
 )
 
 interface ApiFeesPaymentsRouteChildren {
+  ApiFeesPaymentsCollectiveRoute: typeof ApiFeesPaymentsCollectiveRoute
   ApiFeesPaymentsIdRefundRoute: typeof ApiFeesPaymentsIdRefundRoute
   ApiFeesPaymentsIdReverseRoute: typeof ApiFeesPaymentsIdReverseRoute
 }
 
 const ApiFeesPaymentsRouteChildren: ApiFeesPaymentsRouteChildren = {
+  ApiFeesPaymentsCollectiveRoute: ApiFeesPaymentsCollectiveRoute,
   ApiFeesPaymentsIdRefundRoute: ApiFeesPaymentsIdRefundRoute,
   ApiFeesPaymentsIdReverseRoute: ApiFeesPaymentsIdReverseRoute,
 }

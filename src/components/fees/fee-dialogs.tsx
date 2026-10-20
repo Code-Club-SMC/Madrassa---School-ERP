@@ -1,6 +1,23 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, Loader2, Printer, ReceiptText, RotateCcw, Undo2, WalletCards } from "lucide-react";
+import {
+  Banknote,
+  Calendar,
+  CalendarCheck,
+  Check,
+  CheckSquare,
+  Clock,
+  CreditCard,
+  Loader2,
+  Printer,
+  ReceiptText,
+  RotateCcw,
+  Sparkles,
+  Undo2,
+  User,
+  Users,
+  WalletCards,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import {
@@ -13,7 +30,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -27,8 +46,10 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate, formatPKR, paisaToRupees, rupeesToPaisa } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/language-context";
 import {
   chargeAndCollect,
+  collectCollectivePayment,
   collectPayment,
   createCharge,
   refundPayment,
@@ -36,12 +57,14 @@ import {
   reversePayment,
 } from "./fee-api";
 import type {
+  AdvanceMonthOption,
   FeeCharge,
   FeeChargeType,
   FeeLedgerPayload,
   FeePayment,
   FeePaymentMethod,
   FeeStudent,
+  SiblingFeeInfo,
 } from "./fee-types";
 
 type BaseDialogProps = {
@@ -302,6 +325,25 @@ export function ChargeDialog({
   );
 }
 
+export type CollectiveReceiptData = {
+  payerName?: string;
+  payerPhone?: string;
+  method: FeePaymentMethod;
+  receivedAt: string;
+  totalAmountPaisa: number;
+  receiptNos: string[];
+  students: Array<{
+    name: string;
+    nameUrdu: string;
+    rollNo: string;
+    classOrDarja: string;
+    institutionName: string;
+    receiptNo: string;
+    amountPaisa: number;
+    items: Array<{ label: string; period?: string; amountPaisa: number }>;
+  }>;
+};
+
 export function CollectPaymentDialog({
   open,
   onOpenChange,
@@ -310,229 +352,923 @@ export function CollectPaymentDialog({
 }: BaseDialogProps & {
   ledger: FeeLedgerPayload | null;
 }) {
-  const outstandingCharges = useMemo(
-    () => ledger?.charges.filter((charge) => charge.ledger.balancePaisa > 0 && charge.status !== "reversed") ?? [],
-    [ledger?.charges],
-  );
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
+
+  const primaryStudent = ledger?.student;
+  const siblings = useMemo(() => ledger?.siblings ?? [], [ledger?.siblings]);
+  const hasSiblings = siblings.length > 0;
+
+  // Track which students are included in this collective payment
+  const [includedStudentIds, setIncludedStudentIds] = useState<Set<string>>(new Set());
+
+  // Track payment amounts allocated to outstanding charges (chargeId -> amount string in rupees)
   const [amountByCharge, setAmountByCharge] = useState<Record<string, string>>({});
+
+  // Track selected advance months per student (studentId -> Set of period strings e.g. "2026-11")
+  const [selectedAdvanceMonths, setSelectedAdvanceMonths] = useState<Record<string, Set<string>>>({});
+
   const [method, setMethod] = useState<FeePaymentMethod>("cash");
   const [payerName, setPayerName] = useState("");
   const [payerPhone, setPayerPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [pending, setPending] = useState(false);
 
+  // Completed receipt data for modal preview
+  const [receiptData, setReceiptData] = useState<CollectiveReceiptData | null>(null);
+
+  // Initialize form state when ledger or dialog opens
   useEffect(() => {
-    if (!open || !ledger) return;
-    const charges = ledger.charges.filter(c => c.ledger.balancePaisa > 0 && c.status !== "reversed");
-    setAmountByCharge(
-      Object.fromEntries(
-        charges.map((charge) => [charge.id, String(paisaToRupees(charge.ledger.balancePaisa))]),
-      ),
+    if (!open || !ledger || !primaryStudent) return;
+
+    // Include primary student + all siblings by default
+    const initialIncluded = new Set<string>([primaryStudent.id, ...siblings.map((s) => s.id)]);
+    setIncludedStudentIds(initialIncluded);
+
+    // Collect all outstanding charges across primary student and siblings
+    const initialAmounts: Record<string, string> = {};
+    const primaryCharges = ledger.charges.filter(
+      (c) => c.ledger.balancePaisa > 0 && c.status !== "reversed",
     );
+    for (const c of primaryCharges) {
+      initialAmounts[c.id] = String(paisaToRupees(c.ledger.balancePaisa));
+    }
+    for (const sib of siblings) {
+      for (const c of sib.outstandingCharges) {
+        initialAmounts[c.id] = String(paisaToRupees(c.ledger.balancePaisa));
+      }
+    }
+    setAmountByCharge(initialAmounts);
+
+    setSelectedAdvanceMonths({});
     setMethod("cash");
     setPayerName(ledger.student.guardianName ?? "");
     setPayerPhone(ledger.student.guardianPhone ?? "");
     setNotes("");
-  }, [open, ledger?.id]);
+  }, [open, ledger, primaryStudent?.id]);
 
-  const totalPaisa = outstandingCharges.reduce((sum, charge) => {
-    return sum + rupeesToPaisa(amountByCharge[charge.id] ?? "0");
-  }, 0);
+  // Primary student outstanding charges
+  const primaryOutstandingCharges = useMemo(
+    () => ledger?.charges.filter((c) => c.ledger.balancePaisa > 0 && c.status !== "reversed") ?? [],
+    [ledger?.charges],
+  );
 
-  const totalOutstanding = outstandingCharges.reduce((sum, charge) => {
-    return sum + charge.ledger.balancePaisa;
-  }, 0);
+  // Toggle student inclusion
+  const toggleStudentInclusion = (studentId: string) => {
+    setIncludedStudentIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(studentId)) {
+        next.delete(studentId);
+      } else {
+        next.add(studentId);
+      }
+      return next;
+    });
+  };
 
-  async function save() {
-    if (!ledger) return;
-    const allocations = outstandingCharges
-      .map((charge) => ({
-        chargeId: charge.id,
-        amountPaisa: rupeesToPaisa(amountByCharge[charge.id] ?? "0"),
-        balancePaisa: charge.ledger.balancePaisa,
-      }))
-      .filter((allocation) => allocation.amountPaisa > 0);
+  // Toggle advance month selection for a student
+  const toggleAdvanceMonth = (studentId: string, period: string) => {
+    setSelectedAdvanceMonths((prev) => {
+      const currentSet = new Set(prev[studentId] ?? []);
+      if (currentSet.has(period)) {
+        currentSet.delete(period);
+      } else {
+        currentSet.add(period);
+      }
+      return { ...prev, [studentId]: currentSet };
+    });
+  };
 
-    if (allocations.length === 0) {
-      toast.error("Enter at least one payment amount");
-      return;
+  // Select all remaining advance months for a student
+  const selectAllAdvance = (studentId: string, months: AdvanceMonthOption[]) => {
+    setSelectedAdvanceMonths((prev) => ({
+      ...prev,
+      [studentId]: new Set(months.map((m) => m.period)),
+    }));
+  };
+
+  // Clear advance months for a student
+  const clearAdvance = (studentId: string) => {
+    setSelectedAdvanceMonths((prev) => {
+      const next = { ...prev };
+      delete next[studentId];
+      return next;
+    });
+  };
+
+  // Calculate totals per student
+  const getStudentTotals = (
+    studentId: string,
+    charges: FeeCharge[],
+    advanceMonths: AdvanceMonthOption[],
+  ) => {
+    const outstandingPaisa = charges.reduce((sum, c) => {
+      const entered = rupeesToPaisa(amountByCharge[c.id] ?? "0");
+      return sum + entered;
+    }, 0);
+
+    const selectedPeriods = selectedAdvanceMonths[studentId] ?? new Set();
+    const advancePaisa = advanceMonths
+      .filter((m) => selectedPeriods.has(m.period))
+      .reduce((sum, m) => sum + m.amountPaisa, 0);
+
+    return {
+      outstandingPaisa,
+      advancePaisa,
+      totalPaisa: outstandingPaisa + advancePaisa,
+      selectedAdvanceCount: selectedPeriods.size,
+    };
+  };
+
+  // Primary student totals
+  const primaryTotals = useMemo(() => {
+    if (!primaryStudent) return { outstandingPaisa: 0, advancePaisa: 0, totalPaisa: 0, selectedAdvanceCount: 0 };
+    return getStudentTotals(
+      primaryStudent.id,
+      primaryOutstandingCharges,
+      ledger?.advanceMonths ?? [],
+    );
+  }, [primaryStudent?.id, primaryOutstandingCharges, ledger?.advanceMonths, amountByCharge, selectedAdvanceMonths]);
+
+  // Grand total calculation across all included students
+  const grandTotalPaisa = useMemo(() => {
+    let grand = 0;
+    if (primaryStudent && includedStudentIds.has(primaryStudent.id)) {
+      grand += primaryTotals.totalPaisa;
     }
-    if (allocations.some((allocation) => allocation.amountPaisa > allocation.balancePaisa)) {
-      toast.error("Payment cannot exceed outstanding balance");
+    for (const sib of siblings) {
+      if (includedStudentIds.has(sib.id)) {
+        const sibTotals = getStudentTotals(sib.id, sib.outstandingCharges, sib.advanceMonths);
+        grand += sibTotals.totalPaisa;
+      }
+    }
+    return grand;
+  }, [primaryStudent?.id, primaryTotals, siblings, includedStudentIds, amountByCharge, selectedAdvanceMonths]);
+
+  const activeStudentsCount = useMemo(() => {
+    let count = 0;
+    if (primaryStudent && includedStudentIds.has(primaryStudent.id)) count++;
+    for (const sib of siblings) {
+      if (includedStudentIds.has(sib.id)) count++;
+    }
+    return count;
+  }, [primaryStudent?.id, siblings, includedStudentIds]);
+
+  // Fill full outstanding dues for a student
+  const fillStudentFullDues = (charges: FeeCharge[]) => {
+    setAmountByCharge((prev) => {
+      const next = { ...prev };
+      for (const c of charges) {
+        next[c.id] = String(paisaToRupees(c.ledger.balancePaisa));
+      }
+      return next;
+    });
+  };
+
+  // Clear outstanding dues for a student
+  const clearStudentDues = (charges: FeeCharge[]) => {
+    setAmountByCharge((prev) => {
+      const next = { ...prev };
+      for (const c of charges) {
+        next[c.id] = "0";
+      }
+      return next;
+    });
+  };
+
+  // Submit collective payment
+  async function save() {
+    if (!ledger || !primaryStudent) return;
+
+    const studentsPayload: Array<{
+      studentId: string;
+      allocations: Array<{ chargeId: string; amountPaisa: number }>;
+      advanceMonths: Array<{ period: string; label: string; amountPaisa: number }>;
+    }> = [];
+
+    // 1. Primary Student
+    if (includedStudentIds.has(primaryStudent.id)) {
+      const allocations = primaryOutstandingCharges
+        .map((c) => ({
+          chargeId: c.id,
+          amountPaisa: rupeesToPaisa(amountByCharge[c.id] ?? "0"),
+          balancePaisa: c.ledger.balancePaisa,
+        }))
+        .filter((a) => a.amountPaisa > 0);
+
+      if (allocations.some((a) => a.amountPaisa > a.balancePaisa)) {
+        toast.error(`Payment for ${primaryStudent.name} cannot exceed outstanding balance`);
+        return;
+      }
+
+      const primaryAdvSelected = selectedAdvanceMonths[primaryStudent.id] ?? new Set();
+      const advMonths = (ledger.advanceMonths ?? [])
+        .filter((m) => primaryAdvSelected.has(m.period))
+        .map((m) => ({
+          period: m.period,
+          label: `Monthly Tuition Fee - ${m.labelEn}`,
+          amountPaisa: m.amountPaisa,
+        }));
+
+      if (allocations.length > 0 || advMonths.length > 0) {
+        studentsPayload.push({
+          studentId: primaryStudent.id,
+          allocations: allocations.map(({ chargeId, amountPaisa }) => ({ chargeId, amountPaisa })),
+          advanceMonths: advMonths,
+        });
+      }
+    }
+
+    // 2. Siblings
+    for (const sib of siblings) {
+      if (!includedStudentIds.has(sib.id)) continue;
+
+      const allocations = sib.outstandingCharges
+        .map((c) => ({
+          chargeId: c.id,
+          amountPaisa: rupeesToPaisa(amountByCharge[c.id] ?? "0"),
+          balancePaisa: c.ledger.balancePaisa,
+        }))
+        .filter((a) => a.amountPaisa > 0);
+
+      if (allocations.some((a) => a.amountPaisa > a.balancePaisa)) {
+        toast.error(`Payment for ${sib.name} cannot exceed outstanding balance`);
+        return;
+      }
+
+      const sibAdvSelected = selectedAdvanceMonths[sib.id] ?? new Set();
+      const advMonths = sib.advanceMonths
+        .filter((m) => sibAdvSelected.has(m.period))
+        .map((m) => ({
+          period: m.period,
+          label: `Monthly Tuition Fee - ${m.labelEn}`,
+          amountPaisa: m.amountPaisa,
+        }));
+
+      if (allocations.length > 0 || advMonths.length > 0) {
+        studentsPayload.push({
+          studentId: sib.id,
+          allocations: allocations.map(({ chargeId, amountPaisa }) => ({ chargeId, amountPaisa })),
+          advanceMonths: advMonths,
+        });
+      }
+    }
+
+    if (studentsPayload.length === 0) {
+      toast.error(
+        isUrdu
+          ? "براہ کرم فیس ادا کرنے کے لیے بقایا رقم درج کریں یا پیشگی مہینے منتخب کریں۔"
+          : "Please enter an amount or select advance months to collect.",
+      );
       return;
     }
 
     setPending(true);
     try {
-      await collectPayment({
-        studentId: ledger.student.id,
-        allocations: allocations.map(({ chargeId, amountPaisa }) => ({ chargeId, amountPaisa })),
+      const res = await collectCollectivePayment({
         method,
         payerName: payerName.trim() || undefined,
         payerPhone: payerPhone.trim() || undefined,
         notes: notes.trim() || undefined,
+        students: studentsPayload,
       });
-      toast.success("Payment collected");
-      setPayerName("");
-      setPayerPhone("");
-      setNotes("");
-      setAmountByCharge({});
+
+      toast.success(
+        isUrdu
+          ? `فیس کامیابی سے وصول ہو گئی۔ کل وصولی: ${formatPKR(res.totalAmountPaisa)}`
+          : `Fee payment collected successfully. Total: ${formatPKR(res.totalAmountPaisa)}`,
+      );
+
+      // Build structured receipt data
+      const receiptBreakdowns = res.results.map((r) => {
+        const isPrim = r.studentId === primaryStudent.id;
+        const st = isPrim ? primaryStudent : siblings.find((s) => s.id === r.studentId);
+        const studentInput = studentsPayload.find((s) => s.studentId === r.studentId);
+
+        const items: Array<{ label: string; period?: string; amountPaisa: number }> = [];
+        if (studentInput) {
+          studentInput.allocations.forEach((a) => {
+            const chargeObj = isPrim
+              ? primaryOutstandingCharges.find((c) => c.id === a.chargeId)
+              : siblings.find((s) => s.id === r.studentId)?.outstandingCharges.find((c) => c.id === a.chargeId);
+            items.push({
+              label: chargeObj?.label ?? "Tuition Fee Dues",
+              period: chargeObj?.period ?? undefined,
+              amountPaisa: a.amountPaisa,
+            });
+          });
+          studentInput.advanceMonths.forEach((adv) => {
+            items.push({
+              label: adv.label,
+              period: adv.period,
+              amountPaisa: adv.amountPaisa,
+            });
+          });
+        }
+
+        return {
+          name: st?.name ?? r.studentName ?? "Student",
+          nameUrdu: st?.nameUrdu ?? r.studentNameUrdu ?? "",
+          rollNo: st?.rollNo ?? r.rollNo ?? "—",
+          classOrDarja: (st as any)?.groupLabel ?? "—",
+          institutionName: (st as any)?.institutionName ?? "Al-Qasim / Jamia",
+          receiptNo: r.receiptNo,
+          amountPaisa: r.amountPaisa,
+          items,
+        };
+      });
+
+      setReceiptData({
+        payerName: payerName.trim() || undefined,
+        payerPhone: payerPhone.trim() || undefined,
+        method,
+        receivedAt: new Date().toISOString(),
+        totalAmountPaisa: res.totalAmountPaisa,
+        receiptNos: res.receiptNos,
+        students: receiptBreakdowns,
+      });
+
       onSuccess();
-      onOpenChange(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not collect payment");
+      toast.error(error instanceof Error ? error.message : "Could not collect fee payment");
     } finally {
       setPending(false);
     }
   }
 
-  const fillFullOutstanding = () => {
-    setAmountByCharge(
-      Object.fromEntries(
-        outstandingCharges.map((charge) => [charge.id, String(paisaToRupees(charge.ledger.balancePaisa))]),
-      ),
-    );
-  };
+  // Render an individual person's fee collection section
+  const renderStudentSection = (
+    student: {
+      id: string;
+      name: string;
+      nameUrdu: string;
+      rollNo: string;
+      groupLabel: string | null;
+      institutionName: string;
+      institutionNameUrdu?: string;
+      system: string;
+      monthlyFee: number;
+      monthlyFeePaisa: number;
+    },
+    outstandingCharges: FeeCharge[],
+    advanceMonths: AdvanceMonthOption[],
+    isSibling: boolean,
+  ) => {
+    const isIncluded = includedStudentIds.has(student.id);
+    const totals = getStudentTotals(student.id, outstandingCharges, advanceMonths);
+    const selectedPeriods = selectedAdvanceMonths[student.id] ?? new Set();
 
-  return (
-    <ResponsiveDialog
-      title="Collect Payment"
-      description={ledger ? `Outstanding balance: ${formatPKR(ledger.summary.outstandingPaisa)}` : "Select a student before continuing."}
-      open={open}
-      onOpenChange={onOpenChange}
-      icon={WalletCards}
-      className="sm:max-w-2xl"
-    >
-      <div className="space-y-5 p-2">
-        {/* Student Summary */}
-        {ledger && (
-          <div className="rounded-lg bg-gradient-to-r from-primary/10 to-transparent p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-urdu text-lg font-semibold">{ledger.student.nameUrdu}</p>
-                <p className="text-sm text-muted-foreground">
-                  {ledger.student.name} · {ledger.student.rollNo}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Total Outstanding</p>
-                <p className="font-mono text-xl font-bold text-destructive">
-                  {formatPKR(totalOutstanding)}
-                </p>
-              </div>
-            </div>
-          </div>
+    return (
+      <div
+        key={student.id}
+        className={cn(
+          "rounded-xl border-2 transition-all duration-200 overflow-hidden",
+          isIncluded
+            ? "border-primary/40 bg-card shadow-sm"
+            : "border-border/60 bg-muted/20 opacity-70",
         )}
-
-        {/* Payment Details */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Payment Method">
-            <PaymentMethodSelect value={method} onChange={setMethod} />
-          </Field>
-          <Field label="Payer Name">
-            <Input value={payerName} onChange={(event) => setPayerName(event.target.value)} className="h-10" />
-          </Field>
-          <Field label="Payer Phone">
-            <Input value={payerPhone} onChange={(event) => setPayerPhone(event.target.value)} className="h-10" />
-          </Field>
-        </div>
-
-        {/* Charges Allocation */}
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <Label className="text-sm font-semibold">Allocate Payment</Label>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={fillFullOutstanding}
-              className="h-7 text-xs"
-            >
-              Fill Full Outstanding
-            </Button>
-          </div>
-          
-          <div className="overflow-hidden rounded-lg border">
-            <div className="grid grid-cols-[1fr_7rem_7rem] bg-muted/50 px-4 py-2 text-xs font-semibold text-muted-foreground">
-              <span>Charge</span>
-              <span className="text-end">Balance</span>
-              <span className="text-end">Pay Now</span>
-            </div>
-            {outstandingCharges.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                No outstanding charges.
-              </p>
+      >
+        {/* Person Header */}
+        <div
+          className={cn(
+            "p-4 border-b flex flex-wrap items-center justify-between gap-3",
+            isIncluded ? "bg-muted/40" : "bg-muted/10",
+          )}
+        >
+          <div className="flex items-center gap-3">
+            {isSibling ? (
+              <Checkbox
+                id={`include-${student.id}`}
+                checked={isIncluded}
+                onCheckedChange={() => toggleStudentInclusion(student.id)}
+                className="h-5 w-5"
+              />
             ) : (
-              outstandingCharges.map((charge, index) => (
-                <div 
-                  key={charge.id} 
-                  className={cn(
-                    "grid grid-cols-[1fr_7rem_7rem] items-center gap-2 border-t px-4 py-3",
-                    index % 2 === 0 && "bg-muted/20"
-                  )}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{charge.label}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {charge.period ?? charge.type}
-                      {charge.dueDate && ` · Due: ${formatDate(charge.dueDate)}`}
-                    </p>
-                  </div>
-                  <p className="text-end font-mono text-xs">{formatPKR(charge.ledger.balancePaisa)}</p>
-                  <Input
-                    inputMode="decimal"
-                    value={amountByCharge[charge.id] ?? ""}
-                    onChange={(event) =>
-                      setAmountByCharge((current) => ({ ...current, [charge.id]: event.target.value }))
-                    }
-                    className="h-9 text-end font-mono"
-                    placeholder="0"
-                  />
-                </div>
-              ))
+              <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-urdu font-bold text-base">{student.nameUrdu}</span>
+                <span className="text-sm font-medium text-foreground">({student.name})</span>
+                {isSibling ? (
+                  <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                    {isUrdu ? "بھائی / بہن" : "Sibling"}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-[10px]">
+                    {isUrdu ? "مرکزی طالب علم" : "Primary Student"}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {student.rollNo} · {student.groupLabel ?? "Class"} · {student.institutionName}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="text-end">
+              <span className="text-[11px] text-muted-foreground block">{isUrdu ? "ماہانہ فیس" : "Monthly Fee"}</span>
+              <span className="font-mono text-xs font-semibold text-foreground">
+                {formatPKR(student.monthlyFeePaisa)}
+              </span>
+            </div>
+            {isSibling && (
+              <Label
+                htmlFor={`include-${student.id}`}
+                className="cursor-pointer text-xs text-muted-foreground select-none"
+              >
+                {isIncluded ? (isUrdu ? "شامل ہے" : "Included") : (isUrdu ? "شامل نہیں" : "Excluded")}
+              </Label>
             )}
           </div>
         </div>
 
-        {/* Total */}
-        <div className="rounded-lg bg-primary/5 p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Payment Total</span>
-            <span className="font-mono text-2xl font-bold text-primary">
-              {formatPKR(totalPaisa)}
-            </span>
+        {/* Person Body (shown only when student is included) */}
+        {isIncluded && (
+          <div className="p-4 space-y-5">
+            {/* 1. Outstanding Dues Sub-section */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <CreditCard className="h-4 w-4 text-amber-600" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {isUrdu ? "واجب الادا فیس / سابقہ بقایا جات" : "Outstanding Dues / Overdue"}
+                  </span>
+                </div>
+                {outstandingCharges.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fillStudentFullDues(outstandingCharges)}
+                      className="h-6 text-[11px] px-2"
+                    >
+                      {isUrdu ? "تمام ادا کریں" : "Full Dues"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => clearStudentDues(outstandingCharges)}
+                      className="h-6 text-[11px] px-2 text-muted-foreground"
+                    >
+                      {isUrdu ? "صفر کریں" : "Clear"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {outstandingCharges.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-3 text-center text-xs text-muted-foreground bg-muted/10">
+                  <Check className="h-4 w-4 inline-block me-1 text-emerald-500" />
+                  {isUrdu ? "کوئی بقایا فیس نہیں ہے۔" : "No outstanding overdue charges."}
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-lg border">
+                  <div className="grid grid-cols-[1fr_6rem_6.5rem] bg-muted/50 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground">
+                    <span>{isUrdu ? "تفصیل" : "Charge"}</span>
+                    <span className="text-end">{isUrdu ? "بقایا" : "Balance"}</span>
+                    <span className="text-end">{isUrdu ? "وصولی رقم" : "Pay Amount"}</span>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {outstandingCharges.map((charge) => (
+                      <div
+                        key={charge.id}
+                        className="grid grid-cols-[1fr_6rem_6.5rem] items-center gap-2 px-3 py-2 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{charge.label}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {charge.period ?? charge.type}
+                            {charge.dueDate && ` · Due: ${formatDate(charge.dueDate)}`}
+                          </p>
+                        </div>
+                        <p className="text-end font-mono text-xs text-destructive">
+                          {formatPKR(charge.ledger.balancePaisa)}
+                        </p>
+                        <Input
+                          inputMode="decimal"
+                          value={amountByCharge[charge.id] ?? ""}
+                          onChange={(e) =>
+                            setAmountByCharge((cur) => ({ ...cur, [charge.id]: e.target.value }))
+                          }
+                          className="h-8 text-end font-mono text-xs"
+                          placeholder="0"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Pay in Advance (Remaining Months of Session) Sub-section */}
+            <div className="rounded-lg border bg-muted/15 p-3.5 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-semibold text-foreground">
+                    {isUrdu ? "پیشگی فیس کی وصولی (باقی ماندہ مہینے)" : "Pay in Advance (Remaining Session Months)"}
+                  </span>
+                </div>
+                {advanceMonths.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => selectAllAdvance(student.id, advanceMonths)}
+                      className="h-6 text-[10px] px-2"
+                    >
+                      {isUrdu ? "تمام باقی مہینے" : "Select All Remaining"}
+                    </Button>
+                    {selectedPeriods.size > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => clearAdvance(student.id)}
+                        className="h-6 text-[10px] px-2 text-muted-foreground"
+                      >
+                        {isUrdu ? "ختم کریں" : "Clear"}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {advanceMonths.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">
+                  {isUrdu
+                    ? "اس سیشن کے تمام مہینوں کی فیس پہلے ہی درج کی جا چکی ہے۔"
+                    : "All months for this academic session have already been generated/paid."}
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1">
+                  {advanceMonths.map((month) => {
+                    const isSelected = selectedPeriods.has(month.period);
+                    return (
+                      <button
+                        type="button"
+                        key={month.period}
+                        onClick={() => toggleAdvanceMonth(student.id, month.period)}
+                        className={cn(
+                          "flex items-center justify-between p-2.5 rounded-lg border text-start transition-all duration-150",
+                          isSelected
+                            ? "border-primary bg-primary/10 text-primary font-medium shadow-sm ring-1 ring-primary/30"
+                            : "border-border/80 bg-background hover:bg-muted/50 text-foreground",
+                        )}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className={cn(
+                              "h-4 w-4 rounded border flex items-center justify-center shrink-0",
+                              isSelected ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/40",
+                            )}
+                          >
+                            {isSelected && <Check className="h-3 w-3" />}
+                          </div>
+                          <div className="truncate">
+                            <span className="block text-xs font-semibold truncate font-urdu">
+                              {month.labelUrdu}
+                            </span>
+                            <span className="block text-[10px] text-muted-foreground truncate">
+                              {month.labelEn}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="font-mono text-xs font-semibold shrink-0 ms-2">
+                          {formatPKR(month.amountPaisa)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Person Subtotal Bar */}
+            <div className="rounded-lg bg-muted/40 p-3 flex flex-wrap items-center justify-between border">
+              <span className="text-xs text-muted-foreground font-medium">
+                {isUrdu ? `${student.name} کا میزان:` : `Subtotal for ${student.name}:`}
+                <span className="ms-1.5 text-[11px] opacity-80">
+                  ({isUrdu ? "بقایا جات" : "Dues"}: {formatPKR(totals.outstandingPaisa)} + {isUrdu ? "پیشگی" : "Advance"}: {formatPKR(totals.advancePaisa)})
+                </span>
+              </span>
+              <span className="font-mono text-base font-bold text-foreground">
+                {formatPKR(totals.totalPaisa)}
+              </span>
+            </div>
           </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <ResponsiveDialog
+        title={
+          hasSiblings
+            ? isUrdu
+              ? "مشترکہ فیس وصولی (بہن بھائی)"
+              : "Family Collective Fee Collection"
+            : isUrdu
+              ? "فیس وصولی"
+              : "Collect Fee Payment"
+        }
+        description={
+          hasSiblings && ledger?.guardianCnic
+            ? isUrdu
+              ? `والد شناختی کارڈ: ${ledger.guardianCnic} · ${activeStudentsCount} طلبہ شامل ہیں`
+              : `Father CNIC: ${ledger.guardianCnic} · ${activeStudentsCount} student(s) included`
+            : primaryStudent
+              ? `${primaryStudent.rollNo} · ${primaryStudent.name}`
+              : "Select student"
+        }
+        open={open}
+        onOpenChange={onOpenChange}
+        icon={hasSiblings ? Users : WalletCards}
+        className="sm:max-w-3xl"
+      >
+        <div className="space-y-6 p-2 max-h-[75vh] overflow-y-auto pr-1">
+          {/* Family Banner if siblings exist */}
+          {hasSiblings && (
+            <div className="rounded-xl bg-gradient-to-r from-primary/15 via-emerald-500/10 to-transparent p-4 border border-primary/20 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">
+                    {isUrdu ? "خاندانی مشترکہ فیس وصولی" : "Sibling Collective Payment Mode"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isUrdu ? "والد / سرپرست شناختی کارڈ:" : "Father / Guardian CNIC:"}{" "}
+                    <span className="font-mono font-semibold text-foreground">
+                      {ledger?.guardianCnic || primaryStudent?.guardianCnic || "—"}
+                    </span>
+                    {primaryStudent?.guardianName && ` · ${primaryStudent.guardianName}`}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-xs bg-card border-primary/40 font-mono">
+                {siblings.length + 1} {isUrdu ? "بہن بھائی دستیاب" : "Siblings in System"}
+              </Badge>
+            </div>
+          )}
+
+          {/* Person-by-Person Fee Sections */}
+          <div className="space-y-4">
+            {/* Primary Student Section */}
+            {primaryStudent &&
+              renderStudentSection(
+                primaryStudent,
+                primaryOutstandingCharges,
+                ledger?.advanceMonths ?? [],
+                false,
+              )}
+
+            {/* Sibling Sections */}
+            {siblings.map((sib) =>
+              renderStudentSection(
+                sib,
+                sib.outstandingCharges,
+                sib.advanceMonths,
+                true,
+              ),
+            )}
+          </div>
+
+          {/* Grand Total Highlight Banner */}
+          <div className="rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border-2 border-primary/40 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                  {isUrdu ? "کل واجب الادا فیس (تمام طلبہ)" : "Total Collective Fee (All Persons)"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {activeStudentsCount} {isUrdu ? "طلبہ شامل ہیں" : "student(s) selected"}
+                </p>
+              </div>
+              <div className="text-end">
+                <p className="font-mono text-3xl font-extrabold text-primary">
+                  {formatPKR(grandTotalPaisa)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Details Inputs */}
+          <div className="grid gap-4 sm:grid-cols-3 pt-1">
+            <Field label={isUrdu ? "ادائیگی کا طریقہ" : "Payment Method"}>
+              <PaymentMethodSelect value={method} onChange={setMethod} />
+            </Field>
+            <Field label={isUrdu ? "ادا کنندہ کا نام" : "Payer Name"}>
+              <Input
+                value={payerName}
+                onChange={(e) => setPayerName(e.target.value)}
+                placeholder="Full name"
+                className="h-10"
+              />
+            </Field>
+            <Field label={isUrdu ? "فون نمبر" : "Payer Phone"}>
+              <Input
+                value={payerPhone}
+                onChange={(e) => setPayerPhone(e.target.value)}
+                placeholder="03XX-XXXXXXX"
+                className="h-10"
+              />
+            </Field>
+          </div>
+
+          <Field label={isUrdu ? "اضافی نوٹس" : "Notes"}>
+            <Textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={isUrdu ? "کوئی ضروری وضاحت یا حوالہ..." : "Any payment notes or reference..."}
+            />
+          </Field>
         </div>
 
-        <Field label="Notes">
-          <Textarea 
-            rows={2} 
-            value={notes} 
-            onChange={(event) => setNotes(event.target.value)} 
-            placeholder="Any payment notes..."
-          />
-        </Field>
-      </div>
-      
-      <div className="mt-6 flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
-        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-          Cancel
+        {/* Modal Actions */}
+        <div className="mt-4 flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
+            {isUrdu ? "منسوخ کریں" : "Cancel"}
+          </Button>
+          <Button
+            onClick={save}
+            disabled={!ledger || pending || grandTotalPaisa <= 0}
+            className="gap-2 px-6"
+          >
+            {pending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {isUrdu ? "فیس وصول ہو رہی ہے..." : "Collecting..."}
+              </>
+            ) : (
+              <>
+                <WalletCards className="h-4 w-4" />
+                {isUrdu
+                  ? `فیس وصول کریں (${formatPKR(grandTotalPaisa)})`
+                  : `Collect Fee (${formatPKR(grandTotalPaisa)})`}
+              </>
+            )}
+          </Button>
+        </div>
+      </ResponsiveDialog>
+
+      {/* Collective Receipt Dialog */}
+      <CollectiveReceiptDialog
+        data={receiptData}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReceiptData(null);
+            onOpenChange(false);
+          }
+        }}
+      />
+    </>
+  );
+}
+
+export function CollectiveReceiptDialog({
+  data,
+  onOpenChange,
+}: {
+  data: CollectiveReceiptData | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { lang } = useLanguage();
+  const isUrdu = lang === "ur";
+
+  return (
+    <ResponsiveDialog
+      title={isUrdu ? "فیس وصولی رسید" : "Official Fee Receipt"}
+      description={data ? data.receiptNos.join(", ") : "Payment receipt"}
+      open={!!data}
+      onOpenChange={onOpenChange}
+      icon={ReceiptText}
+      className="sm:max-w-xl"
+    >
+      {data && (
+        <div className="p-2 space-y-4">
+          <div className="print-target overflow-hidden rounded-xl border-2 bg-card">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-primary/15 to-transparent p-5 text-center border-b">
+              <p className="font-urdu text-xl font-bold">جامعہ قاسمیہ / القاسم اکیڈمی</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground mt-0.5">
+                Al-Qasim Academy & Jamia Qasimia
+              </p>
+              <div className="mt-2.5 inline-block rounded-full bg-primary/10 border border-primary/20 px-3.5 py-1">
+                <p className="text-xs font-semibold text-primary">
+                  {data.students.length > 1 ? "Family Collective Fee Receipt" : "Official Fee Receipt"}
+                </p>
+              </div>
+            </div>
+
+            {/* Metadata Rows */}
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground block">{isUrdu ? "رسید نمبر:" : "Receipt No(s):"}</span>
+                  <span className="font-mono font-bold text-foreground">{data.receiptNos.join(", ")}</span>
+                </div>
+                <div className="text-end">
+                  <span className="text-muted-foreground block">{isUrdu ? "تاریخ:" : "Date:"}</span>
+                  <span className="font-medium text-foreground">{formatDate(data.receivedAt)}</span>
+                </div>
+              </div>
+
+              {data.payerName && (
+                <div className="rounded-md bg-muted/30 p-2.5 text-xs flex justify-between">
+                  <span className="text-muted-foreground">{isUrdu ? "ادا کنندہ / ولی:" : "Paid By:"}</span>
+                  <span className="font-semibold text-foreground">
+                    {data.payerName} {data.payerPhone && `(${data.payerPhone})`}
+                  </span>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Per-Child Section Breakdown */}
+              <div className="space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  {isUrdu ? "طلبہ و فیس کی تفصیل" : "Students & Fee Breakdown"}
+                </p>
+
+                {data.students.map((st, idx) => (
+                  <div key={idx} className="rounded-lg border p-3 bg-muted/10 space-y-2">
+                    <div className="flex items-center justify-between border-b pb-1.5">
+                      <div>
+                        <span className="font-urdu font-bold text-sm">{st.nameUrdu}</span>
+                        <span className="text-xs text-muted-foreground ms-1.5">({st.name})</span>
+                      </div>
+                      <span className="text-xs font-mono font-semibold">{st.receiptNo}</span>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground flex justify-between">
+                      <span>
+                        {st.rollNo} · {st.classOrDarja}
+                      </span>
+                      <span>{st.institutionName}</span>
+                    </div>
+
+                    {st.items.length > 0 && (
+                      <div className="pt-1 space-y-1">
+                        {st.items.map((it, itIdx) => (
+                          <div key={itIdx} className="flex justify-between text-xs font-mono text-muted-foreground">
+                            <span className="text-[11px] truncate max-w-[240px]">{it.label}</span>
+                            <span>{formatPKR(it.amountPaisa)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex justify-between pt-1 border-t text-xs font-bold">
+                      <span>{isUrdu ? "اس طالب علم کی رقم:" : "Student Amount:"}</span>
+                      <span className="font-mono text-primary">{formatPKR(st.amountPaisa)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Separator />
+
+              {/* Grand Total */}
+              <div className="rounded-xl bg-primary/10 border border-primary/30 p-4 text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">
+                  {isUrdu ? "کل وصول شدہ رقم" : "Total Amount Received"}
+                </p>
+                <p className="mt-1 font-mono text-3xl font-extrabold text-primary">
+                  {formatPKR(data.totalAmountPaisa)}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-1 capitalize">
+                  {isUrdu ? "طریقہ کار:" : "Method:"} {data.method}
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t bg-muted/20 p-3 text-center text-[10px] text-muted-foreground">
+              {isUrdu
+                ? "یہ کمپیوٹر سے جاری کردہ رسید ہے۔ اس پر کسی دستخط کی ضرورت نہیں۔"
+                : "This is a computer-generated official receipt and requires no physical signature."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-col-reverse gap-2 print:hidden sm:flex-row sm:justify-end">
+        <Button variant="outline" onClick={() => onOpenChange(false)}>
+          {isUrdu ? "بند کریں" : "Close"}
         </Button>
-        <Button 
-          onClick={save} 
-          disabled={!ledger || pending || totalPaisa <= 0}
-          className="gap-2"
-        >
-          {pending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Collecting...
-            </>
-          ) : (
-            <>
-              <WalletCards className="h-4 w-4" />
-              Collect Payment
-            </>
-          )}
+        <Button className="gap-2" onClick={() => window.print()}>
+          <Printer className="h-4 w-4" />
+          {isUrdu ? "رسید پرنٹ کریں" : "Print Receipt"}
         </Button>
       </div>
     </ResponsiveDialog>
@@ -965,8 +1701,7 @@ export function BulkCollectDialog({
     <ResponsiveDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Bulk Fee Collection"
-      titleUrdu="کل فیس وصولی"
+      title="Bulk Fee Collection · کل فیس وصولی"
       description={`Collect fees for ${students.length} selected student${students.length > 1 ? "s" : ""}`}
       className="sm:max-w-lg"
     >

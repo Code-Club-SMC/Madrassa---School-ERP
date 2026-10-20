@@ -397,7 +397,9 @@ function ClassDetailPage() {
           <TableBody>
             {subjectsLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-muted-foreground">{t("Loading subjects...", "مضامین لوڈ ہو رہے ہیں...")}</TableCell>
+                <TableCell colSpan={7} className="py-8">
+                  <BookLoader size="sm" text={t("Loading subjects...", "مضامین لوڈ ہو رہے ہیں...")} />
+                </TableCell>
               </TableRow>
             ) : subjects.length === 0 ? (
               <TableRow>

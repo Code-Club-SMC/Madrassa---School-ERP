@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { AppLoader } from "@/components/shared/app-loader";
 
 type Subject = { type: "student" | "teacher"; id: string; name: string; nameUrdu: string; sub: string; subUrdu: string; roll: string };
 
@@ -219,7 +220,15 @@ function IdCardsPage() {
 
       <Card className="p-4">
         <div className="space-y-2">
-          {subjects.length === 0 ? (
+          {tab === "student" && studentsLoading ? (
+            <div className="py-12">
+              <AppLoader text="Loading student cards..." textUrdu="طلبہ شناختی کارڈز لوڈ ہو رہے ہیں..." />
+            </div>
+          ) : tab === "teacher" && teachersLoading ? (
+            <div className="py-12">
+              <AppLoader text="Loading teacher cards..." textUrdu="اساتذہ شناختی کارڈز لوڈ ہو رہے ہیں..." />
+            </div>
+          ) : subjects.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No cards found. Adjust your filters or search query.</p>
           ) : (
             subjects.map((s) => (

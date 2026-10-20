@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { AppLoader } from "@/components/shared/app-loader";
 import { ResponsiveSheet } from "@/components/custom/responsive-sheet";
 import {
   AlertDialog,
@@ -129,9 +130,8 @@ export function TeacherProfileWorkspace() {
 
   if (loading) {
     return (
-      <Card className="p-10 text-center text-sm text-muted-foreground">
-        <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
-        Loading teacher profile...
+      <Card className="p-12">
+        <AppLoader text="Loading teacher profile..." textUrdu="استاد کا پروفائل لوڈ ہو رہا ہے..." />
       </Card>
     );
   }

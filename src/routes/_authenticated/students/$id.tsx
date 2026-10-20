@@ -6,6 +6,7 @@ import { TranscriptView } from "@/components/exams/transcript-view";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { AppLoader } from "@/components/shared/app-loader";
 import { MoveEnrollmentDialog } from "@/components/students/move-enrollment-dialog";
 import { StudentGuardianManager } from "@/components/students/student-guardian-manager";
 import { StudentSiblingManager } from "@/components/students/student-sibling-manager";
@@ -80,7 +81,11 @@ function StudentProfile() {
   }
 
   if (loading) {
-    return <Card className="p-8 text-sm text-muted-foreground">Loading student profile...</Card>;
+    return (
+      <Card className="p-12">
+        <AppLoader text="Loading student profile..." textUrdu="طالب علم کا پروفائل لوڈ ہو رہا ہے..." />
+      </Card>
+    );
   }
 
   if (error || !profile || !student) {
@@ -274,7 +279,9 @@ function StudentProfile() {
         {transcript ? (
           <TranscriptView data={transcript} />
         ) : (
-          <Card className="p-6 text-sm text-muted-foreground">Loading transcript...</Card>
+          <Card className="p-8">
+            <AppLoader size="sm" text="Loading transcript..." textUrdu="تعلیمی ریکارڈ لوڈ ہو رہا ہے..." />
+          </Card>
         )}
       </ResponsiveDialog>
       <CredentialsOverlay creds={creds} onClose={() => setCreds(null)} />

@@ -4,6 +4,7 @@ import { Plus, Search, ShieldAlert, KeyRound, Trash2, Eye, MoreHorizontal, UserC
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
+import { AppLoader } from "@/components/shared/app-loader";
 import { KpiCard } from "@/components/shared/chart-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -289,12 +290,11 @@ function UsersPage() {
 
   if (sessionLoading || !currentUser) {
     return (
-      <div>
+      <div className="space-y-6">
         <PageHeader title="User Management" titleUrdu="صارف انتظام" />
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {isUrdu ? "سیشن لوڈ ہو رہا ہے..." : "Loading session..."}
-        </div>
+        <Card className="p-12">
+          <AppLoader text="Loading session..." textUrdu="سیشن لوڈ ہو رہا ہے..." />
+        </Card>
       </div>
     );
   }

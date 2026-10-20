@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { AppLoader } from "@/components/shared/app-loader";
 
 type Props = {
   examId: string;
@@ -211,7 +212,9 @@ export function ExamSeatingWorkspace({ examId, system }: Props) {
       </Card>
 
       {loading ? (
-        <Card className="p-6 text-sm text-muted-foreground">Loading seating plan...</Card>
+        <Card className="p-12">
+          <AppLoader text="Loading seating plan..." textUrdu="سیٹنگ پلان لوڈ ہو رہا ہے..." />
+        </Card>
       ) : !payload?.plan ? (
         <Card className="p-6 text-sm text-muted-foreground">
           No seating plan generated yet. Create halls, then generate a plan.

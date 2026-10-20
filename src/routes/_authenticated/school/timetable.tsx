@@ -4,6 +4,7 @@ import { ClipboardList, Plus, Printer, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
+import { AppLoader } from "@/components/shared/app-loader";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -464,8 +465,8 @@ function SchoolTimetablePage() {
               <TableBody>
                 {loadingTimetable ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-muted-foreground text-center py-8">
-                      {isUrdu ? "ٹائم ٹیبل لوڈ ہو رہا ہے..." : "Loading timetable..."}
+                    <TableCell colSpan={8} className="py-12">
+                      <AppLoader text="Loading timetable..." textUrdu="ٹائم ٹیبل لوڈ ہو رہا ہے..." />
                     </TableCell>
                   </TableRow>
                 ) : periods.length === 0 ? (

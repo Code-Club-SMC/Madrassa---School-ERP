@@ -229,7 +229,11 @@ function CategoriesPage() {
         description={t("Manage madrassa categories and their classes.", "مدرسہ کے زمرے اور ان کی کلاسز کا انتظام کریں۔")}
       />
 
-      {loading && <Card className="p-5 text-sm text-muted-foreground">{t("Loading categories...", "زمرے لوڈ ہو رہے ہیں...")}</Card>}
+      {loading && (
+        <Card className="p-8">
+          <BookLoader text={t("Loading categories...", "زمرے لوڈ ہو رہے ہیں...")} />
+        </Card>
+      )}
       {!loading && visibleCategories.length === 0 && (
         <Card className="p-5 text-sm text-muted-foreground">
           {t("No categories found.", "کوئی زمرہ نہیں ملا۔")}

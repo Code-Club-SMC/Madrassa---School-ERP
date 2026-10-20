@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
+import { AppLoader } from "@/components/shared/app-loader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -114,9 +115,8 @@ export function TeacherPortal() {
 
   if (loading) {
     return (
-      <Card className="p-10 text-center text-sm text-muted-foreground">
-        <Loader2 className="mx-auto mb-3 h-5 w-5 animate-spin" />
-        {isUrdu ? "استاد پورٹل لوڈ ہو رہا ہے..." : "Loading teacher portal..."}
+      <Card className="p-12">
+        <AppLoader text="Loading teacher portal..." textUrdu="استاد پورٹل لوڈ ہو رہا ہے..." />
       </Card>
     );
   }
