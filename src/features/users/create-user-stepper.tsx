@@ -98,7 +98,20 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
   useEffect(() => {
     if (open) {
       setStep(1);
-      if (!isEdit) {
+      if (isEdit && initial) {
+        setNameUrdu(initial.nameUrdu ?? "");
+        setNameEnglish(initial.name ?? "");
+        setEmail(initial.email ?? "");
+        setPhone(initial.phone ?? "");
+        setCnic(initial.cnic ?? "");
+        setRole((initial.role as StepperRole) ?? "teacher");
+        setSystemAccess(initial.systemAccess ?? "both");
+        setMustChange(initial.mustChangePassword ?? false);
+        setLinkedTeacherId(initial.linkedTeacherId);
+        setPermissions(
+          initial.permissions ?? (initial.role === "parent" ? {} : (ROLE_DEFAULTS[initial.role as StepperRole] ?? {})),
+        );
+      } else if (!isEdit) {
         setNameUrdu(prefill?.nameUrdu ?? "");
         setNameEnglish(prefill?.name ?? "");
         setEmail("");
@@ -108,9 +121,12 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
         setSystemAccess("both");
         setMustChange(true);
         setLinkedTeacherId(prefill?.linkedTeacherId);
+        setPermissions(
+          prefill?.role === "parent" ? {} : (ROLE_DEFAULTS[prefill?.role ?? "teacher"] ?? {}),
+        );
       }
     }
-  }, [open, isEdit, prefill]);
+  }, [open, isEdit, initial, prefill]);
 
   const isParent = role === "parent";
   const totalSteps = isParent ? 3 : 4;
@@ -125,7 +141,11 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
   function next() {
     if (step === 1) {
       if (!nameUrdu.trim()) return toast.error(lang === "ur" ? "نام (اردو) درج کریں" : "Enter Urdu name");
-      if (!email.trim() || !/.+@.+\..+/.test(email)) return toast.error(lang === "ur" ? "درست ای میل درج کریں" : "Enter valid email");
+      if (!isEdit) {
+        if (!email.trim() || !/.+@.+\..+/.test(email)) {
+          return toast.error(lang === "ur" ? "درست ای میل درج کریں" : "Enter valid email");
+        }
+      }
     }
     const nextIdx = Math.min(stepIdx + 1, stepOrder.length - 1);
     setStep(stepOrder[nextIdx]);
@@ -144,7 +164,7 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
           ...initial,
           name: nameEnglish || nameUrdu,
           nameUrdu,
-          email,
+          email: initial.email, // Preserve original email without change
           phone,
           cnic,
           systemAccess,
@@ -268,8 +288,24 @@ export function CreateUserStepper({ open, onOpenChange, mode = "create", initial
                   <Input value={nameEnglish} onChange={(e) => setNameEnglish(e.target.value)} placeholder="Ustad Muhammad Bilal" />
                 </BilingualLabel>
               </div>
-              <BilingualLabel urdu="ای میل" english="Email Address" required>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="user@msmis.pk" disabled={isEdit} />
+              <BilingualLabel urdu="ای میل (لاگ ان)" english="Email Address (Login ID)" required={!isEdit}>
+                <div className="space-y-1">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="user@msmis.pk"
+                    disabled={isEdit}
+                    className={isEdit ? "bg-muted cursor-not-allowed opacity-80" : ""}
+                  />
+                  {isEdit && (
+                    <p className="text-[11px] text-muted-foreground">
+                      {lang === "ur"
+                        ? "اکاؤنٹ کی حفاظت اور لاگ ان کی مطابقت کے لیے ای میل تبدیل نہیں ہو سکتی۔"
+                        : "Email address cannot be changed to ensure login and account stability."}
+                    </p>
+                  )}
+                </div>
               </BilingualLabel>
               <BilingualLabel urdu="فون نمبر" english="Phone Number">
                 <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0312-3456789" />

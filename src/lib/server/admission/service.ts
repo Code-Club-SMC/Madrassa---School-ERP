@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { admissionApplications, admissionEvents } from "@/db/schema/admission";
@@ -287,6 +287,22 @@ export async function createDirectAdmission(
         relation: normalized.guardianRelation,
         isPrimary: true,
       });
+
+      // Automatically link siblings sharing the same father/guardian
+      const existingSiblings = await tx
+        .select({ studentId: studentGuardians.studentId })
+        .from(studentGuardians)
+        .where(
+          and(
+            eq(studentGuardians.guardianId, resolvedGuardianId),
+            ne(studentGuardians.studentId, studentId),
+          ),
+        );
+
+      const siblingStudentIds = existingSiblings.map((s) => s.studentId);
+      if (siblingStudentIds.length > 0) {
+        await insertSiblingLinks(tx, studentId, siblingStudentIds, actor.id);
+      }
 
       await tx.insert(studentEnrollments).values({
         id: enrollmentId,
@@ -770,7 +786,21 @@ export async function acceptAdmissionApplication(
         isPrimary: true,
       });
 
-      await insertSiblingLinks(tx, studentId, input.siblingStudentIds, actor.id);
+      // Auto-detect and link siblings sharing the resolved father/guardian
+      const existingSiblings = await tx
+        .select({ studentId: studentGuardians.studentId })
+        .from(studentGuardians)
+        .where(
+          and(
+            eq(studentGuardians.guardianId, resolvedGuardianId),
+            ne(studentGuardians.studentId, studentId),
+          ),
+        );
+
+      const allSiblingIds = [
+        ...new Set([...input.siblingStudentIds, ...existingSiblings.map((s) => s.studentId)]),
+      ];
+      await insertSiblingLinks(tx, studentId, allSiblingIds, actor.id);
 
       const preloadedStudent = { name: application.name, nameUrdu: application.nameUrdu };
       const preloadedGuardians = [
@@ -951,9 +981,26 @@ export async function suggestGuardians(
 ) {
   await requireAdmissionPermission(request, "admission_new", "create");
 
+  const cleanCnic = input.guardianCnic ? input.guardianCnic.replace(/\D/g, "") : null;
+  const cleanPhone = input.guardianPhone ? input.guardianPhone.replace(/\D/g, "") : null;
+
   const clauses = [
-    input.guardianCnic ? eq(guardians.cnic, input.guardianCnic) : undefined,
-    input.guardianPhone ? eq(guardians.phone, input.guardianPhone) : undefined,
+    input.guardianCnic
+      ? or(
+          eq(guardians.cnic, input.guardianCnic),
+          cleanCnic && cleanCnic.length >= 10
+            ? sql`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '') = ${cleanCnic}`
+            : undefined,
+        )
+      : undefined,
+    input.guardianPhone
+      ? or(
+          eq(guardians.phone, input.guardianPhone),
+          cleanPhone && cleanPhone.length >= 7
+            ? sql`REPLACE(REPLACE(REPLACE(${guardians.phone}, '-', ''), ' ', ''), '+92', '0') = ${cleanPhone}`
+            : undefined,
+        )
+      : undefined,
   ].filter(Boolean);
 
   if (clauses.length === 0) return [];
@@ -1107,13 +1154,30 @@ async function cleanupParentAccount(userId: string) {
 async function findReusableGuardian(cnic: string | null, phone: string | null): Promise<ReusableGuardianResult | null> {
   if (!cnic && !phone) return null;
 
+  const cleanCnic = cnic ? cnic.replace(/\D/g, "") : null;
+  const cleanPhone = phone ? phone.replace(/\D/g, "") : null;
+
   const [guardian] = await db
     .select({ id: guardians.id, userId: guardians.userId, name: guardians.name })
     .from(guardians)
     .where(
       or(
-        cnic ? eq(guardians.cnic, cnic) : undefined,
-        phone ? eq(guardians.phone, phone) : undefined,
+        cnic
+          ? or(
+              eq(guardians.cnic, cnic),
+              cleanCnic && cleanCnic.length >= 10
+                ? sql`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '') = ${cleanCnic}`
+                : undefined,
+            )
+          : undefined,
+        phone
+          ? or(
+              eq(guardians.phone, phone),
+              cleanPhone && cleanPhone.length >= 7
+                ? sql`REPLACE(REPLACE(REPLACE(${guardians.phone}, '-', ''), ' ', ''), '+92', '0') = ${cleanPhone}`
+                : undefined,
+            )
+          : undefined,
       ),
     )
     .limit(1);

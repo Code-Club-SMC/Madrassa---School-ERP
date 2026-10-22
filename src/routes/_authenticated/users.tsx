@@ -519,7 +519,14 @@ function UsersPage() {
       </Card>
 
       <CreateUserStepper open={createOpen} onOpenChange={setCreateOpen} onCreate={handleCreate} />
-      <CreateUserStepper open={!!editUser} onOpenChange={(v) => !v && setEditUser(null)} mode="edit" initial={editUser} onUpdate={handleUpdate} />
+      <CreateUserStepper
+        key={editUser?.id ?? "edit-user-stepper"}
+        open={!!editUser}
+        onOpenChange={(v) => !v && setEditUser(null)}
+        mode="edit"
+        initial={editUser}
+        onUpdate={handleUpdate}
+      />
       <UserDetailSheet
         user={detailUser}
         onClose={() => setDetailUser(null)}

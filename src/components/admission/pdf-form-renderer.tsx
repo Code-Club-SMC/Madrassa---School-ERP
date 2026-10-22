@@ -10,8 +10,10 @@ import {
   Loader2,
   Printer,
   Wand2,
+  Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -85,7 +87,7 @@ const TEXT = {
     guardianName: "ولی کا نام",
     guardianRelation: "ولی سے تعلق",
     guardianPhone: "فون نمبر",
-    guardianCnic: "شناختی کارڈ نمبر",
+    guardianCnic: "والد کا شناختی کارڈ نمبر (CNIC)",
     siblingSearch: "بھائی / بہن تلاش کریں",
     searchByName: "نام یا رول نمبر تلاش کریں...",
     noResults: "کوئی نتیجہ نہیں ملا",
@@ -150,7 +152,7 @@ const TEXT = {
     guardianName: "Guardian Name",
     guardianRelation: "Relation to Guardian",
     guardianPhone: "Phone Number",
-    guardianCnic: "CNIC Number",
+    guardianCnic: "Father / Guardian CNIC (13 digits)",
     siblingSearch: "Search Siblings",
     searchByName: "Search by name or roll no...",
     noResults: "No results found",
@@ -191,7 +193,16 @@ type AdmissionSaveResponse = AdmissionPrintResponse & {
 };
 
 const requiredFieldsByLayout = {
-  school: ["name", "father", "dob_digits", "address", "class", "guardian_name"],
+  school: [
+    "name",
+    "father",
+    "dob_digits",
+    "address",
+    "class",
+    "guardian_name",
+    "guardian_phone",
+    "guardian_cnic",
+  ],
   "madrassa-short": [
     "name",
     "father",
@@ -201,9 +212,16 @@ const requiredFieldsByLayout = {
     "guardian_name",
     "guardian_rel",
     "guardian_phone",
+    "guardian_cnic",
   ],
-  "madrassa-long": ["req_darja", "name", "father", "dob_age", "guardian_name"],
+  "madrassa-long": ["req_darja", "name", "father", "dob_age", "guardian_name", "guardian_cnic"],
 } satisfies Record<AdmissionVariant["layout"], string[]>;
+
+function formatCnic(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 13);
+  const parts = [digits.slice(0, 5), digits.slice(5, 12), digits.slice(12, 13)].filter(Boolean);
+  return parts.join("-");
+}
 
 export function PdfFormRenderer({
   variant,
@@ -285,6 +303,73 @@ export function PdfFormRenderer({
   };
 
   const val = (k: string) => form[k] ?? "";
+
+  const [detectedGuardian, setDetectedGuardian] = useState<any | null>(null);
+  const [checkingCnic, setCheckingCnic] = useState(false);
+
+  const handleCnicChange = (raw: string) => {
+    const formatted = formatCnic(raw);
+    set("guardian_cnic", formatted);
+    set("father_cnic", formatted);
+    set("cnic", formatted);
+  };
+
+  useEffect(() => {
+    const raw = form.guardian_cnic || form.father_cnic || form.cnic || "";
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length !== 13) {
+      setDetectedGuardian(null);
+      return;
+    }
+
+    let active = true;
+    setCheckingCnic(true);
+    fetch("/api/admission/guardian-suggestions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ guardianCnic: raw }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload) => {
+        if (!active || !payload) return;
+        const matches = (payload.guardians ?? []) as any[];
+        if (matches.length > 0) {
+          setDetectedGuardian(matches[0]);
+        } else {
+          setDetectedGuardian(null);
+        }
+      })
+      .catch(() => {
+        if (active) setDetectedGuardian(null);
+      })
+      .finally(() => {
+        if (active) setCheckingCnic(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [form.guardian_cnic, form.father_cnic, form.cnic]);
+
+  const handleAutoFillGuardian = (guardianRecord: any) => {
+    setForm((prev) => ({
+      ...prev,
+      guardian_name: guardianRecord.nameUrdu || guardianRecord.name || prev.guardian_name,
+      guardian_father: guardianRecord.name || prev.guardian_father,
+      guardian_phone: guardianRecord.phone || prev.guardian_phone,
+      guardian_phone_home: guardianRecord.phone || prev.guardian_phone_home,
+      guardian_email: guardianRecord.email || prev.guardian_email,
+      curr_address: guardianRecord.address || prev.curr_address || prev.address,
+      address: guardianRecord.address || prev.address || prev.curr_address,
+      guardian_address: guardianRecord.address || prev.guardian_address,
+    }));
+    toast.success(
+      lang === "ur"
+        ? "سرپرست کے کوائف اور خاندانی تفصیلات خودکار بھر دی گئیں"
+        : "Guardian details auto-filled from family profile",
+    );
+  };
 
   const variantSection = variant.category;
   const variantKind: "hifz" | "nazira" | null = variant.key.includes("hifz")
@@ -381,10 +466,14 @@ export function PdfFormRenderer({
       father: person.father,
       guardian_name: person.guardian,
       guardian_father: person.guardianFather,
+      guardian_phone: person.phone,
       guardian_phone_home: person.phone,
       guardian_phone_office: person.officePhone,
       guardian_email: person.email,
+      guardian_cnic: person.cnic,
+      father_cnic: person.cnic,
       cnic: person.cnic,
+      address: person.fullAddress,
       curr_address: person.fullAddress,
       perm_address: person.fullAddress,
       dob: person.dob,
@@ -398,11 +487,6 @@ export function PdfFormRenderer({
       perm_po: person.postOffice,
       perm_tehsil: person.tehsil,
       perm_district: person.district,
-      prev_madrassa: person.prevMadrassa,
-      prev_class: person.prevClass,
-      prev_marks: person.prevMarks,
-      prev_grade: person.prevGrade,
-      prev_roll: person.prevRoll,
     };
 
     if (requestedGradeOptions && requestedGradeOptions.length > 0) {
@@ -468,27 +552,50 @@ export function PdfFormRenderer({
   const submit = async () => {
     const missing = missingRequired();
     if (missing.length > 0) {
-      toast.error("Please complete all required fields before saving.");
+      toast.error(
+        lang === "ur"
+          ? "براہ کرم تمام ضروری خانے پر کریں۔"
+          : "Please complete all required fields before saving.",
+      );
+      return;
+    }
+
+    const cnicDigits = (form.guardian_cnic || form.father_cnic || form.cnic || "").replace(/\D/g, "");
+    if (cnicDigits.length !== 13) {
+      toast.error(
+        lang === "ur"
+          ? "براہ کرم والد / سرپرست کا درست 13 ہندسوں کا شناختی کارڈ (CNIC) درج کریں۔"
+          : "Please enter a valid 13-digit Father / Guardian CNIC.",
+      );
       return;
     }
 
     setSubmitting(true);
     try {
+      const formattedCnic = formatCnic(cnicDigits);
+      const submissionForm = {
+        ...form,
+        guardian_cnic: formattedCnic,
+        father_cnic: formattedCnic,
+        cnic: formattedCnic,
+      };
+
       const response = await fetch(
         isPublic ? "/api/admission/applications" : "/api/admission/students",
         {
           method: "POST",
           headers: { "content-type": "application/json" },
           credentials: "include",
-      body: JSON.stringify({
-        variantKey: variant.key,
-        form,
-        declaration,
-        photoDataUrl: photo?.dataUrl,
-        target: variant.section === "school"
-          ? { schoolClassId: form.classId || undefined }
-          : { madrassaSubcategoryId: form.req_darja || form.shoba || undefined },
-      }),
+          body: JSON.stringify({
+            variantKey: variant.key,
+            form: submissionForm,
+            declaration,
+            photoDataUrl: photo?.dataUrl,
+            target:
+              variant.section === "school"
+                ? { schoolClassId: form.classId || undefined }
+                : { madrassaSubcategoryId: form.req_darja || form.shoba || undefined },
+          }),
         },
       );
       const payload: AdmissionSaveResponse = await response.json().catch(() => ({}));
@@ -496,7 +603,7 @@ export function PdfFormRenderer({
         throw new Error(payload.error || "Could not save admission");
       }
 
-      setSavedPrintForm(buildAdmissionPrintPayload(form, payload));
+      setSavedPrintForm(buildAdmissionPrintPayload(submissionForm, payload));
       if (payload.parentCredentials) setCreds(payload.parentCredentials);
       setRefNo(
         payload.student?.rollNo ?? payload.application?.refNo ?? payload.application?.id ?? null,
@@ -761,7 +868,23 @@ export function PdfFormRenderer({
       )}
 
       {/* Body per layout */}
-      {variant.layout === "school" && <SchoolFields form={form} set={set} lang={lang} t={t} variant={variant} step={step} cls={cls} loadingCls={loadingCls} madrassaCategoryOptions={madrassaCategoryOptions} />}
+      {variant.layout === "school" && (
+        <SchoolFields
+          form={form}
+          set={set}
+          lang={lang}
+          t={t}
+          variant={variant}
+          step={step}
+          cls={cls}
+          loadingCls={loadingCls}
+          madrassaCategoryOptions={madrassaCategoryOptions}
+          detectedGuardian={detectedGuardian}
+          isCheckingCnic={checkingCnic}
+          onCnicChange={handleCnicChange}
+          onAutoFillGuardian={handleAutoFillGuardian}
+        />
+      )}
       {variant.layout === "madrassa-short" && (
         <MadrassaShortFields
           form={form}
@@ -775,6 +898,10 @@ export function PdfFormRenderer({
           sameAsCurrentAddress={sameAsCurrentAddress}
           onToggleSameAddress={handleSameAddressToggle}
           onPermChange={onPermFieldChange}
+          detectedGuardian={detectedGuardian}
+          isCheckingCnic={checkingCnic}
+          onCnicChange={handleCnicChange}
+          onAutoFillGuardian={handleAutoFillGuardian}
         />
       )}
       {variant.layout === "madrassa-long" && (
@@ -789,6 +916,10 @@ export function PdfFormRenderer({
           sameAsCurrentAddress={sameAsCurrentAddress}
           onToggleSameAddress={handleSameAddressToggle}
           onPermChange={onPermFieldChange}
+          detectedGuardian={detectedGuardian}
+          isCheckingCnic={checkingCnic}
+          onCnicChange={handleCnicChange}
+          onAutoFillGuardian={handleAutoFillGuardian}
         />
       )}
 
@@ -886,7 +1017,114 @@ type FieldProps = {
   sameAsCurrentAddress?: boolean;
   onToggleSameAddress?: (checked: boolean) => void;
   onPermChange?: (k: string, v: string) => void;
+  detectedGuardian?: any | null;
+  isCheckingCnic?: boolean;
+  onCnicChange?: (raw: string) => void;
+  onAutoFillGuardian?: (guardian: any) => void;
 };
+
+function FatherCnicFieldBlock({
+  val,
+  onCnicChange,
+  detectedGuardian,
+  isCheckingCnic,
+  onAutoFillGuardian,
+  lang,
+  t,
+}: {
+  val: (k: string) => string;
+  onCnicChange: (raw: string) => void;
+  detectedGuardian: any | null;
+  isCheckingCnic: boolean;
+  onAutoFillGuardian: (guardian: any) => void;
+  lang: "ur" | "en";
+  t: (typeof TEXT)["ur"];
+}) {
+  const isRtl = lang === "ur";
+  const cnicValue = val("guardian_cnic") || val("father_cnic") || val("cnic");
+
+  return (
+    <div className="md:col-span-2 space-y-3 rounded-xl border border-primary/20 bg-primary/[0.02] p-4">
+      <div className="flex flex-col gap-1.5">
+        <BilingualLabel
+          urdu="والد کا شناختی کارڈ نمبر (CNIC)"
+          english="Father / Guardian CNIC (13 digits)"
+          htmlFor="guardian_cnic"
+          required
+          lang={lang}
+        >
+          <div className="relative">
+            <Input
+              id="guardian_cnic"
+              name="guardian_cnic"
+              dir="ltr"
+              inputMode="numeric"
+              placeholder="XXXXX-XXXXXXX-X"
+              maxLength={15}
+              required
+              className="tracking-wider text-base font-mono font-medium"
+              value={cnicValue}
+              onChange={(e) => onCnicChange(e.target.value)}
+            />
+            {isCheckingCnic && (
+              <div className="absolute right-3 top-2.5">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+        </BilingualLabel>
+        <p className={`text-xs text-muted-foreground ${isRtl ? "text-end font-urdu" : "text-start"}`}>
+          {isRtl
+            ? "والد کے شناختی کارڈ کے ذریعے تمام بہن بھائی (Siblings) اور فیس کے فیصلے خودکار طور پر منسلک ہوں گے۔"
+            : "Father's CNIC links sibling records, family fee collection, and concessions automatically."}
+        </p>
+      </div>
+
+      {detectedGuardian && (
+        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 space-y-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-emerald-600" />
+              <span className={`text-sm font-semibold text-emerald-900 dark:text-emerald-100 ${isRtl ? "font-urdu" : ""}`}>
+                {isRtl ? "خاندانی ریکارڈ موجود ہے" : "Existing Family Record Found"}
+              </span>
+              <Badge variant="outline" className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300">
+                {detectedGuardian.nameUrdu || detectedGuardian.name}
+              </Badge>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="border-emerald-500/50 hover:bg-emerald-500/20 text-xs h-7"
+              onClick={() => onAutoFillGuardian(detectedGuardian)}
+            >
+              <Wand2 className="h-3 w-3 me-1" />
+              <span className={isRtl ? "font-urdu" : ""}>
+                {isRtl ? "سرپرست کے کوائف خودکار بھریں" : "Auto-fill Guardian Details"}
+              </span>
+            </Button>
+          </div>
+
+          {detectedGuardian.students && detectedGuardian.students.length > 0 && (
+            <div className="text-xs text-muted-foreground space-y-1">
+              <span className={`font-medium text-foreground ${isRtl ? "font-urdu" : ""}`}>
+                {isRtl ? "پہلے سے زیر تعلیم بہن بھائی (Siblings):" : "Enrolled Siblings:"}
+              </span>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {detectedGuardian.students.map((st: any) => (
+                  <Badge key={st.id} variant="secondary" className="text-xs">
+                    {st.name} ({st.rollNo || "Active"}) · {st.nameUrdu || (isRtl ? "طالب علم" : "Student")}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function MadrassaGradeSelect({
   id,
@@ -931,7 +1169,34 @@ function MadrassaGradeSelect({
 /* ============================================================
  * School layout — Al-Qasim / Zainab (Shoba School)
  * ============================================================ */
-function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls, madrassaCategoryOptions }: FieldProps & { step?: number; cls: any[]; loadingCls: boolean; madrassaCategoryOptions: Array<{ id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; subcategories: Array<{ id: string; name: string; nameUrdu: string }> }> }) {
+function SchoolFields({
+  form,
+  set,
+  lang,
+  t,
+  variant,
+  step = 1,
+  cls,
+  loadingCls,
+  madrassaCategoryOptions,
+  detectedGuardian,
+  isCheckingCnic,
+  onCnicChange,
+  onAutoFillGuardian,
+}: FieldProps & {
+  step?: number;
+  cls: any[];
+  loadingCls: boolean;
+  madrassaCategoryOptions: Array<{
+    id: string;
+    name: string;
+    nameUrdu: string;
+    description: string;
+    descriptionUrdu: string;
+    section: string;
+    subcategories: Array<{ id: string; name: string; nameUrdu: string }>;
+  }>;
+}) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
   return (
@@ -1091,10 +1356,21 @@ function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls, 
       )}
 
       {step === 2 && (
-        <Section urdu="سرپرست" english="Guardian" lang={lang}>
+        <Section urdu="سرپرست / والد" english="Father / Guardian" lang={lang}>
+          {onCnicChange && (
+            <FatherCnicFieldBlock
+              val={val}
+              onCnicChange={onCnicChange}
+              detectedGuardian={detectedGuardian}
+              isCheckingCnic={Boolean(isCheckingCnic)}
+              onAutoFillGuardian={onAutoFillGuardian ?? (() => {})}
+              lang={lang}
+              t={t}
+            />
+          )}
           <BilingualLabel
-            urdu="سرپرست کا نام"
-            english="Guardian Name"
+            urdu="سرپرست / والد کا نام"
+            english="Father / Guardian Name"
             htmlFor="guardian_name"
             required
             lang={lang}
@@ -1107,6 +1383,24 @@ function SchoolFields({ form, set, lang, t, variant, step = 1, cls, loadingCls, 
               className={isRtl ? "font-urdu" : ""}
               value={val("guardian_name")}
               onChange={(e) => set("guardian_name", e.target.value)}
+            />
+          </BilingualLabel>
+          <BilingualLabel
+            urdu="رابطہ نمبر (موبائل)"
+            english="Phone / Mobile Number"
+            htmlFor="guardian_phone"
+            required
+            lang={lang}
+          >
+            <Input
+              id="guardian_phone"
+              name="guardian_phone"
+              required
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={val("guardian_phone")}
+              onChange={(e) => set("guardian_phone", e.target.value)}
             />
           </BilingualLabel>
           <BilingualLabel urdu="سرپرست ای میل" english="Guardian Email" htmlFor="guardian_email" lang={lang}>
@@ -1230,6 +1524,10 @@ function MadrassaShortFields({
   sameAsCurrentAddress = false,
   onToggleSameAddress,
   onPermChange = set,
+  detectedGuardian,
+  isCheckingCnic,
+  onCnicChange,
+  onAutoFillGuardian,
 }: FieldProps & { variant: AdmissionVariant; isGirls: boolean; step?: number; shobaOptions?: GradeSelectOption[] | null }) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
@@ -1401,10 +1699,21 @@ function MadrassaShortFields({
       )}
 
       {step === 2 && (
-        <Section urdu="سرپرست" english="Guardian" lang={lang}>
+        <Section urdu="سرپرست / والد" english="Father / Guardian" lang={lang}>
+          {onCnicChange && (
+            <FatherCnicFieldBlock
+              val={val}
+              onCnicChange={onCnicChange}
+              detectedGuardian={detectedGuardian}
+              isCheckingCnic={Boolean(isCheckingCnic)}
+              onAutoFillGuardian={onAutoFillGuardian ?? (() => {})}
+              lang={lang}
+              t={t}
+            />
+          )}
           <BilingualLabel
-            urdu="سرپرست کا نام"
-            english="Guardian Name"
+            urdu="سرپرست / والد کا نام"
+            english="Guardian / Father Name"
             htmlFor="guardian_name"
             required
             lang={lang}
@@ -1425,11 +1734,11 @@ function MadrassaShortFields({
               name="guardian_rel"
               required
               className="font-urdu"
-              value={val("guardian_rel")}
+              value={val("guardian_rel") || (lang === "ur" ? "والد" : "Father")}
               onChange={(e) => set("guardian_rel", e.target.value)}
             />
           </BilingualLabel>
-          <BilingualLabel urdu="رابطہ نمبر" english="Contact No." htmlFor="guardian_phone" required lang={lang}>
+          <BilingualLabel urdu="رابطہ نمبر (موبائل)" english="Contact No." htmlFor="guardian_phone" required lang={lang}>
             <Input
               id="guardian_phone"
               name="guardian_phone"
@@ -1472,6 +1781,10 @@ function MadrassaLongFields({
   sameAsCurrentAddress = false,
   onToggleSameAddress,
   onPermChange = set,
+  detectedGuardian,
+  isCheckingCnic,
+  onCnicChange,
+  onAutoFillGuardian,
 }: FieldProps & { variant: AdmissionVariant; isGirls: boolean; step?: number }) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
@@ -1776,7 +2089,7 @@ function MadrassaLongFields({
       )}
 
       {step === 2 && (
-        <Section urdu="برائے سرپرست" english="For Guardian" lang={lang}>
+        <Section urdu="برائے سرپرست / والد" english="Father / Guardian Particulars" lang={lang}>
           <div className="md:col-span-2">
             {isRtl ? (
               <p
@@ -1792,26 +2105,20 @@ function MadrassaLongFields({
               </p>
             )}
           </div>
-          <div className="md:col-span-2">
-            <BilingualLabel
-              urdu="شناختی کارڈ نمبر (13 ہندسے)"
-              english="CNIC (13 digits)"
-              htmlFor="cnic"
+          {onCnicChange && (
+            <FatherCnicFieldBlock
+              val={val}
+              onCnicChange={onCnicChange}
+              detectedGuardian={detectedGuardian}
+              isCheckingCnic={Boolean(isCheckingCnic)}
+              onAutoFillGuardian={onAutoFillGuardian ?? (() => {})}
               lang={lang}
-            >
-              <Input
-                id="cnic"
-                name="cnic"
-                inputMode="numeric"
-                placeholder="XXXXX-XXXXXXX-X"
-                value={val("cnic")}
-                onChange={(e) => set("cnic", e.target.value)}
-              />
-            </BilingualLabel>
-          </div>
+              t={t}
+            />
+          )}
           <BilingualLabel
-            urdu="سرپرست کا نام"
-            english="Guardian Name"
+            urdu="سرپرست / والد کا نام"
+            english="Guardian / Father Name"
             htmlFor="guardian_name"
             required
             lang={lang}

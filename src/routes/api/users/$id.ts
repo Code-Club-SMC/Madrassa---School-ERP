@@ -8,7 +8,7 @@ import { ensureUserColumns } from "@/lib/auth-helpers.server";
 import { hashPassword } from "@/lib/server/password";
 
 const updateSchema = z.object({
-  email: z.string().email().optional(),
+  email: z.string().optional(),
   password: z.string().min(6).optional(),
   name: z.string().min(1).optional(),
   role: z.string().min(1).optional(),
@@ -41,7 +41,7 @@ export const Route = createFileRoute("/api/users/$id")({
           const data = parsed.data;
           const updates: Record<string, unknown> = {};
           if (data.name !== undefined) updates.name = data.name;
-          if (data.email !== undefined) updates.email = data.email;
+          // Do not mutate user's email login identifier when updating user account
           if (data.role !== undefined) updates.role = data.role;
           if (data.nameUrdu !== undefined) updates.nameUrdu = data.nameUrdu;
           if (data.phone !== undefined) updates.phone = data.phone;

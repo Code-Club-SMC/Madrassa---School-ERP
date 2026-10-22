@@ -40,7 +40,7 @@ export function normalizeAdmissionForm(variantKey: AdmissionVariantKey, form: Re
     guardianName,
     guardianNameUrdu: guardianName,
     guardianPhone: nullable(form.guardian_phone || form.guardian_phone_home || form.curr_phone || form.phone),
-    guardianCnic: nullable(form.guardian_cnic || form.cnic),
+    guardianCnic: nullable(form.guardian_cnic || form.father_cnic || form.cnic),
     guardianEmail: nullable(form.guardian_email || form.email)?.toLowerCase() ?? null,
     guardianRelation: nullable(form.guardian_rel || form.guardian_relation) ?? "father",
     address: nullable(form.address || form.curr_address || form.guardian_address),

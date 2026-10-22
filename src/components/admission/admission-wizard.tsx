@@ -76,7 +76,7 @@ const TEXT = {
     section: "سیکشن",
     guardianName: "ولی کا نام",
     guardianPhone: "فون نمبر",
-    guardianCnic: "شناختی کارڈ نمبر",
+    guardianCnic: "والد کا شناختی کارڈ نمبر (CNIC)",
     siblingSearch: "بھائی / بہن تلاش کریں",
     siblingSearchHint: "نام یا رول نمبر تلاش کریں...",
     noResults: "کوئی نتیجہ نہیں ملا",
@@ -132,7 +132,7 @@ const TEXT = {
     section: "Section",
     guardianName: "Guardian Name",
     guardianPhone: "Phone",
-    guardianCnic: "CNIC",
+    guardianCnic: "Father / Guardian CNIC (13 digits)",
     siblingSearch: "Search siblings",
     siblingSearchHint: "Search by name or roll no...",
     noResults: "No results found",
@@ -573,7 +573,17 @@ function StepGuardian({ form, update, isPublic, lang }: { form: FormState; updat
             <Input placeholder="0312-3456789" value={form.guardianPhone} onChange={(e) => update("guardianPhone", e.target.value)} />
           </BilingualLabel>
           <BilingualLabel urdu={t.guardianCnic} english={t.guardianCnic} required lang={lang}>
-            <Input placeholder="42201-1234567-1" value={form.guardianCnic} onChange={(e) => update("guardianCnic", e.target.value)} />
+            <Input
+              placeholder="17301-1234567-1"
+              dir="ltr"
+              maxLength={15}
+              value={form.guardianCnic}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/\D/g, "").slice(0, 13);
+                const parts = [raw.slice(0, 5), raw.slice(5, 12), raw.slice(12, 13)].filter(Boolean);
+                update("guardianCnic", parts.join("-"));
+              }}
+            />
           </BilingualLabel>
         </div>
         {!isPublic && (

@@ -45,7 +45,9 @@ const schoolSections: Section[] = [
     urdu: "سرپرست کی معلومات",
     english: "Guardian Information",
     fields: [
+      { urdu: "والد کا شناختی کارڈ", english: "Father/Guardian CNIC", key: "guardian_cnic", ltr: true },
       { urdu: "سرپرست کا نام", english: "Guardian Name", key: "guardian_name" },
+      { urdu: "رابطہ نمبر", english: "Contact No.", key: "guardian_phone", ltr: true },
       {
         urdu: "کیا مدرسہ میں داخل ہونا چاہتے ہیں؟",
         english: "Also Madrassa?",
@@ -74,6 +76,7 @@ const madrassaShortSections: Section[] = [
     urdu: "سرپرست",
     english: "Guardian",
     fields: [
+      { urdu: "والد کا شناختی کارڈ", english: "Father/Guardian CNIC", key: "guardian_cnic", ltr: true },
       { urdu: "سرپرست کا نام", english: "Guardian Name", key: "guardian_name" },
       { urdu: "رشتہ", english: "Relation", key: "guardian_rel" },
       { urdu: "رابطہ نمبر", english: "Contact No.", key: "guardian_phone", ltr: true },
@@ -213,6 +216,12 @@ const esc = (value: string) =>
     .replace(/'/g, "&#39;");
 
 function valueFor(form: Record<string, string>, key: string) {
+  if (key === "guardian_cnic" || key === "cnic" || key === "father_cnic") {
+    return form.guardian_cnic || form.father_cnic || form.cnic || "";
+  }
+  if (key === "guardian_phone" || key === "phone" || key === "guardian_phone_home") {
+    return form.guardian_phone || form.guardian_phone_home || form.phone || "";
+  }
   if (
     (key === "req_darja" ||
       key === "shoba") &&
