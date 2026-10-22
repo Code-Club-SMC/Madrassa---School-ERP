@@ -15,8 +15,8 @@ export function PublicHeader() {
 
   const navLinks = [
     { id: "home", to: "/", labelEn: "Home", labelUr: "ہوم" },
+    { id: "about", to: "/website/about", labelEn: "About", labelUr: "تعارف و مقاصد" },
     { id: "campuses", to: "/#campuses", labelEn: "Campuses", labelUr: "شعبہ جات" },
-    { id: "portals", to: "/#portals", labelEn: "Portals", labelUr: "پورٹلز" },
     { id: "gallery", to: "/website/gallery", labelEn: "Gallery", labelUr: "گیلری" },
     { id: "contact", to: "/website/contact", labelEn: "Contact", labelUr: "رابطہ" },
   ];
@@ -29,21 +29,16 @@ export function PublicHeader() {
 
     const checkHashAndScroll = () => {
       const hash = window.location.hash.replace(/^#/, "");
-      if (hash === "campuses" || hash === "portals") {
+      if (hash === "campuses") {
         setActiveSection(hash);
         return;
       }
 
       const scrollY = window.scrollY;
       const campusesEl = document.getElementById("campuses");
-      const portalsEl = document.getElementById("portals");
-
       const campusesTop = campusesEl ? campusesEl.offsetTop - 140 : 99999;
-      const portalsTop = portalsEl ? portalsEl.offsetTop - 140 : 99999;
 
-      if (portalsEl && scrollY >= portalsTop) {
-        setActiveSection("portals");
-      } else if (campusesEl && scrollY >= campusesTop) {
+      if (campusesEl && scrollY >= campusesTop) {
         setActiveSection("campuses");
       } else {
         setActiveSection("home");
@@ -64,6 +59,9 @@ export function PublicHeader() {
     if (pathname === "/") {
       return activeSection === id;
     }
+    if (id === "about") {
+      return pathname === "/website/about" || pathname.startsWith("/website/about/");
+    }
     if (id === "gallery") {
       return pathname === "/website/gallery" || pathname.startsWith("/website/gallery/");
     }
@@ -83,7 +81,7 @@ export function PublicHeader() {
         window.history.replaceState(null, "", "/");
         setActiveSection("home");
       }
-    } else if (id === "campuses" || id === "portals") {
+    } else if (id === "campuses") {
       if (pathname === "/") {
         e.preventDefault();
         const el = document.getElementById(id);
@@ -174,7 +172,7 @@ export function PublicHeader() {
           >
             <Link to="/login">
               <LogIn className="h-3.5 w-3.5" />
-              <span>{isUrdu ? "پورٹل لاگ ان" : "Portal Login"}</span>
+              <span>{isUrdu ? "لاگ ان" : "Login"}</span>
             </Link>
           </Button>
         </div>
@@ -210,7 +208,7 @@ export function PublicHeader() {
                 ? "bg-primary/10 text-primary font-semibold"
                 : "text-foreground hover:bg-accent";
 
-              if (item.id === "campuses" || item.id === "portals") {
+              if (item.id === "campuses") {
                 return (
                   <a
                     key={item.id}

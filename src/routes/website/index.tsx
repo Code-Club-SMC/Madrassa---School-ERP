@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BookOpen, GraduationCap, Users2 } from "lucide-react";
+import { ArrowRight, BookOpen, GraduationCap, ScrollText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { institution } from "@/mock";
@@ -37,7 +37,7 @@ function WebsiteHome() {
           {[
             { icon: BookOpen, t: "Madrassa", u: "مدرسہ", d: "Qaida, Nazira, Hifz, Dars-e-Nizami & Takhassus tracks aligned with Wifaq ul Madaris." },
             { icon: GraduationCap, t: "School", u: "اسکول", d: "Pre-Primary through Higher Secondary following BISE / FBISE curriculum." },
-            { icon: Users2, t: "Parents Portal", u: "والدین پورٹل", d: "Track attendance, fees, and exam results for your children online." },
+            { icon: ScrollText, t: "About & Vision", u: "تعارف و مقاصد", d: "Core vision, aims, and objectives of the Jamia promoting Quran, Sunnah, and academic excellence." },
           ].map((c) => (
             <Card key={c.t} className="p-6">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3"><c.icon className="h-6 w-6 text-primary" /></div>

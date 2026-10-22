@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Globe, Save, Plus, Trash2, ExternalLink, Image as ImgIcon, Phone, Bell } from "lucide-react";
+import { Globe, Save, Plus, Trash2, ExternalLink, Image as ImgIcon, Phone, Bell, ScrollText, BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,7 @@ function WebsiteCMS() {
       <Tabs defaultValue="home">
         <TabsList>
           <TabsTrigger value="home"><Globe className="h-3.5 w-3.5 me-1.5" />Home</TabsTrigger>
+          <TabsTrigger value="about"><ScrollText className="h-3.5 w-3.5 me-1.5" />About & Vision</TabsTrigger>
           <TabsTrigger value="gallery"><ImgIcon className="h-3.5 w-3.5 me-1.5" />Gallery</TabsTrigger>
           <TabsTrigger value="notices"><Bell className="h-3.5 w-3.5 me-1.5" />Notices</TabsTrigger>
           <TabsTrigger value="contact"><Phone className="h-3.5 w-3.5 me-1.5" />Contact</TabsTrigger>
@@ -56,6 +57,51 @@ function WebsiteCMS() {
               <Textarea rows={4} value={home.about} onChange={(e) => setHome({ ...home, about: e.target.value })} />
             </div>
             <Button size="sm" className="gap-1.5" onClick={() => toast.success("Home page saved")}><Save className="h-3.5 w-3.5" />Save Home</Button>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="about">
+          <Card className="p-5 mt-3 space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap border-b border-border pb-3">
+              <div>
+                <h3 className="font-heading font-semibold text-base">جامعہ کا نصب العین (اغراض و مقاصد)</h3>
+                <p className="text-xs text-muted-foreground">Official Institutional Charter & Objectives (10 Core Points)</p>
+              </div>
+              <Link to="/website/about" target="_blank" rel="noreferrer">
+                <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View Public About Page
+                </Button>
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-xs font-semibold text-primary">1. قران و حدیث کی ترویج</p>
+                <p className="font-urdu text-sm mt-1">قرآن وحدیث کی تعلیمات کو مسلمانوں کی عملی زندگی میں لانے اور مزید ترویج واشاعت کے لیے ہمہ وقت کوشاں رہنا۔</p>
+                <p className="text-xs text-muted-foreground mt-1">To continuously strive to bring Quranic and Prophetic teachings into the practical daily lives of Muslims.</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-xs font-semibold text-primary">2. صاحبِ بصیرت علماء کی تیاری</p>
+                <p className="font-urdu text-sm mt-1">جدید دور کے علمی تقاضوں کو مدنظر رکھتے ہوئے اپنے طلبہ کو قرآن وحدیث اور فقہ وعقائد کی ایسی جامع، مکمل اور محققانہ تعلیم دینا جس کے نتیجے میں عصری ضرورتوں کو سمجھ کر مسلمانوں کی دینی رہنمائی کرنے والے صاحب بصیرت علماء پیدا ہوں۔</p>
+                <p className="text-xs text-muted-foreground mt-1">Imparting comprehensive and research-oriented education to produce visionary scholars capable of contemporary religious guidance.</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-xs font-semibold text-primary">3. تخصص فی العلوم و تربیت</p>
+                <p className="font-urdu text-sm mt-1">علومِ دینیہ کی عمومی تکمیل کے بعد ہر سال فضلاء کی ایک جماعت منتخب کر کے انہیں تفسیر، حدیث، فقہ وقضاء، دعوت وارشاد اور دیگر علوم میں تخصص کروانا ۔ نیز سیاسیات، اقتصادیات اور صحافت کے شعبوں کے لیے فضلاء کو خصوصی تربیت دینا تاکہ ان شعبوں کے ساتھ ساتھ مختلف شعبہ ہائے زندگی میں فضلاء جامعہ دینی وملی خدمات انجام دے سکیں۔</p>
+                <p className="text-xs text-muted-foreground mt-1">Postgraduate Takhassus in Islamic disciplines alongside training in politics, economics, and journalism.</p>
+              </div>
+              <div className="p-3 rounded-lg border border-border bg-muted/30">
+                <p className="text-xs font-semibold text-primary">4. عربی و انگریزی زبانوں میں مہارت</p>
+                <p className="font-urdu text-sm mt-1">بیرونی دنیا کے ساتھ رابطے کی دونوں بڑی زبانوں عربی و انگریزی کی تعلیم پر خصوصی توجہ دینا اور جدید وسائل تعلیم سے روشناس کرانا۔</p>
+                <p className="text-xs text-muted-foreground mt-1">Mastery of Arabic and English communication and modern instructional technology.</p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Original document scans stored in public archives (/about/vision-page-1.jpeg, vision-page-2.jpeg).</span>
+              <Button size="sm" className="gap-1.5" onClick={() => toast.success("Objectives verified")}><Save className="h-3.5 w-3.5" />Save Changes</Button>
+            </div>
           </Card>
         </TabsContent>
 

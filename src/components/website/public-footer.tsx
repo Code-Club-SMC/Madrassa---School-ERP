@@ -55,17 +55,22 @@ export function PublicFooter() {
 
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              {isUrdu ? "رسائی و پورٹلز" : "Portals & Links"}
+              {isUrdu ? "اہم لنکس" : "Quick Links"}
             </p>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link to="/login" className="hover:text-primary font-medium transition-colors">
-                  {isUrdu ? "پورٹل لاگ ان (Portal Login)" : "Portal Login (All Roles)"}
+                  {isUrdu ? "لاگ ان (Login)" : "Login"}
                 </Link>
               </li>
               <li>
                 <Link to="/apply" className="hover:text-primary transition-colors">
                   {isUrdu ? "آن لائن داخلہ فارم" : "Online Admission Application"}
+                </Link>
+              </li>
+              <li>
+                <Link to="/website/about" className="hover:text-primary transition-colors">
+                  {isUrdu ? "تعارف و اغراض و مقاصد" : "About & Institutional Vision"}
                 </Link>
               </li>
               <li>

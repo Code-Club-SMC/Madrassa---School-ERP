@@ -33,6 +33,7 @@ import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/
 import { Route as ApiDashboardRouteImport } from './routes/api/dashboard'
 import { Route as ApiStudentsRouteImport } from './routes/api/students'
 import { Route as WebsiteIndexRouteImport } from './routes/website/index'
+import { Route as WebsiteAboutRouteImport } from './routes/website/about'
 import { Route as WebsiteContactRouteImport } from './routes/website/contact'
 import { Route as WebsiteGalleryRouteImport } from './routes/website/gallery'
 import { Route as AuthenticatedAdmissionIndexRouteImport } from './routes/_authenticated/admission/index'
@@ -306,6 +307,11 @@ const ApiStudentsRoute = ApiStudentsRouteImport.update({
 const WebsiteIndexRoute = WebsiteIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => WebsiteRoute,
+} as any)
+const WebsiteAboutRoute = WebsiteAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => WebsiteRoute,
 } as any)
 const WebsiteContactRoute = WebsiteContactRouteImport.update({
@@ -1203,6 +1209,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof AuthenticatedUsersRoute
   '/api/dashboard': typeof ApiDashboardRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
+  '/website/about': typeof WebsiteAboutRoute
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
   '/website/': typeof WebsiteIndexRoute
@@ -1375,6 +1382,7 @@ export interface FileRoutesByTo {
   '/users': typeof AuthenticatedUsersRoute
   '/api/dashboard': typeof ApiDashboardRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
+  '/website/about': typeof WebsiteAboutRoute
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
   '/website': typeof WebsiteIndexRoute
@@ -1554,6 +1562,7 @@ export interface FileRoutesById {
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/api/dashboard': typeof ApiDashboardRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
+  '/website/about': typeof WebsiteAboutRoute
   '/website/contact': typeof WebsiteContactRoute
   '/website/gallery': typeof WebsiteGalleryRoute
   '/website/': typeof WebsiteIndexRoute
@@ -1735,6 +1744,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/api/dashboard'
     | '/api/students'
+    | '/website/about'
     | '/website/contact'
     | '/website/gallery'
     | '/website/'
@@ -1907,6 +1917,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/api/dashboard'
     | '/api/students'
+    | '/website/about'
     | '/website/contact'
     | '/website/gallery'
     | '/website'
@@ -2085,6 +2096,7 @@ export interface FileRouteTypes {
     | '/_authenticated/users'
     | '/api/dashboard'
     | '/api/students'
+    | '/website/about'
     | '/website/contact'
     | '/website/gallery'
     | '/website/'
@@ -2476,6 +2488,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/website/'
       preLoaderRoute: typeof WebsiteIndexRouteImport
+      parentRoute: typeof WebsiteRoute
+    }
+    '/website/about': {
+      id: '/website/about'
+      path: '/about'
+      fullPath: '/website/about'
+      preLoaderRoute: typeof WebsiteAboutRouteImport
       parentRoute: typeof WebsiteRoute
     }
     '/website/contact': {
@@ -3840,12 +3859,14 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 interface WebsiteRouteChildren {
+  WebsiteAboutRoute: typeof WebsiteAboutRoute
   WebsiteContactRoute: typeof WebsiteContactRoute
   WebsiteGalleryRoute: typeof WebsiteGalleryRoute
   WebsiteIndexRoute: typeof WebsiteIndexRoute
 }
 
 const WebsiteRouteChildren: WebsiteRouteChildren = {
+  WebsiteAboutRoute: WebsiteAboutRoute,
   WebsiteContactRoute: WebsiteContactRoute,
   WebsiteGalleryRoute: WebsiteGalleryRoute,
   WebsiteIndexRoute: WebsiteIndexRoute,

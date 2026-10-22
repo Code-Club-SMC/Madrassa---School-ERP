@@ -19,6 +19,8 @@ import {
   Award,
   Clock,
   ChevronRight,
+  ScrollText,
+  Globe2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -207,7 +209,7 @@ function PublicRootWebsite() {
             <Button asChild size="lg" className="gap-2 font-medium shadow-md">
               <Link to="/login">
                 <LogIn className="h-4 w-4" />
-                <span>{isUr ? "پورٹل لاگ ان کریں" : "Login to Portal"}</span>
+                <span>{isUr ? "لاگ ان کریں" : "Login"}</span>
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="gap-2">
@@ -295,7 +297,7 @@ function PublicRootWebsite() {
                 </Link>
                 <Link to="/login">
                   <Button size="sm" variant="ghost" className="gap-1 text-xs text-primary">
-                    {isUr ? "پورٹل رسائی" : "Portal"}
+                    {isUr ? "لاگ ان" : "Login"}
                     <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
                   </Button>
                 </Link>
@@ -305,92 +307,164 @@ function PublicRootWebsite() {
         </div>
       </section>
 
-      {/* Portals Section */}
-      <section id="portals" className="py-16 bg-muted/30 border-y border-border">
+      {/* Institutional Vision & Objectives (Aims & Objectives) Section */}
+      <section className="py-16 md:py-20 bg-primary/5 border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <Badge variant="secondary" className="mb-2">
-              {isUr ? "ڈیجیٹل پورٹلز" : "Digital Portals"}
+          <div className="max-w-3xl mx-auto text-center mb-12">
+            <Badge variant="outline" className="mb-3 py-1 px-3 border-primary/30 text-primary bg-primary/10">
+              <ScrollText className="h-3.5 w-3.5 me-1.5" />
+              {isUr ? "نصب العین و اغراض و مقاصد" : "Charter, Vision & Mission"}
             </Badge>
-            <h2 className="font-heading text-3xl font-bold">
-              {isUr ? "والدین، اساتذہ اور انتظامیہ پورٹلز" : "Connected Portals for Everyone"}
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground">
+              {isUr ? (
+                <span className="font-urdu block leading-tight text-primary">
+                  جامعہ کا نصب العین (اغراض و مقاصد)
+                </span>
+              ) : (
+                <span>Institutional Vision, Aims & Objectives</span>
+              )}
             </h2>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-sm text-muted-foreground mt-3 max-w-2xl mx-auto leading-relaxed">
               {isUr
-                ? "تمام صارفین کے لیے ایک ہی یونیفائیڈ لاگ ان۔ آپ کا ای میل یا یوزر نیم خودکار طور پر آپ کا پورٹل کھولے گا۔"
-                : "One unified login for all users. Simply enter your credentials to open your dedicated workspace."}
+                ? "قرآن و سنت کی عملی ترویج، بصیرت افروز علماء کی تیاری، عربی و انگریزی زبانوں پر عبور اور جدید علمی تقاضوں سے ہم آہنگی ہمارے بنیادی اہداف ہیں۔"
+                : "Continuous dedication to Quranic scholarship, nurturing visionary leaders, global language fluency (Arabic & English), and addressing contemporary challenges with academic excellence."}
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="p-6">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <Users2 className="h-6 w-6 text-primary" />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <Card className="p-6 border-border hover:border-primary/40 transition-all flex flex-col justify-between">
+              <div>
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+                  <BookOpen className="h-5 w-5" />
+                </div>
+                <h3 className="font-heading font-semibold text-base mb-1">
+                  {isUr ? "قرآن و حدیث کی عملی ترویج" : "Practical Quran & Hadith Education"}
+                </h3>
+                <p className="font-urdu text-xs text-muted-foreground mb-2">تعلیماتِ نبوی کا عملی نفاذ</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {isUr
+                    ? "قرآن وحدیث کی تعلیمات کو مسلمانوں کی عملی زندگی میں لانے اور مزید ترویج واشاعت کے لیے ہمہ وقت کوشاں رہنا۔"
+                    : "Bringing Quranic and Prophetic teachings into the practical daily life of the Muslim Ummah."}
+                </p>
               </div>
-              <h3 className="font-heading text-lg font-semibold">
-                {isUr ? "والدین پورٹل" : "Parent Portal"}
-              </h3>
-              <p className="font-urdu text-sm text-muted-foreground">والدین و سرپرست</p>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                {isUr
-                  ? "اپنے بچوں کی روزانہ حاضری، فیس واؤچرز اور بقایاجات، امتحانی نتائج اور ادارے کی اطلاعات دیکھیں اور ڈاؤنلوڈ کریں۔"
-                  : "Track daily attendance, fee dues and receipts, quarterly/annual exam cards, and institutional announcements in real time."}
-              </p>
-              <div className="mt-5">
-                <Link to="/login">
-                  <Button size="sm" variant="outline" className="w-full gap-1.5 text-xs">
-                    <LogIn className="h-3.5 w-3.5" />
-                    {isUr ? "والدین لاگ ان" : "Parent Login"}
-                  </Button>
-                </Link>
+              <div className="mt-4 pt-3 border-t border-border/60 text-[11px] font-mono text-primary">
+                {isUr ? "مقصد #۱" : "Objective #1"}
               </div>
             </Card>
 
-            <Card className="p-6">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <GraduationCap className="h-6 w-6 text-primary" />
+            <Card className="p-6 border-border hover:border-primary/40 transition-all flex flex-col justify-between">
+              <div>
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+                  <GraduationCap className="h-5 w-5" />
+                </div>
+                <h3 className="font-heading font-semibold text-base mb-1">
+                  {isUr ? "صاحبِ بصیرت علماء کی تیاری" : "Visionary Islamic Scholarship"}
+                </h3>
+                <p className="font-urdu text-xs text-muted-foreground mb-2">عصری شعور اور فقہی بصیرت</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {isUr
+                    ? "عصری ضرورتوں کو سمجھ کر مسلمانوں کی دینی رہنمائی کرنے والے صاحبِ بصیرت، محقق اور باعمل علماء تیار کرنا۔"
+                    : "Imparting research-driven education to nurture scholars who understand contemporary realities and guide society."}
+                </p>
               </div>
-              <h3 className="font-heading text-lg font-semibold">
-                {isUr ? "استاد پورٹل" : "Teacher Portal"}
-              </h3>
-              <p className="font-urdu text-sm text-muted-foreground">اساتذہ و معلمات</p>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                {isUr
-                  ? "روزانہ ٹائم ٹیبل پیریڈز، کلاس لسٹیں، طالب علموں کے امتحانی نمبرات درج کریں اور حاضری کی تصدیق کریں۔"
-                  : "View active class timetable, submit exam marks, manage subject allocations, and track academic progress."}
-              </p>
-              <div className="mt-5">
-                <Link to="/login">
-                  <Button size="sm" variant="outline" className="w-full gap-1.5 text-xs">
-                    <LogIn className="h-3.5 w-3.5" />
-                    {isUr ? "استاد لاگ ان" : "Teacher Login"}
-                  </Button>
-                </Link>
+              <div className="mt-4 pt-3 border-t border-border/60 text-[11px] font-mono text-primary">
+                {isUr ? "مقصد #۲" : "Objective #2"}
               </div>
             </Card>
 
-            <Card className="p-6">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                <ShieldCheck className="h-6 w-6 text-primary" />
+            <Card className="p-6 border-border hover:border-primary/40 transition-all flex flex-col justify-between">
+              <div>
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+                  <Award className="h-5 w-5" />
+                </div>
+                <h3 className="font-heading font-semibold text-base mb-1">
+                  {isUr ? "تخصص فی العلوم اور صحافت و معیشت" : "Postgraduate Specialization & Leadership"}
+                </h3>
+                <p className="font-urdu text-xs text-muted-foreground mb-2">تفسیر، حدیث، افتاء، سیاسیات و معاشیات</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {isUr
+                    ? "فضلاء کو تفسیر، حدیث، فقہ و قضاء اور سیاسیات، اقتصادیات و صحافت میں اعلیٰ تربیت دینا تاکہ وہ ہر شعبہ میں خدمات انجام دیں۔"
+                    : "Advanced Takhassus along with specialized training in economics, politics, and journalism for multi-disciplinary impact."}
+                </p>
               </div>
-              <h3 className="font-heading text-lg font-semibold">
-                {isUr ? "انتظامی پورٹلز" : "Administrative Workspaces"}
-              </h3>
-              <p className="font-urdu text-sm text-muted-foreground">ایڈمشن، فنانس، ایچ آر، اکیڈمکس</p>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                {isUr
-                  ? "سپر ایڈمن اور ذیلی ایڈمنز (داخلہ، تعلیمی امور، مالیات، ملازمین و رپورٹس) کے لیے مخصوص مکمل کنٹرول پینل۔"
-                  : "Dedicated role-based panels for Super Admin, Admission, Academics, Finance, HR, and Institutional Audits."}
-              </p>
-              <div className="mt-5">
-                <Link to="/login">
-                  <Button size="sm" className="w-full gap-1.5 text-xs">
-                    <LogIn className="h-3.5 w-3.5" />
-                    {isUr ? "انتظامیہ لاگ ان" : "Admin Login"}
-                  </Button>
-                </Link>
+              <div className="mt-4 pt-3 border-t border-border/60 text-[11px] font-mono text-primary">
+                {isUr ? "مقصد #۳" : "Objective #3"}
               </div>
             </Card>
+
+            <Card className="p-6 border-border hover:border-primary/40 transition-all flex flex-col justify-between">
+              <div>
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+                  <Globe2 className="h-5 w-5" />
+                </div>
+                <h3 className="font-heading font-semibold text-base mb-1">
+                  {isUr ? "عربی و انگریزی زبانوں میں مہارت" : "Arabic & English Global Communication"}
+                </h3>
+                <p className="font-urdu text-xs text-muted-foreground mb-2">عالمی زبانیں اور جدید وسائل تعلیم</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {isUr
+                    ? "بیرونی دنیا کے ساتھ رابطے کی دونوں بڑی زبانوں عربی و انگریزی کی اعلیٰ تعلیم اور جدید وسائلِ تعلیم سے روشناس کرانا۔"
+                    : "Intensive training in Arabic and English alongside modern educational technologies for global engagement."}
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/60 text-[11px] font-mono text-primary">
+                {isUr ? "مقصد #۴" : "Objective #4"}
+              </div>
+            </Card>
+
+            <Card className="p-6 border-border hover:border-primary/40 transition-all flex flex-col justify-between">
+              <div>
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+                  <Users2 className="h-5 w-5" />
+                </div>
+                <h3 className="font-heading font-semibold text-base mb-1">
+                  {isUr ? "خواتین میں تعلیمات اور عالمات کی تیاری" : "Female Scholarship & Islamic Education"}
+                </h3>
+                <p className="font-urdu text-xs text-muted-foreground mb-2">شعبہ بنات اور فاضلات کی تربیت</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {isUr
+                    ? "خواتین میں قرآن و حدیث کی تعلیمات کو عام کرنے اور ان کی علمی ضروریات پوری کرنے کے لیے صحیح الفکر عالمات و فاضلات تیار کرنا۔"
+                    : "Preparing upright, qualified female Islamic scholars (Alimat) to educate and inspire women in society."}
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/60 text-[11px] font-mono text-primary">
+                {isUr ? "مقصد #۷" : "Objective #7"}
+              </div>
+            </Card>
+
+            <Card className="p-6 border-border hover:border-primary/40 transition-all flex flex-col justify-between">
+              <div>
+                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <h3 className="font-heading font-semibold text-base mb-1">
+                  {isUr ? "ریسرچ، فکری دفاع اور جدید تدریس" : "Academic Research & Modern Pedagogy"}
+                </h3>
+                <p className="font-urdu text-xs text-muted-foreground mb-2">الحاد و فتنوں کا تعاقب اور جدید وسائل</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {isUr
+                    ? "الحاد کے فکری حملوں کو روکنے کے لیے ریسرچ اداروں کا قیام، اور ابلاغ و تفہیم میں جدید تعلیمی وسائل کا بھرپور استعمال۔"
+                    : "Establishing research institutions to counter modern intellectual fallacies, utilizing cutting-edge educational tools."}
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/60 text-[11px] font-mono text-primary">
+                {isUr ? "مقاصد #۹ و #۱۰" : "Objectives #9 & #10"}
+              </div>
+            </Card>
+          </div>
+
+          <div className="mt-10 text-center">
+            <Button asChild size="lg" className="gap-2 font-medium shadow-sm">
+              <Link to="/website/about">
+                <ScrollText className="h-4 w-4" />
+                <span>
+                  {isUr
+                    ? "تمام ۱۰ بنیادی اغراض و مقاصد اور اصل دستاویز دیکھیں"
+                    : "View All 10 Institutional Objectives & Scanned Documents"}
+                </span>
+                <ArrowRight className="h-4 w-4 rtl:rotate-180" />
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
