@@ -113,6 +113,19 @@ describe("fee ledger arithmetic", () => {
     });
   });
 
+  test("handles missing payments array without throwing", () => {
+    const summary = summarizeStudentLedger({
+      charges: [{ id: "c1", amountPaisa: 5_000, dueDate: null, status: "open" }],
+      allocations: [],
+      adjustments: [],
+    });
+
+    expect(summary).toMatchObject({
+      totalChargedPaisa: 5_000,
+      outstandingPaisa: 5_000,
+    });
+  });
+
   test("builds aging buckets", () => {
     const asOf = new Date("2026-07-16T00:00:00Z");
 

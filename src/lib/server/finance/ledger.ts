@@ -37,10 +37,10 @@ export type ChargeLedgerRow = {
 };
 
 export type ChargeLedgerInput = {
-  charges: LedgerChargeInput[];
-  payments: LedgerPaymentInput[];
-  allocations: LedgerAllocationInput[];
-  adjustments: LedgerAdjustmentInput[];
+  charges?: LedgerChargeInput[];
+  payments?: LedgerPaymentInput[];
+  allocations?: LedgerAllocationInput[];
+  adjustments?: LedgerAdjustmentInput[];
   asOf?: Date;
 };
 
@@ -61,25 +61,30 @@ export function buildChargeLedger(input: ChargeLedgerInput): ChargeLedgerRow[] {
   validateLedgerInput(input);
 
   const asOf = input.asOf ?? new Date();
-  const paymentStatus = new Map(input.payments.map((payment) => [payment.id, payment.status]));
+  const charges = input.charges ?? [];
+  const payments = input.payments ?? [];
+  const allocations = input.allocations ?? [];
+  const adjustments = input.adjustments ?? [];
+
+  const paymentStatus = new Map(payments.map((payment) => [payment.id, payment.status]));
   const reversedPaymentIds = new Set(
-    input.adjustments
+    adjustments
       .filter((adjustment) => adjustment.type === "payment_reversal" && adjustment.paymentId)
       .map((adjustment) => adjustment.paymentId as string),
   );
-  const activeAllocations = input.allocations
+  const activeAllocations = allocations
     .map((allocation, order) => ({ ...allocation, order }))
     .filter((allocation) => paymentStatus.get(allocation.paymentId) !== "reversed")
     .filter((allocation) => !reversedPaymentIds.has(allocation.paymentId));
 
   const allocatedByCharge = sumAmounts(activeAllocations, "chargeId");
   const refundByPayment = sumAdjustments(
-    input.adjustments.filter((adjustment) => adjustment.type === "refund"),
+    adjustments.filter((adjustment) => adjustment.type === "refund"),
     "paymentId",
   );
   const refundedByCharge = distributeRefundsByCharge(activeAllocations, refundByPayment);
   const concessionByCharge = sumAdjustments(
-    input.adjustments.filter(
+    adjustments.filter(
       (adjustment) =>
         adjustment.type === "concession" ||
         adjustment.type === "waiver" ||
@@ -88,11 +93,11 @@ export function buildChargeLedger(input: ChargeLedgerInput): ChargeLedgerRow[] {
     "chargeId",
   );
   const reversalByCharge = sumAdjustments(
-    input.adjustments.filter((adjustment) => adjustment.type === "charge_reversal"),
+    adjustments.filter((adjustment) => adjustment.type === "charge_reversal"),
     "chargeId",
   );
 
-  return input.charges.map((charge) => {
+  return charges.map((charge) => {
     const allocatedPaisa = allocatedByCharge.get(charge.id) ?? 0;
     const refundedPaisa = refundedByCharge.get(charge.id) ?? 0;
     const concessionPaisa = concessionByCharge.get(charge.id) ?? 0;
@@ -261,22 +266,22 @@ function incrementMap(map: Map<string, number>, key: string, amountPaisa: number
 }
 
 function validateLedgerInput(input: ChargeLedgerInput) {
-  for (const charge of input.charges) {
+  for (const charge of input.charges ?? []) {
     assertPaisaAmount(charge.amountPaisa, `charge ${charge.id}`);
   }
 
-  for (const payment of input.payments) {
+  for (const payment of input.payments ?? []) {
     assertPaisaAmount(payment.amountPaisa, `payment ${payment.id}`);
   }
 
-  for (const allocation of input.allocations) {
+  for (const allocation of input.allocations ?? []) {
     assertPaisaAmount(
       allocation.amountPaisa,
       `allocation ${allocation.paymentId}:${allocation.chargeId}`,
     );
   }
 
-  for (const adjustment of input.adjustments) {
+  for (const adjustment of input.adjustments ?? []) {
     assertPaisaAmount(adjustment.amountPaisa, `adjustment ${adjustment.type}`);
   }
 }

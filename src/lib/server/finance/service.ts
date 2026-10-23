@@ -547,8 +547,8 @@ export async function collectCollectiveFeePayment(
   input: z.infer<typeof collectCollectiveFeeSchema>,
 ) {
   const actor = await requirePermission(request, "finance", "create").catch(async () => {
-    return await requirePermission(request, "fees_school", "create").catch(async () => {
-      return await requirePermission(request, "fees_madrassa", "create");
+    return await requirePermission(request, "school_fees", "create").catch(async () => {
+      return await requirePermission(request, "madrassa_fees", "create");
     });
   });
 
@@ -1106,6 +1106,7 @@ export async function getStudentFeeLedger(
 
   const primarySummary = summarizeStudentLedger({
     charges: allLedgerData.charges.filter((c) => c.studentId === studentId),
+    payments: allLedgerData.payments.filter((p) => p.studentId === studentId),
     allocations: allLedgerData.allocations.filter((a) =>
       allLedgerData.charges.some((c) => c.id === a.chargeId && c.studentId === studentId),
     ),
@@ -1153,6 +1154,7 @@ export async function getStudentFeeLedger(
 
     const sibSummary = summarizeStudentLedger({
       charges: allLedgerData.charges.filter((c) => c.studentId === sibRow.studentId),
+      payments: allLedgerData.payments.filter((p) => p.studentId === sibRow.studentId),
       allocations: allLedgerData.allocations.filter((a) =>
         allLedgerData.charges.some((c) => c.id === a.chargeId && c.studentId === sibRow.studentId),
       ),
