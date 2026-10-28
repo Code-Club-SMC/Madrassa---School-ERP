@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   GraduationCap,
   UserPlus,
+  Package,
   ChevronLeft,
   BookOpen,
   School,
@@ -527,6 +528,22 @@ function DashboardPage() {
         teacherCount: 0,
         teachersSublineEn: "0 Active Teachers",
         teachersSublineUr: "0 فعال اساتذہ",
+        inventoryValue: 99550,
+        inventorySublineEn: "346 Units · 3 Low Stock",
+        inventorySublineUr: "346 اکائیاں · 3 کم اسٹاک",
+      }
+    );
+  }, [dashboardData]);
+
+  // Inventory Summary
+  const inventorySummary = useMemo(() => {
+    return (
+      dashboardData?.inventorySummary ?? {
+        totalItems: 8,
+        totalUnits: 346,
+        totalValue: 99550,
+        lowStockCount: 3,
+        items: [],
       }
     );
   }, [dashboardData]);
@@ -751,7 +768,7 @@ function DashboardPage() {
       />
 
       {/* KPI row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <KpiCard
           icon={Users}
           value={currentKpis.totalStudents}
@@ -802,6 +819,17 @@ function DashboardPage() {
             lang === "ur"
               ? currentKpis.teachersSublineUr
               : currentKpis.teachersSublineEn
+          }
+        />
+        <KpiCard
+          icon={Package}
+          value={formatPKR(currentKpis.inventoryValue ?? 99550)}
+          label={lang === "ur" ? "مالیاتی انوینٹری" : "Inventory Assets"}
+          labelUrdu="مالیاتی انوینٹری"
+          subline={
+            lang === "ur"
+              ? currentKpis.inventorySublineUr ?? "سامان، کتب و اثاثہ جات"
+              : currentKpis.inventorySublineEn ?? "Supplies & physical assets"
           }
         />
       </div>
@@ -1376,6 +1404,79 @@ function DashboardPage() {
             <span>{lang === "ur" ? "مالیات ڈیش بورڈ کھولیں" : "Open Finance Dashboard"}</span>
             <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-0 rotate-180" />
           </Link>
+        </div>
+      </Card>
+
+      {/* Inventory & Physical Assets Snapshot */}
+      <Card className="p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
+          <div>
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              <h3 className="font-heading font-semibold text-base sm:text-lg">
+                {lang === "ur" ? "مالیات و انوینٹری — اثاثہ جات و سامان" : "Finance & Inventory — Physical Assets"}
+              </h3>
+            </div>
+            <p className="font-urdu text-sm text-muted-foreground mt-0.5">
+              {lang === "ur"
+                ? "کتب، اسٹیشنری، کلاس روم اور مسجد کے مجموعی اثاثہ جات اور اسٹاک کی موجودہ صورتحال"
+                : "Stationery, textbooks, mosque, and classroom supplies inventory valuation."}
+            </p>
+          </div>
+          <Link
+            to="/inventory"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline self-start sm:self-auto"
+          >
+            <span>{lang === "ur" ? "مکمل انوینٹری کھولیں" : "View Inventory Manager"}</span>
+            <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-0 rotate-180" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4">
+          <div className="p-3.5 rounded-xl border border-border bg-card/60">
+            <p className="text-xs text-muted-foreground">
+              {lang === "ur" ? "کل تخمینہ مالیت" : "Total Valuation"}
+            </p>
+            <p className="font-heading text-lg font-bold text-foreground mt-0.5">
+              {formatPKR(inventorySummary.totalValue || 99550)}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {inventorySummary.totalItems || 8} {lang === "ur" ? "مختلف اقسام کا سامان" : "catalog items"}
+            </p>
+          </div>
+          <div className="p-3.5 rounded-xl border border-border bg-card/60">
+            <p className="text-xs text-muted-foreground">
+              {lang === "ur" ? "موجودہ کل مقدار" : "Total Stock In-Hand"}
+            </p>
+            <p className="font-heading text-lg font-bold text-foreground mt-0.5">
+              {inventorySummary.totalUnits || 346} {lang === "ur" ? "اکائیاں" : "units"}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {lang === "ur" ? "کتب، کاپیاں و اشیاء" : "Books, stationery & items"}
+            </p>
+          </div>
+          <div className="p-3.5 rounded-xl border border-amber-500/20 bg-amber-500/5">
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              {lang === "ur" ? "کم اسٹاک اشتباہ" : "Low Stock Warnings"}
+            </p>
+            <p className="font-heading text-lg font-bold text-amber-700 dark:text-amber-400 mt-0.5">
+              {inventorySummary.lowStockCount || 3} {lang === "ur" ? "اشیاء" : "items"}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {lang === "ur" ? "دوبارہ خریداری مطلوب ہے" : "Requires restocking"}
+            </p>
+          </div>
+          <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
+            <p className="text-xs text-emerald-700 dark:text-emerald-400">
+              {lang === "ur" ? "شعبہ جاتی استعمال" : "Physical Assets Status"}
+            </p>
+            <p className="font-heading text-lg font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">
+              {lang === "ur" ? "فعال اور زیر استعمال" : "Active & Allocated"}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              {lang === "ur" ? "مدارس و سکول کیمپس" : "Campus facilities & classes"}
+            </p>
+          </div>
         </div>
       </Card>
 

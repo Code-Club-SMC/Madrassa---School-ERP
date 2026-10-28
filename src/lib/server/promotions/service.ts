@@ -119,6 +119,15 @@ export const promotionRuleInputSchema = z.object({
   displayOrder: z.number().int().default(0),
 });
 
+export const promotionPreviewItemInputSchema = z.object({
+  studentId: z.string().trim().min(1),
+  sourceEnrollmentId: z.string().trim().min(1),
+  outcome: z.enum(promotionOutcomes).default("promote"),
+  targetSchoolClassId: z.string().trim().nullable().optional(),
+  targetMadrassaSubcategoryId: z.string().trim().nullable().optional(),
+  targetDarja: z.string().trim().nullable().optional(),
+});
+
 export const promotionPreviewSchema = z.object({
   sourceAcademicYearId: z.string().trim().min(1),
   targetAcademicYearId: z.string().trim().min(1),
@@ -130,6 +139,13 @@ export const promotionPreviewSchema = z.object({
   madrassaSubcategoryId: z.string().trim().nullable().optional(),
   carryForwardFees: z.boolean().default(true),
   includeTeacherRollover: z.boolean().default(false),
+  items: z.array(promotionPreviewItemInputSchema).optional(),
+});
+
+export const promotionRosterQuerySchema = z.object({
+  sourceAcademicYearId: z.string().trim().min(1),
+  system: z.enum(promotionSystems).default("school"),
+  institutionId: z.string().trim().optional(),
 });
 
 export async function listPromotionRules(
@@ -233,8 +249,76 @@ export async function createPromotionPreview(
       )
     : new Map<string, number>();
 
+  const explicitItemsMap = new Map((input.items ?? []).map((it) => [it.studentId, it]));
+
+  const allClasses =
+    input.system === "school"
+      ? await db
+          .select()
+          .from(schoolClasses)
+          .where(eq(schoolClasses.institutionId, input.institutionId))
+          .orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name))
+      : [];
+  const classOrderMap = new Map<string, (typeof allClasses)[0]>();
+  allClasses.forEach((c, idx) => {
+    if (idx + 1 < allClasses.length) {
+      classOrderMap.set(c.id, allClasses[idx + 1]);
+    }
+  });
+
   const previewItems = sourceEnrollments.map((row) => {
-    const evaluation = evaluatePromotionCandidate({
+    const carryForwardAmountPaisa = Math.max(0, balances.get(row.studentId) ?? 0);
+    const warnings: string[] = [];
+    if (carryForwardAmountPaisa > 0) {
+      warnings.push("Outstanding fee balance will be carried forward");
+    }
+
+    const explicit = explicitItemsMap.get(row.studentId);
+    if (explicit) {
+      let targetClassId = explicit.targetSchoolClassId ?? null;
+      let targetSubcatId = explicit.targetMadrassaSubcategoryId ?? null;
+      let targetDarja = explicit.targetDarja ?? null;
+      const blockers: string[] = [];
+
+      if (explicit.outcome === "repeat") {
+        targetClassId = row.schoolClassId;
+        targetSubcatId = row.madrassaSubcategoryId;
+        targetDarja = row.darja;
+      } else if (explicit.outcome === "promote") {
+        if (input.system === "school" && !targetClassId) {
+          blockers.push("Promotion requires a target school class");
+        }
+        if (input.system === "madrassa" && !targetSubcatId) {
+          blockers.push("Promotion requires a target madrassa subcategory");
+        }
+      }
+
+      const status: PromotionItemStatus =
+        blockers.length > 0 ? "blocked" : warnings.length > 0 ? "warning" : "ready";
+
+      return {
+        id: randomUUID(),
+        studentId: row.studentId,
+        sourceEnrollmentId: row.enrollmentId,
+        outcome: explicit.outcome,
+        status,
+        warnings,
+        blockers,
+        carryForwardAmountPaisa,
+        metadata: buildPreviewMetadata(
+          row,
+          {
+            schoolClassId: targetClassId,
+            madrassaCategoryId: null,
+            madrassaSubcategoryId: targetSubcatId,
+            darja: targetDarja,
+          },
+          null,
+        ),
+      };
+    }
+
+    let evaluation = evaluatePromotionCandidate({
       system: input.system,
       enrollment: {
         schoolClassId: row.schoolClassId,
@@ -244,13 +328,45 @@ export async function createPromotionPreview(
       },
       rules,
     });
-    const carryForwardAmountPaisa = Math.max(0, balances.get(row.studentId) ?? 0);
-    const warnings = [...evaluation.warnings];
-    if (carryForwardAmountPaisa > 0) {
-      warnings.push("Outstanding fee balance will be carried forward");
+
+    if (evaluation.status === "blocked" && input.system === "school" && row.schoolClassId) {
+      const nextClass = classOrderMap.get(row.schoolClassId);
+      if (nextClass) {
+        evaluation = {
+          outcome: "promote",
+          status: "ready",
+          target: {
+            schoolClassId: nextClass.id,
+            schoolSectionId: null,
+            madrassaCategoryId: null,
+            madrassaSubcategoryId: null,
+            darja: null,
+          },
+          warnings: [],
+          blockers: [],
+          ruleId: null,
+        };
+      } else {
+        evaluation = {
+          outcome: "graduate",
+          status: "ready",
+          target: {
+            schoolClassId: null,
+            schoolSectionId: null,
+            madrassaCategoryId: null,
+            madrassaSubcategoryId: null,
+            darja: null,
+          },
+          warnings: [],
+          blockers: [],
+          ruleId: null,
+        };
+      }
     }
+
+    const itemWarnings = [...warnings, ...evaluation.warnings];
     const status: PromotionItemStatus =
-      evaluation.status === "blocked" ? "blocked" : warnings.length > 0 ? "warning" : "ready";
+      evaluation.status === "blocked" ? "blocked" : itemWarnings.length > 0 ? "warning" : "ready";
 
     return {
       id: randomUUID(),
@@ -258,7 +374,7 @@ export async function createPromotionPreview(
       sourceEnrollmentId: row.enrollmentId,
       outcome: evaluation.outcome,
       status,
-      warnings,
+      warnings: itemWarnings,
       blockers: evaluation.blockers,
       carryForwardAmountPaisa,
       metadata: buildPreviewMetadata(row, evaluation.target, evaluation.ruleId),
@@ -815,4 +931,207 @@ function assertProgramMatchesSystem(system: PromotionSystem, programSystem: stri
 
 function compactSql(items: Array<SQL | undefined>): SQL[] {
   return items.filter((item): item is SQL => Boolean(item));
+}
+
+export async function getPromotionRoster(
+  request: Request,
+  query: z.infer<typeof promotionRosterQuerySchema>,
+) {
+  await requirePermission(request, "settings_academic_year", "view");
+
+  const sourceYear = await getAcademicYearOrThrow(query.sourceAcademicYearId);
+
+  const resolvedInstitutionId =
+    query.institutionId ||
+    (query.system === "school" ? "al_qasim_academy" : "jamia_qasmia_baneen");
+
+  const [institution] = await db
+    .select()
+    .from(institutions)
+    .where(eq(institutions.id, resolvedInstitutionId))
+    .limit(1);
+
+  const [program] = await db
+    .select()
+    .from(programs)
+    .where(
+      and(
+        eq(programs.institutionId, resolvedInstitutionId),
+        query.system === "school"
+          ? or(eq(programs.system, "school"), eq(programs.system, "school_support"))
+          : eq(programs.system, "madrassa"),
+      ),
+    )
+    .limit(1);
+
+  if (query.system === "school") {
+    const classesList = await db
+      .select()
+      .from(schoolClasses)
+      .where(eq(schoolClasses.institutionId, resolvedInstitutionId))
+      .orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name));
+
+    const enrollments = await loadSourceEnrollments({
+      sourceAcademicYearId: sourceYear.id,
+      targetAcademicYearId: sourceYear.id,
+      system: query.system,
+      institutionId: resolvedInstitutionId,
+      programId: program?.id ?? "al_qasim_school",
+      carryForwardFees: true,
+      includeTeacherRollover: false,
+    });
+
+    const balances = await getOutstandingBalanceByStudentIds(
+      db,
+      enrollments.map((e) => e.studentId),
+    );
+
+    let totalBalancePaisa = 0;
+    const studentsByClass = new Map<string, typeof enrollments>();
+    for (const enr of enrollments) {
+      const cId = enr.schoolClassId ?? "unassigned";
+      if (!studentsByClass.has(cId)) studentsByClass.set(cId, []);
+      studentsByClass.get(cId)!.push(enr);
+    }
+
+    const classesWithStudents = classesList.map((c, idx) => {
+      const nextClass = idx + 1 < classesList.length ? classesList[idx + 1] : null;
+      const classStudents = (studentsByClass.get(c.id) ?? []).map((st) => {
+        const bal = balances.get(st.studentId) ?? 0;
+        totalBalancePaisa += Math.max(0, bal);
+        return {
+          studentId: st.studentId,
+          enrollmentId: st.enrollmentId,
+          name: st.studentName,
+          nameUrdu: st.studentNameUrdu,
+          fatherName: st.fatherName,
+          gender: st.gender,
+          rollNo: st.rollNo,
+          admissionNo: st.admissionNo,
+          outstandingBalancePaisa: Math.max(0, bal),
+          suggestedTargetClassId: nextClass ? nextClass.id : null,
+          suggestedOutcome: nextClass ? "promote" : "graduate",
+        };
+      });
+
+      return {
+        id: c.id,
+        name: c.name,
+        nameUrdu: c.nameUrdu,
+        displayOrder: c.displayOrder,
+        suggestedTargetClassId: nextClass ? nextClass.id : null,
+        suggestedOutcome: nextClass ? "promote" : "graduate",
+        studentCount: classStudents.length,
+        students: classStudents,
+      };
+    });
+
+    return {
+      sourceAcademicYear: sourceYear,
+      system: query.system,
+      institutionId: resolvedInstitutionId,
+      institutionName: institution?.name ?? "Al-Qasim Academy",
+      programId: program?.id ?? "al_qasim_school",
+      programName: program?.name ?? "School",
+      classes: classesWithStudents,
+      availableTargetClasses: classesList.map((c) => ({
+        id: c.id,
+        name: c.name,
+        nameUrdu: c.nameUrdu,
+        displayOrder: c.displayOrder,
+      })),
+      totalStudents: enrollments.length,
+      totalBalancePaisa,
+    };
+  }
+
+  const madrassaSubcats = await db
+    .select({
+      id: madrassaSubcategories.id,
+      name: madrassaSubcategories.name,
+      nameUrdu: madrassaSubcategories.nameUrdu,
+      categoryId: madrassaSubcategories.categoryId,
+      categoryName: madrassaCategories.name,
+      categoryNameUrdu: madrassaCategories.nameUrdu,
+      displayOrder: madrassaSubcategories.displayOrder,
+    })
+    .from(madrassaSubcategories)
+    .innerJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+    .orderBy(asc(madrassaSubcategories.displayOrder));
+
+  const enrollments = await loadSourceEnrollments({
+    sourceAcademicYearId: sourceYear.id,
+    targetAcademicYearId: sourceYear.id,
+    system: query.system,
+    institutionId: resolvedInstitutionId,
+    programId: program?.id ?? "qasmia_hifz",
+    carryForwardFees: true,
+    includeTeacherRollover: false,
+  });
+
+  const balances = await getOutstandingBalanceByStudentIds(
+    db,
+    enrollments.map((e) => e.studentId),
+  );
+
+  let totalBalancePaisa = 0;
+  const studentsBySubcat = new Map<string, typeof enrollments>();
+  for (const enr of enrollments) {
+    const sId = enr.madrassaSubcategoryId ?? "unassigned";
+    if (!studentsBySubcat.has(sId)) studentsBySubcat.set(sId, []);
+    studentsBySubcat.get(sId)!.push(enr);
+  }
+
+  const subcatsWithStudents = madrassaSubcats.map((sc, idx) => {
+    const nextSubcat = idx + 1 < madrassaSubcats.length ? madrassaSubcats[idx + 1] : null;
+    const catStudents = (studentsBySubcat.get(sc.id) ?? []).map((st) => {
+      const bal = balances.get(st.studentId) ?? 0;
+      totalBalancePaisa += Math.max(0, bal);
+      return {
+        studentId: st.studentId,
+        enrollmentId: st.enrollmentId,
+        name: st.studentName,
+        nameUrdu: st.studentNameUrdu,
+        fatherName: st.fatherName,
+        gender: st.gender,
+        rollNo: st.rollNo,
+        admissionNo: st.admissionNo,
+        outstandingBalancePaisa: Math.max(0, bal),
+        suggestedTargetSubcategoryId: nextSubcat ? nextSubcat.id : null,
+        suggestedOutcome: nextSubcat ? "promote" : "graduate",
+      };
+    });
+
+    return {
+      id: sc.id,
+      name: sc.name,
+      nameUrdu: sc.nameUrdu,
+      categoryId: sc.categoryId,
+      categoryName: sc.categoryName,
+      categoryNameUrdu: sc.categoryNameUrdu,
+      displayOrder: sc.displayOrder,
+      suggestedTargetSubcategoryId: nextSubcat ? nextSubcat.id : null,
+      suggestedOutcome: nextSubcat ? "promote" : "graduate",
+      studentCount: catStudents.length,
+      students: catStudents,
+    };
+  });
+
+  return {
+    sourceAcademicYear: sourceYear,
+    system: query.system,
+    institutionId: resolvedInstitutionId,
+    institutionName: institution?.name ?? "Jamia Qasmia",
+    programId: program?.id ?? "qasmia_hifz",
+    programName: program?.name ?? "Madrassa",
+    classes: subcatsWithStudents,
+    availableTargetClasses: madrassaSubcats.map((sc) => ({
+      id: sc.id,
+      name: sc.name,
+      nameUrdu: sc.nameUrdu,
+      displayOrder: sc.displayOrder,
+    })),
+    totalStudents: enrollments.length,
+    totalBalancePaisa,
+  };
 }

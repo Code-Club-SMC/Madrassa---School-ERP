@@ -95,6 +95,11 @@ export function isAcademicYearEditable(status: AcademicYearStatus) {
   return status === "upcoming" || status === "active";
 }
 
+export function isAcademicYearExpired(endDate: string, asOfDate?: string): boolean {
+  const current = asOfDate ?? new Date().toISOString().slice(0, 10);
+  return endDate < current;
+}
+
 export function assertAcademicYearEditable(status: AcademicYearStatus) {
   if (!isAcademicYearEditable(status)) throw new HttpError("تعلیمی سال مقفل ہے", 409);
 }

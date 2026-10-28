@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
-import { type InventoryItem } from "@/mock";
+import { inventoryItems, type InventoryItem } from "@/mock";
 import { formatPKR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
@@ -35,10 +35,13 @@ function InventoryPage() {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("inventory_items");
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
       } catch {}
     }
-    return [];
+    return inventoryItems;
   });
 
   useEffect(() => {

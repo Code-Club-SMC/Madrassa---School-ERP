@@ -29,7 +29,7 @@ import {
   students,
 } from "@/db/schema/students";
 import type { ModuleKey } from "@/lib/permissions/module-registry";
-import { requirePermission } from "@/lib/server/authz";
+import { getRequestUser, requirePermission } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
 import { insertStudentEvent } from "@/lib/server/students/events";
 import {
@@ -248,11 +248,22 @@ function feeModuleForSystem(system: FeeSystem): ModuleKey {
 }
 
 async function requireFinanceReportPermission(request: Request) {
+  const user = await getRequestUser(request);
+  if (!user) throw new HttpError("Authentication required", 401);
+  if (
+    user.role === "super_admin" ||
+    user.role === "admin" ||
+    user.role === "finance_admin" ||
+    user.role === "accountant" ||
+    user.role === "reports_admin"
+  ) {
+    return user;
+  }
   return requirePermission(request, "finance", "view");
 }
 
 async function getActiveEnrollmentContext(studentId: string): Promise<ActiveEnrollmentContext> {
-  const [row] = await db
+  let [row] = await db
     .select({
       studentId: students.id,
       studentName: students.name,
@@ -307,6 +318,62 @@ async function getActiveEnrollmentContext(studentId: string): Promise<ActiveEnro
     )
     .orderBy(desc(studentEnrollments.startedAt))
     .limit(1);
+
+  if (!row) {
+    const [fallbackRow] = await db
+      .select({
+        studentId: students.id,
+        studentName: students.name,
+        studentNameUrdu: students.nameUrdu,
+        fatherName: students.fatherName,
+        enrollmentId: studentEnrollments.id,
+        rollNo: studentEnrollments.rollNo,
+        admissionNo: studentEnrollments.admissionNo,
+        institutionId: studentEnrollments.institutionId,
+        institutionName: institutions.name,
+        institutionNameUrdu: institutions.nameUrdu,
+        programId: studentEnrollments.programId,
+        programName: programs.name,
+        programNameUrdu: programs.nameUrdu,
+        programSystem: programs.system,
+        schoolClassId: studentEnrollments.schoolClassId,
+        schoolClassName: schoolClasses.name,
+        schoolClassNameUrdu: schoolClasses.nameUrdu,
+        madrassaSubcategoryId: studentEnrollments.madrassaSubcategoryId,
+        madrassaSubcategoryName: madrassaSubcategories.name,
+        madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
+        madrassaCategoryName: madrassaCategories.name,
+        madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
+        guardianName: guardians.name,
+        guardianPhone: guardians.phone,
+        guardianCnic: guardians.cnic,
+        academicYearId: studentEnrollments.academicYearId,
+        schoolClassFee: schoolClasses.fee ?? null,
+        madrassaSubcategoryFee: madrassaSubcategories.fee ?? null,
+      })
+      .from(students)
+      .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, students.id))
+      .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
+      .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
+      .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
+      .leftJoin(
+        madrassaSubcategories,
+        eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
+      )
+      .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+      .leftJoin(
+        studentGuardians,
+        and(eq(studentGuardians.studentId, students.id), eq(studentGuardians.isPrimary, true)),
+      )
+      .leftJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
+      .where(eq(students.id, studentId))
+      .orderBy(desc(studentEnrollments.startedAt), desc(studentEnrollments.createdAt))
+      .limit(1);
+
+    if (fallbackRow) {
+      row = fallbackRow;
+    }
+  }
 
   if (!row) throw new HttpError("Active student enrollment not found", 404);
 

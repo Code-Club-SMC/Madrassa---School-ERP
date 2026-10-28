@@ -4,6 +4,7 @@ import {
   assertActiveAcademicYear,
   assertValidAcademicYearDates,
   defaultCalendarTypeForSystem,
+  isAcademicYearExpired,
   nextAcademicYearStatus,
 } from "@/lib/server/academic-years/domain";
 
@@ -59,5 +60,11 @@ describe("academic year domain", () => {
     expect(() => assertAcademicYearCalendar("madrassa", "gregorian")).toThrow(
       "مدرسہ تعلیمی سال کے لیے ہجری کیلنڈر لازم ہے",
     );
+  });
+
+  test("correctly identifies whether an academic year has expired", () => {
+    expect(isAcademicYearExpired("2026-05-31", "2026-06-01")).toBe(true);
+    expect(isAcademicYearExpired("2026-06-30", "2026-06-01")).toBe(false);
+    expect(isAcademicYearExpired("2026-06-01", "2026-06-01")).toBe(false);
   });
 });

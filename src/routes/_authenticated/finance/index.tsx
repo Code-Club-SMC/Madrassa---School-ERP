@@ -53,6 +53,18 @@ function FinanceDashboard() {
       madrassaExpense: number;
     }>
   >([]);
+  const [serverDaily, setServerDaily] = useState<
+    Array<{
+      day: string;
+      fullLabel: string;
+      income: number;
+      expense: number;
+      schoolIncome: number;
+      madrassaIncome: number;
+      schoolExpense: number;
+      madrassaExpense: number;
+    }>
+  >([]);
   const [serverKpis, setServerKpis] = useState<{
     monthlyIncome: number;
     schoolMonthlyIncome: number;
@@ -77,6 +89,7 @@ function FinanceDashboard() {
         if (!mounted || !d) return;
         if (Array.isArray(d.recentTransactions)) setServerTransactions(d.recentTransactions);
         if (Array.isArray(d.monthlyHistory)) setServerMonthly(d.monthlyHistory);
+        if (Array.isArray(d.dailyHistory)) setServerDaily(d.dailyHistory);
         if (d.kpis) setServerKpis(d.kpis);
       })
       .catch(() => {});
@@ -123,7 +136,7 @@ function FinanceDashboard() {
     const recordMadrassaIncomeByDay = new Map<number, number>();
     const recordMadrassaExpenseByDay = new Map<number, number>();
 
-    scoped.forEach((r) => {
+    localRecords.forEach((r) => {
       const d = new Date(r.date);
       if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
         const day = d.getDate();
@@ -153,10 +166,17 @@ function FinanceDashboard() {
 
     return Array.from({ length: daysInMonth }, (_, index) => {
       const day = index + 1;
-      const schoolIncome = recordSchoolIncomeByDay.get(day) ?? 0;
-      const madrassaIncome = recordMadrassaIncomeByDay.get(day) ?? 0;
-      const schoolExpense = recordSchoolExpenseByDay.get(day) ?? 0;
-      const madrassaExpense = recordMadrassaExpenseByDay.get(day) ?? 0;
+      const baseDay = serverDaily[index] ?? {
+        schoolIncome: 0,
+        madrassaIncome: 0,
+        schoolExpense: 0,
+        madrassaExpense: 0,
+      };
+
+      const schoolIncome = (baseDay.schoolIncome ?? 0) + (recordSchoolIncomeByDay.get(day) ?? 0);
+      const madrassaIncome = (baseDay.madrassaIncome ?? 0) + (recordMadrassaIncomeByDay.get(day) ?? 0);
+      const schoolExpense = (baseDay.schoolExpense ?? 0) + (recordSchoolExpenseByDay.get(day) ?? 0);
+      const madrassaExpense = (baseDay.madrassaExpense ?? 0) + (recordMadrassaExpenseByDay.get(day) ?? 0);
 
       return {
         day: `${day}`,
@@ -169,20 +189,39 @@ function FinanceDashboard() {
         madrassaExpense,
       };
     });
-  }, [scoped]);
+  }, [serverDaily, localRecords]);
 
   const totals = useMemo(() => {
     const rate = serverKpis?.recoveryRate ?? 0;
 
     if (period === "yearly") {
-      const income = serverMonthly.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
-      const expense = serverMonthly.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
+      let income = serverMonthly.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
+      let expense = serverMonthly.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
+      if (serverKpis) {
+        const kpiAnnual =
+          scope === "school"
+            ? serverKpis.schoolAnnualIncome
+            : scope === "madrassa"
+              ? serverKpis.madrassaAnnualIncome
+              : serverKpis.annualIncome;
+        if (kpiAnnual > 0) income = kpiAnnual;
+      }
       return { income, expense, net: income - expense, rate };
     }
-    const income = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
-    const expense = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
+
+    let income = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
+    let expense = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
+    if (serverKpis) {
+      const kpiMonthly =
+        scope === "school"
+          ? serverKpis.schoolMonthlyIncome
+          : scope === "madrassa"
+            ? serverKpis.madrassaMonthlyIncome
+            : serverKpis.monthlyIncome;
+      if (kpiMonthly > 0) income = kpiMonthly;
+    }
     return { income, expense, net: income - expense, rate };
-  }, [period, incomeKey, expenseKey, dailyIncomeVsExpense, serverMonthly, serverKpis]);
+  }, [period, incomeKey, expenseKey, dailyIncomeVsExpense, serverMonthly, serverKpis, scope]);
 
   const incomeBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; nameUrdu: string; value: number }>();

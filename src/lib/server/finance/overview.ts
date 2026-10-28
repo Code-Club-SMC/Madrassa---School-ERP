@@ -41,10 +41,10 @@ export async function getFinanceOverview(request: Request) {
       institutionSystem: institutions.system,
     })
     .from(feePayments)
-    .innerJoin(students, eq(students.id, feePayments.studentId))
-    .innerJoin(studentEnrollments, eq(studentEnrollments.id, feePayments.enrollmentId))
-    .innerJoin(institutions, eq(institutions.id, feePayments.institutionId))
-    .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
+    .leftJoin(students, eq(students.id, feePayments.studentId))
+    .leftJoin(studentEnrollments, eq(studentEnrollments.id, feePayments.enrollmentId))
+    .leftJoin(institutions, eq(institutions.id, feePayments.institutionId))
+    .leftJoin(programs, eq(programs.id, studentEnrollments.programId))
     .where(eq(feePayments.status, "posted"))
     .orderBy(desc(feePayments.receivedAt));
 
@@ -60,7 +60,7 @@ export async function getFinanceOverview(request: Request) {
       programSystem: programs.system,
     })
     .from(feeCharges)
-    .innerJoin(programs, eq(programs.id, feeCharges.programId))
+    .leftJoin(programs, eq(programs.id, feeCharges.programId))
     .catch(() => []);
 
   // 3. Daily mapping for current month

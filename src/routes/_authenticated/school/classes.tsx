@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, Outlet, useMatches } from "@tanstack/react-router";
-import { Loader2, Plus, Power, PowerOff, Trash2 } from "lucide-react";
+import { AlertTriangle, CalendarRange, Loader2, Plus, Power, PowerOff, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { ResponsiveDialog } from "@/components/custom/responsive-dialog";
 import { AppLoader } from "@/components/shared/app-loader";
 import { useLanguage } from "@/components/language-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +52,14 @@ const emptyClassForm = {
 
 type ClassForm = typeof emptyClassForm;
 
+type AcademicYear = {
+  id: string;
+  name: string;
+  system: string;
+  status: string;
+  endDate: string;
+};
+
 type SchoolConfirmAction =
   | { kind: "class"; item: Klass; nextActive: boolean };
 
@@ -62,6 +72,8 @@ function ClassesPage() {
   const isUrdu = lang === "ur";
   const institutionId = gender === "male" ? "al_qasim_academy" : "jamia_zainab_banat";
   const [classes, setClasses] = useState<Klass[]>([]);
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [selectedYearId, setSelectedYearId] = useState<string>("active");
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [classOpen, setClassOpen] = useState(false);
@@ -70,10 +82,36 @@ function ClassesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Klass | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const loadAcademicYears = useCallback(async () => {
+    try {
+      const res = await fetch("/api/academic-years", { credentials: "include" });
+      const payload = await res.json().catch(() => ({}));
+      if (res.ok && payload.years) {
+        const schoolYears = (payload.years as AcademicYear[]).filter((y) => y.system === "school");
+        setAcademicYears(schoolYears);
+        const active = schoolYears.find((y) => y.status === "active");
+        if (active) setSelectedYearId(active.id);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAcademicYears();
+  }, [loadAcademicYears]);
+
   const loadClasses = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/academic/school/classes?institutionId=${encodeURIComponent(institutionId)}`, { credentials: "include" });
+      const yearQuery =
+        selectedYearId && selectedYearId !== "active"
+          ? `&academicYearId=${encodeURIComponent(selectedYearId)}`
+          : "";
+      const response = await fetch(
+        `/api/academic/school/classes?institutionId=${encodeURIComponent(institutionId)}${yearQuery}`,
+        { credentials: "include" },
+      );
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not load classes");
       setClasses((payload.classes ?? []) as Klass[]);
@@ -82,7 +120,7 @@ function ClassesPage() {
     } finally {
       setLoading(false);
     }
-  }, [institutionId]);
+  }, [institutionId, selectedYearId]);
 
   useEffect(() => {
     void loadClasses();
@@ -179,27 +217,93 @@ function ClassesPage() {
     ? "This class will become available again for new admissions and enrollment moves."
     : "This class will stop being used for new admissions or enrollment moves. Existing student history will remain unchanged.";
 
+  const today = new Date().toISOString().slice(0, 10);
+  const activeYear = academicYears.find((y) => y.status === "active");
+  const isYearLockedOrExpired = !activeYear || activeYear.endDate < today || activeYear.status === "locked";
+
   return isDetailPage ? (
     <Outlet />
   ) : (
-    <div>
+    <div className="space-y-4">
       <PageHeader
         title="Class Manager"
         titleUrdu="جماعتیں"
         description="Manage school classes. Student counts come from active enrollments; subject counts come from exam subjects."
         actions={
-          <Button size="sm" className="gap-1.5" onClick={() => setClassOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Add Class
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 font-urdu text-xs"
+              onClick={() => navigate({ to: "/settings/academic-year" })}
+            >
+              <Sparkles className="h-4 w-4 text-primary" />
+              {isUrdu ? "سالانہ ترقی" : "Promotions"}
+            </Button>
+            <Button size="sm" className="gap-1.5 font-urdu text-xs" onClick={() => setClassOpen(true)}>
+              <Plus className="h-4 w-4" />
+              {isUrdu ? "نئی جماعت" : "Add Class"}
+            </Button>
+          </div>
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-1 gap-3 mb-4">
-        <div className="rounded-lg border border-border p-4">
-          <p className="text-xs text-muted-foreground">Classes · جماعتیں</p>
+      {isYearLockedOrExpired && (
+        <Alert className="border-amber-300 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <AlertTitle className="font-urdu font-bold">
+                {isUrdu ? "تعلیمی سال مقفل ہے یا ختم ہو چکا ہے" : "Academic Year Ended / Locked"}
+              </AlertTitle>
+              <AlertDescription className="font-urdu text-sm mt-1">
+                {isUrdu
+                  ? "تعلیمی سال کی تاریخ گزرنے پر سال کو مقفل کر دیا گیا ہے۔ طلباء کو اگلی جماعتوں میں منتقل کرنے کے لیے سالانہ ترقی نافذ کریں۔"
+                  : "The academic year has ended and is locked. Please activate a new year and promote students to their next classes."}
+                <div className="mt-2.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 font-urdu text-xs border-amber-400 hover:bg-amber-500/20"
+                    onClick={() => navigate({ to: "/settings/academic-year" })}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                    {isUrdu ? "طلباء کی سالانہ ترقی پر جائیں" : "Go to Annual Student Promotion"}
+                  </Button>
+                </div>
+              </AlertDescription>
+            </div>
+          </div>
+        </Alert>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="rounded-lg border border-border p-3.5 flex-1 min-w-[200px]">
+          <p className="text-xs text-muted-foreground font-urdu">{isUrdu ? "کل جماعتیں" : "Classes · جماعتیں"}</p>
           <p className="font-heading text-2xl font-bold mt-1">{totals.classes}</p>
         </div>
+
+        {academicYears.length > 0 && (
+          <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-card">
+            <CalendarRange className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground font-urdu">{isUrdu ? "تعلیمی سال:" : "Academic Year:"}</span>
+            <Select value={selectedYearId} onValueChange={setSelectedYearId}>
+              <SelectTrigger className="h-8 text-xs font-urdu w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active" className="text-xs font-urdu">
+                  {isUrdu ? "فعال تعلیمی سال" : "Active Academic Year"}
+                </SelectItem>
+                {academicYears.map((yr) => (
+                  <SelectItem key={yr.id} value={yr.id} className="text-xs font-urdu">
+                    {yr.name} [{yr.status === "active" ? (isUrdu ? "فعال" : "Active") : yr.status === "locked" ? (isUrdu ? "مقفل" : "Locked") : yr.status}]
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg border border-border">

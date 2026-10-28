@@ -95,6 +95,7 @@ import { Route as ApiFeesStudentsRouteImport } from './routes/api/fees/students'
 import { Route as ApiFinanceOverviewRouteImport } from './routes/api/finance/overview'
 import { Route as ApiNotificationsIndexRouteImport } from './routes/api/notifications/index'
 import { Route as ApiPromotionsPreviewRouteImport } from './routes/api/promotions/preview'
+import { Route as ApiPromotionsRosterRouteImport } from './routes/api/promotions/roster'
 import { Route as ApiPromotionsRulesRouteImport } from './routes/api/promotions/rules'
 import { Route as ApiSetupSuperAdminRouteImport } from './routes/api/setup/super-admin'
 import { Route as ApiStudentsIdRouteImport } from './routes/api/students/$id'
@@ -655,6 +656,11 @@ const ApiNotificationsIndexRoute = ApiNotificationsIndexRouteImport.update({
 const ApiPromotionsPreviewRoute = ApiPromotionsPreviewRouteImport.update({
   id: '/api/promotions/preview',
   path: '/api/promotions/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPromotionsRosterRoute = ApiPromotionsRosterRouteImport.update({
+  id: '/api/promotions/roster',
+  path: '/api/promotions/roster',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPromotionsRulesRoute = ApiPromotionsRulesRouteImport.update({
@@ -1264,6 +1270,7 @@ export interface FileRoutesByFullPath {
   '/api/fees/students': typeof ApiFeesStudentsRouteWithChildren
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
+  '/api/promotions/roster': typeof ApiPromotionsRosterRoute
   '/api/promotions/rules': typeof ApiPromotionsRulesRoute
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
   '/api/students/$id': typeof ApiStudentsIdRouteWithChildren
@@ -1435,6 +1442,7 @@ export interface FileRoutesByTo {
   '/api/fees/students': typeof ApiFeesStudentsRouteWithChildren
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
+  '/api/promotions/roster': typeof ApiPromotionsRosterRoute
   '/api/promotions/rules': typeof ApiPromotionsRulesRoute
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
   '/api/students/$id': typeof ApiStudentsIdRouteWithChildren
@@ -1617,6 +1625,7 @@ export interface FileRoutesById {
   '/api/fees/students': typeof ApiFeesStudentsRouteWithChildren
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
+  '/api/promotions/roster': typeof ApiPromotionsRosterRoute
   '/api/promotions/rules': typeof ApiPromotionsRulesRoute
   '/api/setup/super-admin': typeof ApiSetupSuperAdminRouteWithChildren
   '/api/students/$id': typeof ApiStudentsIdRouteWithChildren
@@ -1799,6 +1808,7 @@ export interface FileRouteTypes {
     | '/api/fees/students'
     | '/api/finance/overview'
     | '/api/promotions/preview'
+    | '/api/promotions/roster'
     | '/api/promotions/rules'
     | '/api/setup/super-admin'
     | '/api/students/$id'
@@ -1970,6 +1980,7 @@ export interface FileRouteTypes {
     | '/api/fees/students'
     | '/api/finance/overview'
     | '/api/promotions/preview'
+    | '/api/promotions/roster'
     | '/api/promotions/rules'
     | '/api/setup/super-admin'
     | '/api/students/$id'
@@ -2151,6 +2162,7 @@ export interface FileRouteTypes {
     | '/api/fees/students'
     | '/api/finance/overview'
     | '/api/promotions/preview'
+    | '/api/promotions/roster'
     | '/api/promotions/rules'
     | '/api/setup/super-admin'
     | '/api/students/$id'
@@ -2280,6 +2292,7 @@ export interface RootRouteChildren {
   ApiFeesStudentsRoute: typeof ApiFeesStudentsRouteWithChildren
   ApiFinanceOverviewRoute: typeof ApiFinanceOverviewRoute
   ApiPromotionsPreviewRoute: typeof ApiPromotionsPreviewRoute
+  ApiPromotionsRosterRoute: typeof ApiPromotionsRosterRoute
   ApiPromotionsRulesRoute: typeof ApiPromotionsRulesRoute
   ApiSetupSuperAdminRoute: typeof ApiSetupSuperAdminRouteWithChildren
   ApiTeachersIdRoute: typeof ApiTeachersIdRouteWithChildren
@@ -2922,6 +2935,13 @@ declare module '@tanstack/react-router' {
       path: '/api/promotions/preview'
       fullPath: '/api/promotions/preview'
       preLoaderRoute: typeof ApiPromotionsPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/promotions/roster': {
+      id: '/api/promotions/roster'
+      path: '/api/promotions/roster'
+      fullPath: '/api/promotions/roster'
+      preLoaderRoute: typeof ApiPromotionsRosterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/promotions/rules': {
@@ -4290,6 +4310,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFeesStudentsRoute: ApiFeesStudentsRouteWithChildren,
   ApiFinanceOverviewRoute: ApiFinanceOverviewRoute,
   ApiPromotionsPreviewRoute: ApiPromotionsPreviewRoute,
+  ApiPromotionsRosterRoute: ApiPromotionsRosterRoute,
   ApiPromotionsRulesRoute: ApiPromotionsRulesRoute,
   ApiSetupSuperAdminRoute: ApiSetupSuperAdminRouteWithChildren,
   ApiTeachersIdRoute: ApiTeachersIdRouteWithChildren,

@@ -11,7 +11,11 @@ import {
   Loader2,
   Lock,
   Plus,
+  AlertTriangle,
+  Sparkles,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ClassWisePromotion } from "@/components/promotions/class-wise-promotion";
 import { DayPicker as HijriDayPicker, getDateLib as getHijriDateLib } from "react-day-picker/hijri";
 import { getDefaultClassNames } from "react-day-picker";
 import { toast } from "sonner";
@@ -139,6 +143,7 @@ const SYSTEM_META: Record<
 function AcademicYearPage() {
   const queryClient = useQueryClient();
   const { lang } = useLanguage();
+  const [activeTab, setActiveTab] = useState<"years" | "promotion">("years");
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [form, setForm] = useState<NewYearForm>(() => defaultForm("school"));
@@ -161,6 +166,20 @@ function AcademicYearPage() {
     }),
     [years],
   );
+
+  const today = new Date().toISOString().slice(0, 10);
+  const hasExpiredOrLockedYear = useMemo(() => {
+    return years.some(
+      (y) => y.status === "locked" || (y.endDate < today && y.status !== "archived"),
+    );
+  }, [years, today]);
+
+  const hasMissingActiveYear = useMemo(() => {
+    if (yearsQuery.isLoading) return false;
+    const hasSchoolActive = grouped.school.some((y) => y.status === "active");
+    const hasMadrassaActive = grouped.madrassa.some((y) => y.status === "active");
+    return !hasSchoolActive || !hasMadrassaActive;
+  }, [grouped, yearsQuery.isLoading]);
 
   const createMutation = useMutation({
     mutationFn: (input: { name: string; hijriName: string | null; system: AcademicYearSystem; calendarType: CalendarType; startDate: string; endDate: string; carryForwardEnabled: boolean; }): Promise<AcademicYearsResponse> => createAcademicYear(input, t),
@@ -215,11 +234,11 @@ function AcademicYearPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
-        title={t("Academic Year", "تعلیمی سال")}
-        titleUrdu="تعلیمی سال"
-        description={t("Set up active academic years for admissions, progression, fees, attendance and reports.", "داخلوں، ترقی، فیس، حاضری اور رپورٹس کے لیے اسکول اور مدرسہ کے فعال تعلیمی سال مقرر کریں۔")}
+        title={t("Academic Year & Promotions", "تعلیمی سال اور سالانہ ترقی")}
+        titleUrdu="تعلیمی سال اور سالانہ ترقی"
+        description={t("Set up active academic years, auto-lock expired sessions, and promote student classes.", "داخلوں، حاضری اور فیس کے لیے تعلیمی سال کا نظم کریں اور طلباء کی سالانہ ترقی نافذ کریں۔")}
       />
 
       {yearsQuery.isError && (
@@ -229,28 +248,90 @@ function AcademicYearPage() {
         </Alert>
       )}
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <AcademicYearSection
-          system="school"
-          years={grouped.school}
-          loading={yearsQuery.isLoading}
-          pendingAction={actionMutation.isPending ? (actionMutation.variables as ConfirmAction) : undefined}
-          onAction={setConfirm}
-          onCreate={() => openNewYear("school")}
-          t={t}
-          lang={lang}
-        />
-        <AcademicYearSection
-          system="madrassa"
-          years={grouped.madrassa}
-          loading={yearsQuery.isLoading}
-          pendingAction={actionMutation.isPending ? (actionMutation.variables as ConfirmAction) : undefined}
-          onAction={setConfirm}
-          onCreate={() => openNewYear("madrassa")}
-          t={t}
-          lang={lang}
-        />
-      </div>
+      {/* Prominent Action Banner for Expired/Locked or Missing Active Academic Years */}
+      {(hasExpiredOrLockedYear || hasMissingActiveYear) && (
+        <Alert className="border-amber-300/80 bg-amber-500/10 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <AlertTitle className="font-urdu font-bold text-base">
+                {t("Academic Year Transition Required", "تعلیمی سال کی تبدیلی اور تجدید لازمی ہے")}
+              </AlertTitle>
+              <AlertDescription className="font-urdu text-sm mt-1">
+                {t(
+                  "An academic year date has passed and the year is locked. Please ensure a new academic year is added and activated, then promote students into their next classes.",
+                  "تعلیمی سال کی تاریخ گزرنے پر سال کو مقفل کر دیا جاتا ہے۔ براہ کرم نیا تعلیمی سال شامل یا فعال کریں اور طلباء کو نئی جماعتوں میں منتقل کرنے کے لیے سالانہ ترقی کا عمل مکمل کریں۔",
+                )}
+                <div className="flex flex-wrap gap-2.5 mt-3">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="gap-1.5 font-urdu text-xs"
+                    onClick={() => {
+                      setActiveTab("years");
+                      openNewYear("school");
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {t("Add New Academic Year", "نیا تعلیمی سال شامل کریں")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5 font-urdu text-xs border-amber-400/80 hover:bg-amber-500/20 text-amber-900 dark:text-amber-200"
+                    onClick={() => setActiveTab("promotion")}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                    {t("Go to Annual Student Promotion", "طلباء کی سالانہ ترقی پر جائیں")}
+                  </Button>
+                </div>
+              </AlertDescription>
+            </div>
+          </div>
+        </Alert>
+      )}
+
+      <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="space-y-6">
+        <TabsList className="bg-muted/70 p-1 h-11">
+          <TabsTrigger value="years" className="gap-2 font-urdu text-sm px-4">
+            <CalendarRange className="h-4 w-4" />
+            {t("Academic Years Setup", "تعلیمی سال کی ترتیبات")}
+          </TabsTrigger>
+          <TabsTrigger value="promotion" className="gap-2 font-urdu text-sm px-4">
+            <Sparkles className="h-4 w-4 text-primary" />
+            {t("Annual Student Promotion", "طلباء کی سالانہ ترقی")}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="years" className="space-y-6 mt-0">
+          <div className="grid gap-4 xl:grid-cols-2">
+            <AcademicYearSection
+              system="school"
+              years={grouped.school}
+              loading={yearsQuery.isLoading}
+              pendingAction={actionMutation.isPending ? (actionMutation.variables as ConfirmAction) : undefined}
+              onAction={setConfirm}
+              onCreate={() => openNewYear("school")}
+              t={t}
+              lang={lang}
+            />
+            <AcademicYearSection
+              system="madrassa"
+              years={grouped.madrassa}
+              loading={yearsQuery.isLoading}
+              pendingAction={actionMutation.isPending ? (actionMutation.variables as ConfirmAction) : undefined}
+              onAction={setConfirm}
+              onCreate={() => openNewYear("madrassa")}
+              t={t}
+              lang={lang}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="promotion" className="mt-0">
+          <ClassWisePromotion years={years} initialSystem="school" />
+        </TabsContent>
+      </Tabs>
 
 
       <NewAcademicYearDialog

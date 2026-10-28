@@ -18,6 +18,7 @@ import { studentAttendance } from "@/db/schema/attendance";
 import { teacherAssignments, teacherTimetablePeriods } from "@/db/schema/teachers";
 import { requirePermission } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
+import { getActiveAcademicYear } from "@/lib/server/academic-years/service";
 import { ensureAcademicSeeded } from "./seed";
 
 export const schoolClassInputSchema = z.object({
@@ -102,6 +103,17 @@ export async function listSchoolClasses(request: Request) {
   const url = new URL(request.url);
   const gender = url.searchParams.get("gender") as "male" | "female" | null;
   const institutionId = url.searchParams.get("institutionId");
+  const academicYearIdParam = url.searchParams.get("academicYearId");
+
+  let resolvedYearId = academicYearIdParam || undefined;
+  if (!resolvedYearId && academicYearIdParam !== "all") {
+    try {
+      const activeYear = await getActiveAcademicYear("school");
+      resolvedYearId = activeYear.id;
+    } catch {
+      // no active year configured
+    }
+  }
 
   const classes = await db
     .select()
@@ -115,16 +127,19 @@ export async function listSchoolClasses(request: Request) {
     return [];
   }
 
+  const enrollmentConditions = [
+    eq(studentEnrollments.status, "active"),
+    isNotNull(studentEnrollments.schoolClassId),
+  ];
+  if (resolvedYearId && resolvedYearId !== "all") {
+    enrollmentConditions.push(eq(studentEnrollments.academicYearId, resolvedYearId));
+  }
+
   const [classCounts, subjectCounts] = await Promise.all([
     db
       .select({ classId: studentEnrollments.schoolClassId, count: count() })
       .from(studentEnrollments)
-      .where(
-        and(
-          eq(studentEnrollments.status, "active"),
-          isNotNull(studentEnrollments.schoolClassId),
-        ),
-      )
+      .where(and(...enrollmentConditions))
       .groupBy(studentEnrollments.schoolClassId)
       .catch((err) => {
         console.error("[listSchoolClasses] Failed to query enrollment counts:", err);
@@ -228,6 +243,24 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
   await requirePermission(request, "madrassa_categories", "view");
   await ensureAcademicSeeded();
 
+  let resolvedYearId = academicYearId;
+  if (!resolvedYearId && academicYearId !== "all") {
+    try {
+      const activeYear = await getActiveAcademicYear("madrassa");
+      resolvedYearId = activeYear.id;
+    } catch {
+      // no active year configured
+    }
+  }
+
+  const enrollmentConditions = [
+    eq(studentEnrollments.status, "active"),
+    isNotNull(studentEnrollments.madrassaSubcategoryId),
+  ];
+  if (resolvedYearId && resolvedYearId !== "all") {
+    enrollmentConditions.push(eq(studentEnrollments.academicYearId, resolvedYearId));
+  }
+
   const [categories, subcategories, countsBySubcategory] = await Promise.all([
     db.select().from(madrassaCategories).orderBy(asc(madrassaCategories.displayOrder), asc(madrassaCategories.name)),
     db.select().from(madrassaSubcategories).orderBy(asc(madrassaSubcategories.displayOrder), asc(madrassaSubcategories.name)),
@@ -238,13 +271,7 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
         count: count(),
       })
       .from(studentEnrollments)
-      .where(
-        and(
-          eq(studentEnrollments.status, "active"),
-          isNotNull(studentEnrollments.madrassaSubcategoryId),
-          academicYearId ? eq(studentEnrollments.academicYearId, academicYearId) : undefined,
-        ),
-      )
+      .where(and(...enrollmentConditions))
       .groupBy(studentEnrollments.madrassaSubcategoryId, studentEnrollments.institutionId)
       .catch((err) => {
         console.error("[listMadrassaCategories] Failed to query enrollment counts:", err);

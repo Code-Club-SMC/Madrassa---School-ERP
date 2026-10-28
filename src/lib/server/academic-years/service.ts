@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, count, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { programs } from "@/db/schema/academic";
@@ -54,8 +54,43 @@ export const academicYearBackfillSchema = z.object({
   system: academicYearSystemSchema.default("school"),
 });
 
+export async function autoLockExpiredAcademicYears() {
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const expiredRows = await db
+      .select({ id: academicYears.id, name: academicYears.name, system: academicYears.system })
+      .from(academicYears)
+      .where(and(eq(academicYears.status, "active"), lt(academicYears.endDate, today)));
+
+    if (expiredRows.length === 0) return [];
+
+    const now = new Date();
+    const updated = await db
+      .update(academicYears)
+      .set({
+        status: "locked",
+        lockedAt: now,
+        updatedAt: now,
+      })
+      .where(
+        inArray(
+          academicYears.id,
+          expiredRows.map((r) => r.id),
+        ),
+      )
+      .returning();
+
+    clearActiveAcademicYearCache();
+    return updated;
+  } catch (err) {
+    console.error("[autoLockExpiredAcademicYears] error:", err);
+    return [];
+  }
+}
+
 export async function listAcademicYears(request: Request) {
   await requirePermission(request, "settings_academic_year", "view");
+  const autoLocked = await autoLockExpiredAcademicYears();
 
   const [years, missingYearRows] = await Promise.all([
     db.select().from(academicYears).orderBy(asc(academicYears.startDate)),
@@ -76,6 +111,8 @@ export async function listAcademicYears(request: Request) {
     summary: {
       activeEnrollmentBackfillRequired: backfillBySystem.school + backfillBySystem.madrassa,
       activeEnrollmentBackfillRequiredBySystem: backfillBySystem,
+      autoLockedCount: autoLocked.length,
+      autoLockedYears: autoLocked,
     },
   };
 }
@@ -258,9 +295,12 @@ export function clearActiveAcademicYearCache() {
 export async function getActiveAcademicYear(system: AcademicYearSystem) {
   const cached = activeAcademicYearCache[system];
   const now = Date.now();
-  if (cached && cached.expiresAt > now && cached.year) {
+  const today = new Date().toISOString().slice(0, 10);
+  if (cached && cached.expiresAt > now && cached.year && cached.year.endDate >= today) {
     return assertActiveAcademicYear(cached.year, system);
   }
+
+  await autoLockExpiredAcademicYears();
 
   const [row] = await db
     .select()

@@ -11,6 +11,7 @@ import { examSessions } from "@/db/schema/exams";
 import { feeCharges, feePayments } from "@/db/schema/finance";
 import { studentEnrollments, students } from "@/db/schema/students";
 import { teacherAssignments, teacherProfiles } from "@/db/schema/teachers";
+import { inventoryItems } from "@/mock";
 import { getRequestUser } from "@/lib/server/authz";
 import { HttpError } from "@/lib/server/http";
 
@@ -477,6 +478,11 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
   activities.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
   const finalRecentActivities = activities.slice(0, 5);
 
+  // 9. Inventory Assets Calculation
+  const inventoryTotalValue = inventoryItems.reduce((acc, it) => acc + (it.value || 0), 0);
+  const inventoryTotalUnits = inventoryItems.reduce((acc, it) => acc + (it.quantity || 0), 0);
+  const inventoryLowStockCount = inventoryItems.filter((it) => it.quantity <= it.lowStockThreshold).length;
+
   return {
     institutionCounts,
     kpis: {
@@ -495,6 +501,9 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
       teacherCount: scopedTeacherCount,
       teachersSublineEn: `${scopedTeacherCount} Active Teachers`,
       teachersSublineUr: `${scopedTeacherCount} فعال اساتذہ`,
+      inventoryValue: inventoryTotalValue,
+      inventorySublineEn: `${inventoryTotalUnits} Units · ${inventoryLowStockCount} Low Stock`,
+      inventorySublineUr: `${inventoryTotalUnits} سامان اکائیاں · ${inventoryLowStockCount} کم اسٹاک`,
     },
     trendData,
     attendanceSummary: {
@@ -502,6 +511,22 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
       bestDay: bestDayObj.rate > 0 ? bestDayObj.day : "—",
       lowDay: lowDayObj.rate < 100 && daysWithAttendanceCount > 0 ? lowDayObj.day : "—",
       rates: last7DaysRates,
+    },
+    inventorySummary: {
+      totalItems: inventoryItems.length,
+      totalUnits: inventoryTotalUnits,
+      totalValue: inventoryTotalValue,
+      lowStockCount: inventoryLowStockCount,
+      items: inventoryItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        nameUrdu: item.nameUrdu,
+        category: item.category,
+        quantity: item.quantity,
+        unit: item.unit,
+        value: item.value,
+        lowStock: item.quantity <= item.lowStockThreshold,
+      })),
     },
     financialMeta: {
       collected: monthlyFeeCollected,
@@ -518,7 +543,7 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
     cashflowMeta: {
       monthly: {
         totalIncome: monthlyFeeCollected,
-        totalExpenses: 0,
+        totalExpenses: 24000,
         incomeSources: [
           { id: "fees", nameEn: "Student Tuition & Fee Receipts", nameUr: "فیس طلباء و وصولیات", amount: monthlyFeeCollected, iconName: "Banknote" as const },
           { id: "donations", nameEn: "General Donations & Atiyaat", nameUr: "عطیات و عمومی امداد", amount: 0, iconName: "HeartHandshake" as const },
@@ -527,6 +552,7 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
         expenseCategories: [
           { id: "salaries", nameEn: "Teacher & Staff Salaries", nameUr: "اساتذہ و عملہ کی تنخواہیں", amount: 0, iconName: "Users" as const },
           { id: "utilities", nameEn: "Utilities (Electricity, Gas)", nameUr: "یوٹیلیٹی بلز (بجلی، گیس)", amount: 0, iconName: "Zap" as const },
+          { id: "inventory", nameEn: "Inventory & Academic Supplies", nameUr: "سامان، کتب و اسٹاک", amount: 24000, iconName: "Store" as const },
         ],
       },
       daily: {
@@ -538,6 +564,7 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
         ],
         expenseCategories: [
           { id: "salaries", nameEn: "Daily Staff Allowances", nameUr: "یومیہ اجرت و عارضی عملہ", amount: 0, iconName: "Users" as const },
+          { id: "inventory", nameEn: "Daily Supplies & Stationery", nameUr: "روزمرہ اسٹیشنری و سامان", amount: 0, iconName: "Store" as const },
         ],
       },
     },

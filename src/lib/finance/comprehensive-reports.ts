@@ -1,3 +1,5 @@
+import { students as mockStudents, type Student } from "@/mock";
+
 export type System = "madrassa" | "school" | "both";
 
 export type FinanceScope = "both" | "school" | "madrassa";
@@ -237,11 +239,11 @@ export function getDailyCollectionFallback(scope: FinanceScope, dateFrom?: strin
 
 export function getOutstandingDuesFallback(scope: FinanceScope, query?: string) {
   const q = (query || "").trim().toLowerCase();
-  const students = mockStudents
-    .filter((s) => (scope === "both" ? true : s.system === scope))
-    .filter((s) => !q || s.name.toLowerCase().includes(q) || s.rollNo.toLowerCase().includes(q));
+  const studentList = mockStudents
+    .filter((s: Student) => (scope === "both" ? true : s.system === scope))
+    .filter((s: Student) => !q || s.name.toLowerCase().includes(q) || s.rollNo.toLowerCase().includes(q));
 
-  return students.slice(0, 20).map((s, idx) => {
+  return studentList.slice(0, 20).map((s: Student, idx: number) => {
     const isMadrassa = s.system === "madrassa";
     const inst = isMadrassa ? "Jamia Qasimia Lil-Baneen" : "Al-Qasim Academy (School)";
     const group = s.classId ? `Class ${s.classId}` : s.subcategoryId ? s.subcategoryId : "Standard";

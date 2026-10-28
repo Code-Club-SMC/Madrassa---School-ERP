@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
+  CalendarRange,
   Download,
   Eye,
   Filter,
@@ -78,6 +79,8 @@ export function StudentsTable({ system, section, institutionId }: Props) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | StudentStatus>("all");
   const [groupFilter, setGroupFilter] = useState("all");
+  const [academicYearFilter, setAcademicYearFilter] = useState("all");
+  const [academicYears, setAcademicYears] = useState<Array<{ id: string; name: string; system: string; status: string }>>([]);
   const [page, setPage] = useState(1);
   const [students, setStudents] = useState<StudentListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -90,6 +93,16 @@ export function StudentsTable({ system, section, institutionId }: Props) {
 
   const loadGroups = useCallback(async () => {
     try {
+      // Load academic years for filter
+      const yearsRes = await fetch("/api/academic-years", { credentials: "include" });
+      const yearsPayload = await yearsRes.json().catch(() => ({}));
+      if (yearsRes.ok && yearsPayload.years) {
+        const filteredYears = (yearsPayload.years as Array<{ id: string; name: string; system: string; status: string }>).filter(
+          (y) => y.system === system,
+        );
+        setAcademicYears(filteredYears);
+      }
+
       if (system === "school") {
         const url = institutionId
           ? `/api/academic/school/classes?institutionId=${encodeURIComponent(institutionId)}`
@@ -128,6 +141,7 @@ export function StudentsTable({ system, section, institutionId }: Props) {
       });
       if (query.trim()) params.set("q", query.trim());
       if (statusFilter !== "all") params.set("status", statusFilter);
+      if (academicYearFilter !== "all") params.set("academicYearId", academicYearFilter);
       if (institutionId) params.set("institutionId", institutionId);
       if (groupFilter !== "all") {
         if (system === "school") params.set("classId", groupFilter);
@@ -149,7 +163,7 @@ export function StudentsTable({ system, section, institutionId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [groupFilter, institutionId, page, query, statusFilter, system, section]);
+  }, [groupFilter, academicYearFilter, institutionId, page, query, statusFilter, system, section]);
 
   useEffect(() => {
     void loadGroups();
@@ -279,6 +293,31 @@ export function StudentsTable({ system, section, institutionId }: Props) {
               )}
             </SelectContent>
           </Select>
+
+          {academicYears.length > 0 && (
+            <Select
+              value={academicYearFilter}
+              onValueChange={(value) => {
+                setAcademicYearFilter(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <CalendarRange className="h-3.5 w-3.5 me-1.5 text-muted-foreground" />
+                <SelectValue placeholder={isUrdu ? "تعلیمی سال" : "Academic Year"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {isUrdu ? "تمام تعلیمی سال" : "All Academic Years"}
+                </SelectItem>
+                {academicYears.map((yr) => (
+                  <SelectItem key={yr.id} value={yr.id}>
+                    {yr.name} {yr.status === "active" ? (isUrdu ? "(فعال)" : "(Active)") : yr.status === "locked" ? (isUrdu ? "(مقفل)" : "(Locked)") : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Select
             value={statusFilter}
