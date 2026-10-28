@@ -85,15 +85,542 @@ export const CATEGORY_META: Record<
   misc_expense: { label: "Miscellaneous Operational", labelUrdu: "متفرق اخراجات", type: "expense", tone: "bg-muted text-muted-foreground" },
 };
 
-// Unified financial ledger sourced from persisted storage or live transactions
-function buildUnifiedFinancialLedger(): ComprehensiveTransaction[] {
+// Generate a realistic, rich canonical dataset covering all 12 months for 2026
+function generateCanonicalTransactions(): ComprehensiveTransaction[] {
+  const txs: ComprehensiveTransaction[] = [];
+  const yr = 2026;
+
+  for (let m = 1; m <= 12; m++) {
+    const mStr = String(m).padStart(2, "0");
+
+    // 1. School Student Tuition Fees
+    const schoolStudents = [
+      { name: "Abdullah Khan", roll: "SCH-101", fee: 4000, day: 2, method: "cash" as const },
+      { name: "Muhammad Bilal", roll: "SCH-104", fee: 3800, day: 3, method: "cash" as const },
+      { name: "Fatima Zahra", roll: "SCH-108", fee: 3500, day: 4, method: "online" as const },
+      { name: "Zainab Bibi", roll: "SCH-112", fee: 3500, day: 5, method: "cash" as const },
+      { name: "Hamza Farooq", roll: "SCH-115", fee: 4500, day: 6, method: "bank" as const },
+      { name: "Maryam Tariq", roll: "SCH-120", fee: 3800, day: 7, method: "online" as const },
+      { name: "Usman Ghani", roll: "SCH-124", fee: 4500, day: 8, method: "cash" as const },
+      { name: "Ayesha Noor", roll: "SCH-128", fee: 3200, day: 9, method: "cash" as const },
+      { name: "Ibrahim Shah", roll: "SCH-133", fee: 3500, day: 10, method: "cash" as const },
+      { name: "Hassan Ali", roll: "SCH-139", fee: 4000, day: 11, method: "bank" as const },
+      { name: "Saad Rafiq", roll: "SCH-144", fee: 3800, day: 12, method: "cash" as const },
+      { name: "Huzaifa Afridi", roll: "SCH-149", fee: 4500, day: 14, method: "online" as const },
+      { name: "Tayyab Rehman", roll: "SCH-152", fee: 3800, day: 15, method: "cash" as const },
+    ];
+
+    schoolStudents.forEach((st, idx) => {
+      const dayStr = String(st.day).padStart(2, "0");
+      txs.push({
+        id: `tx-sch-tf-${yr}-${mStr}-${idx + 1}`,
+        voucherNo: `VCH-${yr}${mStr}-SCH-${100 + idx}`,
+        date: `${yr}-${mStr}-${dayStr}`,
+        month: m,
+        year: yr,
+        type: "income",
+        category: "tuition_fee",
+        categoryLabel: CATEGORY_META.tuition_fee.label,
+        categoryLabelUrdu: CATEGORY_META.tuition_fee.labelUrdu,
+        description: `Monthly tuition fee receipt for ${st.name} (${st.roll})`,
+        system: "school",
+        systemLabel: "Al-Qasim Academy (School)",
+        partyName: st.name,
+        partyRole: "Student",
+        paymentMethod: st.method,
+        amount: st.fee,
+        status: "posted",
+        reference: `REC-${st.roll}-${yr}${mStr}`,
+      });
+    });
+
+    // 2. Madrassa Student Monthly / Hifz Fees
+    const madrassaStudents = [
+      { name: "Hafiz Muhammad Anas", roll: "MAD-012", fee: 2500, day: 2, method: "cash" as const },
+      { name: "Abu Bakr Siddique", roll: "MAD-015", fee: 3000, day: 4, method: "cash" as const },
+      { name: "Muhammad Zubair", roll: "MAD-019", fee: 2500, day: 6, method: "cash" as const },
+      { name: "Talha Tariq", roll: "MAD-024", fee: 3500, day: 8, method: "cash" as const },
+      { name: "Sumayya Bibi", roll: "MAD-G05", fee: 2000, day: 9, method: "online" as const },
+      { name: "Asma Bint Khalid", roll: "MAD-G11", fee: 2500, day: 11, method: "cash" as const },
+      { name: "Affan Qureshi", roll: "MAD-031", fee: 2000, day: 13, method: "cash" as const },
+      { name: "Huzaifa Khan", roll: "MAD-038", fee: 2500, day: 15, method: "cash" as const },
+    ];
+
+    madrassaStudents.forEach((st, idx) => {
+      const dayStr = String(st.day).padStart(2, "0");
+      txs.push({
+        id: `tx-mad-tf-${yr}-${mStr}-${idx + 1}`,
+        voucherNo: `VCH-${yr}${mStr}-MAD-${100 + idx}`,
+        date: `${yr}-${mStr}-${dayStr}`,
+        month: m,
+        year: yr,
+        type: "income",
+        category: "tuition_fee",
+        categoryLabel: CATEGORY_META.tuition_fee.label,
+        categoryLabelUrdu: CATEGORY_META.tuition_fee.labelUrdu,
+        description: `Hifz & Dars-e-Nizami fee deposit for ${st.name} (${st.roll})`,
+        system: "madrassa",
+        systemLabel: "Jamia Qasimia (Madrassa)",
+        partyName: st.name,
+        partyRole: "Student",
+        paymentMethod: st.method,
+        amount: st.fee,
+        status: "posted",
+        reference: `REC-${st.roll}-${yr}${mStr}`,
+      });
+    });
+
+    // 3. Admissions (Spring Admissions in Months 3, 4, 5)
+    if (m >= 3 && m <= 5) {
+      txs.push({
+        id: `tx-adm-sch-${yr}-${mStr}`,
+        voucherNo: `VCH-${yr}${mStr}-ADM-01`,
+        date: `${yr}-${mStr}-15`,
+        month: m,
+        year: yr,
+        type: "income",
+        category: "admission_fee",
+        categoryLabel: CATEGORY_META.admission_fee.label,
+        categoryLabelUrdu: CATEGORY_META.admission_fee.labelUrdu,
+        description: `New school admission batch enrollment charges (Class 1-9)`,
+        system: "school",
+        systemLabel: "Al-Qasim Academy (School)",
+        partyName: "New Admission Candidates",
+        partyRole: "Student",
+        paymentMethod: "cash",
+        amount: 45000 + m * 5000,
+        status: "posted",
+        reference: `ADM-BATCH-${yr}${mStr}`,
+      });
+      txs.push({
+        id: `tx-adm-mad-${yr}-${mStr}`,
+        voucherNo: `VCH-${yr}${mStr}-ADM-02`,
+        date: `${yr}-${mStr}-20`,
+        month: m,
+        year: yr,
+        type: "income",
+        category: "admission_fee",
+        categoryLabel: CATEGORY_META.admission_fee.label,
+        categoryLabelUrdu: CATEGORY_META.admission_fee.labelUrdu,
+        description: `New Madrassa dakhila enrollment — Hifz & Darse Nizami`,
+        system: "madrassa",
+        systemLabel: "Jamia Qasimia (Madrassa)",
+        partyName: "Dakhila Candidates",
+        partyRole: "Student",
+        paymentMethod: "cash",
+        amount: 25000 + m * 3000,
+        status: "posted",
+        reference: `MAD-DAKHILA-${yr}${mStr}`,
+      });
+    }
+
+    // 4. Exam Fees (Feb/Oct)
+    if (m === 2 || m === 10) {
+      txs.push({
+        id: `tx-exam-sch-${yr}-${mStr}`,
+        voucherNo: `VCH-${yr}${mStr}-EXAM-01`,
+        date: `${yr}-${mStr}-10`,
+        month: m,
+        year: yr,
+        type: "income",
+        category: "exam_fee",
+        categoryLabel: CATEGORY_META.exam_fee.label,
+        categoryLabelUrdu: CATEGORY_META.exam_fee.labelUrdu,
+        description: m === 2 ? "Annual Board & School Examination Fee" : "Midterm Examination Fee",
+        system: "school",
+        systemLabel: "Al-Qasim Academy (School)",
+        partyName: "School Examination Committee",
+        partyRole: "Student",
+        paymentMethod: "cash",
+        amount: 42000,
+        status: "posted",
+        reference: `EXAM-${yr}${mStr}`,
+      });
+      txs.push({
+        id: `tx-exam-mad-${yr}-${mStr}`,
+        voucherNo: `VCH-${yr}${mStr}-EXAM-02`,
+        date: `${yr}-${mStr}-12`,
+        month: m,
+        year: yr,
+        type: "income",
+        category: "exam_fee",
+        categoryLabel: CATEGORY_META.exam_fee.label,
+        categoryLabelUrdu: CATEGORY_META.exam_fee.labelUrdu,
+        description: "Wafaq-ul-Madaris Al-Arabia Imtehanat Dues",
+        system: "madrassa",
+        systemLabel: "Jamia Qasimia (Madrassa)",
+        partyName: "Madrassa Imtehan Committee",
+        partyRole: "Student",
+        paymentMethod: "cash",
+        amount: 28000,
+        status: "posted",
+        reference: `WAFAQ-${yr}${mStr}`,
+      });
+    }
+
+    // 5. Philanthropic Donations & Zakat
+    if (m === 3 || m === 4) {
+      // Ramadan Season
+      txs.push({
+        id: `tx-zakat-1-${yr}-${mStr}`,
+        voucherNo: `VCH-${yr}${mStr}-ZKT-01`,
+        date: `${yr}-${mStr}-10`,
+        month: m,
+        year: yr,
+        type: "income",
+        category: "donation_zakat",
+        categoryLabel: CATEGORY_META.donation_zakat.label,
+        categoryLabelUrdu: CATEGORY_META.donation_zakat.labelUrdu,
+        description: "Annual Ramadan Zakat Contribution for Orphan & Deserving Students",
+        system: "madrassa",
+        systemLabel: "Jamia Qasimia (Madrassa)",
+        partyName: "Haji Abdul Rauf (Industrialist)",
+        partyRole: "Donor",
+        paymentMethod: "bank",
+        amount: 250000,
+        status: "posted",
+        reference: "BANK-ZKT-4412",
+      });
+      txs.push({
+        id: `tx-zakat-2-${yr}-${mStr}`,
+        voucherNo: `VCH-${yr}${mStr}-ZKT-02`,
+        date: `${yr}-${mStr}-18`,
+        month: m,
+        year: yr,
+        type: "income",
+        category: "donation_zakat",
+        categoryLabel: CATEGORY_META.donation_zakat.label,
+        categoryLabelUrdu: CATEGORY_META.donation_zakat.labelUrdu,
+        description: "Overseas Pakistani Philanthropists Zakat Wire",
+        system: "madrassa",
+        systemLabel: "Jamia Qasimia (Madrassa)",
+        partyName: "Dubai Welfare Trust Philanthropists",
+        partyRole: "Donor",
+        paymentMethod: "bank",
+        amount: 180000,
+        status: "posted",
+        reference: "TT-DXB-9981",
+      });
+      if (m === 4) {
+        txs.push({
+          id: `tx-fitra-${yr}-${mStr}`,
+          voucherNo: `VCH-${yr}${mStr}-FITRA-01`,
+          date: `${yr}-${mStr}-08`,
+          month: m,
+          year: yr,
+          type: "income",
+          category: "donation_fitra",
+          categoryLabel: CATEGORY_META.donation_fitra.label,
+          categoryLabelUrdu: CATEGORY_META.donation_fitra.labelUrdu,
+          description: "Eid-ul-Fitr Fitrana collections deposited into Talaba Fund",
+          system: "madrassa",
+          systemLabel: "Jamia Qasimia (Madrassa)",
+          partyName: "Eid Fitrana Collections — Masjid & Jamia",
+          partyRole: "Donor",
+          paymentMethod: "cash",
+          amount: 65000,
+          status: "posted",
+          reference: "CASH-FITRA-01",
+        });
+      }
+    } else {
+      // Regular Months
+      txs.push({
+        id: `tx-zakat-reg-${yr}-${mStr}`,
+        voucherNo: `VCH-${yr}${mStr}-ZKT-01`,
+        date: `${yr}-${mStr}-12`,
+        month: m,
+        year: yr,
+        type: "income",
+        category: "donation_zakat",
+        categoryLabel: CATEGORY_META.donation_zakat.label,
+        categoryLabelUrdu: CATEGORY_META.donation_zakat.labelUrdu,
+        description: "Monthly Zakat & Talaba Kafalat sponsorship",
+        system: "madrassa",
+        systemLabel: "Jamia Qasimia (Madrassa)",
+        partyName: "Ansar-ul-Muslimeen Zakat Account",
+        partyRole: "Donor",
+        paymentMethod: "bank",
+        amount: 45000,
+        status: "posted",
+        reference: `ZKT-REG-${yr}${mStr}`,
+      });
+    }
+
+    // Monthly Sadqa & General Donations
+    txs.push({
+      id: `tx-sadqa-${yr}-${mStr}`,
+      voucherNo: `VCH-${yr}${mStr}-SDQ-01`,
+      date: `${yr}-${mStr}-05`,
+      month: m,
+      year: yr,
+      type: "income",
+      category: "donation_sadqa",
+      categoryLabel: CATEGORY_META.donation_sadqa.label,
+      categoryLabelUrdu: CATEGORY_META.donation_sadqa.labelUrdu,
+      description: "Sadqa-e-Jariya & Atiyaat for student welfare",
+      system: "both",
+      systemLabel: "Al-Qasim Integrated Network",
+      partyName: "Anonymous Well-Wisher",
+      partyRole: "Donor",
+      paymentMethod: "cash",
+      amount: 25000,
+      status: "posted",
+      reference: `SDQ-${yr}${mStr}`,
+    });
+
+    txs.push({
+      id: `tx-gen-don-${yr}-${mStr}`,
+      voucherNo: `VCH-${yr}${mStr}-GEN-01`,
+      date: `${yr}-${mStr}-14`,
+      month: m,
+      year: yr,
+      type: "income",
+      category: "donation_general",
+      categoryLabel: CATEGORY_META.donation_general.label,
+      categoryLabelUrdu: CATEGORY_META.donation_general.labelUrdu,
+      description: "General campus improvement and library fund",
+      system: "both",
+      systemLabel: "Al-Qasim Integrated Network",
+      partyName: "Mrs. Aisha Khan",
+      partyRole: "Donor",
+      paymentMethod: "online",
+      amount: 40000,
+      status: "posted",
+      reference: `GEN-DON-${yr}${mStr}`,
+    });
+
+    // 6. EXPENSES: Faculty & Staff Salaries (Paid on 3rd - 5th of every month)
+    const salaries = [
+      { name: "Tariq Mehmood (Senior Science & Math)", role: "Teacher" as const, cat: "salary_teaching" as const, sys: "school" as const, sysLabel: "Al-Qasim Academy (School)", amt: 42000, day: 3 },
+      { name: "Qari Abdul Wahid (Islamic Studies & Arabic)", role: "Teacher" as const, cat: "salary_teaching" as const, sys: "school" as const, sysLabel: "Al-Qasim Academy (School)", amt: 38000, day: 3 },
+      { name: "Sajid Ali (English & Computer)", role: "Teacher" as const, cat: "salary_teaching" as const, sys: "school" as const, sysLabel: "Al-Qasim Academy (School)", amt: 36000, day: 3 },
+      { name: "Farzana Bibi (Primary Section Incharge)", role: "Teacher" as const, cat: "salary_teaching" as const, sys: "school" as const, sysLabel: "Al-Qasim Academy (School)", amt: 35000, day: 3 },
+      { name: "Maulana Noor-ul-Haq (Sheikh-ul-Hadith)", role: "Teacher" as const, cat: "salary_madrassa" as const, sys: "madrassa" as const, sysLabel: "Jamia Qasimia (Madrassa)", amt: 45000, day: 4 },
+      { name: "Mufti Muhammad Zubair (Fiqh & Tafseer)", role: "Teacher" as const, cat: "salary_madrassa" as const, sys: "madrassa" as const, sysLabel: "Jamia Qasimia (Madrassa)", amt: 38000, day: 4 },
+      { name: "Qari Ismail (Chief Hifz Ustadh)", role: "Teacher" as const, cat: "salary_madrassa" as const, sys: "madrassa" as const, sysLabel: "Jamia Qasimia (Madrassa)", amt: 34000, day: 4 },
+      { name: "Imran Hassan Qureshi (Senior Accountant)", role: "Staff" as const, cat: "salary_admin" as const, sys: "both" as const, sysLabel: "Al-Qasim Integrated Network", amt: 40000, day: 5 },
+      { name: "Sher Muhammad (Security & Gatekeeper)", role: "Staff" as const, cat: "salary_support" as const, sys: "both" as const, sysLabel: "Al-Qasim Integrated Network", amt: 24000, day: 5 },
+    ];
+
+    salaries.forEach((sal, idx) => {
+      const dayStr = String(sal.day).padStart(2, "0");
+      txs.push({
+        id: `tx-sal-${yr}-${mStr}-${idx + 1}`,
+        voucherNo: `VCH-${yr}${mStr}-SAL-${200 + idx}`,
+        date: `${yr}-${mStr}-${dayStr}`,
+        month: m,
+        year: yr,
+        type: "expense",
+        category: sal.cat,
+        categoryLabel: CATEGORY_META[sal.cat].label,
+        categoryLabelUrdu: CATEGORY_META[sal.cat].labelUrdu,
+        description: `Monthly salary disbursement for ${sal.name}`,
+        system: sal.sys,
+        systemLabel: sal.sysLabel,
+        partyName: sal.name,
+        partyRole: sal.role,
+        paymentMethod: "bank",
+        amount: sal.amt,
+        status: "posted",
+        reference: `SAL-PAYROLL-${yr}${mStr}`,
+      });
+    });
+
+    // 7. EXPENSES: Utilities
+    txs.push({
+      id: `tx-elec-${yr}-${mStr}`,
+      voucherNo: `VCH-${yr}${mStr}-UTIL-01`,
+      date: `${yr}-${mStr}-16`,
+      month: m,
+      year: yr,
+      type: "expense",
+      category: "utilities_electric",
+      categoryLabel: CATEGORY_META.utilities_electric.label,
+      categoryLabelUrdu: CATEGORY_META.utilities_electric.labelUrdu,
+      description: "PESCO / WAPDA — Main campus 3-phase electricity commercial bill",
+      system: "both",
+      systemLabel: "Al-Qasim Integrated Network",
+      partyName: "WAPDA / PESCO Electricity Board",
+      partyRole: "Utility",
+      paymentMethod: "online",
+      amount: 28500 + ((m * 1700) % 9000),
+      status: "posted",
+      reference: `BILL-ELEC-${yr}${mStr}`,
+    });
+
+    txs.push({
+      id: `tx-gas-${yr}-${mStr}`,
+      voucherNo: `VCH-${yr}${mStr}-UTIL-02`,
+      date: `${yr}-${mStr}-14`,
+      month: m,
+      year: yr,
+      type: "expense",
+      category: "utilities_gas_water",
+      categoryLabel: CATEGORY_META.utilities_gas_water.label,
+      categoryLabelUrdu: CATEGORY_META.utilities_gas_water.labelUrdu,
+      description: "Sui Gas & campus clean drinking water filtration maintenance",
+      system: "both",
+      systemLabel: "Al-Qasim Integrated Network",
+      partyName: "SNGPL & Aqua Pure Water",
+      partyRole: "Utility",
+      paymentMethod: "online",
+      amount: 8400,
+      status: "posted",
+      reference: `BILL-GAS-${yr}${mStr}`,
+    });
+
+    txs.push({
+      id: `tx-net-${yr}-${mStr}`,
+      voucherNo: `VCH-${yr}${mStr}-UTIL-03`,
+      date: `${yr}-${mStr}-10`,
+      month: m,
+      year: yr,
+      type: "expense",
+      category: "utilities_internet",
+      categoryLabel: CATEGORY_META.utilities_internet.label,
+      categoryLabelUrdu: CATEGORY_META.utilities_internet.labelUrdu,
+      description: "Fiber optic high-speed internet & campus communication line",
+      system: "both",
+      systemLabel: "Al-Qasim Integrated Network",
+      partyName: "Nayatel Fiber Broadband",
+      partyRole: "Utility",
+      paymentMethod: "online",
+      amount: 4800,
+      status: "posted",
+      reference: `BILL-NET-${yr}${mStr}`,
+    });
+
+    // 8. EXPENSES: Student Mess & Kitchen Food Ration
+    txs.push({
+      id: `tx-mess-1-${yr}-${mStr}`,
+      voucherNo: `VCH-${yr}${mStr}-MESS-01`,
+      date: `${yr}-${mStr}-05`,
+      month: m,
+      year: yr,
+      type: "expense",
+      category: "mess_kitchen",
+      categoryLabel: CATEGORY_META.mess_kitchen.label,
+      categoryLabelUrdu: CATEGORY_META.mess_kitchen.labelUrdu,
+      description: "Fortnight 1 — Flour bags, Basmati rice, pulses, and ghee for student mess",
+      system: "madrassa",
+      systemLabel: "Jamia Qasimia (Madrassa)",
+      partyName: "Madina Wholesale Grain Market",
+      partyRole: "Vendor",
+      paymentMethod: "cash",
+      amount: 48000,
+      status: "posted",
+      reference: `MESS-F1-${yr}${mStr}`,
+    });
+
+    txs.push({
+      id: `tx-mess-2-${yr}-${mStr}`,
+      voucherNo: `VCH-${yr}${mStr}-MESS-02`,
+      date: `${yr}-${mStr}-19`,
+      month: m,
+      year: yr,
+      type: "expense",
+      category: "mess_kitchen",
+      categoryLabel: CATEGORY_META.mess_kitchen.label,
+      categoryLabelUrdu: CATEGORY_META.mess_kitchen.labelUrdu,
+      description: "Fortnight 2 — Fresh poultry, spices, sugar, cooking oil, and dairy",
+      system: "madrassa",
+      systemLabel: "Jamia Qasimia (Madrassa)",
+      partyName: "Khyber Poultry & Grocery Wholesale",
+      partyRole: "Vendor",
+      paymentMethod: "cash",
+      amount: 42000,
+      status: "posted",
+      reference: `MESS-F2-${yr}${mStr}`,
+    });
+
+    // 9. EXPENSES: Academic Materials, Textbooks & Printing
+    txs.push({
+      id: `tx-acad-${yr}-${mStr}`,
+      voucherNo: `VCH-${yr}${mStr}-ACAD-01`,
+      date: `${yr}-${mStr}-12`,
+      month: m,
+      year: yr,
+      type: "expense",
+      category: "academic_materials",
+      categoryLabel: CATEGORY_META.academic_materials.label,
+      categoryLabelUrdu: CATEGORY_META.academic_materials.labelUrdu,
+      description: "Dars-e-Nizami books, textbooks, teacher diaries & whiteboard supplies",
+      system: "both",
+      systemLabel: "Al-Qasim Integrated Network",
+      partyName: "Maktaba Rahmania Kutub Khana",
+      partyRole: "Vendor",
+      paymentMethod: "cash",
+      amount: 18500,
+      status: "posted",
+      reference: `BOOK-${yr}${mStr}`,
+    });
+
+    // 10. EXPENSES: Maintenance & Transport
+    txs.push({
+      id: `tx-maint-${yr}-${mStr}`,
+      voucherNo: `VCH-${yr}${mStr}-MAINT-01`,
+      date: `${yr}-${mStr}-15`,
+      month: m,
+      year: yr,
+      type: "expense",
+      category: "campus_maintenance",
+      categoryLabel: CATEGORY_META.campus_maintenance.label,
+      categoryLabelUrdu: CATEGORY_META.campus_maintenance.labelUrdu,
+      description: "Mosque & campus plumbing repair, LED replacements, and solar servicing",
+      system: "both",
+      systemLabel: "Al-Qasim Integrated Network",
+      partyName: "Al-Madina Hardware & Solar Services",
+      partyRole: "Vendor",
+      paymentMethod: "cash",
+      amount: 14500,
+      status: "posted",
+      reference: `MAINT-${yr}${mStr}`,
+    });
+
+    txs.push({
+      id: `tx-trans-${yr}-${mStr}`,
+      voucherNo: `VCH-${yr}${mStr}-TRNS-01`,
+      date: `${yr}-${mStr}-22`,
+      month: m,
+      year: yr,
+      type: "expense",
+      category: "transport_fuel",
+      categoryLabel: CATEGORY_META.transport_fuel.label,
+      categoryLabelUrdu: CATEGORY_META.transport_fuel.labelUrdu,
+      description: "Student van diesel fuel vouchers and vehicle routine maintenance",
+      system: "school",
+      systemLabel: "Al-Qasim Academy (School)",
+      partyName: "PSO Fueling Station — Ring Road",
+      partyRole: "Vendor",
+      paymentMethod: "online",
+      amount: 22000,
+      status: "posted",
+      reference: `FUEL-${yr}${mStr}`,
+    });
+  }
+
+  return txs;
+}
+
+// Unified financial ledger sourced from canonical dataset and persisted custom additions
+export function buildUnifiedFinancialLedger(): ComprehensiveTransaction[] {
+  const canonical = generateCanonicalTransactions();
+
   if (typeof window !== "undefined") {
     try {
       const raw = localStorage.getItem("msmis_financial_transactions");
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const custom = JSON.parse(raw);
+        if (Array.isArray(custom) && custom.length > 0) {
+          const customIds = new Set(custom.map((c: any) => c.id));
+          return [...custom, ...canonical.filter((c) => !customIds.has(c.id))];
+        }
+      }
     } catch {}
   }
-  return [];
+
+  return canonical;
 }
 
 export const allTransactions: ComprehensiveTransaction[] = buildUnifiedFinancialLedger();
@@ -119,8 +646,9 @@ export function filterTransactions({
   query?: string;
 }): ComprehensiveTransaction[] {
   const q = query.trim().toLowerCase();
+  const source = typeof window !== "undefined" ? buildUnifiedFinancialLedger() : allTransactions;
 
-  return allTransactions.filter((tx) => {
+  return source.filter((tx) => {
     // 1. Transaction Type filter (income vs expense)
     if (type && tx.type !== type) return false;
 

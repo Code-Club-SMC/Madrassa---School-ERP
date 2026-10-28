@@ -31,6 +31,7 @@ function InventoryPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<InventoryItem[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -44,6 +45,37 @@ function InventoryPage() {
     return inventoryItems;
   });
 
+  // Fetch persistent inventory from server on mount
+  useEffect(() => {
+    let mounted = true;
+    async function fetchInventory() {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/inventory");
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted && Array.isArray(data.items)) {
+            setItems(data.items);
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem("inventory_items", JSON.stringify(data.items));
+              } catch {}
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error loading inventory from server:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    fetchInventory();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Sync to local storage
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
@@ -78,15 +110,58 @@ function InventoryPage() {
   }), [items]);
 
   function openEdit(it: InventoryItem) { setEditing(it); setDialogOpen(true); }
-  function save(it: InventoryItem) {
-    setItems((p) => editing ? p.map((x) => x.id === it.id ? it : x) : [it, ...p]);
-    toast.success(editing?.id ? "Item updated" : it.type === "donated" ? "Donation recorded" : "Purchase recorded");
+
+  async function save(it: InventoryItem) {
+    const isEdit = Boolean(editing?.id);
+    const itemToSave = { ...it, id: it.id || `inv-${Date.now()}` };
+
+    // Optimistically update UI
+    setItems((p) => isEdit ? p.map((x) => x.id === itemToSave.id ? itemToSave : x) : [itemToSave, ...p]);
     setDialogOpen(false);
+
+    try {
+      const res = await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(itemToSave),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.item) {
+          setItems((p) => p.map((x) => x.id === itemToSave.id ? data.item : x));
+        }
+        toast.success(
+          isEdit
+            ? "Item updated"
+            : it.type === "donated"
+            ? "Donation recorded"
+            : "Stock recorded"
+        );
+      } else {
+        toast.error("Failed to save inventory item on server");
+      }
+    } catch {
+      toast.error("Network error while saving inventory item");
+    }
   }
-  function remove(id: string) {
+
+  async function remove(id: string) {
+    // Optimistically remove
     setItems((p) => p.filter((x) => x.id !== id));
-    toast.success("Item deleted");
+    try {
+      const res = await fetch(`/api/inventory?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        toast.success("Item deleted");
+      } else {
+        toast.error("Failed to delete inventory item on server");
+      }
+    } catch {
+      toast.error("Network error while deleting inventory item");
+    }
   }
+
   function recordStock() {
     setEditing({ id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 });
     setDialogOpen(true);
@@ -228,7 +303,7 @@ function InventoryPage() {
   );
 }
 
-function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; onOpenChange: (v: boolean) => void; initial: InventoryItem | null; onSave: (i: InventoryItem) => void }) {
+function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; onOpenChange: (v: boolean) => void; initial: InventoryItem | null; onSave: (i: InventoryItem) => void | Promise<void> }) {
   const [f, setF] = useState<InventoryItem>({ id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 });
   const [submitting, setSubmitting] = useState(false);
 

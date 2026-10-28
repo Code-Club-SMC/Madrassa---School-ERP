@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BookOpen,
   CalendarCheck,
@@ -24,7 +24,6 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useLanguage } from "@/components/language-context";
 import { cn } from "@/lib/utils";
-import { TeacherSidebar } from "./teacher-sidebar";
 import {
   getMyTeacherDashboard,
   getMyTeacherClasses,
@@ -77,7 +76,14 @@ const navItems: { value: TeacherTab; icon: typeof BookOpen; en: string; ur: stri
 export function TeacherPortal() {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
-  const [tab, setTab] = useState<TeacherTab>("dashboard");
+  const navigate = useNavigate();
+  const search = useRouterState({ select: (s) => s.location.search }) as { tab?: TeacherTab };
+  const [localTab, setLocalTab] = useState<TeacherTab>("dashboard");
+  const tab: TeacherTab = (search?.tab as TeacherTab) || localTab;
+  const setTab = (newTab: TeacherTab) => {
+    setLocalTab(newTab);
+    navigate({ to: "/dashboard", search: { tab: newTab } as any });
+  };
   const [dashboard, setDashboard] = useState<Awaited<ReturnType<typeof getMyTeacherDashboard>> | null>(null);
   const [classes, setClasses] = useState<Awaited<ReturnType<typeof getMyTeacherClasses>> | null>(null);
   const [exams, setExams] = useState<Awaited<ReturnType<typeof getMyTeacherExams>> | null>(null);
@@ -167,51 +173,44 @@ export function TeacherPortal() {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:block shrink-0">
-          <TeacherSidebar active={tab} onChange={setTab} />
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 min-w-0 space-y-5">
-          {tab === "dashboard" && (
-            <DashboardView
-              dashboard={dashboard}
-              todayPeriods={todayPeriods}
-              today={today}
-              classAssignments={classes ?? []}
-              isUrdu={isUrdu}
-            />
-          )}
-          {tab === "classes" && (
-            <ClassesTab
-              assignments={classes && classes.length > 0 ? classes : (dashboard.assignments as any[])}
-              isUrdu={isUrdu}
-            />
-          )}
-          {tab === "timetable" && (
-            <TimetableTab
-              periods={dashboard.timetable}
-              assignments={classes && classes.length > 0 ? classes : (dashboard.assignments as any[])}
-              isUrdu={isUrdu}
-            />
-          )}
-          {tab === "exams" && <ExamsTab data={exams} isUrdu={isUrdu} />}
-          {tab === "attendance" && (
-            <AttendanceTab
-              isUrdu={isUrdu}
-            />
-          )}
-          {tab === "reports" && <ReportsTab data={reports} isUrdu={isUrdu} />}
-          {tab === "profile" && (
-            <ProfileTab
-              profile={dashboard.profile}
-              account={dashboard.account}
-              isUrdu={isUrdu}
-            />
-          )}
-        </div>
+      {/* Content Area */}
+      <div className="w-full space-y-5">
+        {tab === "dashboard" && (
+          <DashboardView
+            dashboard={dashboard}
+            todayPeriods={todayPeriods}
+            today={today}
+            classAssignments={classes ?? []}
+            isUrdu={isUrdu}
+          />
+        )}
+        {tab === "classes" && (
+          <ClassesTab
+            assignments={classes && classes.length > 0 ? classes : (dashboard.assignments as any[])}
+            isUrdu={isUrdu}
+          />
+        )}
+        {tab === "timetable" && (
+          <TimetableTab
+            periods={dashboard.timetable}
+            assignments={classes && classes.length > 0 ? classes : (dashboard.assignments as any[])}
+            isUrdu={isUrdu}
+          />
+        )}
+        {tab === "exams" && <ExamsTab data={exams} isUrdu={isUrdu} />}
+        {tab === "attendance" && (
+          <AttendanceTab
+            isUrdu={isUrdu}
+          />
+        )}
+        {tab === "reports" && <ReportsTab data={reports} isUrdu={isUrdu} />}
+        {tab === "profile" && (
+          <ProfileTab
+            profile={dashboard.profile}
+            account={dashboard.account}
+            isUrdu={isUrdu}
+          />
+        )}
       </div>
     </div>
   );

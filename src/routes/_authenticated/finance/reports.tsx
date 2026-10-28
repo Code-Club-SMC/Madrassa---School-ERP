@@ -57,7 +57,7 @@ function FinanceReportsPage() {
   const [system, setSystem] = useState<FinanceScope>("both");
   const [year, setYear] = useState<number>(2026);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
-  const [dateFrom, setDateFrom] = useState<string>("2026-05-01");
+  const [dateFrom, setDateFrom] = useState<string>("2026-01-01");
   const [dateTo, setDateTo] = useState<string>(today());
   const [query, setQuery] = useState("");
 

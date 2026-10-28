@@ -64,6 +64,7 @@ const searchSchema = z.object({
   filter: z
     .enum(["all", "qasimia_madrassa", "qasim_academy", "zainab_madrassa", "zainab_school"])
     .optional(),
+  tab: z.string().optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -823,13 +824,13 @@ function DashboardPage() {
         />
         <KpiCard
           icon={Package}
-          value={formatPKR(currentKpis.inventoryValue ?? 99550)}
+          value={formatPKR(currentKpis.inventoryValue ?? inventorySummary.totalValue ?? 0)}
           label={lang === "ur" ? "مالیاتی انوینٹری" : "Inventory Assets"}
           labelUrdu="مالیاتی انوینٹری"
           subline={
             lang === "ur"
-              ? currentKpis.inventorySublineUr ?? "سامان، کتب و اثاثہ جات"
-              : currentKpis.inventorySublineEn ?? "Supplies & physical assets"
+              ? currentKpis.inventorySublineUr ?? `${inventorySummary.totalUnits} سامان اکائیاں`
+              : currentKpis.inventorySublineEn ?? `${inventorySummary.totalUnits} Units in Stock`
           }
         />
       </div>
@@ -1438,10 +1439,10 @@ function DashboardPage() {
               {lang === "ur" ? "کل تخمینہ مالیت" : "Total Valuation"}
             </p>
             <p className="font-heading text-lg font-bold text-foreground mt-0.5">
-              {formatPKR(inventorySummary.totalValue || 99550)}
+              {formatPKR(inventorySummary.totalValue ?? 0)}
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              {inventorySummary.totalItems || 8} {lang === "ur" ? "مختلف اقسام کا سامان" : "catalog items"}
+              {inventorySummary.totalItems ?? 0} {lang === "ur" ? "مختلف اقسام کا سامان" : "catalog items"}
             </p>
           </div>
           <div className="p-3.5 rounded-xl border border-border bg-card/60">
@@ -1449,7 +1450,7 @@ function DashboardPage() {
               {lang === "ur" ? "موجودہ کل مقدار" : "Total Stock In-Hand"}
             </p>
             <p className="font-heading text-lg font-bold text-foreground mt-0.5">
-              {inventorySummary.totalUnits || 346} {lang === "ur" ? "اکائیاں" : "units"}
+              {inventorySummary.totalUnits ?? 0} {lang === "ur" ? "اکائیاں" : "units"}
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {lang === "ur" ? "کتب، کاپیاں و اشیاء" : "Books, stationery & items"}
@@ -1460,7 +1461,7 @@ function DashboardPage() {
               {lang === "ur" ? "کم اسٹاک اشتباہ" : "Low Stock Warnings"}
             </p>
             <p className="font-heading text-lg font-bold text-amber-700 dark:text-amber-400 mt-0.5">
-              {inventorySummary.lowStockCount || 3} {lang === "ur" ? "اشیاء" : "items"}
+              {inventorySummary.lowStockCount ?? 0} {lang === "ur" ? "اشیاء" : "items"}
             </p>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {lang === "ur" ? "دوبارہ خریداری مطلوب ہے" : "Requires restocking"}

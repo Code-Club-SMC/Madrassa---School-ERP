@@ -31,6 +31,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedTeachersRouteImport } from './routes/_authenticated/teachers'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as ApiDashboardRouteImport } from './routes/api/dashboard'
+import { Route as ApiInventoryRouteImport } from './routes/api/inventory'
 import { Route as ApiStudentsRouteImport } from './routes/api/students'
 import { Route as WebsiteIndexRouteImport } from './routes/website/index'
 import { Route as WebsiteAboutRouteImport } from './routes/website/about'
@@ -298,6 +299,11 @@ const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
 const ApiDashboardRoute = ApiDashboardRouteImport.update({
   id: '/api/dashboard',
   path: '/api/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiInventoryRoute = ApiInventoryRouteImport.update({
+  id: '/api/inventory',
+  path: '/api/inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStudentsRoute = ApiStudentsRouteImport.update({
@@ -1214,6 +1220,7 @@ export interface FileRoutesByFullPath {
   '/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/api/dashboard': typeof ApiDashboardRoute
+  '/api/inventory': typeof ApiInventoryRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
   '/website/about': typeof WebsiteAboutRoute
   '/website/contact': typeof WebsiteContactRoute
@@ -1388,6 +1395,7 @@ export interface FileRoutesByTo {
   '/school': typeof AuthenticatedSchoolRouteWithChildren
   '/users': typeof AuthenticatedUsersRoute
   '/api/dashboard': typeof ApiDashboardRoute
+  '/api/inventory': typeof ApiInventoryRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
   '/website/about': typeof WebsiteAboutRoute
   '/website/contact': typeof WebsiteContactRoute
@@ -1569,6 +1577,7 @@ export interface FileRoutesById {
   '/_authenticated/teachers': typeof AuthenticatedTeachersRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRoute
   '/api/dashboard': typeof ApiDashboardRoute
+  '/api/inventory': typeof ApiInventoryRoute
   '/api/students': typeof ApiStudentsRouteWithChildren
   '/website/about': typeof WebsiteAboutRoute
   '/website/contact': typeof WebsiteContactRoute
@@ -1752,6 +1761,7 @@ export interface FileRouteTypes {
     | '/teachers'
     | '/users'
     | '/api/dashboard'
+    | '/api/inventory'
     | '/api/students'
     | '/website/about'
     | '/website/contact'
@@ -1926,6 +1936,7 @@ export interface FileRouteTypes {
     | '/school'
     | '/users'
     | '/api/dashboard'
+    | '/api/inventory'
     | '/api/students'
     | '/website/about'
     | '/website/contact'
@@ -2106,6 +2117,7 @@ export interface FileRouteTypes {
     | '/_authenticated/teachers'
     | '/_authenticated/users'
     | '/api/dashboard'
+    | '/api/inventory'
     | '/api/students'
     | '/website/about'
     | '/website/contact'
@@ -2274,6 +2286,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   WebsiteRoute: typeof WebsiteRouteWithChildren
   ApiDashboardRoute: typeof ApiDashboardRoute
+  ApiInventoryRoute: typeof ApiInventoryRoute
   ApiStudentsRoute: typeof ApiStudentsRouteWithChildren
   ApiAcademicYearsIdRoute: typeof ApiAcademicYearsIdRouteWithChildren
   ApiAcademicYearsBackfillRoute: typeof ApiAcademicYearsBackfillRoute
@@ -2487,6 +2500,13 @@ declare module '@tanstack/react-router' {
       path: '/api/dashboard'
       fullPath: '/api/dashboard'
       preLoaderRoute: typeof ApiDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/inventory': {
+      id: '/api/inventory'
+      path: '/api/inventory'
+      fullPath: '/api/inventory'
+      preLoaderRoute: typeof ApiInventoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/students': {
@@ -4292,6 +4312,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   WebsiteRoute: WebsiteRouteWithChildren,
   ApiDashboardRoute: ApiDashboardRoute,
+  ApiInventoryRoute: ApiInventoryRoute,
   ApiStudentsRoute: ApiStudentsRouteWithChildren,
   ApiAcademicYearsIdRoute: ApiAcademicYearsIdRouteWithChildren,
   ApiAcademicYearsBackfillRoute: ApiAcademicYearsBackfillRoute,

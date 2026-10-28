@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createFileRoute, Outlet, useNavigate, useRouterState, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate, useRouterState, redirect, Link } from "@tanstack/react-router";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app/app-sidebar";
 import { CommandPalette } from "@/components/app/command-palette";
@@ -12,6 +12,7 @@ import { HRProvider } from "@/stores/hr-store";
 import { useAuth } from "@/hooks/use-auth";
 import { BookLoader } from "@/components/shared/book-loader";
 import { TeacherPortal } from "@/components/teachers/teacher-portal";
+import { TeacherSidebar } from "@/components/teachers/teacher-sidebar";
 import { ParentPortal } from "@/components/parents/parent-portal";
 import { Button } from "@/components/ui/button";
 import { School, LogOut, Languages } from "lucide-react";
@@ -64,7 +65,7 @@ function AuthenticatedLayout() {
         >
           <div className="min-h-dvh flex flex-col w-full bg-background">
             <header className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
+              <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-85 transition-opacity">
                 <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                   <School className="h-4 w-4 text-primary" />
                 </div>
@@ -76,7 +77,7 @@ function AuthenticatedLayout() {
                     {isUrdu ? "استاد پورٹل" : "Teacher Portal"}
                   </p>
                 </div>
-              </div>
+              </Link>
               <div className="flex items-center gap-2">
                 <div className="text-end hidden sm:block pe-1">
                   <p className="text-xs font-medium">{user.name}</p>
@@ -106,11 +107,16 @@ function AuthenticatedLayout() {
                 </Button>
               </div>
             </header>
-            <SidebarInset className="flex-1 min-w-0">
-              <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 max-w-[1600px] w-full mx-auto">
-                {isTeacherDashboard ? <TeacherPortal /> : <Outlet />}
-              </main>
-            </SidebarInset>
+            <div className="flex-1 flex w-full">
+              <div className="hidden lg:block shrink-0">
+                <TeacherSidebar />
+              </div>
+              <SidebarInset className="flex-1 min-w-0">
+                <main className="flex-1 px-4 sm:px-6 lg:px-8 py-5 max-w-[1600px] w-full mx-auto">
+                  {isTeacherDashboard ? <TeacherPortal /> : <Outlet />}
+                </main>
+              </SidebarInset>
+            </div>
           </div>
         </SidebarProvider>
       </HRProvider>
