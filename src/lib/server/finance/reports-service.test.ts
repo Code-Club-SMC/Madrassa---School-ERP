@@ -3,7 +3,7 @@ import {
   getComprehensiveReportTransactions,
   donationToTransaction,
 } from "./reports-service";
-import { listDonations, saveDonation } from "./donations-service";
+import { listDonations, saveDonation, deleteDonation } from "./donations-service";
 import { filterTransactions, aggregateByCategory, aggregateByMonth } from "@/lib/finance/comprehensive-reports";
 
 describe("Finance Reports & Real Data Aggregation", () => {
@@ -30,6 +30,9 @@ describe("Finance Reports & Real Data Aggregation", () => {
     const found = reloaded.find((d) => d.id === created.id);
     expect(found).toBeDefined();
     expect(found?.donor).toBe("Test Philanthropist");
+
+    // Clean up test donation so test state doesn't leak into subsequent tests or persistent seed
+    deleteDonation(created.id);
   });
 
   it("converts donation to comprehensive transaction with correct category and system", () => {
