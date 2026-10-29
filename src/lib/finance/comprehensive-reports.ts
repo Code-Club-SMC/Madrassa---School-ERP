@@ -603,30 +603,85 @@ function generateCanonicalTransactions(): ComprehensiveTransaction[] {
   return txs;
 }
 
-// Unified financial ledger sourced from canonical dataset and persisted custom additions
-export function buildUnifiedFinancialLedger(): ComprehensiveTransaction[] {
-  const canonical = generateCanonicalTransactions();
+// Unified financial ledger sourced from real transactions, database and persistent records
+export function buildUnifiedFinancialLedger(serverTransactions?: ComprehensiveTransaction[]): ComprehensiveTransaction[] {
+  const baseTransactions =
+    serverTransactions && serverTransactions.length > 0
+      ? serverTransactions
+      : generateCanonicalTransactions();
 
   if (typeof window !== "undefined") {
     try {
+      // 1. Persisted custom financial records
       const raw = localStorage.getItem("msmis_financial_transactions");
+      let custom: ComprehensiveTransaction[] = [];
       if (raw) {
-        const custom = JSON.parse(raw);
-        if (Array.isArray(custom) && custom.length > 0) {
-          const customIds = new Set(custom.map((c: any) => c.id));
-          return [...custom, ...canonical.filter((c) => !customIds.has(c.id))];
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          custom = [...parsed];
         }
+      }
+
+      // 2. Also merge newly created donations from localStorage if not already present
+      const rawDonations = localStorage.getItem("msmis_donations");
+      if (rawDonations) {
+        const parsedDonations = JSON.parse(rawDonations);
+        if (Array.isArray(parsedDonations)) {
+          const existingVouchers = new Set([
+            ...baseTransactions.map((t) => t.voucherNo),
+            ...custom.map((t) => t.voucherNo),
+          ]);
+          for (const d of parsedDonations) {
+            if (d && d.receiptNo && !existingVouchers.has(d.receiptNo)) {
+              const dDate = new Date(d.date || new Date().toISOString().slice(0, 10));
+              const year = isNaN(dDate.getFullYear()) ? 2026 : dDate.getFullYear();
+              const month = isNaN(dDate.getMonth()) ? 5 : dDate.getMonth() + 1;
+              let category: TransactionCategory = "donation_general";
+              if (d.type === "zakat") category = "donation_zakat";
+              else if (d.type === "sadqa") category = "donation_sadqa";
+              else if (d.type === "fitra") category = "donation_fitra";
+              const meta = CATEGORY_META[category];
+              custom.push({
+                id: `tx-loc-don-${d.id || d.receiptNo}`,
+                voucherNo: d.receiptNo,
+                date: d.date || `${year}-${String(month).padStart(2, "0")}-15`,
+                month,
+                year,
+                type: "income",
+                category,
+                categoryLabel: meta.label,
+                categoryLabelUrdu: meta.labelUrdu,
+                description: d.purpose ? `${meta.label}: ${d.purpose}` : `${meta.label} receipt from ${d.donor}`,
+                system: "both",
+                systemLabel: "Al-Qasim Integrated Network",
+                partyName: d.donor,
+                partyRole: "Donor",
+                paymentMethod: d.method || "cash",
+                amount: Math.round((d.amountPaisa || 0) / 100),
+                status: "posted",
+                reference: d.receiptNo,
+              });
+              existingVouchers.add(d.receiptNo);
+            }
+          }
+        }
+      }
+
+      if (custom.length > 0) {
+        const customIds = new Set(custom.map((c) => c.id));
+        return [...custom, ...baseTransactions.filter((c) => !customIds.has(c.id))];
       }
     } catch {}
   }
 
-  return canonical;
+  return baseTransactions;
 }
 
 export const allTransactions: ComprehensiveTransaction[] = buildUnifiedFinancialLedger();
 
 // Helper to filter transactions
 export function filterTransactions({
+  transactions,
   type,
   scope = "both",
   period = "annually",
@@ -636,6 +691,7 @@ export function filterTransactions({
   dateTo,
   query = "",
 }: {
+  transactions?: ComprehensiveTransaction[];
   type?: "income" | "expense";
   scope?: FinanceScope;
   period?: FinancePeriod;
@@ -646,7 +702,7 @@ export function filterTransactions({
   query?: string;
 }): ComprehensiveTransaction[] {
   const q = query.trim().toLowerCase();
-  const source = typeof window !== "undefined" ? buildUnifiedFinancialLedger() : allTransactions;
+  const source = transactions ?? (typeof window !== "undefined" ? buildUnifiedFinancialLedger() : allTransactions);
 
   return source.filter((tx) => {
     // 1. Transaction Type filter (income vs expense)

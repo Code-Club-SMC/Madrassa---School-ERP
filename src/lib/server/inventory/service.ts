@@ -47,6 +47,12 @@ export function listInventoryItems(): InventoryItem[] {
 export function getInventorySummary() {
   const items = loadStoredItems();
   const totalValue = items.reduce((acc, it) => acc + (it.value || 0), 0);
+  const purchasedValue = items
+    .filter((it) => it.type === "purchased")
+    .reduce((acc, it) => acc + (it.value || 0), 0);
+  const donatedValue = items
+    .filter((it) => it.type === "donated" || it.type === "gift")
+    .reduce((acc, it) => acc + (it.value || 0), 0);
   const totalUnits = items.reduce((acc, it) => acc + (it.quantity || 0), 0);
   const lowStockCount = items.filter((it) => it.quantity <= it.lowStockThreshold).length;
 
@@ -54,6 +60,8 @@ export function getInventorySummary() {
     totalItems: items.length,
     totalUnits,
     totalValue,
+    purchasedValue,
+    donatedValue,
     lowStockCount,
     items: items.map((item) => ({
       id: item.id,

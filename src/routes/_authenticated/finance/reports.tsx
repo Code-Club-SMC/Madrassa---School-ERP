@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Download,
   Printer,
+  RefreshCw,
   Search,
   TrendingDown,
   TrendingUp,
@@ -20,11 +21,13 @@ import { useLanguage } from "@/components/language-context";
 import {
   aggregateByCategory,
   aggregateByMonth,
+  buildUnifiedFinancialLedger,
   filterTransactions,
   type ComprehensiveTransaction,
   type FinancePeriod,
   type FinanceScope,
 } from "@/lib/finance/comprehensive-reports";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/finance/reports")({
   component: FinanceReportsPage,
@@ -61,9 +64,41 @@ function FinanceReportsPage() {
   const [dateTo, setDateTo] = useState<string>(today());
   const [query, setQuery] = useState("");
 
+  const [serverTransactions, setServerTransactions] = useState<ComprehensiveTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchTransactions = useCallback(async (isRefresh = false) => {
+    try {
+      if (isRefresh) setRefreshing(true);
+      const res = await fetch("/api/finance/reports");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.transactions)) {
+          setServerTransactions(data.transactions);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load finance reports:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  // Combined ledger prioritizing live server transactions
+  const combinedTransactions = useMemo(() => {
+    return buildUnifiedFinancialLedger(serverTransactions);
+  }, [serverTransactions]);
+
   // Aggregated comprehensive transactions for Income and Expenses
   const filteredIncomeTransactions = useMemo(() => {
     return filterTransactions({
+      transactions: combinedTransactions,
       type: "income",
       scope: system,
       period,
@@ -73,10 +108,11 @@ function FinanceReportsPage() {
       dateTo,
       query,
     });
-  }, [system, period, year, month, dateFrom, dateTo, query]);
+  }, [combinedTransactions, system, period, year, month, dateFrom, dateTo, query]);
 
   const filteredExpenseTransactions = useMemo(() => {
     return filterTransactions({
+      transactions: combinedTransactions,
       type: "expense",
       scope: system,
       period,
@@ -86,7 +122,7 @@ function FinanceReportsPage() {
       dateTo,
       query,
     });
-  }, [system, period, year, month, dateFrom, dateTo, query]);
+  }, [combinedTransactions, system, period, year, month, dateFrom, dateTo, query]);
 
   // Summary Metrics
   const incomeTotal = useMemo(() => {
@@ -236,6 +272,19 @@ function FinanceReportsPage() {
           description="Comprehensive income and expenses reports with annual, monthly, and daily granularity across School and Madrassa."
           actions={
             <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => {
+                  fetchTransactions(true);
+                  toast.success(isUrdu ? "مالی ڈیٹا اپ ڈیٹ ہو گیا ہے" : "Financial data refreshed");
+                }}
+                disabled={refreshing}
+              >
+                <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+                {isUrdu ? "تازہ کریں" : "Refresh"}
+              </Button>
               <Button size="sm" variant="outline" className="gap-1.5" onClick={handleExportCsv}>
                 <Download className="h-4 w-4" />
                 Export CSV

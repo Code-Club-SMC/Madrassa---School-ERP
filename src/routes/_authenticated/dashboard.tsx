@@ -526,12 +526,15 @@ function DashboardPage() {
         arrears: 0,
         arrearsSublineEn: "No pending dues",
         arrearsSublineUr: "کوئی بقایا نہیں",
+        donationsValue: 365000,
+        donationsSublineEn: "3 Receipts · Zakat Rs 250,000",
+        donationsSublineUr: "3 رسیدات · زکوٰۃ 250,000 روپے",
         teacherCount: 0,
         teachersSublineEn: "0 Active Teachers",
         teachersSublineUr: "0 فعال اساتذہ",
-        inventoryValue: 99550,
-        inventorySublineEn: "346 Units · 3 Low Stock",
-        inventorySublineUr: "346 اکائیاں · 3 کم اسٹاک",
+        inventoryValue: 145900,
+        inventorySublineEn: "549 Units · 3 Low Stock",
+        inventorySublineUr: "549 اکائیاں · 3 کم اسٹاک",
       }
     );
   }, [dashboardData]);
@@ -541,10 +544,63 @@ function DashboardPage() {
     return (
       dashboardData?.inventorySummary ?? {
         totalItems: 8,
-        totalUnits: 346,
-        totalValue: 99550,
+        totalUnits: 549,
+        totalValue: 145900,
         lowStockCount: 3,
         items: [],
+      }
+    );
+  }, [dashboardData]);
+
+  // Donations Summary
+  const donationsSummary = useMemo(() => {
+    return (
+      dashboardData?.donationsSummary ?? {
+        totalReceived: 365000,
+        receiptsCount: 3,
+        zakat: 250000,
+        sadqa: 15000,
+        khairat: 0,
+        fitrana: 0,
+        general: 100000,
+        items: [
+          {
+            id: "d1",
+            receiptNo: "DR-2026-0001",
+            date: "2026-05-12",
+            donor: "Haji Abdul Rauf",
+            donorUrdu: "حاجی عبدالرؤف",
+            phone: "0300-1111111",
+            cnic: "35202-1234567-1",
+            type: "zakat",
+            purpose: "Orphan student fees",
+            amountPaisa: 25000000,
+            method: "bank",
+          },
+          {
+            id: "d2",
+            receiptNo: "DR-2026-0002",
+            date: "2026-05-18",
+            donor: "Anonymous",
+            donorUrdu: "گمنام",
+            type: "sadqa",
+            purpose: "Inventory — notebooks",
+            amountPaisa: 1500000,
+            method: "cash",
+          },
+          {
+            id: "d3",
+            receiptNo: "DR-2026-0003",
+            date: "2026-05-22",
+            donor: "Mrs. Aisha Khan",
+            donorUrdu: "عائشہ خان",
+            phone: "0321-2222222",
+            type: "general",
+            purpose: "Building fund",
+            amountPaisa: 10000000,
+            method: "online",
+          },
+        ],
       }
     );
   }, [dashboardData]);
@@ -769,7 +825,7 @@ function DashboardPage() {
       />
 
       {/* KPI row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
         <KpiCard
           icon={Users}
           value={currentKpis.totalStudents}
@@ -810,6 +866,17 @@ function DashboardPage() {
             lang === "ur" ? currentKpis.arrearsSublineUr : currentKpis.arrearsSublineEn
           }
           tone="destructive"
+        />
+        <KpiCard
+          icon={HeartHandshake}
+          value={formatPKR(currentKpis.donationsValue ?? donationsSummary.totalReceived ?? 365000)}
+          label={lang === "ur" ? "عطیات و زکوٰۃ فنڈ" : "Donations & Charity"}
+          labelUrdu="عطیات و زکوٰۃ فنڈ"
+          subline={
+            lang === "ur"
+              ? (currentKpis.donationsSublineUr ?? "3 رسیدات · زکوٰۃ 250k")
+              : (currentKpis.donationsSublineEn ?? "3 Receipts · Zakat Rs 250k")
+          }
         />
         <KpiCard
           icon={GraduationCap}

@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { db } from "@/db";
 import { feeAdjustments, feeCharges, feePayments } from "@/db/schema/finance";
 import { students, studentEnrollments } from "@/db/schema/students";
@@ -46,7 +48,8 @@ export async function getFinanceOverview(request: Request) {
     .leftJoin(institutions, eq(institutions.id, feePayments.institutionId))
     .leftJoin(programs, eq(programs.id, studentEnrollments.programId))
     .where(eq(feePayments.status, "posted"))
-    .orderBy(desc(feePayments.receivedAt));
+    .orderBy(desc(feePayments.receivedAt))
+    .catch(() => []);
 
   // 2. Fetch all fee charges for dues calculation
   const charges = await db
@@ -63,11 +66,73 @@ export async function getFinanceOverview(request: Request) {
     .leftJoin(programs, eq(programs.id, feeCharges.programId))
     .catch(() => []);
 
+  let activePayments = payments;
+  if (!activePayments || activePayments.length === 0) {
+    try {
+      const pFile = path.join(process.cwd(), "public", "finance-fee-payments.json");
+      if (fs.existsSync(pFile)) {
+        const raw = fs.readFileSync(pFile, "utf-8");
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          activePayments = parsed.map((t: any) => ({
+            id: t.id,
+            receiptNo: t.voucherNo,
+            amountPaisa: t.amount * 100,
+            method: t.paymentMethod,
+            receivedAt: new Date(t.date),
+            status: "posted" as const,
+            payerName: t.partyName,
+            studentId: t.id,
+            studentName: t.partyName,
+            studentNameUrdu: t.partyName,
+            rollNo: t.reference,
+            institutionId: t.system === "madrassa" ? "inst-madrassa" : "inst-school",
+            institutionName: t.systemLabel,
+            institutionNameUrdu: t.systemLabel,
+            programSystem: t.system,
+            institutionSystem: t.system,
+          }));
+        }
+      }
+    } catch {}
+  }
+
+  // Load real institutional expenses (including purchased inventory)
+  const expenseList: Array<{ date: string; amount: number; system: string }> = [];
+  try {
+    const expFile = path.join(process.cwd(), "public", "finance-expenses.json");
+    if (fs.existsSync(expFile)) {
+      const expRaw = fs.readFileSync(expFile, "utf-8");
+      const parsedExp = JSON.parse(expRaw);
+      if (Array.isArray(parsedExp)) {
+        expenseList.push(...parsedExp);
+      }
+    }
+    const invFile = path.join(process.cwd(), "public", "inventory-items.json");
+    if (fs.existsSync(invFile)) {
+      const invRaw = fs.readFileSync(invFile, "utf-8");
+      const parsedInv = JSON.parse(invRaw);
+      if (Array.isArray(parsedInv)) {
+        parsedInv
+          .filter((it: any) => it.type === "purchased" && (it.value || 0) > 0)
+          .forEach((it: any) => {
+            expenseList.push({
+              date: it.lastRestocked || `${curYear}-${String(curMonth + 1).padStart(2, "0")}-15`,
+              amount: it.value || 0,
+              system: "both",
+            });
+          });
+      }
+    }
+  } catch {}
+
   // 3. Daily mapping for current month
   const daySchoolMap = new Map<number, number>();
   const dayMadrassaMap = new Map<number, number>();
+  const daySchoolExpenseMap = new Map<number, number>();
+  const dayMadrassaExpenseMap = new Map<number, number>();
 
-  payments.forEach((p) => {
+  activePayments.forEach((p) => {
     const d = new Date(p.receivedAt);
     if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
       const day = d.getDate();
@@ -81,19 +146,38 @@ export async function getFinanceOverview(request: Request) {
     }
   });
 
+  expenseList.forEach((e) => {
+    const d = new Date(e.date);
+    if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
+      const day = d.getDate();
+      const amt = e.amount;
+      if (e.system === "school") {
+        daySchoolExpenseMap.set(day, (daySchoolExpenseMap.get(day) ?? 0) + amt);
+      } else if (e.system === "madrassa") {
+        dayMadrassaExpenseMap.set(day, (dayMadrassaExpenseMap.get(day) ?? 0) + amt);
+      } else {
+        const half = Math.round(amt / 2);
+        daySchoolExpenseMap.set(day, (daySchoolExpenseMap.get(day) ?? 0) + half);
+        dayMadrassaExpenseMap.set(day, (dayMadrassaExpenseMap.get(day) ?? 0) + (amt - half));
+      }
+    }
+  });
+
   const dailyHistory = Array.from({ length: daysInMonth }, (_, index) => {
     const day = index + 1;
     const schoolIncome = daySchoolMap.get(day) ?? 0;
     const madrassaIncome = dayMadrassaMap.get(day) ?? 0;
+    const schoolExpense = daySchoolExpenseMap.get(day) ?? 0;
+    const madrassaExpense = dayMadrassaExpenseMap.get(day) ?? 0;
     return {
       day: `${day}`,
       fullLabel: `${monthName} ${day}`,
       income: schoolIncome + madrassaIncome,
-      expense: 0,
+      expense: schoolExpense + madrassaExpense,
       schoolIncome,
       madrassaIncome,
-      schoolExpense: 0,
-      madrassaExpense: 0,
+      schoolExpense,
+      madrassaExpense,
     };
   });
 
@@ -103,8 +187,13 @@ export async function getFinanceOverview(request: Request) {
     const d = new Date(curYear, curMonth - i, 1);
     const endD = new Date(curYear, curMonth - i + 1, 0, 23, 59, 59, 999);
     const mIndex = d.getMonth();
-    const paymentsInMonth = payments.filter((p) => {
+    const paymentsInMonth = activePayments.filter((p) => {
       const rec = new Date(p.receivedAt);
+      return rec >= d && rec <= endD;
+    });
+
+    const expensesInMonth = expenseList.filter((e) => {
+      const rec = new Date(e.date);
       return rec >= d && rec <= endD;
     });
 
@@ -119,20 +208,76 @@ export async function getFinanceOverview(request: Request) {
         .reduce((sum, p) => sum + p.amountPaisa, 0) / 100,
     );
 
+    const schoolExp = Math.round(
+      expensesInMonth
+        .filter((e) => e.system === "school")
+        .reduce((sum, e) => sum + e.amount, 0) +
+        expensesInMonth
+          .filter((e) => e.system === "both" || !e.system)
+          .reduce((sum, e) => sum + Math.round(e.amount / 2), 0),
+    );
+    const madrassaExp = Math.round(
+      expensesInMonth
+        .filter((e) => e.system === "madrassa")
+        .reduce((sum, e) => sum + e.amount, 0) +
+        expensesInMonth
+          .filter((e) => e.system === "both" || !e.system)
+          .reduce((sum, e) => sum + (e.amount - Math.round(e.amount / 2)), 0),
+    );
+
     monthlyHistory.push({
       month: MONTH_NAMES_EN[mIndex],
       monthUr: MONTH_NAMES_UR[mIndex],
       income: schoolInc + madrassaInc,
-      expense: 0,
+      expense: schoolExp + madrassaExp,
       schoolIncome: schoolInc,
       madrassaIncome: madrassaInc,
-      schoolExpense: 0,
-      madrassaExpense: 0,
+      schoolExpense: schoolExp,
+      madrassaExpense: madrassaExp,
     });
   }
 
   // 5. KPIs
-  const thisMonthPayments = payments.filter(
+  const thisMonthExpenses = expenseList.filter(
+    (e) => new Date(e.date) >= startOfMonth && new Date(e.date) <= endOfMonth,
+  );
+  const monthlyExpense = Math.round(thisMonthExpenses.reduce((s, e) => s + e.amount, 0));
+  const schoolMonthlyExpense = Math.round(
+    thisMonthExpenses
+      .filter((e) => e.system === "school")
+      .reduce((s, e) => s + e.amount, 0) +
+      thisMonthExpenses
+        .filter((e) => e.system === "both" || !e.system)
+        .reduce((s, e) => s + Math.round(e.amount / 2), 0),
+  );
+  const madrassaMonthlyExpense = Math.round(
+    thisMonthExpenses
+      .filter((e) => e.system === "madrassa")
+      .reduce((s, e) => s + e.amount, 0) +
+      thisMonthExpenses
+        .filter((e) => e.system === "both" || !e.system)
+        .reduce((s, e) => s + (e.amount - Math.round(e.amount / 2)), 0),
+  );
+
+  const thisYearExpenses = expenseList.filter((e) => new Date(e.date) >= startOfYear);
+  const annualExpense = Math.round(thisYearExpenses.reduce((s, e) => s + e.amount, 0));
+  const schoolAnnualExpense = Math.round(
+    thisYearExpenses
+      .filter((e) => e.system === "school")
+      .reduce((s, e) => s + e.amount, 0) +
+      thisYearExpenses
+        .filter((e) => e.system === "both" || !e.system)
+        .reduce((s, e) => s + Math.round(e.amount / 2), 0),
+  );
+  const madrassaAnnualExpense = Math.round(
+    thisYearExpenses
+      .filter((e) => e.system === "madrassa")
+      .reduce((s, e) => s + e.amount, 0) +
+      thisYearExpenses
+        .filter((e) => e.system === "both" || !e.system)
+        .reduce((s, e) => s + (e.amount - Math.round(e.amount / 2)), 0),
+  );
+  const thisMonthPayments = activePayments.filter(
     (p) => new Date(p.receivedAt) >= startOfMonth && new Date(p.receivedAt) <= endOfMonth,
   );
   const monthlyIncome = Math.round(thisMonthPayments.reduce((s, p) => s + p.amountPaisa, 0) / 100);
@@ -147,7 +292,7 @@ export async function getFinanceOverview(request: Request) {
       .reduce((s, p) => s + p.amountPaisa, 0) / 100,
   );
 
-  const thisYearPayments = payments.filter((p) => new Date(p.receivedAt) >= startOfYear);
+  const thisYearPayments = activePayments.filter((p) => new Date(p.receivedAt) >= startOfYear);
   const annualIncome = Math.round(thisYearPayments.reduce((s, p) => s + p.amountPaisa, 0) / 100);
   const schoolAnnualIncome = Math.round(
     thisYearPayments
@@ -165,8 +310,8 @@ export async function getFinanceOverview(request: Request) {
   const monthlyTarget = Math.max(monthlyIncome, monthlyIncome + openArrears);
   const recoveryRate = monthlyTarget > 0 ? Math.round((monthlyIncome / monthlyTarget) * 100) : 0;
 
-  // 6. Recent transactions
-  const recentTransactions = payments.map((p) => {
+  // 6. Recent transactions (income + expenses)
+  const recentIncome = activePayments.map((p) => {
     const isMadrassa = p.programSystem === "madrassa" || p.institutionSystem === "madrassa";
     const studentEn = p.studentName || p.studentNameUrdu;
     const studentUr = p.studentNameUrdu || p.studentName;
@@ -186,6 +331,32 @@ export async function getFinanceOverview(request: Request) {
     };
   });
 
+  const recentExpenses = expenseList.slice(0, 40).map((e: any, idx) => {
+    const cat = e.category || "";
+    const isSalary = cat.includes("salary");
+    const isUtil = cat.includes("util");
+    const isMess = cat.includes("mess");
+    const categoryKey = isSalary ? "salary" : isUtil ? "utilities" : isMess ? "misc" : "inventory";
+    const categoryUrdu = isSalary ? "تنخواہیں" : isUtil ? "یوٹیلیٹیز" : isMess ? "طعام و راشن" : "سامان و اسٹاک";
+    return {
+      id: e.id || `exp-${idx}-${e.date}`,
+      date: e.date,
+      type: "expense" as const,
+      category: categoryKey as any,
+      categoryUrdu,
+      description: e.description || `Disbursement: ${e.categoryLabel || "Operational Expense"}`,
+      descriptionUrdu: e.description || `اخراجات: ${e.categoryLabelUrdu || "شعبہ جاتی مدات"}`,
+      amount: e.amount,
+      source: e.paymentMethod === "online" ? "Online" : e.paymentMethod === "bank" ? "Bank" : "Cash",
+      sourceUrdu: e.paymentMethod === "online" ? "آن لائن" : e.paymentMethod === "bank" ? "بینک" : "نقد",
+      system: (e.system || "both") as "school" | "madrassa" | "both",
+    };
+  });
+
+  const recentTransactions = [...recentIncome, ...recentExpenses].sort((a, b) =>
+    b.date > a.date ? 1 : b.date < a.date ? -1 : 0,
+  );
+
   return {
     kpis: {
       monthlyIncome,
@@ -194,6 +365,12 @@ export async function getFinanceOverview(request: Request) {
       annualIncome,
       schoolAnnualIncome,
       madrassaAnnualIncome,
+      monthlyExpense,
+      schoolMonthlyExpense,
+      madrassaMonthlyExpense,
+      annualExpense,
+      schoolAnnualExpense,
+      madrassaAnnualExpense,
       openArrears,
       recoveryRate,
     },
