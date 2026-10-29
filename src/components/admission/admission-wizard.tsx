@@ -12,6 +12,7 @@ import { BilingualLabel } from "@/components/shared/bilingual-label";
 import { cn } from "@/lib/utils";
 import type { System, MadrassaCategory } from "@/types";
 import { toast } from "sonner";
+import { getAdmissionSchoolClasses, CANONICAL_SCHOOL_CLASSES } from "@/lib/admission.server";
 
 type FormState = {
   nameUrdu: string;
@@ -183,14 +184,27 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
       setAvailableClasses([]);
       return;
     }
-    const institutionId = form.gender === "female" ? "jamia_zainab_banat" : "al_qasim_academy";
+    const targetGender = form.gender === "female" ? "female" : form.gender === "male" ? "male" : undefined;
     setLoadingClasses(true);
-    fetch(`/api/academic/school/classes?institutionId=${encodeURIComponent(institutionId)}`, { credentials: "include" })
-      .then((r) => r.json().catch(() => ({})))
-      .then((payload) => {
-        setAvailableClasses((payload.classes ?? []) as any[]);
+    getAdmissionSchoolClasses({ data: targetGender ? { gender: targetGender } : undefined })
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setAvailableClasses(data);
+          return;
+        }
+        throw new Error("Empty classes from server fn");
       })
-      .catch(() => toast.error("Could not load classes"))
+      .catch(() => {
+        fetch(`/api/academic/school/classes${targetGender ? `?gender=${targetGender}` : ""}`, { credentials: "include" })
+          .then((r) => r.json().catch(() => ({})))
+          .then((payload) => {
+            const list = (payload.classes ?? []) as any[];
+            setAvailableClasses(list.length > 0 ? list : CANONICAL_SCHOOL_CLASSES);
+          })
+          .catch(() => {
+            setAvailableClasses(CANONICAL_SCHOOL_CLASSES);
+          });
+      })
       .finally(() => setLoadingClasses(false));
   }, [form.system, form.gender]);
 

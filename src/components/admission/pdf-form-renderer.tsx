@@ -34,7 +34,12 @@ import {
   type AdmissionPrintResponse,
 } from "@/lib/admission-print-payload";
 import { buildAdmissionSampleData, getRandomSample } from "@/lib/admission-sample-data";
-import { getAdmissionSubcategories, type AdmissionSubcategoryOption } from "@/lib/admission.server";
+import {
+  getAdmissionSubcategories,
+  getAdmissionSchoolClasses,
+  CANONICAL_SCHOOL_CLASSES,
+  type AdmissionSubcategoryOption,
+} from "@/lib/admission.server";
 import {
   DatePickerInput,
   formatHijriDate,
@@ -252,14 +257,32 @@ export function PdfFormRenderer({
       setCls([]);
       return;
     }
-    const institutionId = variant.category === "female" ? "jamia_zainab_banat" : "al_qasim_academy";
+    const targetGender = variant.category === "female" ? "female" : "male";
     setLoadingCls(true);
-    fetch(`/api/academic/school/classes?institutionId=${encodeURIComponent(institutionId)}`, { credentials: "include" })
-      .then((r) => r.json().catch(() => ({})))
-      .then((payload) => {
-        setCls((payload.classes ?? []) as any[]);
+
+    getAdmissionSchoolClasses({ data: { gender: targetGender } })
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCls(data);
+          return;
+        }
+        throw new Error("Empty classes from server fn");
       })
-      .catch(() => {})
+      .catch(() => {
+        fetch(`/api/academic/school/classes?gender=${targetGender}`, { credentials: "include" })
+          .then((r) => r.json().catch(() => ({})))
+          .then((payload) => {
+            const list = (payload.classes ?? []) as any[];
+            if (list.length > 0) {
+              setCls(list);
+            } else {
+              setCls(CANONICAL_SCHOOL_CLASSES);
+            }
+          })
+          .catch(() => {
+            setCls(CANONICAL_SCHOOL_CLASSES);
+          });
+      })
       .finally(() => setLoadingCls(false));
   }, [variant.section, variant.category]);
 
@@ -1332,23 +1355,30 @@ function SchoolFields({
               <SelectTrigger id="class" className={isRtl ? "font-urdu" : ""}>
                 <SelectValue
                   placeholder={
-                    cls.length === 0
-                      ? (lang === "ur" ? "کوئی جماعت موجود نہیں" : "No classes configured")
-                      : (lang === "ur" ? "جماعت منتخب کریں" : "Select class")
+                    loadingCls
+                      ? (lang === "ur" ? "جماعتیں لوڈ ہو رہی ہیں..." : "Loading classes...")
+                      : cls.length === 0
+                        ? (lang === "ur" ? "کوئی جماعت موجود نہیں" : "No classes configured")
+                        : (lang === "ur" ? "جماعت منتخب کریں" : "Select class")
                   }
                 />
               </SelectTrigger>
               <SelectContent>
-                {cls
-                  .filter((c) => {
+                {(
+                  cls.some((c) => {
                     const g = (c.gender || "").toLowerCase();
                     return !g || g === "mixed" || g === "both" || g === "all" || g === variant.category;
                   })
-                  .map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <span className="font-urdu">{c.nameUrdu}</span> · {c.name}
-                    </SelectItem>
-                  ))}
+                    ? cls.filter((c) => {
+                        const g = (c.gender || "").toLowerCase();
+                        return !g || g === "mixed" || g === "both" || g === "all" || g === variant.category;
+                      })
+                    : cls
+                ).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <span className="font-urdu">{c.nameUrdu}</span> · {c.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </BilingualLabel>

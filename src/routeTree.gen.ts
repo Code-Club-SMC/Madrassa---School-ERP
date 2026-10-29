@@ -85,6 +85,7 @@ import { Route as ApiAcademicProgramsRouteImport } from './routes/api/academic/p
 import { Route as ApiAdminSuperAdminRouteImport } from './routes/api/admin/super-admin'
 import { Route as ApiAdmissionApplicationsRouteImport } from './routes/api/admission/applications'
 import { Route as ApiAdmissionGuardianSuggestionsRouteImport } from './routes/api/admission/guardian-suggestions'
+import { Route as ApiAdmissionInterviewsRouteImport } from './routes/api/admission/interviews'
 import { Route as ApiAdmissionStudentsRouteImport } from './routes/api/admission/students'
 import { Route as ApiExamsHallsRouteImport } from './routes/api/exams/halls'
 import { Route as ApiExamsSessionsRouteImport } from './routes/api/exams/sessions'
@@ -122,6 +123,10 @@ import { Route as ApiAcademicSchoolTimetableRouteImport } from './routes/api/aca
 import { Route as ApiAdminStudentLifecycleIndexRouteImport } from './routes/api/admin/student-lifecycle/index'
 import { Route as ApiAdminStudentLifecycleIdRouteImport } from './routes/api/admin/student-lifecycle/$id'
 import { Route as ApiAdmissionApplicationsIdRouteImport } from './routes/api/admission/applications/$id'
+import { Route as ApiAdmissionInterviewsIdRouteImport } from './routes/api/admission/interviews/$id'
+import { Route as ApiAdmissionInterviewsDocTypesRouteImport } from './routes/api/admission/interviews/doc-types'
+import { Route as ApiAdmissionInterviewsDocsRouteImport } from './routes/api/admission/interviews/docs'
+import { Route as ApiAdmissionInterviewsWaitlistRouteImport } from './routes/api/admission/interviews/waitlist'
 import { Route as ApiAttendanceMadrassaMarkRouteImport } from './routes/api/attendance/madrassa/mark'
 import { Route as ApiAttendanceMadrassaRosterRouteImport } from './routes/api/attendance/madrassa/roster'
 import { Route as ApiAttendanceReportsDailySummaryRouteImport } from './routes/api/attendance/reports/daily-summary'
@@ -609,6 +614,11 @@ const ApiAdmissionGuardianSuggestionsRoute =
     path: '/api/admission/guardian-suggestions',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdmissionInterviewsRoute = ApiAdmissionInterviewsRouteImport.update({
+  id: '/api/admission/interviews',
+  path: '/api/admission/interviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdmissionStudentsRoute = ApiAdmissionStudentsRouteImport.update({
   id: '/api/admission/students',
   path: '/api/admission/students',
@@ -809,6 +819,30 @@ const ApiAdmissionApplicationsIdRoute =
     id: '/$id',
     path: '/$id',
     getParentRoute: () => ApiAdmissionApplicationsRoute,
+  } as any)
+const ApiAdmissionInterviewsIdRoute =
+  ApiAdmissionInterviewsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiAdmissionInterviewsRoute,
+  } as any)
+const ApiAdmissionInterviewsDocTypesRoute =
+  ApiAdmissionInterviewsDocTypesRouteImport.update({
+    id: '/doc-types',
+    path: '/doc-types',
+    getParentRoute: () => ApiAdmissionInterviewsRoute,
+  } as any)
+const ApiAdmissionInterviewsDocsRoute =
+  ApiAdmissionInterviewsDocsRouteImport.update({
+    id: '/docs',
+    path: '/docs',
+    getParentRoute: () => ApiAdmissionInterviewsRoute,
+  } as any)
+const ApiAdmissionInterviewsWaitlistRoute =
+  ApiAdmissionInterviewsWaitlistRouteImport.update({
+    id: '/waitlist',
+    path: '/waitlist',
+    getParentRoute: () => ApiAdmissionInterviewsRoute,
   } as any)
 const ApiAttendanceMadrassaMarkRoute =
   ApiAttendanceMadrassaMarkRouteImport.update({
@@ -1267,6 +1301,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/super-admin': typeof ApiAdminSuperAdminRoute
   '/api/admission/applications': typeof ApiAdmissionApplicationsRouteWithChildren
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
+  '/api/admission/interviews': typeof ApiAdmissionInterviewsRouteWithChildren
   '/api/admission/students': typeof ApiAdmissionStudentsRoute
   '/api/exams/halls': typeof ApiExamsHallsRouteWithChildren
   '/api/exams/sessions': typeof ApiExamsSessionsRouteWithChildren
@@ -1307,6 +1342,10 @@ export interface FileRoutesByFullPath {
   '/api/academic/school/timetable': typeof ApiAcademicSchoolTimetableRouteWithChildren
   '/api/admin/student-lifecycle/$id': typeof ApiAdminStudentLifecycleIdRoute
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
+  '/api/admission/interviews/$id': typeof ApiAdmissionInterviewsIdRoute
+  '/api/admission/interviews/doc-types': typeof ApiAdmissionInterviewsDocTypesRoute
+  '/api/admission/interviews/docs': typeof ApiAdmissionInterviewsDocsRoute
+  '/api/admission/interviews/waitlist': typeof ApiAdmissionInterviewsWaitlistRoute
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
   '/api/attendance/madrassa/roster': typeof ApiAttendanceMadrassaRosterRoute
   '/api/attendance/reports/daily-summary': typeof ApiAttendanceReportsDailySummaryRoute
@@ -1440,6 +1479,7 @@ export interface FileRoutesByTo {
   '/api/admin/super-admin': typeof ApiAdminSuperAdminRoute
   '/api/admission/applications': typeof ApiAdmissionApplicationsRouteWithChildren
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
+  '/api/admission/interviews': typeof ApiAdmissionInterviewsRouteWithChildren
   '/api/admission/students': typeof ApiAdmissionStudentsRoute
   '/api/exams/halls': typeof ApiExamsHallsRouteWithChildren
   '/api/exams/sessions': typeof ApiExamsSessionsRouteWithChildren
@@ -1480,6 +1520,10 @@ export interface FileRoutesByTo {
   '/api/academic/school/timetable': typeof ApiAcademicSchoolTimetableRouteWithChildren
   '/api/admin/student-lifecycle/$id': typeof ApiAdminStudentLifecycleIdRoute
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
+  '/api/admission/interviews/$id': typeof ApiAdmissionInterviewsIdRoute
+  '/api/admission/interviews/doc-types': typeof ApiAdmissionInterviewsDocTypesRoute
+  '/api/admission/interviews/docs': typeof ApiAdmissionInterviewsDocsRoute
+  '/api/admission/interviews/waitlist': typeof ApiAdmissionInterviewsWaitlistRoute
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
   '/api/attendance/madrassa/roster': typeof ApiAttendanceMadrassaRosterRoute
   '/api/attendance/reports/daily-summary': typeof ApiAttendanceReportsDailySummaryRoute
@@ -1624,6 +1668,7 @@ export interface FileRoutesById {
   '/api/admin/super-admin': typeof ApiAdminSuperAdminRoute
   '/api/admission/applications': typeof ApiAdmissionApplicationsRouteWithChildren
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
+  '/api/admission/interviews': typeof ApiAdmissionInterviewsRouteWithChildren
   '/api/admission/students': typeof ApiAdmissionStudentsRoute
   '/api/exams/halls': typeof ApiExamsHallsRouteWithChildren
   '/api/exams/sessions': typeof ApiExamsSessionsRouteWithChildren
@@ -1664,6 +1709,10 @@ export interface FileRoutesById {
   '/api/academic/school/timetable': typeof ApiAcademicSchoolTimetableRouteWithChildren
   '/api/admin/student-lifecycle/$id': typeof ApiAdminStudentLifecycleIdRoute
   '/api/admission/applications/$id': typeof ApiAdmissionApplicationsIdRouteWithChildren
+  '/api/admission/interviews/$id': typeof ApiAdmissionInterviewsIdRoute
+  '/api/admission/interviews/doc-types': typeof ApiAdmissionInterviewsDocTypesRoute
+  '/api/admission/interviews/docs': typeof ApiAdmissionInterviewsDocsRoute
+  '/api/admission/interviews/waitlist': typeof ApiAdmissionInterviewsWaitlistRoute
   '/api/attendance/madrassa/mark': typeof ApiAttendanceMadrassaMarkRoute
   '/api/attendance/madrassa/roster': typeof ApiAttendanceMadrassaRosterRoute
   '/api/attendance/reports/daily-summary': typeof ApiAttendanceReportsDailySummaryRoute
@@ -1808,6 +1857,7 @@ export interface FileRouteTypes {
     | '/api/admin/super-admin'
     | '/api/admission/applications'
     | '/api/admission/guardian-suggestions'
+    | '/api/admission/interviews'
     | '/api/admission/students'
     | '/api/exams/halls'
     | '/api/exams/sessions'
@@ -1848,6 +1898,10 @@ export interface FileRouteTypes {
     | '/api/academic/school/timetable'
     | '/api/admin/student-lifecycle/$id'
     | '/api/admission/applications/$id'
+    | '/api/admission/interviews/$id'
+    | '/api/admission/interviews/doc-types'
+    | '/api/admission/interviews/docs'
+    | '/api/admission/interviews/waitlist'
     | '/api/attendance/madrassa/mark'
     | '/api/attendance/madrassa/roster'
     | '/api/attendance/reports/daily-summary'
@@ -1981,6 +2035,7 @@ export interface FileRouteTypes {
     | '/api/admin/super-admin'
     | '/api/admission/applications'
     | '/api/admission/guardian-suggestions'
+    | '/api/admission/interviews'
     | '/api/admission/students'
     | '/api/exams/halls'
     | '/api/exams/sessions'
@@ -2021,6 +2076,10 @@ export interface FileRouteTypes {
     | '/api/academic/school/timetable'
     | '/api/admin/student-lifecycle/$id'
     | '/api/admission/applications/$id'
+    | '/api/admission/interviews/$id'
+    | '/api/admission/interviews/doc-types'
+    | '/api/admission/interviews/docs'
+    | '/api/admission/interviews/waitlist'
     | '/api/attendance/madrassa/mark'
     | '/api/attendance/madrassa/roster'
     | '/api/attendance/reports/daily-summary'
@@ -2164,6 +2223,7 @@ export interface FileRouteTypes {
     | '/api/admin/super-admin'
     | '/api/admission/applications'
     | '/api/admission/guardian-suggestions'
+    | '/api/admission/interviews'
     | '/api/admission/students'
     | '/api/exams/halls'
     | '/api/exams/sessions'
@@ -2204,6 +2264,10 @@ export interface FileRouteTypes {
     | '/api/academic/school/timetable'
     | '/api/admin/student-lifecycle/$id'
     | '/api/admission/applications/$id'
+    | '/api/admission/interviews/$id'
+    | '/api/admission/interviews/doc-types'
+    | '/api/admission/interviews/docs'
+    | '/api/admission/interviews/waitlist'
     | '/api/attendance/madrassa/mark'
     | '/api/attendance/madrassa/roster'
     | '/api/attendance/reports/daily-summary'
@@ -2295,6 +2359,7 @@ export interface RootRouteChildren {
   ApiAdminSuperAdminRoute: typeof ApiAdminSuperAdminRoute
   ApiAdmissionApplicationsRoute: typeof ApiAdmissionApplicationsRouteWithChildren
   ApiAdmissionGuardianSuggestionsRoute: typeof ApiAdmissionGuardianSuggestionsRoute
+  ApiAdmissionInterviewsRoute: typeof ApiAdmissionInterviewsRouteWithChildren
   ApiAdmissionStudentsRoute: typeof ApiAdmissionStudentsRoute
   ApiExamsHallsRoute: typeof ApiExamsHallsRouteWithChildren
   ApiExamsSessionsRoute: typeof ApiExamsSessionsRouteWithChildren
@@ -2880,6 +2945,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdmissionGuardianSuggestionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admission/interviews': {
+      id: '/api/admission/interviews'
+      path: '/api/admission/interviews'
+      fullPath: '/api/admission/interviews'
+      preLoaderRoute: typeof ApiAdmissionInterviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admission/students': {
       id: '/api/admission/students'
       path: '/api/admission/students'
@@ -3138,6 +3210,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/admission/applications/$id'
       preLoaderRoute: typeof ApiAdmissionApplicationsIdRouteImport
       parentRoute: typeof ApiAdmissionApplicationsRoute
+    }
+    '/api/admission/interviews/$id': {
+      id: '/api/admission/interviews/$id'
+      path: '/$id'
+      fullPath: '/api/admission/interviews/$id'
+      preLoaderRoute: typeof ApiAdmissionInterviewsIdRouteImport
+      parentRoute: typeof ApiAdmissionInterviewsRoute
+    }
+    '/api/admission/interviews/doc-types': {
+      id: '/api/admission/interviews/doc-types'
+      path: '/doc-types'
+      fullPath: '/api/admission/interviews/doc-types'
+      preLoaderRoute: typeof ApiAdmissionInterviewsDocTypesRouteImport
+      parentRoute: typeof ApiAdmissionInterviewsRoute
+    }
+    '/api/admission/interviews/docs': {
+      id: '/api/admission/interviews/docs'
+      path: '/docs'
+      fullPath: '/api/admission/interviews/docs'
+      preLoaderRoute: typeof ApiAdmissionInterviewsDocsRouteImport
+      parentRoute: typeof ApiAdmissionInterviewsRoute
+    }
+    '/api/admission/interviews/waitlist': {
+      id: '/api/admission/interviews/waitlist'
+      path: '/waitlist'
+      fullPath: '/api/admission/interviews/waitlist'
+      preLoaderRoute: typeof ApiAdmissionInterviewsWaitlistRouteImport
+      parentRoute: typeof ApiAdmissionInterviewsRoute
     }
     '/api/attendance/madrassa/mark': {
       id: '/api/attendance/madrassa/mark'
@@ -4037,6 +4137,26 @@ const ApiAdmissionApplicationsRouteWithChildren =
     ApiAdmissionApplicationsRouteChildren,
   )
 
+interface ApiAdmissionInterviewsRouteChildren {
+  ApiAdmissionInterviewsIdRoute: typeof ApiAdmissionInterviewsIdRoute
+  ApiAdmissionInterviewsDocTypesRoute: typeof ApiAdmissionInterviewsDocTypesRoute
+  ApiAdmissionInterviewsDocsRoute: typeof ApiAdmissionInterviewsDocsRoute
+  ApiAdmissionInterviewsWaitlistRoute: typeof ApiAdmissionInterviewsWaitlistRoute
+}
+
+const ApiAdmissionInterviewsRouteChildren: ApiAdmissionInterviewsRouteChildren =
+  {
+    ApiAdmissionInterviewsIdRoute: ApiAdmissionInterviewsIdRoute,
+    ApiAdmissionInterviewsDocTypesRoute: ApiAdmissionInterviewsDocTypesRoute,
+    ApiAdmissionInterviewsDocsRoute: ApiAdmissionInterviewsDocsRoute,
+    ApiAdmissionInterviewsWaitlistRoute: ApiAdmissionInterviewsWaitlistRoute,
+  }
+
+const ApiAdmissionInterviewsRouteWithChildren =
+  ApiAdmissionInterviewsRoute._addFileChildren(
+    ApiAdmissionInterviewsRouteChildren,
+  )
+
 interface ApiExamsHallsRouteChildren {
   ApiExamsHallsIdRoute: typeof ApiExamsHallsIdRoute
 }
@@ -4321,6 +4441,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminSuperAdminRoute: ApiAdminSuperAdminRoute,
   ApiAdmissionApplicationsRoute: ApiAdmissionApplicationsRouteWithChildren,
   ApiAdmissionGuardianSuggestionsRoute: ApiAdmissionGuardianSuggestionsRoute,
+  ApiAdmissionInterviewsRoute: ApiAdmissionInterviewsRouteWithChildren,
   ApiAdmissionStudentsRoute: ApiAdmissionStudentsRoute,
   ApiExamsHallsRoute: ApiExamsHallsRouteWithChildren,
   ApiExamsSessionsRoute: ApiExamsSessionsRouteWithChildren,

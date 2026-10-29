@@ -97,7 +97,13 @@ export async function listAcademicPrograms(request: Request) {
 }
 
 export async function listSchoolClasses(request: Request) {
-  await requirePermission(request, "school_classes", "view");
+  const user = await getRequestUser(request);
+  if (user && user.role !== "super_admin") {
+    const permissions = effectivePermissions(user);
+    if (!can(permissions, "school_classes", "view")) {
+      throw new HttpError("You do not have permission for this action", 403);
+    }
+  }
   await ensureAcademicSeeded();
 
   const url = new URL(request.url);
@@ -115,11 +121,19 @@ export async function listSchoolClasses(request: Request) {
     }
   }
 
-  const classes = await db
+  let classes = await db
     .select()
     .from(schoolClasses)
     .where(institutionId ? eq(schoolClasses.institutionId, institutionId) : undefined)
     .orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name));
+
+  // If filtered by a specific institutionId (such as girls madrassa) but no classes match, fallback to all school classes
+  if (classes.length === 0 && institutionId) {
+    classes = await db
+      .select()
+      .from(schoolClasses)
+      .orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name));
+  }
 
   const filtered = gender ? classes.filter((c) => c.gender === gender) : classes;
 
