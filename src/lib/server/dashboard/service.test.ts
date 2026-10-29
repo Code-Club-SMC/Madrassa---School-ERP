@@ -83,14 +83,22 @@ describe("Dashboard Real Data & Expense Tracking", () => {
 
     // Income sources should have donations and zakat
     const incomeSources = monthlyCashflow.incomeSources;
-    const donSource = incomeSources.find((s) => s.id === "donations");
+    const donSource = incomeSources.find((s) => s.id === "general" || s.id === "donations");
     const zakatSource = incomeSources.find((s) => s.id === "zakat");
 
     expect(donSource).toBeDefined();
-    expect(donSource?.amount).toBeGreaterThan(0);
+    expect(donSource?.amount).toBe(100000);
 
     expect(zakatSource).toBeDefined();
-    expect(zakatSource?.amount).toBeGreaterThan(0);
+    expect(zakatSource?.amount).toBe(250000);
+
+    // Verify Donations KPI and Summary matches real Rs 365,000 receipts
+    expect(data.kpis.donationsValue).toBe(365000);
+    expect(data.donationsSummary.totalReceived).toBe(365000);
+    expect(data.donationsSummary.receiptsCount).toBe(3);
+    expect(data.donationsSummary.zakat).toBe(250000);
+    expect(data.donationsSummary.sadqa).toBe(15000);
+    expect(data.donationsSummary.general).toBe(100000);
 
     // Daily cashflow should not be 0
     expect(data.cashflowMeta.daily.totalExpenses).toBeGreaterThan(0);
