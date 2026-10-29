@@ -18,23 +18,39 @@ type Props = {
 export function KpiCard({ icon: Icon, value, label, labelUrdu, subline, trend, sparkline, tone = "default" }: Props) {
   const { lang } = useLanguage();
   return (
-    <Card className="p-6 border-border/70 hover:shadow-sm transition-shadow">
-      <div className="flex items-start gap-4">
-        <div className="rounded-xl bg-primary/10 p-2.5 shrink-0">
-          <Icon className="h-5 w-5 text-primary" />
+    <Card className="p-4 sm:p-5 border-border/70 hover:shadow-xs transition-shadow min-w-0 overflow-hidden flex flex-col justify-between">
+      <div className="flex items-start gap-3 sm:gap-3.5 min-w-0">
+        <div className="rounded-xl bg-primary/10 p-2 sm:p-2.5 shrink-0">
+          <Icon className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-primary" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className={cn("font-heading text-3xl font-bold tracking-tight tabular-nums", tone === "destructive" && "text-destructive")}>{value}</p>
+          <p
+            className={cn(
+              "font-heading text-lg sm:text-xl lg:text-2xl font-bold tracking-tight tabular-nums truncate",
+              tone === "destructive" && "text-destructive",
+            )}
+            title={value}
+          >
+            {value}
+          </p>
           {lang === "ur" ? (
-            <p dir="rtl" lang="ur" className="font-urdu text-base text-foreground leading-tight mt-1 truncate">{labelUrdu}</p>
+            <p dir="rtl" lang="ur" className="font-urdu text-sm sm:text-base text-foreground leading-snug mt-0.5 truncate" title={labelUrdu}>
+              {labelUrdu}
+            </p>
           ) : (
-            <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground truncate">{label}</p>
+            <p className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground truncate" title={label}>
+              {label}
+            </p>
           )}
-          {subline && <p className="text-[11px] text-muted-foreground mt-1">{subline}</p>}
+          {subline && (
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate" title={subline}>
+              {subline}
+            </p>
+          )}
           {trend && (
             <p
               className={cn(
-                "text-[11px] mt-1 inline-flex items-center gap-1",
+                "text-[11px] mt-1 inline-flex items-center gap-1 truncate",
                 trend.direction === "up" ? "text-chart-3" : "text-destructive",
               )}
             >

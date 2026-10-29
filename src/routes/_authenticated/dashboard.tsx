@@ -749,23 +749,23 @@ function DashboardPage() {
       {/* Welcome banner */}
       <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/15 p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="font-heading text-xl font-bold tracking-tight">
+          <div className="min-w-0">
+            <h1 className="font-heading text-xl font-bold tracking-tight truncate">
               {lang === "ur" ? "السلام عليكم" : "Assalamu Alaikum"}, {user?.name ?? "User"}
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <p className="text-sm text-muted-foreground mt-0.5 truncate">
               {lang === "ur" ? todayUrdu : today}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className={cn("p-2.5 rounded-xl border", activeConfig.badgeBg)}>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={cn("p-2.5 rounded-xl border shrink-0", activeConfig.badgeBg)}>
               <ActiveIcon className="h-5 w-5" />
             </div>
-            <div className="text-start sm:text-end">
-              <p className="font-semibold text-sm leading-tight">
+            <div className="text-start sm:text-end min-w-0">
+              <p className="font-semibold text-sm leading-tight truncate">
                 {lang === "ur" ? activeConfig.labelUr : activeConfig.labelEn}
               </p>
-              <p className="font-urdu text-xs text-muted-foreground mt-0.5">
+              <p className="font-urdu text-xs text-muted-foreground mt-0.5 truncate">
                 {lang === "ur" ? activeConfig.taglineUr : activeConfig.taglineEn}
               </p>
             </div>
@@ -825,7 +825,7 @@ function DashboardPage() {
       />
 
       {/* KPI row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         <KpiCard
           icon={Users}
           value={currentKpis.totalStudents}
@@ -1018,28 +1018,28 @@ function DashboardPage() {
               })}
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3 mt-5">
-            <div className="rounded-lg bg-muted/50 p-3">
-              <p className="font-heading text-lg font-bold tabular-nums">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-5">
+            <div className="rounded-lg bg-muted/50 p-2.5 sm:p-3 min-w-0">
+              <p className="font-heading text-base sm:text-lg font-bold tabular-nums truncate">
                 {attendanceSummary.avgRate}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground truncate">
                 {lang === "ur" ? "اوسط حاضری" : "Average Rate"}
               </p>
             </div>
-            <div className="rounded-lg bg-muted/50 p-3">
-              <p className="font-heading text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+            <div className="rounded-lg bg-muted/50 p-2.5 sm:p-3 min-w-0">
+              <p className="font-heading text-base sm:text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400 truncate" title={attendanceSummary.bestDay}>
                 {attendanceSummary.bestDay}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground truncate">
                 {lang === "ur" ? "بہترین دن" : "Best Day"}
               </p>
             </div>
-            <div className="rounded-lg bg-muted/50 p-3">
-              <p className="font-heading text-lg font-bold tabular-nums text-amber-600 dark:text-amber-400">
+            <div className="rounded-lg bg-muted/50 p-2.5 sm:p-3 min-w-0">
+              <p className="font-heading text-base sm:text-lg font-bold tabular-nums text-amber-600 dark:text-amber-400 truncate" title={attendanceSummary.lowDay}>
                 {attendanceSummary.lowDay}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground truncate">
                 {lang === "ur" ? "کم ترین دن" : "Lowest Day"}
               </p>
             </div>
@@ -1070,28 +1070,28 @@ function DashboardPage() {
             </div>
 
             {/* 3 Quick Financial Stat Chips */}
-            <div className="grid grid-cols-3 gap-2.5 mb-3">
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-2.5">
+            <div className="grid grid-cols-3 gap-2 sm:gap-2.5 mb-3">
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-2 sm:p-2.5 min-w-0">
                 <p className="text-[10px] text-muted-foreground truncate">
                   {lang === "ur" ? "وصول شدہ فیس" : "Collected"}
                 </p>
-                <p className="font-heading text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                <p className="font-heading text-xs sm:text-sm md:text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums truncate" title={formatPKR(financialMeta.collected)}>
                   {formatPKR(financialMeta.collected)}
                 </p>
               </div>
-              <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-2.5">
+              <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-2 sm:p-2.5 min-w-0">
                 <p className="text-[10px] text-muted-foreground truncate">
                   {lang === "ur" ? "بقایا جات" : "Pending Arrears"}
                 </p>
-                <p className="font-heading text-sm sm:text-base font-bold text-destructive tabular-nums">
+                <p className="font-heading text-xs sm:text-sm md:text-base font-bold text-destructive tabular-nums truncate" title={formatPKR(financialMeta.pending)}>
                   {formatPKR(financialMeta.pending)}
                 </p>
               </div>
-              <div className="rounded-xl border border-border bg-muted/40 p-2.5">
+              <div className="rounded-xl border border-border bg-muted/40 p-2 sm:p-2.5 min-w-0">
                 <p className="text-[10px] text-muted-foreground truncate">
                   {lang === "ur" ? "ماہانہ ہدف" : "Target"}
                 </p>
-                <p className="font-heading text-sm sm:text-base font-bold tabular-nums">
+                <p className="font-heading text-xs sm:text-sm md:text-base font-bold tabular-nums truncate" title={formatPKR(financialMeta.target)}>
                   {formatPKR(financialMeta.target)}
                 </p>
               </div>
@@ -1236,9 +1236,9 @@ function DashboardPage() {
         {/* 3 Top Summary Highlight Chips */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 my-4">
           {/* Total Income */}
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3.5 sm:p-4 flex items-center justify-between gap-3 min-w-0">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground truncate">
                 {lang === "ur"
                   ? cashflowPeriod === "monthly"
                     ? "کل ماہانہ آمدن"
@@ -1247,23 +1247,23 @@ function DashboardPage() {
                     ? "Total Monthly Income"
                     : "Today's Total Income"}
               </p>
-              <p className="font-heading text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums mt-1">
+              <p className="font-heading text-lg sm:text-xl md:text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums mt-0.5 truncate" title={formatPKR(activeCashflow.totalIncome)}>
                 {formatPKR(activeCashflow.totalIncome)}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-1">
+              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
                 {activeCashflow.incomeSources.length}{" "}
                 {lang === "ur" ? "فعال ذرائع سے وصولی" : "revenue streams"}
               </p>
             </div>
-            <div className="h-11 w-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-              <ArrowDownLeft className="h-6 w-6" />
+            <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <ArrowDownLeft className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
           </div>
 
           {/* Total Expenses */}
-          <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">
+          <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3.5 sm:p-4 flex items-center justify-between gap-3 min-w-0">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground truncate">
                 {lang === "ur"
                   ? cashflowPeriod === "monthly"
                     ? "کل ماہانہ اخراجات"
@@ -1272,23 +1272,23 @@ function DashboardPage() {
                     ? "Total Monthly Expenses"
                     : "Today's Total Expenses"}
               </p>
-              <p className="font-heading text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400 tabular-nums mt-1">
+              <p className="font-heading text-lg sm:text-xl md:text-2xl font-bold text-rose-600 dark:text-rose-400 tabular-nums mt-0.5 truncate" title={formatPKR(activeCashflow.totalExpenses)}>
                 {formatPKR(activeCashflow.totalExpenses)}
               </p>
-              <p className="text-[11px] text-muted-foreground mt-1">
+              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
                 {activeCashflow.expenseCategories.length}{" "}
                 {lang === "ur" ? "شعبہ جاتی مدات میں صرف" : "operational heads"}
               </p>
             </div>
-            <div className="h-11 w-11 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-              <ArrowUpRight className="h-6 w-6" />
+            <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+              <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
           </div>
 
           {/* Net Cashflow / Surplus */}
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 sm:p-4 flex items-center justify-between gap-3 min-w-0">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground truncate">
                 {lang === "ur"
                   ? cashflowPeriod === "monthly"
                     ? "خالص ماہانہ سرپلس / بچت"
@@ -1297,14 +1297,14 @@ function DashboardPage() {
                     ? "Net Monthly Surplus"
                     : "Today's Net Surplus"}
               </p>
-              <p className="font-heading text-xl sm:text-2xl font-bold text-primary tabular-nums mt-1">
+              <p className="font-heading text-lg sm:text-xl md:text-2xl font-bold text-primary tabular-nums mt-0.5 truncate" title={formatPKR(netSurplus)}>
                 {formatPKR(netSurplus)}
               </p>
-              <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                 <Badge
                   variant="outline"
                   className={cn(
-                    "text-[10px] px-1.5 py-0 font-medium",
+                    "text-[10px] px-1.5 py-0 font-medium shrink-0",
                     netSurplus >= 0
                       ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
                       : "border-destructive text-destructive",
@@ -1312,13 +1312,13 @@ function DashboardPage() {
                 >
                   {surplusMargin}% {lang === "ur" ? "سرپلس شرح" : "margin"}
                 </Badge>
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground truncate">
                   {lang === "ur" ? "آمدن منہا اخراجات" : "Income - Expense"}
                 </span>
               </div>
             </div>
-            <div className="h-11 w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <Wallet className="h-6 w-6" />
+            <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Wallet className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
           </div>
         </div>
@@ -1361,7 +1361,7 @@ function DashboardPage() {
                           </div>
                         </div>
                         <div className="text-end shrink-0">
-                          <p className="font-heading text-xs sm:text-sm font-semibold tabular-nums text-foreground">
+                          <p className="font-heading text-xs sm:text-sm font-semibold tabular-nums text-foreground truncate max-w-[120px]" title={formatPKR(item.amount)}>
                             {formatPKR(item.amount)}
                           </p>
                           <Badge variant="secondary" className="text-[10px] px-1 py-0 font-mono">
@@ -1381,11 +1381,11 @@ function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs">
-              <span className="font-medium text-muted-foreground">
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs gap-2 min-w-0">
+              <span className="font-medium text-muted-foreground truncate">
                 {lang === "ur" ? "مجموعی موصولی آمدن:" : "Total Income Received:"}
               </span>
-              <span className="font-heading font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
+              <span className="font-heading font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums truncate shrink-0">
                 {formatPKR(activeCashflow.totalIncome)}
               </span>
             </div>
@@ -1427,7 +1427,7 @@ function DashboardPage() {
                           </div>
                         </div>
                         <div className="text-end shrink-0">
-                          <p className="font-heading text-xs sm:text-sm font-semibold tabular-nums text-foreground">
+                          <p className="font-heading text-xs sm:text-sm font-semibold tabular-nums text-foreground truncate max-w-[120px]" title={formatPKR(item.amount)}>
                             {formatPKR(item.amount)}
                           </p>
                           <Badge variant="secondary" className="text-[10px] px-1 py-0 font-mono">
@@ -1447,11 +1447,11 @@ function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs">
-              <span className="font-medium text-muted-foreground">
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs gap-2 min-w-0">
+              <span className="font-medium text-muted-foreground truncate">
                 {lang === "ur" ? "مجموعی صرف شدہ اخراجات:" : "Total Expenses Disbursed:"}
               </span>
-              <span className="font-heading font-bold text-sm text-rose-600 dark:text-rose-400 tabular-nums">
+              <span className="font-heading font-bold text-sm text-rose-600 dark:text-rose-400 tabular-nums truncate shrink-0">
                 {formatPKR(activeCashflow.totalExpenses)}
               </span>
             </div>
@@ -1502,47 +1502,47 @@ function DashboardPage() {
 
         {/* 4 Summary Chips */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4">
-          <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-            <p className="text-xs text-muted-foreground">
+          <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 min-w-0">
+            <p className="text-xs text-muted-foreground truncate">
               {lang === "ur" ? "کل موصولی عطیات" : "Total Received"}
             </p>
-            <p className="font-heading text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 tabular-nums">
+            <p className="font-heading text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 tabular-nums truncate" title={formatPKR(donationsSummary.totalReceived ?? 365000)}>
               {formatPKR(donationsSummary.totalReceived ?? 365000)}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
               {donationsSummary.receiptsCount ?? 3} {lang === "ur" ? "رسیدات جاری ہوئیں" : "receipts issued"}
             </p>
           </div>
-          <div className="p-3.5 rounded-xl border border-blue-500/20 bg-blue-500/5">
-            <p className="text-xs text-blue-700 dark:text-blue-400">
+          <div className="p-3.5 rounded-xl border border-blue-500/20 bg-blue-500/5 min-w-0">
+            <p className="text-xs text-blue-700 dark:text-blue-400 truncate">
               {lang === "ur" ? "زکوٰۃ فنڈ" : "Zakat Fund"}
             </p>
-            <p className="font-heading text-lg font-bold text-blue-700 dark:text-blue-400 mt-0.5 tabular-nums">
+            <p className="font-heading text-base sm:text-lg font-bold text-blue-700 dark:text-blue-400 mt-0.5 tabular-nums truncate" title={formatPKR(donationsSummary.zakat ?? 250000)}>
               {formatPKR(donationsSummary.zakat ?? 250000)}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
               {lang === "ur" ? "یتامیٰ و مستحق طلبہ فیس" : "Orphan student fees & welfare"}
             </p>
           </div>
-          <div className="p-3.5 rounded-xl border border-border bg-card/60">
-            <p className="text-xs text-muted-foreground">
+          <div className="p-3.5 rounded-xl border border-border bg-card/60 min-w-0">
+            <p className="text-xs text-muted-foreground truncate">
               {lang === "ur" ? "عمومی عطیات" : "General Donations"}
             </p>
-            <p className="font-heading text-lg font-bold text-foreground mt-0.5 tabular-nums">
+            <p className="font-heading text-base sm:text-lg font-bold text-foreground mt-0.5 tabular-nums truncate" title={formatPKR(donationsSummary.general ?? 100000)}>
               {formatPKR(donationsSummary.general ?? 100000)}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
               {lang === "ur" ? "بلڈنگ و کیمپس توسیع فنڈ" : "Building & expansion fund"}
             </p>
           </div>
-          <div className="p-3.5 rounded-xl border border-amber-500/20 bg-amber-500/5">
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+          <div className="p-3.5 rounded-xl border border-amber-500/20 bg-amber-500/5 min-w-0">
+            <p className="text-xs text-amber-700 dark:text-amber-400 truncate">
               {lang === "ur" ? "صدقات و خیرات" : "Sadqa & Charity"}
             </p>
-            <p className="font-heading text-lg font-bold text-amber-700 dark:text-amber-400 mt-0.5 tabular-nums">
+            <p className="font-heading text-base sm:text-lg font-bold text-amber-700 dark:text-amber-400 mt-0.5 tabular-nums truncate" title={formatPKR(donationsSummary.sadqa ?? 15000)}>
               {formatPKR(donationsSummary.sadqa ?? 15000)}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
               {lang === "ur" ? "کتب، اسٹیشنری و کاپیاں" : "Inventory & notebooks supply"}
             </p>
           </div>
@@ -1554,12 +1554,12 @@ function DashboardPage() {
             <table className="w-full text-xs text-start">
               <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="py-2.5 px-3 text-start">{lang === "ur" ? "رسید نمبر و تاریخ" : "Receipt & Date"}</th>
-                  <th className="py-2.5 px-3 text-start">{lang === "ur" ? "مخیر / ڈونر" : "Donor"}</th>
-                  <th className="py-2.5 px-3 text-start">{lang === "ur" ? "قسم" : "Type"}</th>
-                  <th className="py-2.5 px-3 text-start">{lang === "ur" ? "مقصد" : "Purpose"}</th>
-                  <th className="py-2.5 px-3 text-start">{lang === "ur" ? "طریقہ" : "Method"}</th>
-                  <th className="py-2.5 px-3 text-end">{lang === "ur" ? "رقم (روپے)" : "Amount (PKR)"}</th>
+                  <th className="py-2.5 px-3 text-start whitespace-nowrap">{lang === "ur" ? "رسید نمبر و تاریخ" : "Receipt & Date"}</th>
+                  <th className="py-2.5 px-3 text-start whitespace-nowrap">{lang === "ur" ? "مخیر / ڈونر" : "Donor"}</th>
+                  <th className="py-2.5 px-3 text-start whitespace-nowrap">{lang === "ur" ? "قسم" : "Type"}</th>
+                  <th className="py-2.5 px-3 text-start whitespace-nowrap">{lang === "ur" ? "مقصد" : "Purpose"}</th>
+                  <th className="py-2.5 px-3 text-start whitespace-nowrap">{lang === "ur" ? "طریقہ" : "Method"}</th>
+                  <th className="py-2.5 px-3 text-end whitespace-nowrap">{lang === "ur" ? "رقم (روپے)" : "Amount (PKR)"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
@@ -1569,15 +1569,15 @@ function DashboardPage() {
                   { id: "d3", receiptNo: "DR-2026-0003", date: "2026-05-22", donor: "Mrs. Aisha Khan", donorUrdu: "عائشہ خان", type: "general", purpose: "Building fund", amountPaisa: 10000000, method: "online" },
                 ]).slice(0, 5).map((d: any) => (
                   <tr key={d.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="py-2.5 px-3">
+                    <td className="py-2.5 px-3 whitespace-nowrap">
                       <p className="font-mono font-semibold text-primary">{d.receiptNo}</p>
                       <p className="text-[10px] text-muted-foreground">{d.date}</p>
                     </td>
-                    <td className="py-2.5 px-3 font-medium">
-                      <p>{lang === "ur" ? (d.donorUrdu || d.donor) : d.donor}</p>
-                      {d.phone && <p className="text-[10px] text-muted-foreground font-mono">{d.phone}</p>}
+                    <td className="py-2.5 px-3 font-medium whitespace-nowrap">
+                      <p className="truncate max-w-[160px]">{lang === "ur" ? (d.donorUrdu || d.donor) : d.donor}</p>
+                      {d.phone && <p className="text-[10px] text-muted-foreground font-mono truncate">{d.phone}</p>}
                     </td>
-                    <td className="py-2.5 px-3">
+                    <td className="py-2.5 px-3 whitespace-nowrap">
                       <Badge
                         variant="outline"
                         className={cn(
@@ -1592,13 +1592,13 @@ function DashboardPage() {
                         {d.type === "zakat" ? (lang === "ur" ? "زکوٰۃ" : "Zakat") : d.type === "sadqa" ? (lang === "ur" ? "صدقہ" : "Sadqa") : (lang === "ur" ? "عام عطیہ" : "General")}
                       </Badge>
                     </td>
-                    <td className="py-2.5 px-3 text-muted-foreground truncate max-w-[200px]">
+                    <td className="py-2.5 px-3 text-muted-foreground truncate max-w-[200px]" title={d.purpose}>
                       {d.purpose}
                     </td>
-                    <td className="py-2.5 px-3 capitalize font-mono text-[11px] text-muted-foreground">
+                    <td className="py-2.5 px-3 capitalize font-mono text-[11px] text-muted-foreground whitespace-nowrap">
                       {d.method}
                     </td>
-                    <td className="py-2.5 px-3 text-end font-heading font-semibold tabular-nums text-foreground">
+                    <td className="py-2.5 px-3 text-end font-heading font-semibold tabular-nums text-foreground whitespace-nowrap">
                       {formatPKR(Math.round(Number(d.amountPaisa || 0) / 100))}
                     </td>
                   </tr>
@@ -1635,47 +1635,47 @@ function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 my-4">
-          <div className="p-3.5 rounded-xl border border-border bg-card/60">
-            <p className="text-xs text-muted-foreground">
+          <div className="p-3.5 rounded-xl border border-border bg-card/60 min-w-0">
+            <p className="text-xs text-muted-foreground truncate">
               {lang === "ur" ? "کل تخمینہ مالیت" : "Total Valuation"}
             </p>
-            <p className="font-heading text-lg font-bold text-foreground mt-0.5">
+            <p className="font-heading text-base sm:text-lg font-bold text-foreground mt-0.5 tabular-nums truncate" title={formatPKR(inventorySummary.totalValue ?? 0)}>
               {formatPKR(inventorySummary.totalValue ?? 0)}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
               {inventorySummary.totalItems ?? 0} {lang === "ur" ? "مختلف اقسام کا سامان" : "catalog items"}
             </p>
           </div>
-          <div className="p-3.5 rounded-xl border border-border bg-card/60">
-            <p className="text-xs text-muted-foreground">
+          <div className="p-3.5 rounded-xl border border-border bg-card/60 min-w-0">
+            <p className="text-xs text-muted-foreground truncate">
               {lang === "ur" ? "موجودہ کل مقدار" : "Total Stock In-Hand"}
             </p>
-            <p className="font-heading text-lg font-bold text-foreground mt-0.5">
+            <p className="font-heading text-base sm:text-lg font-bold text-foreground mt-0.5 tabular-nums truncate">
               {inventorySummary.totalUnits ?? 0} {lang === "ur" ? "اکائیاں" : "units"}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
               {lang === "ur" ? "کتب، کاپیاں و اشیاء" : "Books, stationery & items"}
             </p>
           </div>
-          <div className="p-3.5 rounded-xl border border-amber-500/20 bg-amber-500/5">
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+          <div className="p-3.5 rounded-xl border border-amber-500/20 bg-amber-500/5 min-w-0">
+            <p className="text-xs text-amber-700 dark:text-amber-400 truncate">
               {lang === "ur" ? "کم اسٹاک اشتباہ" : "Low Stock Warnings"}
             </p>
-            <p className="font-heading text-lg font-bold text-amber-700 dark:text-amber-400 mt-0.5">
+            <p className="font-heading text-base sm:text-lg font-bold text-amber-700 dark:text-amber-400 mt-0.5 tabular-nums truncate">
               {inventorySummary.lowStockCount ?? 0} {lang === "ur" ? "اشیاء" : "items"}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
               {lang === "ur" ? "دوبارہ خریداری مطلوب ہے" : "Requires restocking"}
             </p>
           </div>
-          <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5">
-            <p className="text-xs text-emerald-700 dark:text-emerald-400">
+          <div className="p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 min-w-0">
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 truncate">
               {lang === "ur" ? "شعبہ جاتی استعمال" : "Physical Assets Status"}
             </p>
-            <p className="font-heading text-lg font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">
+            <p className="font-heading text-base sm:text-lg font-bold text-emerald-700 dark:text-emerald-400 mt-0.5 tabular-nums truncate">
               {lang === "ur" ? "فعال اور زیر استعمال" : "Active & Allocated"}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
               {lang === "ur" ? "مدارس و سکول کیمپس" : "Campus facilities & classes"}
             </p>
           </div>
