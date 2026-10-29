@@ -25,7 +25,7 @@ export async function requirePermission(request: Request, module: ModuleKey, act
   return user;
 }
 
-function effectivePermissions(user: User): UserPermissions {
+export function effectivePermissions(user: User): UserPermissions {
   if (user.role === "super_admin") return getSuperAdminPermissions();
   if (user.permissions) return user.permissions;
   return ROLE_DEFAULTS[user.role as DefaultableRole] ?? {};

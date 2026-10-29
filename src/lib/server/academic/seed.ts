@@ -5,6 +5,7 @@ import {
   madrassaCategories,
   madrassaSubcategories,
   programs,
+  schoolClasses,
 } from "@/db/schema/academic";
 import { buildMadrassaCategories } from "@/lib/madrassa-grade-catalog";
 
@@ -108,6 +109,21 @@ export const ACADEMIC_PROGRAMS = [
   },
 ] as const;
 
+export const DEFAULT_SCHOOL_CLASSES = [
+  { id: "class_nursery", institutionId: "al_qasim_academy", code: "NUR", name: "Nursery", nameUrdu: "نرسری", level: "pre-primary", govtEquivalent: "Early Childhood", displayOrder: 1, fee: 2500, active: true, gender: "male" as const },
+  { id: "class_kg", institutionId: "al_qasim_academy", code: "KG", name: "KG", nameUrdu: "کی جی", level: "pre-primary", govtEquivalent: "Kindergarten", displayOrder: 2, fee: 2500, active: true, gender: "male" as const },
+  { id: "class_1", institutionId: "al_qasim_academy", code: "1", name: "Class 1", nameUrdu: "جماعت اول", level: "primary", govtEquivalent: "Primary", displayOrder: 3, fee: 3000, active: true, gender: "male" as const },
+  { id: "class_2", institutionId: "al_qasim_academy", code: "2", name: "Class 2", nameUrdu: "جماعت دوم", level: "primary", govtEquivalent: "Primary", displayOrder: 4, fee: 3000, active: true, gender: "male" as const },
+  { id: "class_3", institutionId: "al_qasim_academy", code: "3", name: "Class 3", nameUrdu: "جماعت سوم", level: "primary", govtEquivalent: "Primary", displayOrder: 5, fee: 3000, active: true, gender: "male" as const },
+  { id: "class_4", institutionId: "al_qasim_academy", code: "4", name: "Class 4", nameUrdu: "جماعت چہارم", level: "primary", govtEquivalent: "Primary", displayOrder: 6, fee: 3500, active: true, gender: "male" as const },
+  { id: "class_5", institutionId: "al_qasim_academy", code: "5", name: "Class 5", nameUrdu: "جماعت پنجم", level: "primary", govtEquivalent: "Primary", displayOrder: 7, fee: 3500, active: true, gender: "male" as const },
+  { id: "class_6", institutionId: "al_qasim_academy", code: "6", name: "Class 6", nameUrdu: "جماعت ششم", level: "middle", govtEquivalent: "Middle", displayOrder: 8, fee: 4000, active: true, gender: "male" as const },
+  { id: "class_7", institutionId: "al_qasim_academy", code: "7", name: "Class 7", nameUrdu: "جماعت ہفتم", level: "middle", govtEquivalent: "Middle", displayOrder: 9, fee: 4000, active: true, gender: "male" as const },
+  { id: "class_8", institutionId: "al_qasim_academy", code: "8", name: "Class 8", nameUrdu: "جماعت ہشتم", level: "middle", govtEquivalent: "Middle", displayOrder: 10, fee: 4000, active: true, gender: "male" as const },
+  { id: "class_9", institutionId: "al_qasim_academy", code: "9", name: "Class 9", nameUrdu: "جماعت نہم", level: "secondary", govtEquivalent: "Matric 9th", displayOrder: 11, fee: 4500, active: true, gender: "male" as const },
+  { id: "class_10", institutionId: "al_qasim_academy", code: "10", name: "Class 10", nameUrdu: "جماعت دہم", level: "secondary", govtEquivalent: "Matric 10th", displayOrder: 12, fee: 4500, active: true, gender: "male" as const },
+];
+
 let seeded = false;
 
 export async function ensureAcademicSeeded(force = false) {
@@ -116,7 +132,8 @@ export async function ensureAcademicSeeded(force = false) {
   }
   try {
     const [existing] = await db.select({ count: count() }).from(madrassaCategories);
-    if (Number(existing?.count ?? 0) === 0 || force) {
+    const [existingClasses] = await db.select({ count: count() }).from(schoolClasses);
+    if (Number(existing?.count ?? 0) === 0 || Number(existingClasses?.count ?? 0) === 0 || force) {
       await seedAcademicCatalog();
     }
     seeded = true;
@@ -139,6 +156,28 @@ export async function seedAcademicCatalog() {
           section: institution.section,
           isFormal: institution.isFormal,
           active: true,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  for (const cls of DEFAULT_SCHOOL_CLASSES) {
+    await db
+      .insert(schoolClasses)
+      .values(cls)
+      .onConflictDoUpdate({
+        target: schoolClasses.id,
+        set: {
+          name: cls.name,
+          nameUrdu: cls.nameUrdu,
+          institutionId: cls.institutionId,
+          code: cls.code,
+          level: cls.level,
+          govtEquivalent: cls.govtEquivalent,
+          displayOrder: cls.displayOrder,
+          fee: cls.fee,
+          active: cls.active,
+          gender: cls.gender,
           updatedAt: new Date(),
         },
       });

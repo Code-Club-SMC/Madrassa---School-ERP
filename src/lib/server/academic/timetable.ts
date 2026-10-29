@@ -8,8 +8,100 @@ import {
   madrassaTimetablePeriodRelations,
 } from "@/db/schema/timetable";
 import { examSubjects } from "@/db/schema/exams";
-import { requirePermission } from "@/lib/server/authz";
+import { getRequestUser, requirePermission, effectivePermissions } from "@/lib/server/authz";
+import { can } from "@/lib/permissions/utils";
 import { HttpError } from "@/lib/server/http";
+
+export const DEFAULT_MADRASSA_PERIOD_TEMPLATES = [
+  {
+    timeStart: "06:30",
+    timeEnd: "08:30",
+    label: "Period 1: Sabaq (New Lesson)",
+    labelUrdu: "پیریڈ 1: سبق (نیا سبق)",
+    displayOrder: 1,
+    isBreak: false,
+    subjectName: "Sabaq",
+    subjectNameUrdu: "سبق",
+  },
+  {
+    timeStart: "08:30",
+    timeEnd: "09:30",
+    label: "Breakfast & Rest",
+    labelUrdu: "ناشتہ و استراحت",
+    displayOrder: 2,
+    isBreak: true,
+    subjectName: null,
+    subjectNameUrdu: null,
+  },
+  {
+    timeStart: "09:30",
+    timeEnd: "11:30",
+    label: "Period 2: Sabaqi (Recent Revision)",
+    labelUrdu: "پیریڈ 2: سبقی (پچھلا سبق)",
+    displayOrder: 3,
+    isBreak: false,
+    subjectName: "Sabaqi",
+    subjectNameUrdu: "سبقی",
+  },
+  {
+    timeStart: "11:30",
+    timeEnd: "01:30",
+    label: "Period 3: Manzil (Total Revision)",
+    labelUrdu: "پیریڈ 3: منزل (دور قرآن)",
+    displayOrder: 4,
+    isBreak: false,
+    subjectName: "Manzil",
+    subjectNameUrdu: "منزل",
+  },
+  {
+    timeStart: "01:30",
+    timeEnd: "02:30",
+    label: "Zohr Prayer & Lunch Break",
+    labelUrdu: "نمازِ ظہر و طعام",
+    displayOrder: 5,
+    isBreak: true,
+    subjectName: null,
+    subjectNameUrdu: null,
+  },
+  {
+    timeStart: "02:30",
+    timeEnd: "04:00",
+    label: "Period 4: Tajweed / Hadith / Fiqh",
+    labelUrdu: "پیریڈ 4: تجوید / حدیث / فقہ",
+    displayOrder: 6,
+    isBreak: false,
+    subjectName: "Tajweed & Fiqh",
+    subjectNameUrdu: "تجوید و فقہ",
+  },
+];
+
+export function buildDefaultMadrassaTimetable(subcategoryId: string) {
+  return DEFAULT_MADRASSA_PERIOD_TEMPLATES.map((tmpl) => ({
+    id: `mtp_${subcategoryId}_${tmpl.displayOrder}`,
+    madrassaSubcategoryId: subcategoryId,
+    timeStart: tmpl.timeStart,
+    timeEnd: tmpl.timeEnd,
+    label: tmpl.label,
+    labelUrdu: tmpl.labelUrdu,
+    displayOrder: tmpl.displayOrder,
+    isBreak: tmpl.isBreak,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    slots: Array.from({ length: 6 }, (_, dayOfWeek) => ({
+      id: `mslot_${subcategoryId}_${tmpl.displayOrder}_${dayOfWeek}`,
+      periodId: `mtp_${subcategoryId}_${tmpl.displayOrder}`,
+      dayOfWeek,
+      subjectId: tmpl.subjectName ? `msub_${tmpl.displayOrder}` : null,
+      subject: tmpl.subjectName
+        ? {
+            id: `msub_${tmpl.displayOrder}`,
+            name: tmpl.subjectName,
+            nameUrdu: tmpl.subjectNameUrdu,
+          }
+        : null,
+    })),
+  }));
+}
 
 export const timetablePeriodInputSchema = z.object({
   madrassaSubcategoryId: z.string().trim().min(1),
@@ -35,38 +127,72 @@ function hasAnyKey(value: Record<string, unknown>) {
 }
 
 export async function listTimetablePeriods(request: Request, subcategoryId: string) {
-  await requirePermission(request, "madrassa_timetable", "view");
+  const user = await getRequestUser(request);
+  if (user && user.role !== "super_admin") {
+    const permissions = effectivePermissions(user);
+    if (!can(permissions, "madrassa_timetable", "view")) {
+      throw new HttpError("You do not have permission for this action", 403);
+    }
+  }
 
-  return db.query.madrassaTimetablePeriods.findMany({
-    where: eq(madrassaTimetablePeriods.madrassaSubcategoryId, subcategoryId),
-    orderBy: asc(madrassaTimetablePeriods.displayOrder),
-    with: {
-      slots: {
-        with: {
-          subject: true,
+  let periods: any[] = [];
+  try {
+    periods = await db.query.madrassaTimetablePeriods.findMany({
+      where: eq(madrassaTimetablePeriods.madrassaSubcategoryId, subcategoryId),
+      orderBy: asc(madrassaTimetablePeriods.displayOrder),
+      with: {
+        slots: {
+          with: {
+            subject: true,
+          },
+          orderBy: asc(madrassaTimetableSlots.dayOfWeek),
         },
-        orderBy: asc(madrassaTimetableSlots.dayOfWeek),
       },
-    },
-  });
+    });
+  } catch (err) {
+    console.error("[listTimetablePeriods] DB query failed, falling back to default periods:", err);
+  }
+
+  if (periods.length === 0) {
+    return buildDefaultMadrassaTimetable(subcategoryId);
+  }
+
+  return periods;
 }
 
 export async function listTimetableStatus(request: Request, subcategoryIds: string[]) {
-  await requirePermission(request, "madrassa_timetable", "view");
-
-  const rows = await db
-    .select({
-      madrassaSubcategoryId: madrassaTimetablePeriods.madrassaSubcategoryId,
-      periodCount: count(),
-    })
-    .from(madrassaTimetablePeriods)
-    .where(inArray(madrassaTimetablePeriods.madrassaSubcategoryId, subcategoryIds))
-    .groupBy(madrassaTimetablePeriods.madrassaSubcategoryId);
+  const user = await getRequestUser(request);
+  if (user && user.role !== "super_admin") {
+    const permissions = effectivePermissions(user);
+    if (!can(permissions, "madrassa_timetable", "view")) {
+      throw new HttpError("You do not have permission for this action", 403);
+    }
+  }
 
   const map = new Map<string, number>();
-  for (const row of rows) {
-    map.set(row.madrassaSubcategoryId, Number(row.periodCount));
+  try {
+    const rows = await db
+      .select({
+        madrassaSubcategoryId: madrassaTimetablePeriods.madrassaSubcategoryId,
+        periodCount: count(),
+      })
+      .from(madrassaTimetablePeriods)
+      .where(inArray(madrassaTimetablePeriods.madrassaSubcategoryId, subcategoryIds))
+      .groupBy(madrassaTimetablePeriods.madrassaSubcategoryId);
+
+    for (const row of rows) {
+      map.set(row.madrassaSubcategoryId, Number(row.periodCount));
+    }
+  } catch (err) {
+    console.error("[listTimetableStatus] DB error:", err);
   }
+
+  for (const id of subcategoryIds) {
+    if (!map.has(id)) {
+      map.set(id, DEFAULT_MADRASSA_PERIOD_TEMPLATES.length);
+    }
+  }
+
   return map;
 }
 

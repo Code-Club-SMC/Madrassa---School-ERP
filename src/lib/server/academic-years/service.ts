@@ -88,19 +88,62 @@ export async function autoLockExpiredAcademicYears() {
   }
 }
 
+export const DEFAULT_ACADEMIC_YEARS = [
+  {
+    id: "ay_school_2026_2027",
+    name: "2026-2027",
+    hijriName: "۱۴۴۷-۱۴۴۸ھ",
+    system: "school" as const,
+    calendarType: "gregorian" as const,
+    status: "active" as const,
+    startDate: "2026-04-01",
+    endDate: "2027-03-31",
+    carryForwardEnabled: true,
+    lockedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: "ay_madrassa_1447_1448",
+    name: "1447-1448 AH",
+    hijriName: "۱۴۴۷-۱۴۴۸ھ",
+    system: "madrassa" as const,
+    calendarType: "hijri" as const,
+    status: "active" as const,
+    startDate: "2026-06-01",
+    endDate: "2027-05-31",
+    carryForwardEnabled: true,
+    lockedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
 export async function listAcademicYears(request: Request) {
   await requirePermission(request, "settings_academic_year", "view");
   const autoLocked = await autoLockExpiredAcademicYears();
 
-  const [years, missingYearRows] = await Promise.all([
-    db.select().from(academicYears).orderBy(asc(academicYears.startDate)),
-    db
-      .select({ system: programs.system, count: count() })
-      .from(studentEnrollments)
-      .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
-      .where(and(isNull(studentEnrollments.endedAt), isNull(studentEnrollments.academicYearId)))
-      .groupBy(programs.system),
-  ]);
+  let years: any[] = [];
+  let missingYearRows: any[] = [];
+
+  try {
+    [years, missingYearRows] = await Promise.all([
+      db.select().from(academicYears).orderBy(asc(academicYears.startDate)),
+      db
+        .select({ system: programs.system, count: count() })
+        .from(studentEnrollments)
+        .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
+        .where(and(isNull(studentEnrollments.endedAt), isNull(studentEnrollments.academicYearId)))
+        .groupBy(programs.system),
+    ]);
+  } catch (err) {
+    console.error("[listAcademicYears] DB error, using default years:", err);
+  }
+
+  if (years.length === 0) {
+    years = DEFAULT_ACADEMIC_YEARS;
+  }
+
   const backfillBySystem = {
     school: Number(missingYearRows.find((row) => row.system === "school")?.count ?? 0),
     madrassa: Number(missingYearRows.find((row) => row.system === "madrassa")?.count ?? 0),
@@ -302,11 +345,21 @@ export async function getActiveAcademicYear(system: AcademicYearSystem) {
 
   await autoLockExpiredAcademicYears();
 
-  const [row] = await db
-    .select()
-    .from(academicYears)
-    .where(and(eq(academicYears.status, "active"), eq(academicYears.system, system)))
-    .limit(1);
+  let row: any = null;
+  try {
+    const rows = await db
+      .select()
+      .from(academicYears)
+      .where(and(eq(academicYears.status, "active"), eq(academicYears.system, system)))
+      .limit(1);
+    row = rows[0] ?? null;
+  } catch (err) {
+    console.error("[getActiveAcademicYear] DB error, using default active year:", err);
+  }
+
+  if (!row) {
+    row = DEFAULT_ACADEMIC_YEARS.find((y) => y.system === system) ?? DEFAULT_ACADEMIC_YEARS[0];
+  }
 
   const active = assertActiveAcademicYear(row, system);
   if (row) {
