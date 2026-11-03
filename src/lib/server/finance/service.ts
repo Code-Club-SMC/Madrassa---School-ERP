@@ -39,6 +39,8 @@ import {
   type StudentLedgerSummary,
 } from "./ledger";
 import { nextFinanceNumber } from "./numbering";
+import { syncPaymentToFile } from "./transaction-service";
+import { recordAuditLog } from "@/lib/server/audit/audit-service";
 
 const paymentMethods = ["cash", "bank", "online", "cheque", "other"] as const;
 const chargeTypes = ["monthly", "admission", "exam", "transport", "custom"] as const;
@@ -515,6 +517,43 @@ export async function collectFeePayment(
       actorUserId: actor.id,
     });
 
+    const isMadrassa = context.system === "madrassa";
+    const studentEn = context.studentName || input.payerName || "Student";
+    const rollPart = context.rollNo ? ` (${context.rollNo})` : "";
+    const recAt = parseReceivedAt(input.receivedAt);
+
+    syncPaymentToFile({
+      id: payment.id,
+      voucherNo: receiptNo,
+      date: recAt.toISOString().slice(0, 10),
+      month: recAt.getMonth() + 1,
+      year: recAt.getFullYear(),
+      type: "income",
+      category: "tuition_fee",
+      categoryLabel: "Tuition Fee",
+      categoryLabelUrdu: "ماہانہ تعلیمی فیس",
+      description: `Fee Payment: ${receiptNo} · ${studentEn}${rollPart}`,
+      system: isMadrassa ? "madrassa" : "school",
+      systemLabel: isMadrassa ? "Jamia Qasimia (Madrassa)" : "Al-Qasim Academy (School)",
+      partyName: input.payerName || studentEn,
+      partyRole: "Student",
+      paymentMethod: (payment.method || "cash") as any,
+      amount: Math.round(payment.amountPaisa / 100),
+      status: "posted",
+      reference: receiptNo,
+    });
+
+    recordAuditLog({
+      userId: actor.id,
+      userName: actor.name,
+      action: "create",
+      entity: "fee_payment",
+      entityId: receiptNo,
+      module: "finance",
+      message: `Fee payment received: PKR ${Math.round(amountPaisa / 100).toLocaleString()} (Receipt #${receiptNo})`,
+      messageUrdu: `فیس وصولی: ${Math.round(amountPaisa / 100).toLocaleString()} روپے (رسید #${receiptNo})`,
+    }).catch(() => {});
+
     return { payment: serializePayment(payment, allocations) };
   });
 }
@@ -601,6 +640,43 @@ export async function chargeAndCollect(
       },
       actorUserId: actor.id,
     });
+
+    const isMadrassa = context.system === "madrassa";
+    const studentEn = context.studentName || input.payerName || "Student";
+    const rollPart = context.rollNo ? ` (${context.rollNo})` : "";
+    const recAt = parseReceivedAt(input.receivedAt);
+
+    syncPaymentToFile({
+      id: payment.id,
+      voucherNo: receiptNo,
+      date: recAt.toISOString().slice(0, 10),
+      month: recAt.getMonth() + 1,
+      year: recAt.getFullYear(),
+      type: "income",
+      category: "tuition_fee",
+      categoryLabel: "Tuition Fee",
+      categoryLabelUrdu: "ماہانہ تعلیمی فیس",
+      description: `Fee Payment: ${receiptNo} · ${studentEn}${rollPart} (${input.label})`,
+      system: isMadrassa ? "madrassa" : "school",
+      systemLabel: isMadrassa ? "Jamia Qasimia (Madrassa)" : "Al-Qasim Academy (School)",
+      partyName: input.payerName || studentEn,
+      partyRole: "Student",
+      paymentMethod: (payment.method || "cash") as any,
+      amount: Math.round(payment.amountPaisa / 100),
+      status: "posted",
+      reference: receiptNo,
+    });
+
+    recordAuditLog({
+      userId: actor.id,
+      userName: actor.name,
+      action: "create",
+      entity: "fee_payment",
+      entityId: receiptNo,
+      module: "finance",
+      message: `Fee charge and collected: PKR ${Math.round(payment.amountPaisa / 100).toLocaleString()} (Receipt #${receiptNo})`,
+      messageUrdu: `فیس وصولی مکمل: ${Math.round(payment.amountPaisa / 100).toLocaleString()} روپے (رسید #${receiptNo})`,
+    }).catch(() => {});
 
     return {
       charge: serializeCharge(charge),
@@ -735,6 +811,32 @@ export async function collectCollectiveFeePayment(
         actorUserId: actor.id,
       });
 
+      const isMadrassa = context.system === "madrassa";
+      const studentEn = context.studentName || input.payerName || "Student";
+      const rollPart = context.rollNo ? ` (${context.rollNo})` : "";
+      const recAt = parseReceivedAt(input.receivedAt);
+
+      syncPaymentToFile({
+        id: payment.id,
+        voucherNo: receiptNo,
+        date: recAt.toISOString().slice(0, 10),
+        month: recAt.getMonth() + 1,
+        year: recAt.getFullYear(),
+        type: "income",
+        category: "tuition_fee",
+        categoryLabel: "Tuition Fee",
+        categoryLabelUrdu: "ماہانہ تعلیمی فیس",
+        description: `Collective Fee Payment: ${receiptNo} · ${studentEn}${rollPart}`,
+        system: isMadrassa ? "madrassa" : "school",
+        systemLabel: isMadrassa ? "Jamia Qasimia (Madrassa)" : "Al-Qasim Academy (School)",
+        partyName: input.payerName || studentEn,
+        partyRole: "Student",
+        paymentMethod: (payment.method || "cash") as any,
+        amount: Math.round(payment.amountPaisa / 100),
+        status: "posted",
+        reference: receiptNo,
+      });
+
       results.push({
         studentId: context.studentId,
         studentName: context.studentName,
@@ -749,6 +851,17 @@ export async function collectCollectiveFeePayment(
     if (totalCollectedPaisa <= 0) {
       throw new HttpError("No payment amounts were specified", 400);
     }
+
+    recordAuditLog({
+      userId: actor.id,
+      userName: actor.name,
+      action: "create",
+      entity: "fee_payment",
+      entityId: allCreatedReceiptNos.join(", "),
+      module: "finance",
+      message: `Collective fee payment received for ${results.length} students: PKR ${Math.round(totalCollectedPaisa / 100).toLocaleString()}`,
+      messageUrdu: `${results.length} طلباء کی مجموعی فیس وصولی: ${Math.round(totalCollectedPaisa / 100).toLocaleString()} روپے`,
+    }).catch(() => {});
 
     return {
       success: true,

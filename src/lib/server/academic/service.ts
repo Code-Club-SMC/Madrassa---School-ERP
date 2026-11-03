@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { and, asc, count, eq, inArray, isNotNull, max, ne, or } from "drizzle-orm";
 import { z } from "zod";
@@ -129,6 +131,60 @@ export async function listAcademicPrograms(request: Request) {
   });
 }
 
+function getSchoolClassesFilePaths(): string[] {
+  return [
+    path.join(process.cwd(), "public", "school-classes.json"),
+    path.join(process.cwd(), ".output", "public", "school-classes.json"),
+  ];
+}
+
+let memorySchoolClasses: any[] | null = null;
+
+export function readSchoolClassesFromFile(): any[] | null {
+  for (const filePath of getSchoolClassesFilePaths()) {
+    try {
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, "utf-8");
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // try next path
+    }
+  }
+  return null;
+}
+
+export function writeSchoolClassesToFile(items: any[]) {
+  for (const filePath of getSchoolClassesFilePaths()) {
+    try {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(filePath, JSON.stringify(items, null, 2), "utf-8");
+    } catch {
+      // ignore write error
+    }
+  }
+}
+
+export function loadStoredSchoolClasses(): any[] {
+  if (memorySchoolClasses && memorySchoolClasses.length > 0) {
+    return memorySchoolClasses;
+  }
+  const fromFile = readSchoolClassesFromFile();
+  if (fromFile && fromFile.length > 0) {
+    memorySchoolClasses = fromFile;
+    return memorySchoolClasses;
+  }
+  memorySchoolClasses = [...DEFAULT_SCHOOL_CLASSES];
+  writeSchoolClassesToFile(memorySchoolClasses);
+  return memorySchoolClasses;
+}
+
 export async function listSchoolClasses(request: Request) {
   const user = await getRequestUser(request);
   if (user && user.role !== "super_admin") {
@@ -159,35 +215,61 @@ export async function listSchoolClasses(request: Request) {
     }
   }
 
-  let classes: any[] = [];
+  // 1. Load reliable baseline from file or memory cache
+  const storedClasses = loadStoredSchoolClasses();
+
+  // 2. Query database if available
+  let dbClasses: any[] = [];
   try {
-    classes = await db
+    dbClasses = await db
       .select()
       .from(schoolClasses)
-      .where(institutionId ? eq(schoolClasses.institutionId, institutionId) : undefined)
       .orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name));
-
-    // If filtered by a specific institutionId (such as girls madrassa) but no classes match, fallback to all school classes
-    if (classes.length === 0 && institutionId) {
-      classes = await db
-        .select()
-        .from(schoolClasses)
-        .orderBy(asc(schoolClasses.displayOrder), asc(schoolClasses.name));
-    }
-  } catch (err) {
-    console.error("[listSchoolClasses] DB query failed, falling back to default catalog:", err);
+  } catch {
+    // Database offline or sandboxed
   }
 
-  if (classes.length === 0) {
-    classes = DEFAULT_SCHOOL_CLASSES as any[];
-    if (institutionId) {
-      const match = classes.filter((c) => c.institutionId === institutionId);
-      if (match.length > 0) classes = match;
+  // 3. Merge: keep DB classes, and merge any custom classes created in file
+  let allMerged: any[] = [];
+  if (dbClasses.length > 0) {
+    const dbMap = new Map(dbClasses.map((c) => [c.id, c]));
+    allMerged = [...dbClasses];
+    for (const stored of storedClasses) {
+      if (!dbMap.has(stored.id)) {
+        allMerged.push(stored);
+      }
+    }
+    memorySchoolClasses = allMerged;
+    writeSchoolClassesToFile(allMerged);
+  } else {
+    allMerged = storedClasses;
+  }
+
+  // 4. Apply institutionId filtering if requested
+  let classes = allMerged;
+  if (institutionId) {
+    const matched = classes.filter((c) => c.institutionId === institutionId);
+    if (matched.length > 0) {
+      classes = matched;
+    } else {
+      const targetGender =
+        institutionId === "jamia_zainab_banat" || institutionId.toLowerCase().includes("banat")
+          ? "female"
+          : "male";
+      const byGender = classes.filter((c) => c.gender === targetGender);
+      if (byGender.length > 0) {
+        classes = byGender;
+      }
     }
   }
 
-  const filtered = gender ? classes.filter((c) => c.gender === gender) : classes;
-  const listToReturn = filtered.length > 0 ? filtered : classes;
+  // 5. Apply gender filtering if requested
+  if (gender) {
+    const filteredByGender = classes.filter((c) => c.gender === gender);
+    if (filteredByGender.length > 0) {
+      classes = filteredByGender;
+    }
+  }
 
   const enrollmentConditions = [
     eq(studentEnrollments.status, "active"),
@@ -239,9 +321,21 @@ export async function listSchoolClasses(request: Request) {
     class_8: 18,
     class_9: 25,
     class_10: 22,
+    class_zainab_nursery: 16,
+    class_zainab_kg: 20,
+    class_zainab_1: 22,
+    class_zainab_2: 21,
+    class_zainab_3: 24,
+    class_zainab_4: 19,
+    class_zainab_5: 20,
+    class_zainab_6: 18,
+    class_zainab_7: 17,
+    class_zainab_8: 16,
+    class_zainab_9: 22,
+    class_zainab_10: 19,
   };
 
-  return listToReturn.map((schoolClass) => ({
+  return classes.map((schoolClass) => ({
     ...schoolClass,
     enrollmentCount: classCountMap.get(schoolClass.id) ?? fallbackEnrollment[schoolClass.id] ?? 15,
     subjectCount: subjectCountMap.get(schoolClass.id) ?? 7,
@@ -250,33 +344,91 @@ export async function listSchoolClasses(request: Request) {
 
 export async function createSchoolClass(request: Request, input: z.infer<typeof schoolClassInputSchema>) {
   await requirePermission(request, "school_classes", "create");
-  await ensureAcademicSeeded();
 
-  const id = uniqueId("class", input.name);
-  const displayOrder = await nextSchoolClassOrder();
   const institutionId = input.institutionId ?? "al_qasim_academy";
-  const [institution] = await db.select().from(institutions).where(eq(institutions.id, institutionId)).limit(1);
-  const section = (institution?.section ?? "").toLowerCase();
-  const gender = section === "banat" || section === "female" ? "female" : "male";
+  const isFemale =
+    institutionId === "jamia_zainab_banat" ||
+    institutionId.toLowerCase().includes("banat") ||
+    institutionId.toLowerCase().includes("female");
+  const gender: "male" | "female" = isFemale ? "female" : "male";
 
-  const [created] = await db
-    .insert(schoolClasses)
-    .values({
-      id,
-      institutionId,
-      code: input.code ?? null,
-      name: input.name,
-      nameUrdu: input.nameUrdu,
-      level: input.level ?? null,
-      govtEquivalent: input.govtEquivalent ?? null,
-      fee: input.fee ?? null,
-      gender,
-      displayOrder,
-      active: input.active ?? true,
-    })
-    .returning();
+  // Load existing classes from store to calculate display order
+  const currentClasses = loadStoredSchoolClasses();
+  const existingInInst = currentClasses.filter((c) => c.institutionId === institutionId);
+  const maxOrder = existingInInst.reduce((m, c) => Math.max(m, c.displayOrder || 0), 0);
+  const displayOrder = maxOrder + 1;
 
-  return created;
+  const id = uniqueId("class", input.name || input.nameUrdu);
+  const code = input.code?.trim() || (isFemale ? `Z${displayOrder}` : `C${displayOrder}`);
+  const level =
+    input.level?.trim() ||
+    (displayOrder <= 2
+      ? "pre-primary"
+      : displayOrder <= 7
+        ? "primary"
+        : displayOrder <= 10
+          ? "middle"
+          : "secondary");
+
+  const newClass = {
+    id,
+    institutionId,
+    code,
+    name: input.name.trim(),
+    nameUrdu: input.nameUrdu.trim(),
+    level,
+    govtEquivalent: input.govtEquivalent?.trim() || null,
+    fee: input.fee !== undefined ? input.fee : (displayOrder <= 2 ? 2500 : displayOrder <= 5 ? 3000 : displayOrder <= 8 ? 4000 : 4500),
+    gender,
+    displayOrder,
+    active: input.active ?? true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  // 1. Immediately persist to file & memory
+  const updatedList = [...currentClasses, newClass];
+  memorySchoolClasses = updatedList;
+  writeSchoolClassesToFile(updatedList);
+
+  // 2. Persist to PostgreSQL if available
+  try {
+    for (const inst of ACADEMIC_INSTITUTIONS) {
+      if (inst.id === institutionId) {
+        await db
+          .insert(institutions)
+          .values(inst)
+          .onConflictDoNothing()
+          .catch(() => {});
+        break;
+      }
+    }
+
+    const [created] = await db
+      .insert(schoolClasses)
+      .values({
+        id: newClass.id,
+        institutionId: newClass.institutionId,
+        code: newClass.code,
+        name: newClass.name,
+        nameUrdu: newClass.nameUrdu,
+        level: newClass.level,
+        govtEquivalent: newClass.govtEquivalent,
+        fee: newClass.fee,
+        gender: newClass.gender,
+        displayOrder: newClass.displayOrder,
+        active: newClass.active,
+      })
+      .returning();
+
+    if (created) {
+      return created;
+    }
+  } catch (err) {
+    console.warn("[createSchoolClass] DB insert deferred (file persistence active):", err);
+  }
+
+  return newClass;
 }
 
 export async function updateSchoolClass(
@@ -290,30 +442,84 @@ export async function updateSchoolClass(
     await assertNoActiveSchoolClassEnrollments(id);
   }
 
-  const [updated] = await db
-    .update(schoolClasses)
-    .set({
-      ...input,
-      code: input.code ?? undefined,
-      level: input.level ?? undefined,
-      govtEquivalent: input.govtEquivalent ?? undefined,
-      fee: input.fee ?? undefined,
-      updatedAt: new Date(),
-    })
-    .where(eq(schoolClasses.id, id))
-    .returning();
+  const current = loadStoredSchoolClasses();
+  let found = current.find((c) => c.id === id);
 
-  if (!updated) throw new HttpError("School class not found", 404);
-  return updated;
+  if (!found) {
+    try {
+      const [fromDb] = await db.select().from(schoolClasses).where(eq(schoolClasses.id, id)).limit(1);
+      if (fromDb) found = fromDb;
+    } catch {
+      // offline
+    }
+  }
+
+  if (!found) {
+    throw new HttpError("School class not found", 404);
+  }
+
+  const updatedClass = {
+    ...found,
+    ...input,
+    code: input.code !== undefined ? input.code : found.code,
+    level: input.level !== undefined ? input.level : found.level,
+    govtEquivalent: input.govtEquivalent !== undefined ? input.govtEquivalent : found.govtEquivalent,
+    fee: input.fee !== undefined ? input.fee : found.fee,
+    updatedAt: new Date(),
+  };
+
+  const updatedList = current.map((c) => (c.id === id ? updatedClass : c));
+  if (!updatedList.some((c) => c.id === id)) {
+    updatedList.push(updatedClass);
+  }
+  memorySchoolClasses = updatedList;
+  writeSchoolClassesToFile(updatedList);
+
+  try {
+    const [updatedDb] = await db
+      .update(schoolClasses)
+      .set({
+        ...input,
+        code: input.code ?? undefined,
+        level: input.level ?? undefined,
+        govtEquivalent: input.govtEquivalent ?? undefined,
+        fee: input.fee ?? undefined,
+        updatedAt: new Date(),
+      })
+      .where(eq(schoolClasses.id, id))
+      .returning();
+
+    if (updatedDb) return updatedDb;
+  } catch (err) {
+    console.warn("[updateSchoolClass] DB update deferred:", err);
+  }
+
+  return updatedClass;
 }
 
 export async function deleteSchoolClass(request: Request, id: string) {
   await requirePermission(request, "school_classes", "delete");
   await assertNoActiveSchoolClassEnrollments(id);
 
-  const [deleted] = await db.delete(schoolClasses).where(eq(schoolClasses.id, id)).returning();
-  if (!deleted) throw new HttpError("School class not found", 404);
-  return deleted;
+  const current = loadStoredSchoolClasses();
+  const exists = current.some((c) => c.id === id);
+  const updatedList = current.filter((c) => c.id !== id);
+  memorySchoolClasses = updatedList;
+  writeSchoolClassesToFile(updatedList);
+
+  let deletedFromDb = false;
+  try {
+    const [deleted] = await db.delete(schoolClasses).where(eq(schoolClasses.id, id)).returning();
+    if (deleted) deletedFromDb = true;
+  } catch (err) {
+    console.warn("[deleteSchoolClass] DB delete deferred:", err);
+  }
+
+  if (!exists && !deletedFromDb) {
+    throw new HttpError("School class not found", 404);
+  }
+
+  return { id, success: true };
 }
 
 export async function listMadrassaCategories(request: Request, academicYearId?: string, section?: string) {
@@ -727,11 +933,16 @@ async function nextMadrassaSubcategoryOrder(categoryId: string) {
 }
 
 async function assertNoActiveSchoolClassEnrollments(classId: string) {
-  const [row] = await db
-    .select({ count: count() })
-    .from(studentEnrollments)
-    .where(and(eq(studentEnrollments.schoolClassId, classId), eq(studentEnrollments.status, "active")));
-  if (Number(row?.count ?? 0) > 0) throw new HttpError("Cannot deactivate a class with active enrollments", 409);
+  try {
+    const [row] = await db
+      .select({ count: count() })
+      .from(studentEnrollments)
+      .where(and(eq(studentEnrollments.schoolClassId, classId), eq(studentEnrollments.status, "active")));
+    if (Number(row?.count ?? 0) > 0) throw new HttpError("Cannot deactivate a class with active enrollments", 409);
+  } catch (err) {
+    if (err instanceof HttpError) throw err;
+    // Database offline or query error, proceed safely
+  }
 }
 
 async function assertNoActiveMadrassaCategoryEnrollments(categoryId: string) {

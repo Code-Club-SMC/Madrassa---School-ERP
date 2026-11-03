@@ -4,9 +4,19 @@ import { saveDocState } from "@/lib/server/admission/interviews-service";
 import { json, parseJsonBody } from "@/lib/server/super-admin";
 import { errorResponse } from "@/lib/server/http";
 
+const docValueSchema = z.union([
+  z.boolean(),
+  z.string(),
+  z.object({
+    status: z.string(),
+    notes: z.string().optional(),
+    updatedAt: z.string().optional(),
+  }),
+]);
+
 const saveDocStateSchema = z.object({
   appId: z.string().min(1),
-  docs: z.record(z.string(), z.boolean()),
+  docs: z.record(z.string(), docValueSchema),
 });
 
 export const Route = createFileRoute("/api/admission/interviews/docs")({

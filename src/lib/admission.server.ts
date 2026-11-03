@@ -1,8 +1,11 @@
+import fs from "node:fs";
+import path from "node:path";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { eq, asc, or } from "drizzle-orm";
 import { db } from "@/db";
 import { madrassaCategories, madrassaSubcategories, schoolClasses } from "@/db/schema/academic";
+import { getCatalogSubcategories } from "@/lib/madrassa-grade-catalog";
 
 export type AdmissionSubcategoryOption = {
   id: string;
@@ -45,35 +48,45 @@ export const CANONICAL_SCHOOL_CLASSES: AdmissionSchoolClassOption[] = [
  * Intentionally does not require a view permission so it can be used on public forms.
  */
 export const getAdmissionSubcategories = createServerFn({ method: "GET" })
-  .validator(z.object({ section: z.enum(["male", "female"]).optional() }))
+  .validator(z.object({ section: z.enum(["male", "female"]).optional() }).optional())
   .handler(async ({ data }) => {
-    return db
-      .select({
-        id: madrassaSubcategories.id,
-        categoryId: madrassaSubcategories.categoryId,
-        name: madrassaSubcategories.name,
-        nameUrdu: madrassaSubcategories.nameUrdu,
-        rollPrefix: madrassaSubcategories.rollPrefix,
-        section: madrassaSubcategories.section,
-        categoryName: madrassaCategories.name,
-        categoryNameUrdu: madrassaCategories.nameUrdu,
-      })
-      .from(madrassaSubcategories)
-      .innerJoin(madrassaCategories, eq(madrassaSubcategories.categoryId, madrassaCategories.id))
-      .where(
-        data.section
-          ? or(
-              eq(madrassaSubcategories.section, data.section),
-              eq(
-                madrassaSubcategories.section,
-                data.section === "male" ? "baneen" : "banat",
-              ),
-              eq(madrassaSubcategories.section, "both"),
-              eq(madrassaSubcategories.section, "all"),
-            )
-          : undefined,
-      )
-      .orderBy(asc(madrassaSubcategories.displayOrder), asc(madrassaSubcategories.name));
+    try {
+      const rows = await db
+        .select({
+          id: madrassaSubcategories.id,
+          categoryId: madrassaSubcategories.categoryId,
+          name: madrassaSubcategories.name,
+          nameUrdu: madrassaSubcategories.nameUrdu,
+          rollPrefix: madrassaSubcategories.rollPrefix,
+          section: madrassaSubcategories.section,
+          categoryName: madrassaCategories.name,
+          categoryNameUrdu: madrassaCategories.nameUrdu,
+        })
+        .from(madrassaSubcategories)
+        .innerJoin(madrassaCategories, eq(madrassaSubcategories.categoryId, madrassaCategories.id))
+        .where(
+          data?.section
+            ? or(
+                eq(madrassaSubcategories.section, data.section),
+                eq(
+                  madrassaSubcategories.section,
+                  data.section === "male" ? "baneen" : "banat",
+                ),
+                eq(madrassaSubcategories.section, "both"),
+                eq(madrassaSubcategories.section, "all"),
+              )
+            : undefined,
+        )
+        .orderBy(asc(madrassaSubcategories.displayOrder), asc(madrassaSubcategories.name));
+
+      if (rows && rows.length > 0) {
+        return rows;
+      }
+    } catch (err) {
+      console.warn("[getAdmissionSubcategories] DB query failed, fallback to catalog:", err);
+    }
+
+    return getCatalogSubcategories(data?.section);
   });
 
 /**
@@ -100,10 +113,12 @@ export const getAdmissionSchoolClasses = createServerFn({ method: "GET" })
 
       if (rows && rows.length > 0) {
         if (data?.gender) {
-          return rows.filter((r) => {
+          const filtered = rows.filter((r) => {
             const g = (r.gender || "").toLowerCase();
             return !g || g === "mixed" || g === "both" || g === "all" || g === data.gender;
           });
+          if (filtered.length > 0) return filtered;
+          return rows.map((r) => ({ ...r, gender: data.gender }));
         }
         return rows;
       }
@@ -111,11 +126,43 @@ export const getAdmissionSchoolClasses = createServerFn({ method: "GET" })
       console.warn("[getAdmissionSchoolClasses] DB query fallback to canonical classes:", err);
     }
 
+    try {
+      const filePath = path.join(process.cwd(), "public", "school-classes.json");
+      if (fs.existsSync(filePath)) {
+        const fileContent = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+        if (Array.isArray(fileContent) && fileContent.length > 0) {
+          const activeOnes = fileContent
+            .filter((c: any) => c.active !== false)
+            .map((c: any) => ({
+              id: c.id,
+              code: c.code || "",
+              name: c.name,
+              nameUrdu: c.nameUrdu,
+              level: c.level ?? null,
+              gender: c.gender ?? null,
+              displayOrder: c.displayOrder ?? null,
+            }));
+          if (data?.gender) {
+            const filtered = activeOnes.filter((r) => {
+              const g = (r.gender || "").toLowerCase();
+              return !g || g === "mixed" || g === "both" || g === "all" || g === data.gender;
+            });
+            if (filtered.length > 0) return filtered;
+            return activeOnes.map((r) => ({ ...r, gender: data.gender }));
+          }
+          return activeOnes;
+        }
+      }
+    } catch {
+      // ignore file error
+    }
+
     if (data?.gender) {
-      return CANONICAL_SCHOOL_CLASSES.filter((r) => {
+      const filtered = CANONICAL_SCHOOL_CLASSES.filter((r) => {
         const g = (r.gender || "").toLowerCase();
         return !g || g === "mixed" || g === "both" || g === "all" || g === data.gender;
       });
+      if (filtered.length > 0) return filtered;
     }
     return CANONICAL_SCHOOL_CLASSES;
   });

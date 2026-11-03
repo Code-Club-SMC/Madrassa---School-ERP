@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
+import { createHmac } from "node:crypto";
 import {
   listSchoolClasses,
+  createSchoolClass,
+  updateSchoolClass,
+  deleteSchoolClass,
   listAcademicInstitutions,
   listAcademicPrograms,
   listMadrassaCategories,
@@ -14,6 +18,27 @@ import {
   listTimetablePeriods,
   listTimetableStatus,
 } from "./timetable";
+
+function createMockSuperAdminRequest(url: string, init?: RequestInit) {
+  const secret = process.env.SESSION_SECRET || "msmis_erp_fallback_secret_key_2026_super_secure";
+  const payload = {
+    userId: "test-admin-1",
+    email: "superadmin@msmis.pk",
+    role: "super_admin",
+    name: "Super Admin",
+  };
+  const base64 = Buffer.from(JSON.stringify(payload)).toString("base64");
+  const signature = createHmac("sha256", secret).update(base64).digest("base64");
+  const cookie = `msmis_session=${base64}.${signature}`;
+
+  const headers = new Headers(init?.headers);
+  headers.set("cookie", cookie);
+
+  return new Request(url, {
+    ...init,
+    headers,
+  });
+}
 
 describe("Academic Service & Timetable Resilience", () => {
   it("listAcademicInstitutions loads institutions for unauthenticated request without throwing", async () => {
@@ -43,6 +68,63 @@ describe("Academic Service & Timetable Resilience", () => {
     expect(nursery).toBeDefined();
     expect(nursery?.subjectCount).toBeGreaterThan(0);
     expect(nursery?.enrollmentCount).toBeGreaterThanOrEqual(0);
+  });
+
+  it("createSchoolClass persists a new school class for boys and girls institutions without throwing", async () => {
+    const adminReq = createMockSuperAdminRequest("http://localhost:3000/api/academic/school/classes", {
+      method: "POST",
+    });
+
+    // 1. Add male class
+    const maleClass = await createSchoolClass(adminReq, {
+      institutionId: "al_qasim_academy",
+      code: "G11",
+      name: "Grade 11",
+      nameUrdu: "گیارہویں جماعت",
+      fee: 5000,
+    });
+
+    expect(maleClass.id).toBeDefined();
+    expect(maleClass.institutionId).toBe("al_qasim_academy");
+    expect(maleClass.gender).toBe("male");
+    expect(maleClass.name).toBe("Grade 11");
+
+    // 2. Add female class
+    const femaleClass = await createSchoolClass(adminReq, {
+      institutionId: "jamia_zainab_banat",
+      code: "ZG11",
+      name: "Grade 11 Girls",
+      nameUrdu: "گیارہویں جماعت برائے طالبات",
+      fee: 5000,
+    });
+
+    expect(femaleClass.id).toBeDefined();
+    expect(femaleClass.institutionId).toBe("jamia_zainab_banat");
+    expect(femaleClass.gender).toBe("female");
+
+    // 3. Verify they are listed
+    const maleClassesReq = new Request("http://localhost:3000/api/academic/school/classes?institutionId=al_qasim_academy");
+    const maleClasses = await listSchoolClasses(maleClassesReq);
+    expect(maleClasses.some((c) => c.id === maleClass.id)).toBe(true);
+
+    const femaleClassesReq = new Request("http://localhost:3000/api/academic/school/classes?institutionId=jamia_zainab_banat");
+    const femaleClasses = await listSchoolClasses(femaleClassesReq);
+    expect(femaleClasses.some((c) => c.id === femaleClass.id)).toBe(true);
+
+    // 4. Update the class
+    const updated = await updateSchoolClass(adminReq, maleClass.id, {
+      fee: 5500,
+      active: true,
+    });
+    expect(updated.fee).toBe(5500);
+
+    // 5. Clean up by deleting test classes
+    await deleteSchoolClass(adminReq, maleClass.id);
+    await deleteSchoolClass(adminReq, femaleClass.id);
+
+    // Verify deletion
+    const finalClasses = await listSchoolClasses(maleClassesReq);
+    expect(finalClasses.some((c) => c.id === maleClass.id)).toBe(false);
   });
 
   it("listMadrassaCategories returns canonical categories and subcategories", async () => {

@@ -135,6 +135,41 @@ export const numberSequences = pgTable(
   ],
 );
 
+export const admissionInterviews = pgTable(
+  "admission_interviews",
+  {
+    id: text("id").primaryKey(),
+    appId: text("app_id").notNull(),
+    applicantName: text("applicant_name"),
+    applicantNameUrdu: text("applicant_name_urdu"),
+    refNo: text("ref_no"),
+    system: text("system"),
+    categoryOrClass: text("category_or_class"),
+    source: text("source"),
+    date: text("date").notNull(),
+    time: text("time").notNull(),
+    interviewer: text("interviewer").notNull(),
+    room: text("room").notNull(),
+    status: text("status")
+      .$type<"scheduled" | "completed" | "passed" | "failed" | "no_show">()
+      .default("scheduled")
+      .notNull(),
+    marks: integer("marks"),
+    notes: text("notes"),
+    guardianPhone: text("guardian_phone"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("admission_interviews_app_id_idx").on(table.appId),
+    index("admission_interviews_date_idx").on(table.date),
+    index("admission_interviews_status_idx").on(table.status),
+  ],
+);
+
 export const admissionApplicationRelations = relations(admissionApplications, ({ one, many }) => ({
   institution: one(institutions, {
     fields: [admissionApplications.institutionId],

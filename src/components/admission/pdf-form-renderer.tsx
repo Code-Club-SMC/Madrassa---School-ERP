@@ -35,6 +35,10 @@ import {
 } from "@/lib/admission-print-payload";
 import { buildAdmissionSampleData, getRandomSample } from "@/lib/admission-sample-data";
 import {
+  getCatalogSubcategories,
+  buildMadrassaCategories,
+} from "@/lib/madrassa-grade-catalog";
+import {
   getAdmissionSubcategories,
   getAdmissionSchoolClasses,
   CANONICAL_SCHOOL_CLASSES,
@@ -249,7 +253,9 @@ export function PdfFormRenderer({
   const [creds, setCreds] = useState<ParentCreds | null>(null);
   const isRtl = lang === "ur";
   const [step, setStep] = useState(1);
-  const [cls, setCls] = useState<any[]>([]);
+  const [cls, setCls] = useState<any[]>(() =>
+    variant.section === "school" ? CANONICAL_SCHOOL_CLASSES : [],
+  );
   const [loadingCls, setLoadingCls] = useState(false);
 
   useEffect(() => {
@@ -266,18 +272,14 @@ export function PdfFormRenderer({
           setCls(data);
           return;
         }
-        throw new Error("Empty classes from server fn");
+        setCls(CANONICAL_SCHOOL_CLASSES);
       })
       .catch(() => {
         fetch(`/api/academic/school/classes?gender=${targetGender}`, { credentials: "include" })
           .then((r) => r.json().catch(() => ({})))
           .then((payload) => {
             const list = (payload.classes ?? []) as any[];
-            if (list.length > 0) {
-              setCls(list);
-            } else {
-              setCls(CANONICAL_SCHOOL_CLASSES);
-            }
+            setCls(list.length > 0 ? list : CANONICAL_SCHOOL_CLASSES);
           })
           .catch(() => {
             setCls(CANONICAL_SCHOOL_CLASSES);
@@ -404,53 +406,79 @@ export function PdfFormRenderer({
   const { data: subcategoryData } = useQuery({
     queryKey: ["admission-subcategories", variantSection],
     queryFn: () => getAdmissionSubcategories({ data: { section: variantSection } }),
+    initialData: () => getCatalogSubcategories(variantSection),
   });
 
   const { data: categoriesData } = useQuery({
     queryKey: ["admission-madrassa-categories"],
     queryFn: async () => {
-      const response = await fetch(`/api/academic/madrassa/categories`, { credentials: "include" });
-      if (response.status === 401 || response.status === 403) throw new Error("Unauthorized");
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Could not load categories");
-      return (payload.categories ?? []) as Array<{ id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; subcategories: Array<{ id: string; name: string; nameUrdu: string }> }>;
+      try {
+        const response = await fetch(`/api/academic/madrassa/categories`, { credentials: "include" });
+        if (!response.ok) return buildMadrassaCategories();
+        const payload = await response.json().catch(() => ({}));
+        if (Array.isArray(payload.categories) && payload.categories.length > 0) {
+          return payload.categories;
+        }
+        return buildMadrassaCategories();
+      } catch {
+        return buildMadrassaCategories();
+      }
     },
+    initialData: () => buildMadrassaCategories(),
   });
 
   const madrassaCategoryOptions = (categoriesData ?? []) as Array<{ id: string; name: string; nameUrdu: string; description: string; descriptionUrdu: string; section: string; subcategories: Array<{ id: string; name: string; nameUrdu: string }> }>;
 
   const dynamicGradeOptions: GradeSelectOption[] = useMemo(() => {
-    if (!subcategoryData || subcategoryData.length === 0) return [];
+    const list: AdmissionSubcategoryOption[] =
+      subcategoryData && subcategoryData.length > 0
+        ? subcategoryData
+        : getCatalogSubcategories(variantSection);
+
     if (categoryId) {
-      return subcategoryData
-        .filter((s: AdmissionSubcategoryOption) => s.categoryId === categoryId)
-        .map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+      const byCat = list.filter((s: AdmissionSubcategoryOption) => s.categoryId === categoryId);
+      if (byCat.length > 0) {
+        return byCat.map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+      }
     }
+
     if (variantKind === "hifz") {
-      return subcategoryData
-        .filter((s: AdmissionSubcategoryOption) => {
-          const label = `${s.categoryId} ${s.categoryName} ${s.categoryNameUrdu}`.toLowerCase();
-          return label.includes("hifz") || label.includes("حفظ");
-        })
-        .map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+      const hifzMatches = list.filter((s: AdmissionSubcategoryOption) => {
+        const label = `${s.id} ${s.categoryId} ${s.categoryName} ${s.categoryNameUrdu} ${s.name} ${s.nameUrdu}`.toLowerCase();
+        return label.includes("hifz") || label.includes("حفظ");
+      });
+      if (hifzMatches.length > 0) {
+        return hifzMatches.map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+      }
     }
+
     if (variantKind === "nazira") {
-      return subcategoryData
-        .filter((s: AdmissionSubcategoryOption) => {
-          const label = `${s.categoryId} ${s.categoryName} ${s.categoryNameUrdu}`.toLowerCase();
-          return label.includes("nazira") || label.includes("ناظرہ") || label.includes("qaida") || label.includes("قاعد");
-        })
-        .map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+      const naziraMatches = list.filter((s: AdmissionSubcategoryOption) => {
+        const label = `${s.id} ${s.categoryId} ${s.categoryName} ${s.categoryNameUrdu} ${s.name} ${s.nameUrdu}`.toLowerCase();
+        return label.includes("nazira") || label.includes("ناظرہ") || label.includes("qaida") || label.includes("قاعد");
+      });
+      if (naziraMatches.length > 0) {
+        return naziraMatches.map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+      }
     }
-    const darsMatches = subcategoryData.filter((s: AdmissionSubcategoryOption) => {
-      const label = `${s.categoryId} ${s.categoryName} ${s.categoryNameUrdu}`.toLowerCase();
-      return label.includes("dars") || label.includes("درس") || label.includes("نظامی") || label.includes("general");
+
+    const darsMatches = list.filter((s: AdmissionSubcategoryOption) => {
+      const label = `${s.id} ${s.categoryId} ${s.categoryName} ${s.categoryNameUrdu} ${s.name} ${s.nameUrdu}`.toLowerCase();
+      return (
+        label.includes("dars") ||
+        label.includes("درس") ||
+        label.includes("نظامی") ||
+        label.includes("general") ||
+        label.includes("alim") ||
+        label.includes("عالم")
+      );
     });
     if (darsMatches.length > 0) {
       return darsMatches.map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
     }
-    return subcategoryData.map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
-  }, [subcategoryData, variantKind, categoryId]);
+
+    return list.map((s) => ({ id: s.id, name: s.name, nameUrdu: s.nameUrdu, rollPrefix: s.rollPrefix }));
+  }, [subcategoryData, variantKind, categoryId, variantSection]);
 
   const requestedGradeOptions = dynamicGradeOptions;
   const shobaOptions = dynamicGradeOptions;
@@ -1222,6 +1250,15 @@ function SchoolFields({
 }) {
   const val = (k: string) => form[k] ?? "";
   const isRtl = lang === "ur";
+  const displayClasses = useMemo(() => {
+    const list = cls && cls.length > 0 ? cls : CANONICAL_SCHOOL_CLASSES;
+    const targetGender = variant.category;
+    const filtered = list.filter((c) => {
+      const g = (c.gender || "").toLowerCase();
+      return !g || g === "mixed" || g === "both" || g === "all" || g === targetGender;
+    });
+    return filtered.length > 0 ? filtered : list;
+  }, [cls, variant.category]);
   return (
     <>
       {step === 1 && (
@@ -1346,35 +1383,25 @@ function SchoolFields({
             <Select
               value={val("classId")}
               onValueChange={(v) => {
-                const selected = cls.find((c) => c.id === v);
+                const selected = displayClasses.find((c) => c.id === v);
                 set("class", selected ? (selected.nameUrdu || selected.name) : v);
                 set("classId", v);
               }}
-              disabled={cls.length === 0}
+              disabled={displayClasses.length === 0}
             >
               <SelectTrigger id="class" className={isRtl ? "font-urdu" : ""}>
                 <SelectValue
                   placeholder={
-                    loadingCls
+                    loadingCls && displayClasses.length === 0
                       ? (lang === "ur" ? "جماعتیں لوڈ ہو رہی ہیں..." : "Loading classes...")
-                      : cls.length === 0
+                      : displayClasses.length === 0
                         ? (lang === "ur" ? "کوئی جماعت موجود نہیں" : "No classes configured")
                         : (lang === "ur" ? "جماعت منتخب کریں" : "Select class")
                   }
                 />
               </SelectTrigger>
               <SelectContent>
-                {(
-                  cls.some((c) => {
-                    const g = (c.gender || "").toLowerCase();
-                    return !g || g === "mixed" || g === "both" || g === "all" || g === variant.category;
-                  })
-                    ? cls.filter((c) => {
-                        const g = (c.gender || "").toLowerCase();
-                        return !g || g === "mixed" || g === "both" || g === "all" || g === variant.category;
-                      })
-                    : cls
-                ).map((c) => (
+                {displayClasses.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
                     <span className="font-urdu">{c.nameUrdu}</span> · {c.name}
                   </SelectItem>
@@ -1486,20 +1513,31 @@ function SchoolFields({
                     <SelectValue placeholder={lang === "ur" ? "زمرہ منتخب کریں" : "Select category"} />
                   </SelectTrigger>
               <SelectContent>
-                {madrassaCategoryOptions
-                  .filter((c) => {
+                {(() => {
+                  const filtered = madrassaCategoryOptions.filter((c) => {
                     const hasMatchingSubcategory = c.subcategories.some((s) => {
                       const rawSection = (s as any).section ?? "";
-                      const sGender = rawSection === "banat" || rawSection === "female" ? "female" : rawSection === "baneen" || rawSection === "male" ? "male" : rawSection;
-                      return sGender === variant.category;
+                      const sGender =
+                        rawSection === "banat" || rawSection === "female"
+                          ? "female"
+                          : rawSection === "baneen" || rawSection === "male"
+                            ? "male"
+                            : rawSection;
+                      return (
+                        !variant.category ||
+                        sGender === variant.category ||
+                        sGender === "both" ||
+                        sGender === "all"
+                      );
                     });
                     return hasMatchingSubcategory;
-                  })
-                  .map((c) => (
+                  });
+                  return (filtered.length > 0 ? filtered : madrassaCategoryOptions).map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       <span className="font-urdu">{c.nameUrdu || c.name}</span>
                     </SelectItem>
-                  ))}
+                  ));
+                })()}
               </SelectContent>
                 </Select>
               </BilingualLabel>
@@ -1522,11 +1560,30 @@ function SchoolFields({
                       <SelectValue placeholder={lang === "ur" ? "کلاس منتخب کریں" : "Select class"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {(madrassaCategoryOptions.find((c) => c.id === val("madrassa_category"))?.subcategories ?? []).map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          <span className="font-urdu">{s.nameUrdu || s.name}</span>
-                        </SelectItem>
-                      ))}
+                      {(() => {
+                        const cat = madrassaCategoryOptions.find((c) => c.id === val("madrassa_category"));
+                        const subcats = cat?.subcategories ?? [];
+                        const filtered = subcats.filter((s) => {
+                          const rawSection = (s as any).section ?? "";
+                          const sGender =
+                            rawSection === "banat" || rawSection === "female"
+                              ? "female"
+                              : rawSection === "baneen" || rawSection === "male"
+                                ? "male"
+                                : rawSection;
+                          return (
+                            !variant.category ||
+                            sGender === variant.category ||
+                            sGender === "both" ||
+                            sGender === "all"
+                          );
+                        });
+                        return (filtered.length > 0 ? filtered : subcats).map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            <span className="font-urdu">{s.nameUrdu || s.name}</span>
+                          </SelectItem>
+                        ));
+                      })()}
                     </SelectContent>
                   </Select>
                 </BilingualLabel>

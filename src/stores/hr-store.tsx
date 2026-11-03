@@ -594,7 +594,7 @@ export function HRProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const requestLeave = useCallback<HRStore["requestLeave"]>(async (data) => {
-    const id = `LV-${Date.now()}`;
+    const id = `LV-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const newLeave: LeaveRequest = {
       ...data,
       id,

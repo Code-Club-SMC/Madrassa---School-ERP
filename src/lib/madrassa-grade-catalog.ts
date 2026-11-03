@@ -458,6 +458,36 @@ export function buildMadrassaCategories(): MadrassaCategory[] {
     .filter((category) => category.subcategories.length > 0);
 }
 
+export function getCatalogSubcategories(
+  section?: "male" | "female" | "baneen" | "banat" | null,
+) {
+  const targetSection =
+    section === "female" || section === "banat"
+      ? "banat"
+      : section === "male" || section === "baneen"
+        ? "baneen"
+        : null;
+
+  const filtered = MADRASSA_GRADE_CATALOG.filter((item) => {
+    if (!targetSection) return true;
+    const sec = (item.section || "").toLowerCase();
+    return sec === targetSection || sec === "both" || sec === "all";
+  });
+
+  const source = filtered.length > 0 ? filtered : MADRASSA_GRADE_CATALOG;
+
+  return source.map((item) => ({
+    id: item.id,
+    categoryId: item.categoryId,
+    name: item.name,
+    nameUrdu: item.nameUrdu,
+    rollPrefix: item.rollPrefix,
+    section: item.section,
+    categoryName: item.categoryName,
+    categoryNameUrdu: item.categoryNameUrdu,
+  }));
+}
+
 function normalize(value: string | undefined | null) {
   return (
     value

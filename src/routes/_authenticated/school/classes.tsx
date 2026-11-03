@@ -134,10 +134,16 @@ function ClassesPage() {
   );
 
   const addClass = async () => {
-    if (!cf.name.trim() && !cf.nameUrdu.trim()) {
-      toast.error("Name required · نام درکار ہے");
+    const trimmedName = cf.name.trim();
+    const trimmedNameUrdu = cf.nameUrdu.trim();
+    if (!trimmedName && !trimmedNameUrdu) {
+      toast.error(isUrdu ? "نام درکار ہے" : "Name required · نام درکار ہے");
       return;
     }
+
+    const finalName = trimmedName || trimmedNameUrdu;
+    const finalNameUrdu = trimmedNameUrdu || trimmedName;
+    const parsedFee = cf.fee !== "" && !isNaN(Number(cf.fee)) && Number(cf.fee) >= 0 ? Number(cf.fee) : undefined;
 
     setPending(true);
     try {
@@ -148,15 +154,15 @@ function ClassesPage() {
         body: JSON.stringify({
           institutionId: institutionId || undefined,
           code: cf.code.trim() || undefined,
-          name: cf.name.trim() || cf.nameUrdu.trim(),
-          nameUrdu: cf.nameUrdu.trim() || cf.name.trim(),
-          fee: cf.fee !== "" ? Number(cf.fee) : undefined,
+          name: finalName,
+          nameUrdu: finalNameUrdu,
+          fee: parsedFee,
         }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.error || "Could not add class");
       await loadClasses();
-      toast.success("Class added");
+      toast.success(isUrdu ? "کلاس کامیابی سے شامل کر دی گئی" : "Class added successfully");
       setCf(emptyClassForm);
       setClassOpen(false);
     } catch (error) {

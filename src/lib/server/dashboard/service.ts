@@ -346,12 +346,20 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
     // Database offline
   }
 
-  if (allPayments.length === 0) {
-    try {
-      const paymentsPath = path.join(process.cwd(), "public", "finance-fee-payments.json");
-      if (fs.existsSync(paymentsPath)) {
-        const fileContent = JSON.parse(fs.readFileSync(paymentsPath, "utf-8"));
-        allPayments = fileContent.map((p: any) => ({
+  let filePayments: Array<{
+    id: string;
+    amountPaisa: number;
+    institutionId: string;
+    receivedAt: Date | string;
+    status: string;
+  }> = [];
+
+  try {
+    const paymentsPath = path.join(process.cwd(), "public", "finance-fee-payments.json");
+    if (fs.existsSync(paymentsPath)) {
+      const fileContent = JSON.parse(fs.readFileSync(paymentsPath, "utf-8"));
+      if (Array.isArray(fileContent)) {
+        filePayments = fileContent.map((p: any) => ({
           id: p.id,
           amountPaisa: Math.round(Number(p.amount || 0) * 100),
           institutionId: p.system === "madrassa" ? "jamia_qasmia_baneen" : "al_qasim_academy",
@@ -359,12 +367,18 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
           status: "posted",
         }));
       }
-    } catch {
-      // Fallback if file read fails
     }
+  } catch {
+    // Fallback if file read fails
   }
 
-  const scopedPayments = allPayments.filter((p) => {
+  // Merge DB and file payments without duplicates
+  const paymentMap = new Map<string, any>();
+  filePayments.forEach((p) => paymentMap.set(p.id, p));
+  allPayments.forEach((p) => paymentMap.set(p.id, p));
+  const mergedPayments = Array.from(paymentMap.values());
+
+  const scopedPayments = mergedPayments.filter((p) => {
     if (filterConf.institutionId && p.institutionId !== filterConf.institutionId) return false;
     return true;
   });
@@ -639,6 +653,28 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
     // Database offline
   }
 
+  if (recentPayments.length < 4) {
+    try {
+      const paymentsPath = path.join(process.cwd(), "public", "finance-fee-payments.json");
+      if (fs.existsSync(paymentsPath)) {
+        const fileContent = JSON.parse(fs.readFileSync(paymentsPath, "utf-8"));
+        if (Array.isArray(fileContent)) {
+          fileContent.slice(0, 4).forEach((p: any) => {
+            if (!recentPayments.some((rp) => rp.id === p.id || rp.receiptNo === p.voucherNo)) {
+              recentPayments.push({
+                id: p.id,
+                receiptNo: p.voucherNo || p.id,
+                amountPaisa: Math.round(Number(p.amount || 0) * 100),
+                payerName: p.partyName,
+                receivedAt: p.date ? new Date(p.date) : new Date(),
+              });
+            }
+          });
+        }
+      }
+    } catch {}
+  }
+
   recentPayments.forEach((p) => {
     activities.push({
       id: `fee-${p.id}`,
@@ -648,6 +684,25 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
       at: new Date(p.receivedAt).toISOString(),
     });
   });
+
+  // Recent operational expenses from file
+  try {
+    const expPath = path.join(process.cwd(), "public", "finance-expenses.json");
+    if (fs.existsSync(expPath)) {
+      const expContent = JSON.parse(fs.readFileSync(expPath, "utf-8"));
+      if (Array.isArray(expContent)) {
+        expContent.slice(0, 3).forEach((e: any) => {
+          activities.push({
+            id: `exp-${e.id}`,
+            type: "fee",
+            title: `Expense disbursed: PKR ${Number(e.amount || 0).toLocaleString()} (${e.categoryLabel || "Disbursement"})`,
+            titleUrdu: `اخراجات کی ادائیگی: ${Number(e.amount || 0).toLocaleString()} روپے (${e.categoryLabelUrdu || "اخراجات"})`,
+            at: new Date(e.date || todayStr).toISOString(),
+          });
+        });
+      }
+    }
+  } catch {}
 
   // Recent exam sessions
   let recentExams: Array<{
@@ -779,24 +834,48 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
   // Real operational expenses (purchased inventory, payroll, utilities, mess, repairs)
   const inventoryPurchasedValue = inventorySummary.purchasedValue || 90800;
 
-  let salariesAmount = 332000;
-  let utilitiesAmount = 43400;
-  let messAmount = 90000;
-  let maintenanceAmount = 36500;
-  let inventoryExpenseAmount = inventoryPurchasedValue;
+  let salariesAmount = isSchoolScope ? 151000 : isMadrassaScope ? 117000 : 332000;
+  let utilitiesAmount = isSchoolScope ? 22000 : isMadrassaScope ? 21400 : 43400;
+  let messAmount = isSchoolScope ? 0 : isMadrassaScope ? 90000 : 90000;
+  let maintenanceAmount = isSchoolScope ? 26000 : isMadrassaScope ? 10500 : 36500;
+  let inventoryExpenseAmount = isSchoolScope ? Math.round(inventoryPurchasedValue * 0.7) : isMadrassaScope ? Math.round(inventoryPurchasedValue * 0.3) : inventoryPurchasedValue;
 
-  if (isSchoolScope) {
-    salariesAmount = 151000;
-    utilitiesAmount = 22000;
-    messAmount = 0;
-    maintenanceAmount = 26000;
-    inventoryExpenseAmount = Math.round(inventoryPurchasedValue * 0.7);
-  } else if (isMadrassaScope) {
-    salariesAmount = 117000;
-    utilitiesAmount = 21400;
-    messAmount = 90000;
-    maintenanceAmount = 10500;
-    inventoryExpenseAmount = Math.round(inventoryPurchasedValue * 0.3);
+  let recordedExpenses: any[] = [];
+  try {
+    const expPath = path.join(process.cwd(), "public", "finance-expenses.json");
+    if (fs.existsSync(expPath)) {
+      const expParsed = JSON.parse(fs.readFileSync(expPath, "utf-8"));
+      if (Array.isArray(expParsed)) {
+        recordedExpenses = expParsed;
+      }
+    }
+  } catch {}
+
+  const scopedRecordedExpenses = recordedExpenses.filter((e) => {
+    if (isSchoolScope && e.system === "madrassa") return false;
+    if (isMadrassaScope && e.system === "school") return false;
+    return true;
+  });
+
+  const monthExpenses = scopedRecordedExpenses.filter((e) => {
+    const d = new Date(e.date);
+    return d >= startOfMonth;
+  });
+
+  if (monthExpenses.length > 0) {
+    const recSal = monthExpenses.filter((e) => String(e.category).startsWith("salary")).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const recUtil = monthExpenses.filter((e) => String(e.category).startsWith("util")).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const recMess = monthExpenses.filter((e) => String(e.category).startsWith("mess")).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const recMaint = monthExpenses.filter((e) => String(e.category).startsWith("campus") || String(e.category).startsWith("transport") || String(e.category).startsWith("misc")).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    const recMat = monthExpenses.filter((e) => String(e.category).startsWith("academic")).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+    if (recSal > 0) salariesAmount = recSal;
+    if (recUtil > 0) utilitiesAmount = recUtil;
+    if (recMess > 0) messAmount = recMess;
+    if (recMaint > 0) maintenanceAmount = recMaint;
+    if (recMat > 0) {
+      inventoryExpenseAmount = recMat + (inventorySummary.purchasedValue ? Math.round(inventorySummary.purchasedValue * 0.2) : 0);
+    }
   }
 
   const monthlyTotalExpenses =
@@ -804,12 +883,15 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
   const monthlyTotalIncome =
     monthlyFeeCollected + totalDonationsAmount;
 
-  // Daily approximations based on operational cadence
+  // Daily figures
+  const todayExpensesList = scopedRecordedExpenses.filter((e) => e.date === todayStr);
+  const todayExpenseSum = todayExpensesList.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
   const dailyDonations = Math.round(totalDonationsAmount / 30);
   const dailySalaries = Math.round(salariesAmount / 30);
   const dailyUtilities = Math.round((utilitiesAmount + messAmount) / 30);
   const dailyInventory = Math.round(inventoryExpenseAmount / 30);
-  const dailyTotalExpenses = dailySalaries + dailyUtilities + dailyInventory;
+  const dailyTotalExpenses = todayExpenseSum > 0 ? todayExpenseSum : dailySalaries + dailyUtilities + dailyInventory;
   const dailyTotalIncome = todayFeeCollected + dailyDonations;
 
   return {

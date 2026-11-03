@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db";
-import { admissionApplications, admissionEvents } from "@/db/schema/admission";
+import { admissionApplications, admissionEvents, admissionInterviews } from "@/db/schema/admission";
 import { eq, or } from "drizzle-orm";
 
 export type InterviewSlot = {
@@ -26,7 +26,18 @@ export type InterviewSlot = {
   updatedAt: string;
 };
 
-export type DocChecklistState = Record<string, Record<string, boolean>>;
+export type DocItemStatus = "verified" | "pending" | "missing" | "rejected" | "exempted";
+
+export type DocItemDetail = {
+  status: DocItemStatus;
+  notes?: string;
+  updatedAt?: string;
+};
+
+export type DocChecklistState = Record<
+  string,
+  Record<string, boolean | string | DocItemDetail>
+>;
 
 export type WaitlistEntry = {
   id: string;
@@ -139,32 +150,40 @@ export const DEFAULT_SEED_APPLICATIONS = [
   },
 ];
 
-const DATA_FILE = path.join(process.cwd(), "public", "admission-interviews.json");
+function getDataFilePaths(): string[] {
+  return [
+    path.join(process.cwd(), "public", "admission-interviews.json"),
+    path.join(process.cwd(), ".output", "public", "admission-interviews.json"),
+  ];
+}
 
 let memoryData: InterviewStorageData | null = null;
+let dbSyncAttempted = false;
 
 function loadStoredData(): InterviewStorageData {
   if (memoryData) return memoryData;
 
-  try {
-    if (fs.existsSync(DATA_FILE)) {
-      const content = fs.readFileSync(DATA_FILE, "utf-8");
-      const parsed = JSON.parse(content);
-      if (parsed && typeof parsed === "object") {
-        memoryData = {
-          slots: Array.isArray(parsed.slots) ? parsed.slots : [],
-          docStates: parsed.docStates && typeof parsed.docStates === "object" ? parsed.docStates : {},
-          waitlist: Array.isArray(parsed.waitlist) ? parsed.waitlist : [],
-          docTypes:
-            Array.isArray(parsed.docTypes) && parsed.docTypes.length > 0
-              ? parsed.docTypes
-              : [...DEFAULT_CHECKLIST],
-        };
-        return memoryData;
+  for (const filePath of getDataFilePaths()) {
+    try {
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, "utf-8");
+        const parsed = JSON.parse(content);
+        if (parsed && typeof parsed === "object") {
+          memoryData = {
+            slots: Array.isArray(parsed.slots) ? parsed.slots : [],
+            docStates: parsed.docStates && typeof parsed.docStates === "object" ? parsed.docStates : {},
+            waitlist: Array.isArray(parsed.waitlist) ? parsed.waitlist : [],
+            docTypes:
+              Array.isArray(parsed.docTypes) && parsed.docTypes.length > 0
+                ? parsed.docTypes
+                : [...DEFAULT_CHECKLIST],
+          };
+          return memoryData;
+        }
       }
+    } catch (err) {
+      console.error(`[InterviewsService] Error reading ${filePath}:`, err);
     }
-  } catch (err) {
-    console.error("[InterviewsService] Error reading admission-interviews.json:", err);
   }
 
   memoryData = {
@@ -179,19 +198,90 @@ function loadStoredData(): InterviewStorageData {
 
 function saveDataToFile(data: InterviewStorageData) {
   memoryData = data;
-  try {
-    const dir = path.dirname(DATA_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+  const jsonContent = JSON.stringify(data, null, 2);
+  for (const filePath of getDataFilePaths()) {
+    try {
+      const dir = path.dirname(filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(filePath, jsonContent, "utf-8");
+    } catch (err) {
+      console.error(`[InterviewsService] Error saving to ${filePath}:`, err);
     }
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.error("[InterviewsService] Error saving admission-interviews.json:", err);
   }
+}
+
+async function syncInterviewsWithDb(data: InterviewStorageData): Promise<InterviewStorageData> {
+  if (dbSyncAttempted) return data;
+  try {
+    const rows = await db.select().from(admissionInterviews);
+    if (rows && rows.length > 0) {
+      const dbSlots: InterviewSlot[] = rows.map((r) => ({
+        id: r.id,
+        appId: r.appId,
+        applicantName: r.applicantName || undefined,
+        applicantNameUrdu: r.applicantNameUrdu || undefined,
+        refNo: r.refNo || undefined,
+        system: (r.system as "madrassa" | "school") || undefined,
+        categoryOrClass: r.categoryOrClass || undefined,
+        source: r.source || undefined,
+        date: r.date,
+        time: r.time,
+        interviewer: r.interviewer,
+        room: r.room,
+        status: (r.status as InterviewSlot["status"]) || "scheduled",
+        marks: r.marks != null ? r.marks : null,
+        notes: r.notes || null,
+        guardianPhone: r.guardianPhone || undefined,
+        createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
+        updatedAt: r.updatedAt ? r.updatedAt.toISOString() : new Date().toISOString(),
+      }));
+
+      const slotMap = new Map<string, InterviewSlot>();
+      for (const s of data.slots) slotMap.set(s.id, s);
+      for (const s of dbSlots) slotMap.set(s.id, s);
+      data.slots = Array.from(slotMap.values());
+      saveDataToFile(data);
+    } else if (data.slots.length > 0) {
+      for (const s of data.slots) {
+        try {
+          await db
+            .insert(admissionInterviews)
+            .values({
+              id: s.id,
+              appId: s.appId,
+              applicantName: s.applicantName,
+              applicantNameUrdu: s.applicantNameUrdu,
+              refNo: s.refNo,
+              system: s.system,
+              categoryOrClass: s.categoryOrClass,
+              source: s.source,
+              date: s.date,
+              time: s.time,
+              interviewer: s.interviewer,
+              room: s.room,
+              status: s.status,
+              marks: s.marks ?? null,
+              notes: s.notes ?? null,
+              guardianPhone: s.guardianPhone,
+            })
+            .onConflictDoNothing();
+        } catch {
+          // ignore seed errors
+        }
+      }
+    }
+    dbSyncAttempted = true;
+  } catch {
+    // DB offline/unavailable
+  }
+  return data;
 }
 
 export async function listInterviews(): Promise<InterviewStorageData> {
   const data = loadStoredData();
+  await syncInterviewsWithDb(data);
 
   let loadedApps: any[] = [];
   try {
@@ -336,6 +426,53 @@ export async function createOrUpdateSlot(slot: {
 
   saveDataToFile(data);
 
+  // Sync with admission_interviews in DB
+  try {
+    await db
+      .insert(admissionInterviews)
+      .values({
+        id: newSlot.id,
+        appId: newSlot.appId,
+        applicantName: newSlot.applicantName,
+        applicantNameUrdu: newSlot.applicantNameUrdu,
+        refNo: newSlot.refNo,
+        system: newSlot.system,
+        categoryOrClass: newSlot.categoryOrClass,
+        source: newSlot.source,
+        date: newSlot.date,
+        time: newSlot.time,
+        interviewer: newSlot.interviewer,
+        room: newSlot.room,
+        status: newSlot.status,
+        marks: newSlot.marks ?? null,
+        notes: newSlot.notes ?? null,
+        guardianPhone: newSlot.guardianPhone,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: admissionInterviews.id,
+        set: {
+          applicantName: newSlot.applicantName,
+          applicantNameUrdu: newSlot.applicantNameUrdu,
+          refNo: newSlot.refNo,
+          system: newSlot.system,
+          categoryOrClass: newSlot.categoryOrClass,
+          source: newSlot.source,
+          date: newSlot.date,
+          time: newSlot.time,
+          interviewer: newSlot.interviewer,
+          room: newSlot.room,
+          status: newSlot.status,
+          marks: newSlot.marks ?? null,
+          notes: newSlot.notes ?? null,
+          guardianPhone: newSlot.guardianPhone,
+          updatedAt: new Date(),
+        },
+      });
+  } catch {
+    // ignore DB offline
+  }
+
   // Sync with admission_applications in DB
   try {
     const targetStatus =
@@ -379,6 +516,25 @@ export async function updateSlot(
     data.slots[slotIdx] = updated;
     saveDataToFile(data);
 
+    // Sync with admission_interviews in DB
+    try {
+      const updateValues: Record<string, any> = { updatedAt: new Date() };
+      if (updates.date !== undefined) updateValues.date = updates.date;
+      if (updates.time !== undefined) updateValues.time = updates.time;
+      if (updates.interviewer !== undefined) updateValues.interviewer = updates.interviewer;
+      if (updates.room !== undefined) updateValues.room = updates.room;
+      if (updates.status !== undefined) updateValues.status = updates.status;
+      if (updates.marks !== undefined) updateValues.marks = updates.marks;
+      if (updates.notes !== undefined) updateValues.notes = updates.notes;
+
+      await db
+        .update(admissionInterviews)
+        .set(updateValues)
+        .where(eq(admissionInterviews.id, id));
+    } catch {
+      // ignore DB offline
+    }
+
     // Sync with admissionApplications
     try {
       if (updates.status) {
@@ -419,6 +575,11 @@ export async function deleteSlot(id: string): Promise<boolean> {
   data.slots = data.slots.filter((s) => s.id !== id);
   if (data.slots.length !== prevCount) {
     saveDataToFile(data);
+    try {
+      await db.delete(admissionInterviews).where(eq(admissionInterviews.id, id));
+    } catch {
+      // ignore
+    }
     return true;
   }
   return false;
@@ -426,7 +587,7 @@ export async function deleteSlot(id: string): Promise<boolean> {
 
 export async function saveDocState(
   appId: string,
-  docs: Record<string, boolean>,
+  docs: Record<string, boolean | string | DocItemDetail>,
 ): Promise<DocChecklistState> {
   const data = loadStoredData();
   data.docStates[appId] = { ...(data.docStates[appId] || {}), ...docs };

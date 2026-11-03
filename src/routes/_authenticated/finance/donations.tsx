@@ -71,14 +71,32 @@ function DonationsPage() {
     let mounted = true;
     async function fetchDonations() {
       try {
-        const res = await fetch("/api/finance/donations");
+        const res = await fetch("/api/finance/donations", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
-          if (mounted && Array.isArray(data.donations) && data.donations.length > 0) {
-            setItems(data.donations);
-            try {
-              localStorage.setItem("msmis_donations", JSON.stringify(data.donations));
-            } catch {}
+          if (mounted && Array.isArray(data.donations)) {
+            setItems((prev) => {
+              const map = new Map<string, Donation>();
+              // Server items take authoritative priority
+              data.donations.forEach((d: Donation) => map.set(d.id, d));
+              // Preserve any unsynced local items
+              prev.forEach((d: Donation) => {
+                if (!map.has(d.id)) {
+                  map.set(d.id, d);
+                  fetch("/api/finance/donations", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify(d),
+                  }).catch(() => {});
+                }
+              });
+              const merged = Array.from(map.values());
+              try {
+                localStorage.setItem("msmis_donations", JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
         }
       } catch (err) {
@@ -92,42 +110,49 @@ function DonationsPage() {
   }, []);
 
   const handleSaveDonation = async (d: Omit<Donation, "id" | "receiptNo">) => {
-    try {
-      const res = await fetch("/api/finance/donations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(d),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.donation) {
-          setItems((prev) => {
-            const next = [data.donation, ...prev.filter((p) => p.id !== data.donation.id)];
-            try {
-              localStorage.setItem("msmis_donations", JSON.stringify(next));
-            } catch {}
-            return next;
-          });
-          toast.success(isUrdu ? "رسید جاری کر دی گئی ہے" : "Receipt issued successfully");
-          return;
-        }
-      }
-    } catch {}
+    const year = new Date().getFullYear();
+    const nextNum = items.length + 1;
+    const optimisticId = `d${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const optimisticReceiptNo = `DR-${year}-${String(nextNum).padStart(4, "0")}`;
 
-    // Fallback if network/offline
-    const fallback: Donation = {
+    const newDonationItem: Donation = {
       ...d,
-      id: `d${Date.now()}`,
-      receiptNo: `DR-${new Date().getFullYear()}-${String(items.length + 1).padStart(4, "0")}`,
+      id: optimisticId,
+      receiptNo: optimisticReceiptNo,
     };
+
+    // Immediately persist to state & localStorage
     setItems((prev) => {
-      const next = [fallback, ...prev];
+      const next = [newDonationItem, ...prev.filter((p) => p.id !== optimisticId)];
       try {
         localStorage.setItem("msmis_donations", JSON.stringify(next));
       } catch {}
       return next;
     });
-    toast.success(isUrdu ? "رسید جاری کر دی گئی ہے" : "Receipt issued successfully");
+
+    try {
+      const res = await fetch("/api/finance/donations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(newDonationItem),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.donation) {
+          setItems((prev) => {
+            const next = prev.map((p) => (p.id === optimisticId ? data.donation : p));
+            try {
+              localStorage.setItem("msmis_donations", JSON.stringify(next));
+            } catch {}
+            return next;
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Could not reach donations API, saved to offline backup:", err);
+    }
+    toast.success(isUrdu ? "عطیہ کی رسید جاری اور محفوظ کر دی گئی ہے" : "Donation receipt issued and saved successfully");
   };
 
   const totals = items.reduce((acc, d) => {

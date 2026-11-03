@@ -82,6 +82,7 @@ import { Route as ApiAcademicYearsIdRouteImport } from './routes/api/academic-ye
 import { Route as ApiAcademicYearsBackfillRouteImport } from './routes/api/academic-years/backfill'
 import { Route as ApiAcademicInstitutionsRouteImport } from './routes/api/academic/institutions'
 import { Route as ApiAcademicProgramsRouteImport } from './routes/api/academic/programs'
+import { Route as ApiAdminAuditLogsRouteImport } from './routes/api/admin/audit-logs'
 import { Route as ApiAdminSuperAdminRouteImport } from './routes/api/admin/super-admin'
 import { Route as ApiAdmissionApplicationsRouteImport } from './routes/api/admission/applications'
 import { Route as ApiAdmissionGuardianSuggestionsRouteImport } from './routes/api/admission/guardian-suggestions'
@@ -97,6 +98,7 @@ import { Route as ApiFeesStudentsRouteImport } from './routes/api/fees/students'
 import { Route as ApiFinanceDonationsRouteImport } from './routes/api/finance/donations'
 import { Route as ApiFinanceOverviewRouteImport } from './routes/api/finance/overview'
 import { Route as ApiFinanceReportsRouteImport } from './routes/api/finance/reports'
+import { Route as ApiFinanceTransactionsRouteImport } from './routes/api/finance/transactions'
 import { Route as ApiHrLeavesRouteImport } from './routes/api/hr/leaves'
 import { Route as ApiNotificationsIndexRouteImport } from './routes/api/notifications/index'
 import { Route as ApiPromotionsPreviewRouteImport } from './routes/api/promotions/preview'
@@ -600,6 +602,11 @@ const ApiAcademicProgramsRoute = ApiAcademicProgramsRouteImport.update({
   path: '/api/academic/programs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminAuditLogsRoute = ApiAdminAuditLogsRouteImport.update({
+  id: '/api/admin/audit-logs',
+  path: '/api/admin/audit-logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminSuperAdminRoute = ApiAdminSuperAdminRouteImport.update({
   id: '/api/admin/super-admin',
   path: '/api/admin/super-admin',
@@ -675,6 +682,11 @@ const ApiFinanceOverviewRoute = ApiFinanceOverviewRouteImport.update({
 const ApiFinanceReportsRoute = ApiFinanceReportsRouteImport.update({
   id: '/api/finance/reports',
   path: '/api/finance/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFinanceTransactionsRoute = ApiFinanceTransactionsRouteImport.update({
+  id: '/api/finance/transactions',
+  path: '/api/finance/transactions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHrLeavesRoute = ApiHrLeavesRouteImport.update({
@@ -1316,6 +1328,7 @@ export interface FileRoutesByFullPath {
   '/api/academic-years/backfill': typeof ApiAcademicYearsBackfillRoute
   '/api/academic/institutions': typeof ApiAcademicInstitutionsRoute
   '/api/academic/programs': typeof ApiAcademicProgramsRoute
+  '/api/admin/audit-logs': typeof ApiAdminAuditLogsRoute
   '/api/admin/super-admin': typeof ApiAdminSuperAdminRoute
   '/api/admission/applications': typeof ApiAdmissionApplicationsRouteWithChildren
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
@@ -1331,6 +1344,7 @@ export interface FileRoutesByFullPath {
   '/api/finance/donations': typeof ApiFinanceDonationsRoute
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/finance/reports': typeof ApiFinanceReportsRoute
+  '/api/finance/transactions': typeof ApiFinanceTransactionsRoute
   '/api/hr/leaves': typeof ApiHrLeavesRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
   '/api/promotions/roster': typeof ApiPromotionsRosterRoute
@@ -1497,6 +1511,7 @@ export interface FileRoutesByTo {
   '/api/academic-years/backfill': typeof ApiAcademicYearsBackfillRoute
   '/api/academic/institutions': typeof ApiAcademicInstitutionsRoute
   '/api/academic/programs': typeof ApiAcademicProgramsRoute
+  '/api/admin/audit-logs': typeof ApiAdminAuditLogsRoute
   '/api/admin/super-admin': typeof ApiAdminSuperAdminRoute
   '/api/admission/applications': typeof ApiAdmissionApplicationsRouteWithChildren
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
@@ -1512,6 +1527,7 @@ export interface FileRoutesByTo {
   '/api/finance/donations': typeof ApiFinanceDonationsRoute
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/finance/reports': typeof ApiFinanceReportsRoute
+  '/api/finance/transactions': typeof ApiFinanceTransactionsRoute
   '/api/hr/leaves': typeof ApiHrLeavesRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
   '/api/promotions/roster': typeof ApiPromotionsRosterRoute
@@ -1689,6 +1705,7 @@ export interface FileRoutesById {
   '/api/academic-years/backfill': typeof ApiAcademicYearsBackfillRoute
   '/api/academic/institutions': typeof ApiAcademicInstitutionsRoute
   '/api/academic/programs': typeof ApiAcademicProgramsRoute
+  '/api/admin/audit-logs': typeof ApiAdminAuditLogsRoute
   '/api/admin/super-admin': typeof ApiAdminSuperAdminRoute
   '/api/admission/applications': typeof ApiAdmissionApplicationsRouteWithChildren
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
@@ -1704,6 +1721,7 @@ export interface FileRoutesById {
   '/api/finance/donations': typeof ApiFinanceDonationsRoute
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/finance/reports': typeof ApiFinanceReportsRoute
+  '/api/finance/transactions': typeof ApiFinanceTransactionsRoute
   '/api/hr/leaves': typeof ApiHrLeavesRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
   '/api/promotions/roster': typeof ApiPromotionsRosterRoute
@@ -1881,6 +1899,7 @@ export interface FileRouteTypes {
     | '/api/academic-years/backfill'
     | '/api/academic/institutions'
     | '/api/academic/programs'
+    | '/api/admin/audit-logs'
     | '/api/admin/super-admin'
     | '/api/admission/applications'
     | '/api/admission/guardian-suggestions'
@@ -1896,6 +1915,7 @@ export interface FileRouteTypes {
     | '/api/finance/donations'
     | '/api/finance/overview'
     | '/api/finance/reports'
+    | '/api/finance/transactions'
     | '/api/hr/leaves'
     | '/api/promotions/preview'
     | '/api/promotions/roster'
@@ -2062,6 +2082,7 @@ export interface FileRouteTypes {
     | '/api/academic-years/backfill'
     | '/api/academic/institutions'
     | '/api/academic/programs'
+    | '/api/admin/audit-logs'
     | '/api/admin/super-admin'
     | '/api/admission/applications'
     | '/api/admission/guardian-suggestions'
@@ -2077,6 +2098,7 @@ export interface FileRouteTypes {
     | '/api/finance/donations'
     | '/api/finance/overview'
     | '/api/finance/reports'
+    | '/api/finance/transactions'
     | '/api/hr/leaves'
     | '/api/promotions/preview'
     | '/api/promotions/roster'
@@ -2253,6 +2275,7 @@ export interface FileRouteTypes {
     | '/api/academic-years/backfill'
     | '/api/academic/institutions'
     | '/api/academic/programs'
+    | '/api/admin/audit-logs'
     | '/api/admin/super-admin'
     | '/api/admission/applications'
     | '/api/admission/guardian-suggestions'
@@ -2268,6 +2291,7 @@ export interface FileRouteTypes {
     | '/api/finance/donations'
     | '/api/finance/overview'
     | '/api/finance/reports'
+    | '/api/finance/transactions'
     | '/api/hr/leaves'
     | '/api/promotions/preview'
     | '/api/promotions/roster'
@@ -2392,6 +2416,7 @@ export interface RootRouteChildren {
   ApiAcademicYearsBackfillRoute: typeof ApiAcademicYearsBackfillRoute
   ApiAcademicInstitutionsRoute: typeof ApiAcademicInstitutionsRoute
   ApiAcademicProgramsRoute: typeof ApiAcademicProgramsRoute
+  ApiAdminAuditLogsRoute: typeof ApiAdminAuditLogsRoute
   ApiAdminSuperAdminRoute: typeof ApiAdminSuperAdminRoute
   ApiAdmissionApplicationsRoute: typeof ApiAdmissionApplicationsRouteWithChildren
   ApiAdmissionGuardianSuggestionsRoute: typeof ApiAdmissionGuardianSuggestionsRoute
@@ -2407,6 +2432,7 @@ export interface RootRouteChildren {
   ApiFinanceDonationsRoute: typeof ApiFinanceDonationsRoute
   ApiFinanceOverviewRoute: typeof ApiFinanceOverviewRoute
   ApiFinanceReportsRoute: typeof ApiFinanceReportsRoute
+  ApiFinanceTransactionsRoute: typeof ApiFinanceTransactionsRoute
   ApiHrLeavesRoute: typeof ApiHrLeavesRoute
   ApiPromotionsPreviewRoute: typeof ApiPromotionsPreviewRoute
   ApiPromotionsRosterRoute: typeof ApiPromotionsRosterRoute
@@ -2963,6 +2989,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAcademicProgramsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/audit-logs': {
+      id: '/api/admin/audit-logs'
+      path: '/api/admin/audit-logs'
+      fullPath: '/api/admin/audit-logs'
+      preLoaderRoute: typeof ApiAdminAuditLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/super-admin': {
       id: '/api/admin/super-admin'
       path: '/api/admin/super-admin'
@@ -3066,6 +3099,13 @@ declare module '@tanstack/react-router' {
       path: '/api/finance/reports'
       fullPath: '/api/finance/reports'
       preLoaderRoute: typeof ApiFinanceReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/finance/transactions': {
+      id: '/api/finance/transactions'
+      path: '/api/finance/transactions'
+      fullPath: '/api/finance/transactions'
+      preLoaderRoute: typeof ApiFinanceTransactionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/hr/leaves': {
@@ -4498,6 +4538,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAcademicYearsBackfillRoute: ApiAcademicYearsBackfillRoute,
   ApiAcademicInstitutionsRoute: ApiAcademicInstitutionsRoute,
   ApiAcademicProgramsRoute: ApiAcademicProgramsRoute,
+  ApiAdminAuditLogsRoute: ApiAdminAuditLogsRoute,
   ApiAdminSuperAdminRoute: ApiAdminSuperAdminRoute,
   ApiAdmissionApplicationsRoute: ApiAdmissionApplicationsRouteWithChildren,
   ApiAdmissionGuardianSuggestionsRoute: ApiAdmissionGuardianSuggestionsRoute,
@@ -4513,6 +4554,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFinanceDonationsRoute: ApiFinanceDonationsRoute,
   ApiFinanceOverviewRoute: ApiFinanceOverviewRoute,
   ApiFinanceReportsRoute: ApiFinanceReportsRoute,
+  ApiFinanceTransactionsRoute: ApiFinanceTransactionsRoute,
   ApiHrLeavesRoute: ApiHrLeavesRoute,
   ApiPromotionsPreviewRoute: ApiPromotionsPreviewRoute,
   ApiPromotionsRosterRoute: ApiPromotionsRosterRoute,

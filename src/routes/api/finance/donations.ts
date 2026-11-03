@@ -1,10 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { listDonations, saveDonation } from "@/lib/server/finance/donations-service";
+import {
+  ensureDonationsLoaded,
+  listDonations,
+  saveDonation,
+  deleteDonation,
+} from "@/lib/server/finance/donations-service";
 import { errorResponse } from "@/lib/server/http";
 import { json, parseJsonBody } from "@/lib/server/super-admin";
 
 const createDonationSchema = z.object({
+  id: z.string().optional(),
+  receiptNo: z.string().optional(),
   donor: z.string().min(1, "Donor name is required"),
   donorUrdu: z.string().optional(),
   phone: z.string().optional(),
@@ -16,11 +23,16 @@ const createDonationSchema = z.object({
   date: z.string().optional(),
 });
 
+const deleteDonationSchema = z.object({
+  id: z.string().min(1, "Donation ID is required"),
+});
+
 export const Route = createFileRoute("/api/finance/donations")({
   server: {
     handlers: {
       GET: async () => {
         try {
+          await ensureDonationsLoaded().catch(() => {});
           const donations = listDonations();
           return json({ donations });
         } catch (error) {
@@ -38,7 +50,17 @@ export const Route = createFileRoute("/api/finance/donations")({
           return errorResponse(error, "Could not record donation");
         }
       },
+      DELETE: async ({ request }) => {
+        const parsed = await parseJsonBody(request, deleteDonationSchema);
+        if (!parsed.ok) return parsed.response;
+
+        try {
+          deleteDonation(parsed.data.id);
+          return json({ success: true });
+        } catch (error) {
+          return errorResponse(error, "Could not delete donation");
+        }
+      },
     },
   },
 });
-

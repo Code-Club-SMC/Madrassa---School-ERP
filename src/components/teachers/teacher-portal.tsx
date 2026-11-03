@@ -197,11 +197,11 @@ export function TeacherPortal() {
                 {dashboard.profile?.name}
               </h1>
               <Badge variant="outline" className="text-[10px] uppercase font-mono">
-                {dashboard.profile?.systemScope === "both"
+                {dashboard.profile?.systemScope?.includes("both") || dashboard.profile?.systemScope === "all"
                   ? isUrdu
                     ? "مشترکہ"
                     : "Both Systems"
-                  : dashboard.profile?.systemScope === "madrassa"
+                  : dashboard.profile?.systemScope?.includes("madrassa")
                   ? isUrdu
                     ? "مدرسہ"
                     : "Madrassa"

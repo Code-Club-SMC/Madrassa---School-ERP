@@ -19,6 +19,12 @@ import {
   RotateCcw,
   RefreshCw,
   SlidersHorizontal,
+  Clock,
+  AlertCircle,
+  XCircle,
+  MessageSquare,
+  FileText,
+  Check,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { AppLoader } from "@/components/shared/app-loader";
@@ -35,6 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -122,14 +129,143 @@ type Waitlist = {
   reason: string;
 };
 
+export type DocItemStatus = "verified" | "pending" | "missing" | "rejected" | "exempted";
+
+export type DocItemDetail = {
+  status: DocItemStatus;
+  notes?: string;
+  updatedAt?: string;
+};
+
+export type DocValue = boolean | string | DocItemDetail;
+
+export function getDocStatus(val: DocValue | undefined): DocItemStatus {
+  if (val === true) return "verified";
+  if (val === false) return "missing";
+  if (!val) return "pending";
+  if (typeof val === "string") {
+    if (["verified", "pending", "missing", "rejected", "exempted"].includes(val)) {
+      return val as DocItemStatus;
+    }
+    return "pending";
+  }
+  if (typeof val === "object" && val && "status" in val && val.status) {
+    return val.status as DocItemStatus;
+  }
+  return "pending";
+}
+
+export function getDocNotes(val: DocValue | undefined): string {
+  if (typeof val === "object" && val && "notes" in val && typeof val.notes === "string") {
+    return val.notes;
+  }
+  return "";
+}
+
+export function isDocSatisfied(val: DocValue | undefined): boolean {
+  const s = getDocStatus(val);
+  return s === "verified" || s === "exempted";
+}
+
+export const DOC_STATUS_CONFIG: Record<
+  DocItemStatus,
+  {
+    en: string;
+    ur: string;
+    badgeClass: string;
+    borderClass: string;
+    bgClass: string;
+  }
+> = {
+  verified: {
+    en: "Verified",
+    ur: "تصدیق شدہ",
+    badgeClass: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+    borderClass: "border-emerald-500/40",
+    bgClass: "bg-emerald-500/5",
+  },
+  pending: {
+    en: "Pending Review",
+    ur: "زیرِ جائزہ",
+    badgeClass: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    borderClass: "border-amber-500/40",
+    bgClass: "bg-amber-500/5",
+  },
+  missing: {
+    en: "Missing / Required",
+    ur: "غیر موصول",
+    badgeClass: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30",
+    borderClass: "border-red-500/40",
+    bgClass: "bg-red-500/5",
+  },
+  rejected: {
+    en: "Rejected / Incomplete",
+    ur: "مسترد / نامکمل",
+    badgeClass: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30",
+    borderClass: "border-rose-500/40",
+    bgClass: "bg-rose-500/5",
+  },
+  exempted: {
+    en: "Exempted",
+    ur: "مستثنیٰ",
+    badgeClass: "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30",
+    borderClass: "border-slate-500/30",
+    bgClass: "bg-muted/30",
+  },
+};
+
+const LOCAL_STORAGE_KEY = "msmis_admission_interviews_cache";
+
+function getLocalData(): {
+  slots?: Slot[];
+  docStates?: Record<string, Record<string, DocValue>>;
+  waitlist?: Waitlist[];
+  docTypes?: Doc[];
+} | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
+function saveLocalData(partial: {
+  slots?: Slot[];
+  docStates?: Record<string, Record<string, DocValue>>;
+  waitlist?: Waitlist[];
+  docTypes?: Doc[];
+}) {
+  if (typeof window === "undefined") return;
+  try {
+    const current = getLocalData() || {};
+    const updated = { ...current, ...partial };
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+  } catch {}
+}
+
 function InterviewsPage() {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
   const [applications, setApplications] = useState<AdmissionApplication[]>([]);
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [docState, setDocState] = useState<Record<string, Record<string, boolean>>>({});
-  const [docTypes, setDocTypes] = useState<Doc[]>(DEFAULT_CHECKLIST);
-  const [waitlist, setWaitlist] = useState<Waitlist[]>([]);
+  const [slots, setSlots] = useState<Slot[]>(() => {
+    const local = getLocalData();
+    return local?.slots && Array.isArray(local.slots) ? local.slots : [];
+  });
+  const [docState, setDocState] = useState<Record<string, Record<string, DocValue>>>(() => {
+    const local = getLocalData();
+    return local?.docStates && typeof local.docStates === "object" ? local.docStates : {};
+  });
+  const [docTypes, setDocTypes] = useState<Doc[]>(() => {
+    const local = getLocalData();
+    return local?.docTypes && Array.isArray(local.docTypes) && local.docTypes.length > 0
+      ? local.docTypes
+      : DEFAULT_CHECKLIST;
+  });
+  const [waitlist, setWaitlist] = useState<Waitlist[]>(() => {
+    const local = getLocalData();
+    return local?.waitlist && Array.isArray(local.waitlist) ? local.waitlist : [];
+  });
   const [loading, setLoading] = useState(true);
 
   // Filter state for scheduled interviews table
@@ -174,6 +310,17 @@ function InterviewsPage() {
   const [activeDoc, setActiveDoc] = useState<string>("");
   const [docFilter, setDocFilter] = useState<"all" | "website" | "pending">("pending");
 
+  // Document Note/Status edit modal state
+  const [docNoteModalOpen, setDocNoteModalOpen] = useState(false);
+  const [editingDocNote, setEditingDocNote] = useState<{
+    appId: string;
+    docKey: string;
+    docTitleEn: string;
+    docTitleUr: string;
+    status: DocItemStatus;
+    notes: string;
+  } | null>(null);
+
   // Load applications and saved interviews from backend
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -196,7 +343,24 @@ function InterviewsPage() {
 
       if (interviewsData) {
         if (Array.isArray(interviewsData.slots)) {
-          setSlots(interviewsData.slots);
+          setSlots((prev) => {
+            const map = new Map<string, Slot>();
+            interviewsData.slots.forEach((s: Slot) => map.set(s.id, s));
+            prev.forEach((s: Slot) => {
+              if (!map.has(s.id)) {
+                map.set(s.id, s);
+                fetch("/api/admission/interviews", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify(s),
+                }).catch(() => {});
+              }
+            });
+            const merged = Array.from(map.values());
+            saveLocalData({ slots: merged });
+            return merged;
+          });
 
           // If any applicant in slots is missing from appsList, synthesize it so counts & lists are complete
           const existingIds = new Set(appsList.map((a) => a.id));
@@ -224,13 +388,30 @@ function InterviewsPage() {
           });
         }
         if (interviewsData.docStates && typeof interviewsData.docStates === "object") {
-          setDocState(interviewsData.docStates);
+          setDocState((prev) => {
+            const merged = { ...prev, ...interviewsData.docStates };
+            for (const k in prev) {
+              merged[k] = { ...(prev[k] || {}), ...(interviewsData.docStates[k] || {}) };
+            }
+            saveLocalData({ docStates: merged });
+            return merged;
+          });
         }
         if (Array.isArray(interviewsData.waitlist)) {
-          setWaitlist(interviewsData.waitlist);
+          setWaitlist((prev) => {
+            const map = new Map<string, Waitlist>();
+            interviewsData.waitlist.forEach((w: Waitlist) => map.set(w.appId, w));
+            prev.forEach((w: Waitlist) => {
+              if (!map.has(w.appId)) map.set(w.appId, w);
+            });
+            const merged = Array.from(map.values());
+            saveLocalData({ waitlist: merged });
+            return merged;
+          });
         }
         if (Array.isArray(interviewsData.docTypes) && interviewsData.docTypes.length > 0) {
           setDocTypes(interviewsData.docTypes);
+          saveLocalData({ docTypes: interviewsData.docTypes });
         }
       }
 
@@ -292,14 +473,18 @@ function InterviewsPage() {
     return applications.filter((a) => {
       if (a.status === "accepted") return false;
       const applicantDocs = docState[a.id] || {};
-      const allRequiredVerified = requiredKeys.every((k) => Boolean(applicantDocs[k]));
+      const allRequiredVerified = requiredKeys.every((k) => isDocSatisfied(applicantDocs[k]));
       return !allRequiredVerified;
     }).length;
   }, [applications, docTypes, docState]);
 
   // Handle slot field update
   const handleUpdateSlot = async (slotId: string, updates: Partial<Slot>) => {
-    setSlots((prev) => prev.map((s) => (s.id === slotId ? { ...s, ...updates } : s)));
+    setSlots((prev) => {
+      const next = prev.map((s) => (s.id === slotId ? { ...s, ...updates } : s));
+      saveLocalData({ slots: next });
+      return next;
+    });
 
     // Synchronize application status
     if (updates.status) {
@@ -407,15 +592,19 @@ function InterviewsPage() {
 
       if (Array.isArray(data.docTypes)) {
         setDocTypes(data.docTypes);
+        saveLocalData({ docTypes: data.docTypes });
       } else {
         setDocTypes((prev) => {
           const idx = prev.findIndex((d) => d.key === item.key);
+          let next: Doc[];
           if (idx >= 0) {
-            const next = [...prev];
+            next = [...prev];
             next[idx] = item;
-            return next;
+          } else {
+            next = [...prev, item];
           }
-          return [...prev, item];
+          saveLocalData({ docTypes: next });
+          return next;
         });
       }
       setDocEditorOpen(false);
@@ -449,8 +638,13 @@ function InterviewsPage() {
 
       if (Array.isArray(data.docTypes)) {
         setDocTypes(data.docTypes);
+        saveLocalData({ docTypes: data.docTypes });
       } else {
-        setDocTypes((prev) => prev.filter((d) => d.key !== key));
+        setDocTypes((prev) => {
+          const next = prev.filter((d) => d.key !== key);
+          saveLocalData({ docTypes: next });
+          return next;
+        });
       }
       toast.success(isUrdu ? "دستاویز حذف کر دی گئی" : "Document type deleted");
     } catch (err) {
@@ -471,8 +665,10 @@ function InterviewsPage() {
 
       if (Array.isArray(data.docTypes)) {
         setDocTypes(data.docTypes);
+        saveLocalData({ docTypes: data.docTypes });
       } else {
         setDocTypes(DEFAULT_CHECKLIST);
+        saveLocalData({ docTypes: DEFAULT_CHECKLIST });
       }
       toast.success(
         isUrdu
@@ -499,7 +695,11 @@ function InterviewsPage() {
 
   // Handle slot deletion
   const handleDeleteSlot = async (slotId: string) => {
-    setSlots((prev) => prev.filter((s) => s.id !== slotId));
+    setSlots((prev) => {
+      const next = prev.filter((s) => s.id !== slotId);
+      saveLocalData({ slots: next });
+      return next;
+    });
     try {
       await fetch(`/api/admission/interviews/${slotId}`, {
         method: "DELETE",
@@ -548,7 +748,9 @@ function InterviewsPage() {
       if (data.slot) {
         setSlots((prev) => {
           const filtered = prev.filter((s) => s.id !== data.slot.id && s.appId !== candidate.id);
-          return [data.slot, ...filtered];
+          const next = [data.slot, ...filtered];
+          saveLocalData({ slots: next });
+          return next;
         });
       }
 
@@ -568,11 +770,30 @@ function InterviewsPage() {
     }
   };
 
-  // Handle document toggle and persist
-  const handleToggleDoc = async (appId: string, docKey: string, checked: boolean) => {
+  // Handle specific document status and notes update
+  const handleSetDocStatus = async (
+    appId: string,
+    docKey: string,
+    status: DocItemStatus,
+    notes?: string,
+  ) => {
     const current = docState[appId] ?? {};
-    const nextDocs = { ...current, [docKey]: checked };
-    setDocState((prev) => ({ ...prev, [appId]: nextDocs }));
+    const prevEntry = current[docKey];
+    const prevNotes = getDocNotes(prevEntry);
+    const finalNotes = notes !== undefined ? notes : prevNotes;
+
+    const nextDetail: DocItemDetail = {
+      status,
+      notes: finalNotes || undefined,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const nextDocs = { ...current, [docKey]: nextDetail };
+    setDocState((prev) => {
+      const next = { ...prev, [appId]: nextDocs };
+      saveLocalData({ docStates: next });
+      return next;
+    });
 
     try {
       await fetch("/api/admission/interviews/docs", {
@@ -581,14 +802,117 @@ function InterviewsPage() {
         credentials: "include",
         body: JSON.stringify({ appId, docs: nextDocs }),
       });
+      const meta = DOC_STATUS_CONFIG[status];
+      toast.success(
+        isUrdu
+          ? `دستاویز کی حیثیت: ${meta.ur}`
+          : `Document status: ${meta.en}`,
+      );
     } catch (err) {
       console.error("Failed to persist doc check:", err);
+      toast.error(isUrdu ? "اسٹیٹس محفوظ نہیں ہو سکا" : "Failed to save document status");
     }
+  };
+
+  // Handle document toggle and persist
+  const handleToggleDoc = async (appId: string, docKey: string, checked: boolean) => {
+    const newStatus: DocItemStatus = checked ? "verified" : "missing";
+    await handleSetDocStatus(appId, docKey, newStatus);
+  };
+
+  // Bulk update all documents for an applicant
+  const handleBulkSetDocStatus = async (appId: string, status: DocItemStatus) => {
+    const current = docState[appId] ?? {};
+    const nextDocs: Record<string, DocItemDetail> = {};
+    docTypes.forEach((d) => {
+      const prevNotes = getDocNotes(current[d.key]);
+      nextDocs[d.key] = {
+        status,
+        notes: prevNotes || undefined,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    setDocState((prev) => {
+      const next = { ...prev, [appId]: nextDocs };
+      saveLocalData({ docStates: next });
+      return next;
+    });
+
+    try {
+      await fetch("/api/admission/interviews/docs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ appId, docs: nextDocs }),
+      });
+      const meta = DOC_STATUS_CONFIG[status];
+      toast.success(
+        isUrdu
+          ? `تمام دستاویزات کو "${meta.ur}" نشان زد کر دیا گیا`
+          : `All documents set to "${meta.en}"`,
+      );
+    } catch {
+      toast.error(isUrdu ? "تبدیلی محفوظ نہیں ہو سکی" : "Failed to bulk update status");
+    }
+  };
+
+  // Handle updating overall applicant status
+  const handleUpdateApplicationStatus = async (appId: string, newStatus: string) => {
+    setApplications((prev) =>
+      prev.map((a) => (a.id === appId ? { ...a, status: newStatus } : a)),
+    );
+    try {
+      const res = await fetch(`/api/admission/applications/${appId}/status`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      toast.success(
+        isUrdu ? "درخواست کی صورتحال تبدیل ہو گئی" : "Application status updated successfully",
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update application status");
+    }
+  };
+
+  // Document Note modal helpers
+  const handleOpenDocNoteModal = (appId: string, doc: Doc) => {
+    const currentVal = docState[appId]?.[doc.key];
+    const status = getDocStatus(currentVal);
+    const notes = getDocNotes(currentVal);
+    setEditingDocNote({
+      appId,
+      docKey: doc.key,
+      docTitleEn: doc.en,
+      docTitleUr: doc.ur,
+      status,
+      notes,
+    });
+    setDocNoteModalOpen(true);
+  };
+
+  const handleSaveDocNoteModal = async () => {
+    if (!editingDocNote) return;
+    await handleSetDocStatus(
+      editingDocNote.appId,
+      editingDocNote.docKey,
+      editingDocNote.status,
+      editingDocNote.notes,
+    );
+    setDocNoteModalOpen(false);
+    setEditingDocNote(null);
   };
 
   // Handle waitlist promote
   const handlePromote = async (appId: string) => {
-    setWaitlist((w) => w.filter((x) => x.appId !== appId));
+    setWaitlist((w) => {
+      const next = w.filter((x) => x.appId !== appId);
+      saveLocalData({ waitlist: next });
+      return next;
+    });
     try {
       await fetch(`/api/admission/interviews/waitlist?appId=${appId}`, {
         method: "DELETE",
@@ -635,7 +959,11 @@ function InterviewsPage() {
       if (!res.ok) throw new Error(data.error || "Failed to add to waitlist");
 
       if (data.entry) {
-        setWaitlist((prev) => [...prev.filter((w) => w.appId !== waitlistAppId), data.entry]);
+        setWaitlist((prev) => {
+          const next = [...prev.filter((w) => w.appId !== waitlistAppId), data.entry];
+          saveLocalData({ waitlist: next });
+          return next;
+        });
       }
       setApplications((prev) =>
         prev.map((a) => (a.id === waitlistAppId ? { ...a, status: "waitlisted" } : a)),
@@ -654,7 +982,7 @@ function InterviewsPage() {
   const docsForActive = docState[activeDoc] ?? {};
   const verified =
     isAlreadyAccepted ||
-    docTypes.filter((d) => d.required).every((d) => docsForActive[d.key]);
+    docTypes.filter((d) => d.required).every((d) => isDocSatisfied(docsForActive[d.key]));
 
   // Candidates available for scheduling in modal
   const candidatesForDialog = useMemo(() => {
@@ -1250,9 +1578,9 @@ function InterviewsPage() {
                     }
                     return (
                       <>
-                        <div className="flex items-center justify-between mb-4 flex-wrap gap-2 pb-3 border-b">
+                        <div className="flex items-center justify-between mb-4 flex-wrap gap-3 pb-3 border-b">
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="font-heading text-lg font-bold">
                                 {a.name}{" "}
                                 {a.nameUrdu && (
@@ -1274,29 +1602,137 @@ function InterviewsPage() {
                               {a.guardianPhone ? `· 📞 ${a.guardianPhone}` : ""}
                             </p>
                           </div>
-                          {verified ? (
-                            <Badge className="bg-chart-1/15 text-chart-1 border-0">
-                              <CheckCircle2 className="h-3.5 w-3.5 me-1" />
-                              {isUrdu ? "تمام ضروری دستاویزات تصدیق شدہ" : "All required documents verified"}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-amber-600 border-amber-300">
-                              {isUrdu ? "دستاویزات نامکمل / زیر التواء" : "Awaiting required documents"}
-                            </Badge>
-                          )}
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {verified ? (
+                              <Badge className="bg-chart-1/15 text-chart-1 border-0">
+                                <CheckCircle2 className="h-3.5 w-3.5 me-1" />
+                                {isUrdu ? "تمام ضروری دستاویزات تصدیق شدہ" : "All required documents verified"}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-amber-600 border-amber-300">
+                                {isUrdu ? "دستاویزات نامکمل / زیر التواء" : "Awaiting required documents"}
+                              </Badge>
+                            )}
+
+                            {/* Application Status Editable Selector */}
+                            <div className="flex items-center gap-1.5 bg-muted/30 border rounded-md px-2 py-0.5">
+                              <span className="text-[11px] text-muted-foreground font-medium whitespace-nowrap">
+                                {isUrdu ? "درخواست کی صورتحال:" : "Application Status:"}
+                              </span>
+                              <Select
+                                value={a.status}
+                                onValueChange={(val) => handleUpdateApplicationStatus(a.id, val)}
+                              >
+                                <SelectTrigger className="h-7 text-xs w-[160px] bg-background border shadow-2xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="documents_pending" className="text-xs">
+                                    {isUrdu ? "دستاویزات زیر التواء" : "Documents Pending"}
+                                  </SelectItem>
+                                  <SelectItem value="under_review" className="text-xs">
+                                    {isUrdu ? "زیرِ جائزہ" : "Under Review"}
+                                  </SelectItem>
+                                  <SelectItem value="interview_scheduled" className="text-xs">
+                                    {isUrdu ? "انٹرویو طے شدہ" : "Interview Scheduled"}
+                                  </SelectItem>
+                                  <SelectItem value="interview_completed" className="text-xs">
+                                    {isUrdu ? "انٹرویو مکمل" : "Interview Completed"}
+                                  </SelectItem>
+                                  <SelectItem value="pending" className="text-xs">
+                                    {isUrdu ? "ابتدائی درخواست" : "Pending Intake"}
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Document Types Management Toolbar */}
+                        {/* Document Types Management Toolbar + Status Counts & Bulk Actions */}
                         <div className="flex items-center justify-between pb-2 mb-3 border-b flex-wrap gap-2">
-                          <div>
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-xs font-semibold text-foreground">
                               {isUrdu ? "دستاویزات کی چیک لسٹ" : "Documents Checklist"}
                             </span>
-                            <span className="text-[11px] text-muted-foreground ms-2">
+                            <span className="text-[11px] text-muted-foreground">
                               ({docTypes.length} {isUrdu ? "اقسام" : "types"})
                             </span>
+
+                            {/* Live status count badges */}
+                            {(() => {
+                              let vCount = 0;
+                              let pCount = 0;
+                              let mCount = 0;
+                              let rCount = 0;
+                              let eCount = 0;
+                              docTypes.forEach((d) => {
+                                const st = isAlreadyAccepted ? "verified" : getDocStatus(docsForActive[d.key]);
+                                if (st === "verified") vCount++;
+                                else if (st === "pending") pCount++;
+                                else if (st === "missing") mCount++;
+                                else if (st === "rejected") rCount++;
+                                else if (st === "exempted") eCount++;
+                              });
+                              return (
+                                <div className="flex items-center gap-1.5 ms-1 flex-wrap">
+                                  <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300">
+                                    {vCount} {isUrdu ? "تصدیق شدہ" : "Verified"}
+                                  </Badge>
+                                  {pCount > 0 && (
+                                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-300">
+                                      {pCount} {isUrdu ? "زیر جائزہ" : "Pending"}
+                                    </Badge>
+                                  )}
+                                  {mCount > 0 && (
+                                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-red-500/10 text-red-700 dark:text-red-300 border-red-300">
+                                      {mCount} {isUrdu ? "غیر موصول" : "Missing"}
+                                    </Badge>
+                                  )}
+                                  {rCount > 0 && (
+                                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-300">
+                                      {rCount} {isUrdu ? "مسترد" : "Rejected"}
+                                    </Badge>
+                                  )}
+                                  {eCount > 0 && (
+                                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-300">
+                                      {eCount} {isUrdu ? "مستثنیٰ" : "Exempted"}
+                                    </Badge>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
-                          <div className="flex items-center gap-1.5">
+
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {/* Quick Bulk Update Buttons */}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1 text-emerald-700 dark:text-emerald-300 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                              onClick={() => handleBulkSetDocStatus(activeDoc, "verified")}
+                              disabled={isAlreadyAccepted}
+                              title={isUrdu ? "تمام دستاویزات کو تصدیق شدہ کریں" : "Mark all documents as verified"}
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              <span>{isUrdu ? "سب تصدیق شدہ" : "All Verified"}</span>
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1 text-amber-700 dark:text-amber-300 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                              onClick={() => handleBulkSetDocStatus(activeDoc, "pending")}
+                              disabled={isAlreadyAccepted}
+                              title={isUrdu ? "تمام دستاویزات کو زیرِ جائزہ کریں" : "Mark all documents as pending review"}
+                            >
+                              <Clock className="h-3 w-3" />
+                              <span>{isUrdu ? "سب زیر جائزہ" : "All Pending"}</span>
+                            </Button>
+
+                            <div className="h-4 w-px bg-border mx-1" />
+
                             <Button
                               type="button"
                               size="sm"
@@ -1305,7 +1741,7 @@ function InterviewsPage() {
                               onClick={handleOpenAddDoc}
                             >
                               <Plus className="h-3.5 w-3.5" />
-                              <span>{isUrdu ? "نیا دستاویز شامل کریں" : "Add Document"}</span>
+                              <span>{isUrdu ? "نیا دستاویز" : "Add Doc"}</span>
                             </Button>
                             <Button
                               type="button"
@@ -1316,72 +1752,160 @@ function InterviewsPage() {
                               title={isUrdu ? "طے شدہ فہرست بحال کریں" : "Reset to default checklist"}
                             >
                               <RotateCcw className="h-3 w-3" />
-                              <span>{isUrdu ? "طے شدہ بحال کریں" : "Reset"}</span>
+                              <span>{isUrdu ? "ری سیٹ" : "Reset"}</span>
                             </Button>
                           </div>
                         </div>
 
-                        <div className="space-y-2">
+                        {/* Documents List with Editable Status Selector and Note Dialog */}
+                        <div className="space-y-2.5">
                           {docTypes.map((d) => {
-                            const checked = isAlreadyAccepted || !!docsForActive[d.key];
+                            const currentVal = docsForActive[d.key];
+                            const docStatus = isAlreadyAccepted ? "verified" : getDocStatus(currentVal);
+                            const docNotes = getDocNotes(currentVal);
+                            const satisfied = isAlreadyAccepted || isDocSatisfied(currentVal);
+                            const cfg = DOC_STATUS_CONFIG[docStatus] || DOC_STATUS_CONFIG.pending;
+
                             return (
                               <div
                                 key={d.key}
-                                className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-                                  checked
-                                    ? "border-chart-1/40 bg-chart-1/5"
-                                    : "border-border hover:bg-muted/40"
-                                }`}
+                                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-lg border transition-all ${
+                                  cfg.bgClass
+                                } ${cfg.borderClass}`}
                               >
-                                <Checkbox
-                                  checked={checked}
-                                  disabled={isAlreadyAccepted}
-                                  onCheckedChange={(v) =>
-                                    handleToggleDoc(activeDoc, d.key, Boolean(v))
-                                  }
-                                  className="mt-0.5"
-                                  id={`doc-${d.key}`}
-                                />
-                                <label
-                                  htmlFor={`doc-${d.key}`}
-                                  className="flex-1 min-w-0 cursor-pointer"
-                                >
-                                  <p className="text-sm font-medium">
-                                    {d.en}{" "}
-                                    {d.required && (
-                                      <span className="text-destructive ms-1">*</span>
+                                <div className="flex items-start gap-3 min-w-0 flex-1">
+                                  <Checkbox
+                                    checked={satisfied}
+                                    disabled={isAlreadyAccepted}
+                                    onCheckedChange={(v) =>
+                                      handleToggleDoc(activeDoc, d.key, Boolean(v))
+                                    }
+                                    className="mt-1 shrink-0"
+                                    id={`doc-${d.key}`}
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <label
+                                      htmlFor={`doc-${d.key}`}
+                                      className="cursor-pointer block"
+                                    >
+                                      <div className="text-sm font-semibold text-foreground flex items-center gap-1.5 flex-wrap">
+                                        <span>{d.en}</span>
+                                        {d.required && (
+                                          <span className="text-destructive font-bold" title="Required">*</span>
+                                        )}
+                                        <Badge
+                                          variant={d.required ? "default" : "secondary"}
+                                          className="text-[10px] px-1.5 py-0 h-4 font-normal"
+                                        >
+                                          {d.required
+                                            ? isUrdu
+                                              ? "لازمی"
+                                              : "Required"
+                                            : isUrdu
+                                              ? "اختیاری"
+                                              : "Optional"}
+                                        </Badge>
+                                      </div>
+                                      <p className="font-urdu text-sm text-muted-foreground mt-0.5">{d.ur}</p>
+                                    </label>
+
+                                    {/* Document Remarks / Note if available */}
+                                    {docNotes && (
+                                      <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground bg-background/90 border rounded-md px-2 py-0.5 w-fit max-w-full">
+                                        <FileText className="h-3 w-3 text-primary shrink-0" />
+                                        <span className="italic break-all">{docNotes}</span>
+                                      </div>
                                     )}
-                                  </p>
-                                  <p className="font-urdu text-sm text-muted-foreground">{d.ur}</p>
-                                </label>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <Badge
-                                    variant={d.required ? "default" : "secondary"}
-                                    className="text-[10px]"
+                                  </div>
+                                </div>
+
+                                {/* Right action controls: Editable Status Select + Note Button + Edit/Delete Type */}
+                                <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
+                                  {/* Editable Status Select */}
+                                  <Select
+                                    value={docStatus}
+                                    disabled={isAlreadyAccepted}
+                                    onValueChange={(val: DocItemStatus) =>
+                                      handleSetDocStatus(activeDoc, d.key, val, docNotes)
+                                    }
                                   >
-                                    {d.required
-                                      ? isUrdu
-                                        ? "لازمی"
-                                        : "Required"
-                                      : isUrdu
-                                        ? "اختیاری"
-                                        : "Optional"}
-                                  </Badge>
+                                    <SelectTrigger
+                                      className={`h-8 text-xs font-medium w-[160px] gap-1.5 border shadow-2xs ${cfg.badgeClass}`}
+                                    >
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="verified" className="text-xs">
+                                        <span className="flex items-center gap-1.5">
+                                          <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                                          <span>{isUrdu ? "تصدیق شدہ (Verified)" : "Verified (تصدیق شدہ)"}</span>
+                                        </span>
+                                      </SelectItem>
+                                      <SelectItem value="pending" className="text-xs">
+                                        <span className="flex items-center gap-1.5">
+                                          <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
+                                          <span>{isUrdu ? "زیرِ جائزہ (Pending)" : "Pending Review (زیر جائزہ)"}</span>
+                                        </span>
+                                      </SelectItem>
+                                      <SelectItem value="missing" className="text-xs">
+                                        <span className="flex items-center gap-1.5">
+                                          <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
+                                          <span>{isUrdu ? "غیر موصول (Missing)" : "Missing / Required (غیر موصول)"}</span>
+                                        </span>
+                                      </SelectItem>
+                                      <SelectItem value="rejected" className="text-xs">
+                                        <span className="flex items-center gap-1.5">
+                                          <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
+                                          <span>{isUrdu ? "مسترد (Rejected)" : "Rejected / Resubmit (مسترد)"}</span>
+                                        </span>
+                                      </SelectItem>
+                                      <SelectItem value="exempted" className="text-xs">
+                                        <span className="flex items-center gap-1.5">
+                                          <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
+                                          <span>{isUrdu ? "مستثنیٰ (Exempted)" : "Exempted (مستثنیٰ)"}</span>
+                                        </span>
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+
+                                  {/* Note / Remarks edit button */}
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className={`h-8 px-2 text-xs gap-1 ${
+                                      docNotes
+                                        ? "border-primary/50 text-primary bg-primary/10"
+                                        : "text-muted-foreground hover:text-foreground"
+                                    }`}
+                                    title={isUrdu ? "نوٹ یا ریمارکس درج کریں" : "Add or edit document remarks"}
+                                    onClick={() => handleOpenDocNoteModal(activeDoc, d)}
+                                    disabled={isAlreadyAccepted}
+                                  >
+                                    <MessageSquare className="h-3.5 w-3.5" />
+                                    <span className="hidden md:inline">
+                                      {docNotes ? (isUrdu ? "نوٹ" : "Notes") : (isUrdu ? "نوٹ +" : "Add Note")}
+                                    </span>
+                                  </Button>
+
+                                  {/* Edit Document Type definition */}
                                   <Button
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                                     title={isUrdu ? "دستاویز کی قسم میں ترمیم کریں" : "Edit document type"}
                                     onClick={() => handleOpenEditDoc(d)}
                                   >
                                     <Pencil className="h-3.5 w-3.5" />
                                   </Button>
+
+                                  {/* Delete Document Type button */}
                                   <Button
                                     type="button"
                                     size="sm"
                                     variant="ghost"
-                                    className="h-7 w-7 p-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                                    className="h-8 w-8 p-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
                                     title={isUrdu ? "دستاویز خارج کریں" : "Delete document type"}
                                     onClick={() => handleDeleteDocType(d.key)}
                                   >
@@ -2033,6 +2557,110 @@ function InterviewsPage() {
             </Button>
             <Button size="sm" onClick={handleSaveDocType} disabled={!docEn.trim()}>
               {isUrdu ? "محفوظ کریں" : "Save Document"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Status & Remarks Modal */}
+      <Dialog open={docNoteModalOpen} onOpenChange={setDocNoteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <FileText className="h-4 w-4 text-primary" />
+              <span>
+                {isUrdu ? "دستاویز کی حیثیت اور ریمارکس" : "Document Status & Verification Remarks"}
+              </span>
+            </DialogTitle>
+            <DialogDescription>
+              {editingDocNote ? `${editingDocNote.docTitleEn} · ${editingDocNote.docTitleUr}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingDocNote && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">
+                  {isUrdu ? "دستاویز کی تصدیقی حیثیت (Status)" : "Verification Status"}
+                </label>
+                <Select
+                  value={editingDocNote.status}
+                  onValueChange={(val: DocItemStatus) =>
+                    setEditingDocNote((prev) => (prev ? { ...prev, status: val } : null))
+                  }
+                >
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="verified" className="text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span>{isUrdu ? "تصدیق شدہ (Verified)" : "Verified (تصدیق شدہ)"}</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="pending" className="text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
+                        <span>{isUrdu ? "زیرِ جائزہ (Pending Review)" : "Pending Review (زیر جائزہ)"}</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="missing" className="text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
+                        <span>{isUrdu ? "غیر موصول / درکار (Missing)" : "Missing / Required (غیر موصول)"}</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="rejected" className="text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
+                        <span>{isUrdu ? "مسترد / دوبارہ طلب (Rejected)" : "Rejected / Resubmit (مسترد)"}</span>
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="exempted" className="text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
+                        <span>{isUrdu ? "مستثنیٰ (Exempted)" : "Exempted (مستثنیٰ)"}</span>
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">
+                  {isUrdu ? "نوٹس اور ریمارکس (اختیاری)" : "Remarks / Verification Notes (Optional)"}
+                </label>
+                <Textarea
+                  value={editingDocNote.notes}
+                  onChange={(e) =>
+                    setEditingDocNote((prev) => (prev ? { ...prev, notes: e.target.value } : null))
+                  }
+                  placeholder={
+                    isUrdu
+                      ? "مثلاً: اصل دستاویز دفتر میں دیکھ لی گئی، تصدیق شدہ کاپی موصول ہو گئی..."
+                      : "e.g. Original seen & verified in office, attested copy received..."
+                  }
+                  rows={3}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDocNoteModalOpen(false);
+                setEditingDocNote(null);
+              }}
+            >
+              {isUrdu ? "منسوخ" : "Cancel"}
+            </Button>
+            <Button size="sm" onClick={handleSaveDocNoteModal}>
+              {isUrdu ? "محفوظ کریں" : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

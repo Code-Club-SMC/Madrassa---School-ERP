@@ -99,6 +99,35 @@ describe("Admission Interviews Service", () => {
     expect(refreshed.docStates[testAppId].bform).toBe(true);
   });
 
+  it("persists rich editable document verification statuses and remarks", async () => {
+    const docAppId = `test_app_docs_${Date.now()}`;
+    await saveDocState(docAppId, {
+      bform: { status: "verified", notes: "Original verified in office" },
+      cnic: { status: "pending", notes: "Awaiting colored copy" },
+      photos: { status: "rejected", notes: "Passport size required, not 4x6" },
+      prev_result: { status: "exempted" },
+    });
+
+    const data = await listInterviews();
+    expect(data.docStates[docAppId]).toBeDefined();
+    const appDocs = data.docStates[docAppId];
+    expect(typeof appDocs.bform).toBe("object");
+    expect((appDocs.bform as any).status).toBe("verified");
+    expect((appDocs.bform as any).notes).toBe("Original verified in office");
+    expect((appDocs.cnic as any).status).toBe("pending");
+    expect((appDocs.photos as any).status).toBe("rejected");
+    expect((appDocs.prev_result as any).status).toBe("exempted");
+
+    // Update CNIC to verified
+    await saveDocState(docAppId, {
+      cnic: { status: "verified", notes: "Father CNIC copy verified" },
+    });
+    const updated = await listInterviews();
+    expect((updated.docStates[docAppId].cnic as any).status).toBe("verified");
+    expect((updated.docStates[docAppId].cnic as any).notes).toBe("Father CNIC copy verified");
+    expect((updated.docStates[docAppId].bform as any).status).toBe("verified");
+  });
+
   it("manages customizable document types checklist", async () => {
     // 1. Get initial document types
     const initial = await listDocTypes();

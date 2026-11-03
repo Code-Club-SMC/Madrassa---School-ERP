@@ -122,6 +122,19 @@ export const DEFAULT_SCHOOL_CLASSES = [
   { id: "class_8", institutionId: "al_qasim_academy", code: "8", name: "Class 8", nameUrdu: "جماعت ہشتم", level: "middle", govtEquivalent: "Middle", displayOrder: 10, fee: 4000, active: true, gender: "male" as const },
   { id: "class_9", institutionId: "al_qasim_academy", code: "9", name: "Class 9", nameUrdu: "جماعت نہم", level: "secondary", govtEquivalent: "Matric 9th", displayOrder: 11, fee: 4500, active: true, gender: "male" as const },
   { id: "class_10", institutionId: "al_qasim_academy", code: "10", name: "Class 10", nameUrdu: "جماعت دہم", level: "secondary", govtEquivalent: "Matric 10th", displayOrder: 12, fee: 4500, active: true, gender: "male" as const },
+  // Jamia Zainab Lil-Banat (School Department)
+  { id: "class_zainab_nursery", institutionId: "jamia_zainab_banat", code: "ZNUR", name: "Nursery", nameUrdu: "نرسری", level: "pre-primary", govtEquivalent: "Early Childhood", displayOrder: 1, fee: 2500, active: true, gender: "female" as const },
+  { id: "class_zainab_kg", institutionId: "jamia_zainab_banat", code: "ZKG", name: "KG", nameUrdu: "کی جی", level: "pre-primary", govtEquivalent: "Kindergarten", displayOrder: 2, fee: 2500, active: true, gender: "female" as const },
+  { id: "class_zainab_1", institutionId: "jamia_zainab_banat", code: "Z1", name: "Class 1", nameUrdu: "جماعت اول", level: "primary", govtEquivalent: "Primary", displayOrder: 3, fee: 3000, active: true, gender: "female" as const },
+  { id: "class_zainab_2", institutionId: "jamia_zainab_banat", code: "Z2", name: "Class 2", nameUrdu: "جماعت دوم", level: "primary", govtEquivalent: "Primary", displayOrder: 4, fee: 3000, active: true, gender: "female" as const },
+  { id: "class_zainab_3", institutionId: "jamia_zainab_banat", code: "Z3", name: "Class 3", nameUrdu: "جماعت سوم", level: "primary", govtEquivalent: "Primary", displayOrder: 5, fee: 3000, active: true, gender: "female" as const },
+  { id: "class_zainab_4", institutionId: "jamia_zainab_banat", code: "Z4", name: "Class 4", nameUrdu: "جماعت چہارم", level: "primary", govtEquivalent: "Primary", displayOrder: 6, fee: 3500, active: true, gender: "female" as const },
+  { id: "class_zainab_5", institutionId: "jamia_zainab_banat", code: "Z5", name: "Class 5", nameUrdu: "جماعت پنجم", level: "primary", govtEquivalent: "Primary", displayOrder: 7, fee: 3500, active: true, gender: "female" as const },
+  { id: "class_zainab_6", institutionId: "jamia_zainab_banat", code: "Z6", name: "Class 6", nameUrdu: "جماعت ششم", level: "middle", govtEquivalent: "Middle", displayOrder: 8, fee: 4000, active: true, gender: "female" as const },
+  { id: "class_zainab_7", institutionId: "jamia_zainab_banat", code: "Z7", name: "Class 7", nameUrdu: "جماعت ہفتم", level: "middle", govtEquivalent: "Middle", displayOrder: 9, fee: 4000, active: true, gender: "female" as const },
+  { id: "class_zainab_8", institutionId: "jamia_zainab_banat", code: "Z8", name: "Class 8", nameUrdu: "جماعت ہشتم", level: "middle", govtEquivalent: "Middle", displayOrder: 10, fee: 4000, active: true, gender: "female" as const },
+  { id: "class_zainab_9", institutionId: "jamia_zainab_banat", code: "Z9", name: "Class 9", nameUrdu: "جماعت نہم", level: "secondary", govtEquivalent: "Matric 9th", displayOrder: 11, fee: 4500, active: true, gender: "female" as const },
+  { id: "class_zainab_10", institutionId: "jamia_zainab_banat", code: "Z10", name: "Class 10", nameUrdu: "جماعت دہم", level: "secondary", govtEquivalent: "Matric 10th", displayOrder: 12, fee: 4500, active: true, gender: "female" as const },
 ];
 
 let seeded = false;

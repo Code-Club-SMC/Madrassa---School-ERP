@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import type { System, MadrassaCategory } from "@/types";
 import { toast } from "sonner";
 import { getAdmissionSchoolClasses, CANONICAL_SCHOOL_CLASSES } from "@/lib/admission.server";
+import { buildMadrassaCategories } from "@/lib/madrassa-grade-catalog";
 
 type FormState = {
   nameUrdu: string;
@@ -163,9 +164,9 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
   const [form, setForm] = useState<FormState>(init);
   const [submitting, setSubmitting] = useState(false);
   const [doneRef, setDoneRef] = useState<string | null>(null);
-  const [availableClasses, setAvailableClasses] = useState<any[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<any[]>(CANONICAL_SCHOOL_CLASSES);
   const [loadingClasses, setLoadingClasses] = useState(false);
-  const [categories, setCategories] = useState<MadrassaCategory[]>([]);
+  const [categories, setCategories] = useState<MadrassaCategory[]>(() => buildMadrassaCategories());
   const [loadingCategories, setLoadingCategories] = useState(false);
 
   useEffect(() => {
@@ -173,9 +174,10 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
     fetch("/api/academic/madrassa/categories", { credentials: "include" })
       .then((r) => r.json().catch(() => ({})))
       .then((payload) => {
-        setCategories((payload.categories ?? []) as MadrassaCategory[]);
+        const list = (payload.categories ?? []) as MadrassaCategory[];
+        setCategories(list.length > 0 ? list : buildMadrassaCategories());
       })
-      .catch(() => toast.error("Could not load categories"))
+      .catch(() => setCategories(buildMadrassaCategories()))
       .finally(() => setLoadingCategories(false));
   }, []);
 
@@ -192,7 +194,7 @@ export function AdmissionWizard({ isPublic = false, onComplete }: Props) {
           setAvailableClasses(data);
           return;
         }
-        throw new Error("Empty classes from server fn");
+        setAvailableClasses(CANONICAL_SCHOOL_CLASSES);
       })
       .catch(() => {
         fetch(`/api/academic/school/classes${targetGender ? `?gender=${targetGender}` : ""}`, { credentials: "include" })

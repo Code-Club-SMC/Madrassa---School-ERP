@@ -443,6 +443,7 @@ function generateInitialExpenses(): ComprehensiveTransaction[] {
 
 // Load Fee Payments (DB first, fallback to JSON)
 async function loadFeePaymentTransactions(): Promise<ComprehensiveTransaction[]> {
+  let dbPayments: ComprehensiveTransaction[] = [];
   try {
     const rows = await db
       .select({
@@ -472,7 +473,7 @@ async function loadFeePaymentTransactions(): Promise<ComprehensiveTransaction[]>
       .orderBy(desc(feePayments.receivedAt));
 
     if (rows && rows.length > 0) {
-      return rows.map((p) => {
+      dbPayments = rows.map((p) => {
         const d = p.receivedAt instanceof Date ? p.receivedAt : new Date(p.receivedAt);
         const year = isNaN(d.getFullYear()) ? 2026 : d.getFullYear();
         const month = isNaN(d.getMonth()) ? 5 : d.getMonth() + 1;
@@ -483,7 +484,7 @@ async function loadFeePaymentTransactions(): Promise<ComprehensiveTransaction[]>
         const rollPart = p.rollNo ? ` (${p.rollNo})` : "";
 
         return {
-          id: `tx-db-fee-${p.id}`,
+          id: p.id.startsWith("fin-") ? p.id : `tx-db-fee-${p.id}`,
           voucherNo: p.receiptNo || `REC-${p.id.slice(0, 8)}`,
           date: dateStr,
           month,
@@ -510,21 +511,37 @@ async function loadFeePaymentTransactions(): Promise<ComprehensiveTransaction[]>
   }
 
   // Load from persistent file or initialize
+  let filePayments: ComprehensiveTransaction[] = [];
   try {
     if (fs.existsSync(FEE_FILE)) {
       const content = fs.readFileSync(FEE_FILE, "utf-8");
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        filePayments = parsed;
+      }
     }
   } catch (err) {
     console.error("[ReportsService] Error reading finance-fee-payments.json:", err);
   }
 
-  const seeded = generateInitialFeePayments();
-  try {
-    fs.writeFileSync(FEE_FILE, JSON.stringify(seeded, null, 2), "utf-8");
-  } catch {}
-  return seeded;
+  if (filePayments.length === 0 && dbPayments.length === 0) {
+    const seeded = generateInitialFeePayments();
+    try {
+      fs.writeFileSync(FEE_FILE, JSON.stringify(seeded, null, 2), "utf-8");
+    } catch {}
+    filePayments = seeded;
+  }
+
+  // Merge DB and file payments without duplicates
+  const paymentMap = new Map<string, ComprehensiveTransaction>();
+  filePayments.forEach((p) => paymentMap.set(p.id, p));
+  dbPayments.forEach((p) => {
+    if (!paymentMap.has(p.id)) {
+      paymentMap.set(p.id, p);
+    }
+  });
+
+  return Array.from(paymentMap.values());
 }
 
 // Load Institutional Expenses (Salaries, Utilities, Mess, Maintenance)

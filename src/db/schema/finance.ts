@@ -215,3 +215,31 @@ export const feeAdjustmentRelations = relations(feeAdjustments, ({ one }) => ({
   payment: one(feePayments, { fields: [feeAdjustments.paymentId], references: [feePayments.id] }),
   actor: one(user, { fields: [feeAdjustments.actorUserId], references: [user.id] }),
 }));
+
+export const donations = pgTable(
+  "donations",
+  {
+    id: text("id").primaryKey(),
+    receiptNo: text("receipt_no").notNull().unique(),
+    date: text("date").notNull(),
+    donor: text("donor").notNull(),
+    donorUrdu: text("donor_urdu"),
+    phone: text("phone"),
+    cnic: text("cnic"),
+    type: text("type").$type<"zakat" | "sadqa" | "general" | "khairat" | "fitra">().notNull(),
+    purpose: text("purpose").notNull(),
+    amountPaisa: integer("amount_paisa").notNull(),
+    method: text("method").$type<"cash" | "bank" | "online">().default("cash").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("donations_date_idx").on(table.date),
+    index("donations_type_idx").on(table.type),
+    index("donations_receipt_no_idx").on(table.receiptNo),
+  ],
+);

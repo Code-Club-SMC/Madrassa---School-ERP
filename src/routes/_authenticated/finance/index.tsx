@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from "react";
-import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download, Printer } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download, Printer, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -81,22 +81,22 @@ function FinanceDashboard() {
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
   const [balanceDialogOpen, setBalanceDialogOpen] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
-    fetch("/api/finance/overview", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!mounted || !d) return;
+  const loadOverview = useCallback(async () => {
+    try {
+      const res = await fetch("/api/finance/overview", { credentials: "include" });
+      if (res.ok) {
+        const d = await res.json();
         if (Array.isArray(d.recentTransactions)) setServerTransactions(d.recentTransactions);
         if (Array.isArray(d.monthlyHistory)) setServerMonthly(d.monthlyHistory);
         if (Array.isArray(d.dailyHistory)) setServerDaily(d.dailyHistory);
         if (d.kpis) setServerKpis(d.kpis);
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
+      }
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    void loadOverview();
+  }, [loadOverview]);
 
   const handleAddTxn = (r: FinanceRecord) => {
     setLocalRecords((prev) => {
@@ -278,7 +278,7 @@ function FinanceDashboard() {
               <Download className="h-4 w-4" />
               {isUrdu ? "برآمد کریں" : "Export"}
             </Button>
-            <AddTxnDialog open={open} onOpenChange={setOpen} onAdd={handleAddTxn} defaultSystem={scope === "both" ? "both" : scope} />
+            <AddTxnDialog open={open} onOpenChange={setOpen} onAdd={handleAddTxn} onSuccess={loadOverview} defaultSystem={scope === "both" ? "both" : scope} />
           </div>
         }
       />
@@ -741,9 +741,22 @@ function MiniStat({ label, value, highlight, isUrdu }: { label: string; value: s
   );
 }
 
-function AddTxnDialog({ open, onOpenChange, onAdd, defaultSystem }: { open: boolean; onOpenChange: (v: boolean) => void; onAdd: (r: FinanceRecord) => void; defaultSystem: System }) {
+function AddTxnDialog({
+  open,
+  onOpenChange,
+  onAdd,
+  onSuccess,
+  defaultSystem,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onAdd: (r: FinanceRecord) => void;
+  onSuccess?: () => void;
+  defaultSystem: System;
+}) {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     type: "income" as "income" | "expense",
     category: "fees",
@@ -760,6 +773,61 @@ function AddTxnDialog({ open, onOpenChange, onAdd, defaultSystem }: { open: bool
     inventory: { en: "Inventory & Supplies", ur: "سامان و اسٹاک" },
     salary: { en: "Salaries & Payroll", ur: "تنخواہیں" },
     misc: { en: "Miscellaneous", ur: "متفرق" },
+  };
+
+  const handleSubmit = async () => {
+    const amt = parseFloat(form.amount);
+    if (!amt || amt <= 0) {
+      toast.error(isUrdu ? "درست رقم درج کریں" : "Enter a valid amount");
+      return;
+    }
+    const selectedCat = cats[form.category];
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/finance/transactions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          type: form.type,
+          category: form.category,
+          categoryUrdu: selectedCat?.ur,
+          amount: amt,
+          date: form.date,
+          source: form.source || undefined,
+          sourceUrdu: form.source || undefined,
+          description: form.description || undefined,
+          descriptionUrdu: form.description || undefined,
+          system: form.system,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to record transaction");
+
+      if (data.record) {
+        onAdd(data.record);
+      }
+      onSuccess?.();
+      toast.success(
+        isUrdu
+          ? "لین دین کامیابی سے درج کر لیا گیا اور ڈیش بورڈ پر اپ ڈیٹ ہو گیا"
+          : "Transaction recorded and updated on dashboards",
+      );
+      setForm({
+        type: "income",
+        category: "fees",
+        amount: "",
+        description: "",
+        source: "",
+        system: defaultSystem,
+        date: new Date().toISOString().slice(0, 10),
+      });
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not record transaction");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -818,7 +886,7 @@ function AddTxnDialog({ open, onOpenChange, onAdd, defaultSystem }: { open: bool
             </div>
             <div>
               <Label className={cn(isUrdu && "font-urdu")}>{isUrdu ? "رقم (روپے)" : "Amount (PKR)"}</Label>
-              <Input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+              <Input type="number" min={1} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             </div>
           </div>
           <div>
@@ -839,33 +907,12 @@ function AddTxnDialog({ open, onOpenChange, onAdd, defaultSystem }: { open: bool
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" disabled={submitting} onClick={() => onOpenChange(false)}>
             {isUrdu ? "منسوخ کریں" : "Cancel"}
           </Button>
-          <Button onClick={() => {
-            const amt = parseFloat(form.amount);
-            if (!amt || amt <= 0) {
-              toast.error(isUrdu ? "درست رقم درج کریں" : "Enter a valid amount");
-              return;
-            }
-            const selectedCat = cats[form.category];
-            onAdd({
-              id: `fin-${Date.now()}`,
-              date: form.date,
-              type: form.type,
-              category: form.category as FinanceRecord["category"],
-              categoryUrdu: selectedCat?.ur ?? "",
-              description: form.description || (isUrdu ? "—" : "—"),
-              descriptionUrdu: form.description || (isUrdu ? "—" : "—"),
-              amount: amt,
-              source: form.source || (isUrdu ? "نقد" : "Cash"),
-              sourceUrdu: form.source || "نقد",
-              system: form.system,
-            });
-            toast.success(isUrdu ? "لین دین درج کر لیا گیا" : "Transaction recorded");
-            onOpenChange(false);
-          }}>
-            {isUrdu ? "محفوظ کریں" : "Save"}
+          <Button onClick={handleSubmit} disabled={submitting} className="gap-1.5">
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            <span>{submitting ? (isUrdu ? "محفوظ ہو رہا ہے..." : "Saving...") : (isUrdu ? "محفوظ کریں" : "Save")}</span>
           </Button>
         </DialogFooter>
       </DialogContent>

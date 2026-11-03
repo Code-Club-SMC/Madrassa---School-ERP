@@ -84,7 +84,7 @@ export function createLeaveRequest(input: {
   }
 
   const newLeave: LeaveRequest = {
-    id: `LV-${Date.now()}`,
+    id: `LV-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     staffId: input.staffId,
     staffName: input.staffName,
     leaveType: input.leaveType || "emergency",

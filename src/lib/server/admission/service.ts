@@ -27,6 +27,11 @@ import { AdmissionError } from "./errors";
 import { nextScopedNumber, visibleNumberScopeCode, visibleScopedNumberPrefix } from "./numbering";
 import { normalizeAdmissionForm, normalizeFormValues } from "./normalizers";
 import { saveAdmissionPhoto } from "./photos";
+import {
+  loadStoredApplications,
+  saveStoredApplication,
+  updateStoredApplicationStatus as updateStoredAppStatus,
+} from "./applications-store";
 
 const formDataSchema = z.record(z.string(), z.unknown()).transform(normalizeFormValues);
 
@@ -169,6 +174,33 @@ export async function createAdmissionApplication(
         source === "public"
           ? "Application submitted through public portal"
           : "Admission created by staff",
+    });
+
+    saveStoredApplication({
+      id,
+      refNo,
+      source,
+      variantKey: input.variantKey,
+      status: application.status as any,
+      name: normalized.name,
+      nameUrdu: normalized.nameUrdu,
+      fatherName: normalized.fatherName,
+      fatherNameUrdu: normalized.fatherNameUrdu,
+      gender: normalized.gender as any,
+      dob: normalized.dob?.toISOString() ?? null,
+      phone: normalized.guardianPhone ?? "",
+      guardianName: normalized.guardianName,
+      guardianPhone: normalized.guardianPhone,
+      guardianCnic: normalized.guardianCnic,
+      address: normalized.address,
+      system: (target.programId?.includes("school") || input.variantKey.includes("school")) ? "school" : "madrassa",
+      categoryOrClass: target.darja || target.schoolClassId || target.programId || "General",
+      institutionId: target.institutionId,
+      programId: target.programId,
+      schoolClassId: target.schoolClassId,
+      madrassaSubcategoryId: target.madrassaSubcategoryId,
+      darja: target.darja,
+      submittedAt: new Date().toISOString(),
     });
 
     return {
@@ -497,7 +529,9 @@ export async function listAdmissionApplications(
   params: z.infer<typeof listAdmissionApplicationsSchema>,
 ) {
   await requireAdmissionPermission(request, "admission_queue", "view");
-  await ensureAcademicSeeded();
+  try {
+    await ensureAcademicSeeded();
+  } catch {}
 
   const clauses = [];
   if (params.status) clauses.push(eq(admissionApplications.status, params.status));
@@ -512,59 +546,98 @@ export async function listAdmissionApplications(
     );
   }
 
-  const rows = await db
-    .select({
-      application: admissionApplications,
-      programName: programs.name,
-      programNameUrdu: programs.nameUrdu,
-      programSystem: programs.system,
-      className: schoolClasses.name,
-      classNameUrdu: schoolClasses.nameUrdu,
-      subcategoryName: madrassaSubcategories.name,
-      subcategoryNameUrdu: madrassaSubcategories.nameUrdu,
-    })
-    .from(admissionApplications)
-    .leftJoin(programs, eq(programs.id, admissionApplications.programId))
-    .leftJoin(schoolClasses, eq(schoolClasses.id, admissionApplications.schoolClassId))
-    .leftJoin(
-      madrassaSubcategories,
-      eq(madrassaSubcategories.id, admissionApplications.madrassaSubcategoryId),
-    )
-    .where(clauses.length > 0 ? and(...clauses) : undefined)
-    .orderBy(desc(admissionApplications.submittedAt))
-    .limit(150);
+  let dbApps: any[] = [];
+  try {
+    const rows = await db
+      .select({
+        application: admissionApplications,
+        programName: programs.name,
+        programNameUrdu: programs.nameUrdu,
+        programSystem: programs.system,
+        className: schoolClasses.name,
+        classNameUrdu: schoolClasses.nameUrdu,
+        subcategoryName: madrassaSubcategories.name,
+        subcategoryNameUrdu: madrassaSubcategories.nameUrdu,
+      })
+      .from(admissionApplications)
+      .leftJoin(programs, eq(programs.id, admissionApplications.programId))
+      .leftJoin(schoolClasses, eq(schoolClasses.id, admissionApplications.schoolClassId))
+      .leftJoin(
+        madrassaSubcategories,
+        eq(madrassaSubcategories.id, admissionApplications.madrassaSubcategoryId),
+      )
+      .where(clauses.length > 0 ? and(...clauses) : undefined)
+      .orderBy(desc(admissionApplications.submittedAt))
+      .limit(150);
 
-  return rows.map((row) => ({
-    ...toApplicationResponse(row.application),
-    system: row.programSystem === "madrassa" ? "madrassa" : "school",
-    categoryOrClass:
-      row.classNameUrdu ??
-      row.subcategoryNameUrdu ??
-      row.programNameUrdu ??
-      row.className ??
-      row.subcategoryName ??
-      row.programName ??
-      "",
-  }));
+    if (rows && rows.length > 0) {
+      dbApps = rows.map((row) => ({
+        ...toApplicationResponse(row.application),
+        system: row.programSystem === "madrassa" ? "madrassa" : "school",
+        categoryOrClass:
+          row.classNameUrdu ??
+          row.subcategoryNameUrdu ??
+          row.programNameUrdu ??
+          row.className ??
+          row.subcategoryName ??
+          row.programName ??
+          "",
+      }));
+    }
+  } catch {
+    // Database offline or query timeout, fall back to stored applications
+  }
+
+  const stored = loadStoredApplications();
+  const appMap = new Map<string, any>();
+  stored.forEach((a) => appMap.set(a.id, a));
+  dbApps.forEach((a) => appMap.set(a.id, a));
+
+  const allApps = Array.from(appMap.values());
+
+  return allApps.filter((app) => {
+    if (params.status && app.status !== params.status) return false;
+    if (params.q) {
+      const q = params.q.toLowerCase();
+      const match =
+        app.refNo?.toLowerCase().includes(q) ||
+        app.name?.toLowerCase().includes(q) ||
+        app.nameUrdu?.includes(q) ||
+        app.phone?.includes(q) ||
+        app.guardianPhone?.includes(q) ||
+        app.categoryOrClass?.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    return true;
+  });
 }
 
 export async function getAdmissionApplication(request: Request, id: string) {
   await requireAdmissionPermission(request, "admission_queue", "view");
 
-  const [application] = await db
-    .select()
-    .from(admissionApplications)
-    .where(eq(admissionApplications.id, id))
-    .limit(1);
-  if (!application) throw new AdmissionError("Application not found", 404);
+  try {
+    const [application] = await db
+      .select()
+      .from(admissionApplications)
+      .where(eq(admissionApplications.id, id))
+      .limit(1);
+    if (application) {
+      const events = await db
+        .select()
+        .from(admissionEvents)
+        .where(eq(admissionEvents.applicationId, id))
+        .orderBy(desc(admissionEvents.createdAt))
+        .catch(() => []);
+      return { application: toApplicationResponse(application), events };
+    }
+  } catch {}
 
-  const events = await db
-    .select()
-    .from(admissionEvents)
-    .where(eq(admissionEvents.applicationId, id))
-    .orderBy(desc(admissionEvents.createdAt));
-
-  return { application: toApplicationResponse(application), events };
+  const stored = loadStoredApplications();
+  const found = stored.find((a) => a.id === id || a.refNo === id);
+  if (found) {
+    return { application: found, events: [] };
+  }
+  throw new AdmissionError("Application not found", 404);
 }
 
 export async function updateAdmissionApplicationStatus(
@@ -603,6 +676,8 @@ export async function updateAdmissionApplicationStatus(
       message: input.message,
       actorUserId: actor.id,
     });
+
+    updateStoredAppStatus(id, input.status, input.message);
 
     return { application: toApplicationResponse(updated) };
   });
@@ -645,6 +720,8 @@ export async function rejectAdmissionApplication(
       message: input.reason,
       actorUserId: actor.id,
     });
+
+    updateStoredAppStatus(id, "rejected", input.reason);
 
     return { application: toApplicationResponse(updated) };
   });
@@ -877,6 +954,8 @@ export async function acceptAdmissionApplication(
         })
         .where(eq(admissionApplications.id, id))
         .returning();
+
+      updateStoredAppStatus(id, "accepted");
 
       await tx.insert(admissionEvents).values([
         {
