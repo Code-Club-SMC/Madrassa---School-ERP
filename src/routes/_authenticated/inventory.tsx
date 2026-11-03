@@ -51,16 +51,40 @@ function InventoryPage() {
     async function fetchInventory() {
       try {
         setLoading(true);
-        const res = await fetch("/api/inventory");
+        const res = await fetch("/api/inventory", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           if (mounted && Array.isArray(data.items)) {
-            setItems(data.items);
-            if (typeof window !== "undefined") {
-              try {
-                localStorage.setItem("inventory_items", JSON.stringify(data.items));
-              } catch {}
-            }
+            setItems((prevItems) => {
+              const serverIds = new Set(data.items.map((it: InventoryItem) => it.id));
+              // Preserve any items added locally that the server may not have seen yet
+              const localOnly = prevItems.filter((p) => !serverIds.has(p.id));
+              if (localOnly.length > 0) {
+                // Sync unsaved local items to server in background
+                localOnly.forEach((localItem) => {
+                  fetch("/api/inventory", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify(localItem),
+                  }).catch(() => {});
+                });
+                const combined = [...data.items, ...localOnly];
+                if (typeof window !== "undefined") {
+                  try {
+                    localStorage.setItem("inventory_items", JSON.stringify(combined));
+                  } catch {}
+                }
+                return combined;
+              }
+
+              if (typeof window !== "undefined") {
+                try {
+                  localStorage.setItem("inventory_items", JSON.stringify(data.items));
+                } catch {}
+              }
+              return data.items;
+            });
           }
         }
       } catch (err) {
@@ -113,32 +137,59 @@ function InventoryPage() {
 
   async function save(it: InventoryItem) {
     const isEdit = Boolean(editing?.id);
-    const itemToSave = { ...it, id: it.id || `inv-${Date.now()}` };
+    const trimmedName = it.name.trim();
+    const trimmedNameUrdu = it.nameUrdu.trim();
+    const name = trimmedName || trimmedNameUrdu;
+    const nameUrdu = trimmedNameUrdu || trimmedName;
+    const itemToSave: InventoryItem = {
+      ...it,
+      id: it.id || `inv-${Date.now()}`,
+      name,
+      nameUrdu,
+    };
 
-    // Optimistically update UI
-    setItems((p) => isEdit ? p.map((x) => x.id === itemToSave.id ? itemToSave : x) : [itemToSave, ...p]);
+    // Optimistically update UI and local storage
+    setItems((p) => {
+      const next = isEdit ? p.map((x) => (x.id === itemToSave.id ? itemToSave : x)) : [itemToSave, ...p];
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("inventory_items", JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
     setDialogOpen(false);
 
     try {
       const res = await fetch("/api/inventory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(itemToSave),
       });
       if (res.ok) {
         const data = await res.json();
         if (data.item) {
-          setItems((p) => p.map((x) => x.id === itemToSave.id ? data.item : x));
+          setItems((p) => {
+            const next = p.map((x) => (x.id === itemToSave.id ? data.item : x));
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem("inventory_items", JSON.stringify(next));
+              } catch {}
+            }
+            return next;
+          });
         }
         toast.success(
           isEdit
-            ? "Item updated"
+            ? "Item updated · اشیاء کی معلومات محفوظ ہوگئیں"
             : it.type === "donated"
-            ? "Donation recorded"
-            : "Stock recorded"
+            ? "Donation recorded · عطیہ درج کر لیا گیا"
+            : "Stock recorded · نیا اسٹاک محفوظ ہوگیا"
         );
       } else {
-        toast.error("Failed to save inventory item on server");
+        const errJson = await res.json().catch(() => null);
+        toast.error(errJson?.error || "Failed to save inventory item on server");
       }
     } catch {
       toast.error("Network error while saving inventory item");
@@ -147,13 +198,22 @@ function InventoryPage() {
 
   async function remove(id: string) {
     // Optimistically remove
-    setItems((p) => p.filter((x) => x.id !== id));
+    setItems((p) => {
+      const next = p.filter((x) => x.id !== id);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("inventory_items", JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
     try {
       const res = await fetch(`/api/inventory?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
+        credentials: "include",
       });
       if (res.ok) {
-        toast.success("Item deleted");
+        toast.success("Item deleted · آئٹم حذف کر دیا گیا");
       } else {
         toast.error("Failed to delete inventory item on server");
       }
@@ -313,10 +373,20 @@ function ItemDialog({ open, onOpenChange, initial, onSave }: { open: boolean; on
 
   const handleSubmit = async () => {
     if (submitting) return;
-    if (!f.name.trim()) { toast.error("Name is required"); return; }
+    const nameTrimmed = f.name.trim();
+    const urduTrimmed = f.nameUrdu.trim();
+    if (!nameTrimmed && !urduTrimmed) {
+      toast.error("Item name is required · آئٹم کا نام درج کریں");
+      return;
+    }
     setSubmitting(true);
     try {
-      await onSave({ ...f, id: f.id || `inv-${Date.now()}` });
+      await onSave({
+        ...f,
+        id: f.id || `inv-${Date.now()}`,
+        name: nameTrimmed || urduTrimmed,
+        nameUrdu: urduTrimmed || nameTrimmed,
+      });
       setF({ id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 });
       onOpenChange(false);
     } finally {

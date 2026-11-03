@@ -43,6 +43,8 @@ type HRStore = {
   ) => void;
   approveLeave: (id: string) => void;
   rejectLeave: (id: string) => void;
+  requestLeave: (data: Omit<LeaveRequest, "id" | "status" | "appliedAt">) => Promise<LeaveRequest>;
+  refreshLeaves: () => Promise<void>;
   addLoan: (data: Omit<StaffLoan, "id" | "status" | "remainingBalance">) => void;
   settleLoan: (id: string) => void;
 };
@@ -406,9 +408,32 @@ export function HRProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const refreshLeaves = useCallback(async () => {
+    try {
+      const res = await fetch("/api/hr/leaves", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data?.leaves) && data.leaves.length > 0) {
+          setLeaves((prev) => {
+            const serverIds = new Set(data.leaves.map((l: LeaveRequest) => l.id));
+            const localOnly = prev.filter((l) => !serverIds.has(l.id));
+            const combined = [...data.leaves, ...localOnly];
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem("msmis_hr_leaves", JSON.stringify(combined));
+              } catch {}
+            }
+            return combined;
+          });
+        }
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     refreshStaff();
-  }, [refreshStaff]);
+    refreshLeaves();
+  }, [refreshStaff, refreshLeaves]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -533,11 +558,87 @@ export function HRProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const approveLeave = useCallback<HRStore["approveLeave"]>((id) => {
-    setLeaves((p) => p.map((l) => (l.id === id ? { ...l, status: "approved" } : l)));
+    setLeaves((p) => {
+      const updated = p.map((l) => (l.id === id ? { ...l, status: "approved" as const } : l));
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("msmis_hr_leaves", JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+    fetch("/api/hr/leaves", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ id, status: "approved" }),
+    }).catch(() => {});
   }, []);
 
   const rejectLeave = useCallback<HRStore["rejectLeave"]>((id) => {
-    setLeaves((p) => p.map((l) => (l.id === id ? { ...l, status: "rejected" } : l)));
+    setLeaves((p) => {
+      const updated = p.map((l) => (l.id === id ? { ...l, status: "rejected" as const } : l));
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("msmis_hr_leaves", JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+    fetch("/api/hr/leaves", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ id, status: "rejected" }),
+    }).catch(() => {});
+  }, []);
+
+  const requestLeave = useCallback<HRStore["requestLeave"]>(async (data) => {
+    const id = `LV-${Date.now()}`;
+    const newLeave: LeaveRequest = {
+      ...data,
+      id,
+      status: "pending",
+      appliedAt: new Date().toISOString().slice(0, 10),
+    };
+
+    setLeaves((p) => {
+      const updated = [newLeave, ...p];
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("msmis_hr_leaves", JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
+    });
+
+    try {
+      const res = await fetch("/api/hr/leaves", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        const resData = await res.json();
+        if (resData?.leave) {
+          setLeaves((p) => {
+            const next = p.map((l) => (l.id === id ? resData.leave : l));
+            if (typeof window !== "undefined") {
+              try {
+                localStorage.setItem("msmis_hr_leaves", JSON.stringify(next));
+              } catch {}
+            }
+            return next;
+          });
+          return resData.leave;
+        }
+      }
+    } catch (err) {
+      console.warn("Network error submitting leave:", err);
+    }
+
+    return newLeave;
   }, []);
 
   const addLoan = useCallback<HRStore["addLoan"]>((data) => {
@@ -561,6 +662,7 @@ export function HRProvider({ children }: { children: ReactNode }) {
       loans,
       isLoadingStaff,
       refreshStaff,
+      refreshLeaves,
       addStaff,
       updateStaff,
       terminateStaff,
@@ -571,6 +673,7 @@ export function HRProvider({ children }: { children: ReactNode }) {
       bulkSaveAttendance,
       approveLeave,
       rejectLeave,
+      requestLeave,
       addLoan,
       settleLoan,
     }),
@@ -583,6 +686,7 @@ export function HRProvider({ children }: { children: ReactNode }) {
       loans,
       isLoadingStaff,
       refreshStaff,
+      refreshLeaves,
       addStaff,
       updateStaff,
       terminateStaff,
@@ -593,6 +697,7 @@ export function HRProvider({ children }: { children: ReactNode }) {
       bulkSaveAttendance,
       approveLeave,
       rejectLeave,
+      requestLeave,
       addLoan,
       settleLoan,
     ],

@@ -66,6 +66,7 @@ export type AttendanceRecord = {
 export type LeaveRequest = {
   id: string;
   staffId: string;
+  staffName?: string;
   leaveType: "sick" | "annual" | "emergency" | "unpaid";
   fromDate: string;
   toDate: string;
@@ -73,6 +74,7 @@ export type LeaveRequest = {
   reason: string;
   status: "pending" | "approved" | "rejected";
   appliedAt: string;
+  adminNote?: string;
 };
 
 export type StaffLoan = {

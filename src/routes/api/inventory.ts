@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   deleteInventoryItem,
+  ensureInventoryLoaded,
   getInventorySummary,
   listInventoryItems,
   saveInventoryItem,
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/api/inventory")({
     handlers: {
       GET: async () => {
         try {
+          await ensureInventoryLoaded();
           const items = listInventoryItems();
           const summary = getInventorySummary();
           return json({ items, summary });
@@ -23,21 +25,29 @@ export const Route = createFileRoute("/api/inventory")({
       POST: async ({ request }) => {
         try {
           const body = await request.json().catch(() => null);
-          if (!body || !body.name) {
+          const rawName = body?.name ? String(body.name).trim() : "";
+          const rawNameUrdu = body?.nameUrdu ? String(body.nameUrdu).trim() : "";
+
+          if (!rawName && !rawNameUrdu) {
             return json({ error: "Item name is required" }, 400);
           }
+
+          const name = rawName || rawNameUrdu;
+          const nameUrdu = rawNameUrdu || rawName;
+
           const item = {
             id: String(body.id || `inv-${Date.now()}`),
-            name: String(body.name || "").trim(),
-            nameUrdu: String(body.nameUrdu || body.name || "").trim(),
+            name,
+            nameUrdu,
             category: String(body.category || "Stationery").trim(),
-            quantity: Number(body.quantity || 1),
+            quantity: Math.max(0, Number(body.quantity ?? 1)),
             unit: String(body.unit || "pcs").trim(),
             type: (body.type || "purchased") as "purchased" | "donated" | "gift",
-            value: Number(body.value || 0),
-            lowStockThreshold: Number(body.lowStockThreshold || 5),
+            value: Math.max(0, Number(body.value ?? 0)),
+            lowStockThreshold: Math.max(0, Number(body.lowStockThreshold ?? 5)),
           };
-          const saved = saveInventoryItem(item);
+
+          const saved = await saveInventoryItem(item);
           const summary = getInventorySummary();
           return json({ success: true, item: saved, summary }, 201);
         } catch (error) {
@@ -49,7 +59,7 @@ export const Route = createFileRoute("/api/inventory")({
           const url = new URL(request.url);
           const id = url.searchParams.get("id");
           if (!id) return json({ error: "Missing item id" }, 400);
-          deleteInventoryItem(id);
+          await deleteInventoryItem(id);
           const summary = getInventorySummary();
           return json({ success: true, summary });
         } catch (error) {

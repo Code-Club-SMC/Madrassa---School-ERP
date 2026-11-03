@@ -235,12 +235,66 @@ export function getMyTeacherExams() {
   }>("/api/teachers/me/exams");
 }
 
+export type TeacherReportsPayload = {
+  profile: TeacherDetail["profile"];
+  assignments: TeacherAssignment[];
+  totalClasses: number;
+  totalSchool: number;
+  totalMadrassa: number;
+  totalStudents?: number;
+  weeklyPeriods?: number;
+  attendanceSummary?: {
+    totalSessions: number;
+    presentCount: number;
+    absentCount: number;
+    lateCount: number;
+    leaveCount: number;
+    attendanceRate: number;
+    byClass: Array<{
+      classId: string;
+      className: string;
+      classNameUrdu: string;
+      subjectName: string;
+      subjectNameUrdu: string;
+      system: "school" | "madrassa";
+      enrolledStudents?: number;
+      totalSessions: number;
+      totalPresent: number;
+      totalAbsent: number;
+      rate: number;
+      lastDate?: string;
+    }>;
+  };
+  examSummary?: {
+    totalExams: number;
+    submittedExams: number;
+    pendingExams: number;
+    exams: Array<{
+      id: string;
+      examName: string;
+      examNameUrdu: string;
+      subjectName: string;
+      subjectNameUrdu: string;
+      className: string;
+      classNameUrdu: string;
+      system: "school" | "madrassa";
+      phase: "open" | "published" | "closed";
+      status: string;
+      marksEntryEndDate?: string;
+      isCompleted?: boolean;
+    }>;
+  };
+  workload?: {
+    weeklyPeriods: number;
+    periodsByDay: Array<{
+      day: number;
+      dayName: string;
+      dayNameUrdu: string;
+      count: number;
+    }>;
+  };
+};
+
 export function getMyTeacherReports() {
-  return requestJson<{
-    profile: TeacherDetail["profile"];
-    assignments: TeacherAssignment[];
-    totalClasses: number;
-    totalSchool: number;
-    totalMadrassa: number;
-  }>("/api/teachers/me/reports");
+  return requestJson<TeacherReportsPayload>("/api/teachers/me/reports");
 }

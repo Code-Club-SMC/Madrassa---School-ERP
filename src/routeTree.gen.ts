@@ -97,6 +97,7 @@ import { Route as ApiFeesStudentsRouteImport } from './routes/api/fees/students'
 import { Route as ApiFinanceDonationsRouteImport } from './routes/api/finance/donations'
 import { Route as ApiFinanceOverviewRouteImport } from './routes/api/finance/overview'
 import { Route as ApiFinanceReportsRouteImport } from './routes/api/finance/reports'
+import { Route as ApiHrLeavesRouteImport } from './routes/api/hr/leaves'
 import { Route as ApiNotificationsIndexRouteImport } from './routes/api/notifications/index'
 import { Route as ApiPromotionsPreviewRouteImport } from './routes/api/promotions/preview'
 import { Route as ApiPromotionsRosterRouteImport } from './routes/api/promotions/roster'
@@ -674,6 +675,11 @@ const ApiFinanceOverviewRoute = ApiFinanceOverviewRouteImport.update({
 const ApiFinanceReportsRoute = ApiFinanceReportsRouteImport.update({
   id: '/api/finance/reports',
   path: '/api/finance/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHrLeavesRoute = ApiHrLeavesRouteImport.update({
+  id: '/api/hr/leaves',
+  path: '/api/hr/leaves',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiNotificationsIndexRoute = ApiNotificationsIndexRouteImport.update({
@@ -1325,6 +1331,7 @@ export interface FileRoutesByFullPath {
   '/api/finance/donations': typeof ApiFinanceDonationsRoute
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/finance/reports': typeof ApiFinanceReportsRoute
+  '/api/hr/leaves': typeof ApiHrLeavesRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
   '/api/promotions/roster': typeof ApiPromotionsRosterRoute
   '/api/promotions/rules': typeof ApiPromotionsRulesRoute
@@ -1505,6 +1512,7 @@ export interface FileRoutesByTo {
   '/api/finance/donations': typeof ApiFinanceDonationsRoute
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/finance/reports': typeof ApiFinanceReportsRoute
+  '/api/hr/leaves': typeof ApiHrLeavesRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
   '/api/promotions/roster': typeof ApiPromotionsRosterRoute
   '/api/promotions/rules': typeof ApiPromotionsRulesRoute
@@ -1696,6 +1704,7 @@ export interface FileRoutesById {
   '/api/finance/donations': typeof ApiFinanceDonationsRoute
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/finance/reports': typeof ApiFinanceReportsRoute
+  '/api/hr/leaves': typeof ApiHrLeavesRoute
   '/api/promotions/preview': typeof ApiPromotionsPreviewRoute
   '/api/promotions/roster': typeof ApiPromotionsRosterRoute
   '/api/promotions/rules': typeof ApiPromotionsRulesRoute
@@ -1887,6 +1896,7 @@ export interface FileRouteTypes {
     | '/api/finance/donations'
     | '/api/finance/overview'
     | '/api/finance/reports'
+    | '/api/hr/leaves'
     | '/api/promotions/preview'
     | '/api/promotions/roster'
     | '/api/promotions/rules'
@@ -2067,6 +2077,7 @@ export interface FileRouteTypes {
     | '/api/finance/donations'
     | '/api/finance/overview'
     | '/api/finance/reports'
+    | '/api/hr/leaves'
     | '/api/promotions/preview'
     | '/api/promotions/roster'
     | '/api/promotions/rules'
@@ -2257,6 +2268,7 @@ export interface FileRouteTypes {
     | '/api/finance/donations'
     | '/api/finance/overview'
     | '/api/finance/reports'
+    | '/api/hr/leaves'
     | '/api/promotions/preview'
     | '/api/promotions/roster'
     | '/api/promotions/rules'
@@ -2395,6 +2407,7 @@ export interface RootRouteChildren {
   ApiFinanceDonationsRoute: typeof ApiFinanceDonationsRoute
   ApiFinanceOverviewRoute: typeof ApiFinanceOverviewRoute
   ApiFinanceReportsRoute: typeof ApiFinanceReportsRoute
+  ApiHrLeavesRoute: typeof ApiHrLeavesRoute
   ApiPromotionsPreviewRoute: typeof ApiPromotionsPreviewRoute
   ApiPromotionsRosterRoute: typeof ApiPromotionsRosterRoute
   ApiPromotionsRulesRoute: typeof ApiPromotionsRulesRoute
@@ -3053,6 +3066,13 @@ declare module '@tanstack/react-router' {
       path: '/api/finance/reports'
       fullPath: '/api/finance/reports'
       preLoaderRoute: typeof ApiFinanceReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hr/leaves': {
+      id: '/api/hr/leaves'
+      path: '/api/hr/leaves'
+      fullPath: '/api/hr/leaves'
+      preLoaderRoute: typeof ApiHrLeavesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/notifications/': {
@@ -4493,6 +4513,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFinanceDonationsRoute: ApiFinanceDonationsRoute,
   ApiFinanceOverviewRoute: ApiFinanceOverviewRoute,
   ApiFinanceReportsRoute: ApiFinanceReportsRoute,
+  ApiHrLeavesRoute: ApiHrLeavesRoute,
   ApiPromotionsPreviewRoute: ApiPromotionsPreviewRoute,
   ApiPromotionsRosterRoute: ApiPromotionsRosterRoute,
   ApiPromotionsRulesRoute: ApiPromotionsRulesRoute,

@@ -11,6 +11,7 @@ import * as notificationSchema from "@/db/schema/notifications";
 import * as studentSchema from "@/db/schema/students";
 import * as teacherSchema from "@/db/schema/teachers";
 import * as timetableSchema from "@/db/schema/timetable";
+import * as inventorySchema from "@/db/schema/inventory";
 
 function resolveConnectionString(rawUrl?: string): string | undefined {
   if (!rawUrl) return rawUrl;
@@ -76,5 +77,6 @@ export const db = drizzle(pool, {
     ...financeSchema,
     ...notificationSchema,
     ...timetableSchema,
+    ...inventorySchema,
   },
 });
