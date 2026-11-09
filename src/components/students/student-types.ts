@@ -57,6 +57,8 @@ export type StudentEnrollmentProfile = {
   schoolClassId: string | null;
   schoolClassName: string | null;
   schoolClassNameUrdu: string | null;
+  schoolSectionId?: string | null;
+  schoolSectionName?: string | null;
   madrassaCategoryId: string | null;
   madrassaCategoryName: string | null;
   madrassaCategoryNameUrdu: string | null;

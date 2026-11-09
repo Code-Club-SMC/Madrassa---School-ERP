@@ -701,7 +701,7 @@ export function AppSidebar({ onOpenPalette }: AppSidebarProps) {
         {/* ============================================================ */}
         {/* SECONDARY CHILD SIDEBAR (Opens when parent has children)      */}
         {/* ============================================================ */}
-        {isChildOpen && (
+        {isChildOpen && activeParent && (
           <aside className="h-full w-48 flex flex-col bg-sidebar/95 backdrop-blur-md shrink-0 border-inline-end border-sidebar-border/60 transition-[width,opacity] duration-200 ease-in-out">
             {/* Module Switcher (Madrassa / School) for Academic */}
             {activeParent.key === "academic" && role !== "teacher" && (

@@ -588,8 +588,8 @@ export async function listMadrassaCategories(request: Request, academicYearId?: 
       descriptionUrdu: c.descriptionUrdu ?? "",
       displayOrder: c.displayOrder ?? 1,
       active: true,
-      section: c.section ?? "both",
-      formVariantKeys: c.formVariantKeys ?? [],
+      section: (c as { section?: string }).section ?? "both",
+      formVariantKeys: (c as { formVariantKeys?: string[] }).formVariantKeys ?? [],
       createdAt: new Date(),
       updatedAt: new Date(),
     }));

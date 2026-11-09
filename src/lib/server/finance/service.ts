@@ -41,6 +41,13 @@ import {
 import { nextFinanceNumber } from "./numbering";
 import { syncPaymentToFile } from "./transaction-service";
 import { recordAuditLog } from "@/lib/server/audit/audit-service";
+import {
+  getInstitutionDisplayInfo,
+  loadFeeStore,
+  saveFeeStore,
+  toDateLedgerInput,
+  updateFeePaymentStatusInFile,
+} from "./fee-store";
 
 const paymentMethods = ["cash", "bank", "online", "cheque", "other"] as const;
 const chargeTypes = ["monthly", "admission", "exam", "transport", "custom"] as const;
@@ -265,64 +272,9 @@ async function requireFinanceReportPermission(request: Request) {
 }
 
 async function getActiveEnrollmentContext(studentId: string): Promise<ActiveEnrollmentContext> {
-  let [row] = await db
-    .select({
-      studentId: students.id,
-      studentName: students.name,
-      studentNameUrdu: students.nameUrdu,
-      fatherName: students.fatherName,
-      enrollmentId: studentEnrollments.id,
-      rollNo: studentEnrollments.rollNo,
-      admissionNo: studentEnrollments.admissionNo,
-      institutionId: studentEnrollments.institutionId,
-      institutionName: institutions.name,
-      institutionNameUrdu: institutions.nameUrdu,
-      programId: studentEnrollments.programId,
-      programName: programs.name,
-      programNameUrdu: programs.nameUrdu,
-      programSystem: programs.system,
-      schoolClassId: studentEnrollments.schoolClassId,
-      schoolClassName: schoolClasses.name,
-      schoolClassNameUrdu: schoolClasses.nameUrdu,
-      madrassaSubcategoryId: studentEnrollments.madrassaSubcategoryId,
-      madrassaSubcategoryName: madrassaSubcategories.name,
-      madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
-      madrassaCategoryName: madrassaCategories.name,
-      madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
-      guardianName: guardians.name,
-      guardianPhone: guardians.phone,
-      guardianCnic: guardians.cnic,
-      academicYearId: studentEnrollments.academicYearId,
-      schoolClassFee: schoolClasses.fee ?? null,
-      madrassaSubcategoryFee: madrassaSubcategories.fee ?? null,
-    })
-    .from(students)
-    .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, students.id))
-    .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
-    .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
-    .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-    .leftJoin(
-      madrassaSubcategories,
-      eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
-    )
-    .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
-    .leftJoin(
-      studentGuardians,
-      and(eq(studentGuardians.studentId, students.id), eq(studentGuardians.isPrimary, true)),
-    )
-    .leftJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
-    .where(
-      and(
-        eq(students.id, studentId),
-        isNull(studentEnrollments.endedAt),
-        eq(studentEnrollments.status, "active"),
-      ),
-    )
-    .orderBy(desc(studentEnrollments.startedAt))
-    .limit(1);
-
-  if (!row) {
-    const [fallbackRow] = await db
+  let row: Omit<ActiveEnrollmentContext, "system"> | undefined;
+  try {
+    const [activeRow] = await db
       .select({
         studentId: students.id,
         studentName: students.name,
@@ -368,12 +320,112 @@ async function getActiveEnrollmentContext(studentId: string): Promise<ActiveEnro
         and(eq(studentGuardians.studentId, students.id), eq(studentGuardians.isPrimary, true)),
       )
       .leftJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
-      .where(eq(students.id, studentId))
-      .orderBy(desc(studentEnrollments.startedAt), desc(studentEnrollments.createdAt))
+      .where(
+        and(
+          eq(students.id, studentId),
+          isNull(studentEnrollments.endedAt),
+          eq(studentEnrollments.status, "active"),
+        ),
+      )
+      .orderBy(desc(studentEnrollments.startedAt))
       .limit(1);
 
-    if (fallbackRow) {
-      row = fallbackRow;
+    row = activeRow;
+
+    if (!row) {
+      const [fallbackRow] = await db
+        .select({
+          studentId: students.id,
+          studentName: students.name,
+          studentNameUrdu: students.nameUrdu,
+          fatherName: students.fatherName,
+          enrollmentId: studentEnrollments.id,
+          rollNo: studentEnrollments.rollNo,
+          admissionNo: studentEnrollments.admissionNo,
+          institutionId: studentEnrollments.institutionId,
+          institutionName: institutions.name,
+          institutionNameUrdu: institutions.nameUrdu,
+          programId: studentEnrollments.programId,
+          programName: programs.name,
+          programNameUrdu: programs.nameUrdu,
+          programSystem: programs.system,
+          schoolClassId: studentEnrollments.schoolClassId,
+          schoolClassName: schoolClasses.name,
+          schoolClassNameUrdu: schoolClasses.nameUrdu,
+          madrassaSubcategoryId: studentEnrollments.madrassaSubcategoryId,
+          madrassaSubcategoryName: madrassaSubcategories.name,
+          madrassaSubcategoryNameUrdu: madrassaSubcategories.nameUrdu,
+          madrassaCategoryName: madrassaCategories.name,
+          madrassaCategoryNameUrdu: madrassaCategories.nameUrdu,
+          guardianName: guardians.name,
+          guardianPhone: guardians.phone,
+          guardianCnic: guardians.cnic,
+          academicYearId: studentEnrollments.academicYearId,
+          schoolClassFee: schoolClasses.fee ?? null,
+          madrassaSubcategoryFee: madrassaSubcategories.fee ?? null,
+        })
+        .from(students)
+        .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, students.id))
+        .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
+        .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
+        .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
+        .leftJoin(
+          madrassaSubcategories,
+          eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
+        )
+        .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+        .leftJoin(
+          studentGuardians,
+          and(eq(studentGuardians.studentId, students.id), eq(studentGuardians.isPrimary, true)),
+        )
+        .leftJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
+        .where(eq(students.id, studentId))
+        .orderBy(desc(studentEnrollments.startedAt), desc(studentEnrollments.createdAt))
+        .limit(1);
+
+      if (fallbackRow) {
+        row = fallbackRow;
+      }
+    }
+  } catch {
+    // DB offline — fall back to persistent fee store
+  }
+
+  if (!row) {
+    const store = loadFeeStore();
+    const storedStudent = store.students.find((s) => s.studentId === studentId);
+    if (storedStudent) {
+      return {
+        studentId: storedStudent.studentId,
+        studentName: storedStudent.studentName,
+        studentNameUrdu: storedStudent.studentNameUrdu,
+        fatherName: storedStudent.fatherName,
+        enrollmentId: storedStudent.enrollmentId,
+        rollNo: storedStudent.rollNo,
+        admissionNo: storedStudent.admissionNo,
+        institutionId: storedStudent.institutionId,
+        institutionName: storedStudent.institutionName,
+        institutionNameUrdu: storedStudent.institutionNameUrdu,
+        programId: storedStudent.programId,
+        programName: storedStudent.programName,
+        programNameUrdu: storedStudent.programNameUrdu,
+        programSystem: storedStudent.programSystem,
+        schoolClassId: storedStudent.schoolClassId,
+        schoolClassName: storedStudent.schoolClassName,
+        schoolClassNameUrdu: storedStudent.schoolClassNameUrdu,
+        madrassaSubcategoryId: storedStudent.madrassaSubcategoryId,
+        madrassaSubcategoryName: storedStudent.madrassaSubcategoryName,
+        madrassaSubcategoryNameUrdu: storedStudent.madrassaSubcategoryNameUrdu,
+        madrassaCategoryName: storedStudent.madrassaCategoryName,
+        madrassaCategoryNameUrdu: storedStudent.madrassaCategoryNameUrdu ?? null,
+        guardianName: storedStudent.guardianName,
+        guardianPhone: storedStudent.guardianPhone,
+        guardianCnic: storedStudent.guardianCnic,
+        academicYearId: storedStudent.academicYearId,
+        schoolClassFee: storedStudent.schoolClassFee,
+        madrassaSubcategoryFee: storedStudent.madrassaSubcategoryFee,
+        system: storedStudent.system,
+      };
     }
   }
 

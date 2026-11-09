@@ -17,7 +17,7 @@ export type StoredAdmissionApplication = {
   name: string;
   nameUrdu: string;
   fatherName: string;
-  fatherNameUrdu?: string;
+  fatherNameUrdu?: string | null;
   gender: "male" | "female";
   dob?: string | null;
   phone: string;

@@ -33,6 +33,7 @@ export type TeacherAssignment = {
   institutionId: string;
   programId: string;
   schoolClassId: string | null;
+  schoolSectionId?: string | null;
   madrassaCategoryId: string | null;
   madrassaSubcategoryId: string | null;
   subjectId: string | null;
@@ -44,6 +45,7 @@ export type TeacherAssignment = {
   active: boolean;
   schoolClassName?: string | null;
   schoolClassNameUrdu?: string | null;
+  schoolSectionName?: string | null;
   madrassaCategoryName?: string | null;
   madrassaCategoryNameUrdu?: string | null;
   madrassaSubcategoryName?: string | null;
