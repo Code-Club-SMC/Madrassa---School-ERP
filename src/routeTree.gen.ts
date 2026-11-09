@@ -85,6 +85,7 @@ import { Route as ApiAcademicProgramsRouteImport } from './routes/api/academic/p
 import { Route as ApiAdminAuditLogsRouteImport } from './routes/api/admin/audit-logs'
 import { Route as ApiAdminSuperAdminRouteImport } from './routes/api/admin/super-admin'
 import { Route as ApiAdmissionApplicationsRouteImport } from './routes/api/admission/applications'
+import { Route as ApiAdmissionClassesRouteImport } from './routes/api/admission/classes'
 import { Route as ApiAdmissionGuardianSuggestionsRouteImport } from './routes/api/admission/guardian-suggestions'
 import { Route as ApiAdmissionInterviewsRouteImport } from './routes/api/admission/interviews'
 import { Route as ApiAdmissionStudentsRouteImport } from './routes/api/admission/students'
@@ -618,6 +619,11 @@ const ApiAdmissionApplicationsRoute =
     path: '/api/admission/applications',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdmissionClassesRoute = ApiAdmissionClassesRouteImport.update({
+  id: '/api/admission/classes',
+  path: '/api/admission/classes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdmissionGuardianSuggestionsRoute =
   ApiAdmissionGuardianSuggestionsRouteImport.update({
     id: '/api/admission/guardian-suggestions',
@@ -1331,6 +1337,7 @@ export interface FileRoutesByFullPath {
   '/api/admin/audit-logs': typeof ApiAdminAuditLogsRoute
   '/api/admin/super-admin': typeof ApiAdminSuperAdminRoute
   '/api/admission/applications': typeof ApiAdmissionApplicationsRouteWithChildren
+  '/api/admission/classes': typeof ApiAdmissionClassesRoute
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
   '/api/admission/interviews': typeof ApiAdmissionInterviewsRouteWithChildren
   '/api/admission/students': typeof ApiAdmissionStudentsRoute
@@ -1514,6 +1521,7 @@ export interface FileRoutesByTo {
   '/api/admin/audit-logs': typeof ApiAdminAuditLogsRoute
   '/api/admin/super-admin': typeof ApiAdminSuperAdminRoute
   '/api/admission/applications': typeof ApiAdmissionApplicationsRouteWithChildren
+  '/api/admission/classes': typeof ApiAdmissionClassesRoute
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
   '/api/admission/interviews': typeof ApiAdmissionInterviewsRouteWithChildren
   '/api/admission/students': typeof ApiAdmissionStudentsRoute
@@ -1708,6 +1716,7 @@ export interface FileRoutesById {
   '/api/admin/audit-logs': typeof ApiAdminAuditLogsRoute
   '/api/admin/super-admin': typeof ApiAdminSuperAdminRoute
   '/api/admission/applications': typeof ApiAdmissionApplicationsRouteWithChildren
+  '/api/admission/classes': typeof ApiAdmissionClassesRoute
   '/api/admission/guardian-suggestions': typeof ApiAdmissionGuardianSuggestionsRoute
   '/api/admission/interviews': typeof ApiAdmissionInterviewsRouteWithChildren
   '/api/admission/students': typeof ApiAdmissionStudentsRoute
@@ -1902,6 +1911,7 @@ export interface FileRouteTypes {
     | '/api/admin/audit-logs'
     | '/api/admin/super-admin'
     | '/api/admission/applications'
+    | '/api/admission/classes'
     | '/api/admission/guardian-suggestions'
     | '/api/admission/interviews'
     | '/api/admission/students'
@@ -2085,6 +2095,7 @@ export interface FileRouteTypes {
     | '/api/admin/audit-logs'
     | '/api/admin/super-admin'
     | '/api/admission/applications'
+    | '/api/admission/classes'
     | '/api/admission/guardian-suggestions'
     | '/api/admission/interviews'
     | '/api/admission/students'
@@ -2278,6 +2289,7 @@ export interface FileRouteTypes {
     | '/api/admin/audit-logs'
     | '/api/admin/super-admin'
     | '/api/admission/applications'
+    | '/api/admission/classes'
     | '/api/admission/guardian-suggestions'
     | '/api/admission/interviews'
     | '/api/admission/students'
@@ -2419,6 +2431,7 @@ export interface RootRouteChildren {
   ApiAdminAuditLogsRoute: typeof ApiAdminAuditLogsRoute
   ApiAdminSuperAdminRoute: typeof ApiAdminSuperAdminRoute
   ApiAdmissionApplicationsRoute: typeof ApiAdmissionApplicationsRouteWithChildren
+  ApiAdmissionClassesRoute: typeof ApiAdmissionClassesRoute
   ApiAdmissionGuardianSuggestionsRoute: typeof ApiAdmissionGuardianSuggestionsRoute
   ApiAdmissionInterviewsRoute: typeof ApiAdmissionInterviewsRouteWithChildren
   ApiAdmissionStudentsRoute: typeof ApiAdmissionStudentsRoute
@@ -3008,6 +3021,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admission/applications'
       fullPath: '/api/admission/applications'
       preLoaderRoute: typeof ApiAdmissionApplicationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admission/classes': {
+      id: '/api/admission/classes'
+      path: '/api/admission/classes'
+      fullPath: '/api/admission/classes'
+      preLoaderRoute: typeof ApiAdmissionClassesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/admission/guardian-suggestions': {
@@ -4541,6 +4561,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminAuditLogsRoute: ApiAdminAuditLogsRoute,
   ApiAdminSuperAdminRoute: ApiAdminSuperAdminRoute,
   ApiAdmissionApplicationsRoute: ApiAdmissionApplicationsRouteWithChildren,
+  ApiAdmissionClassesRoute: ApiAdmissionClassesRoute,
   ApiAdmissionGuardianSuggestionsRoute: ApiAdmissionGuardianSuggestionsRoute,
   ApiAdmissionInterviewsRoute: ApiAdmissionInterviewsRouteWithChildren,
   ApiAdmissionStudentsRoute: ApiAdmissionStudentsRoute,

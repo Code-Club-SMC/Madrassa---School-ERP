@@ -25,6 +25,7 @@ export const transactionInputSchema = z.object({
   description: z.string().trim().optional(),
   descriptionUrdu: z.string().trim().optional(),
   system: z.enum(["school", "madrassa", "both"]).default("both"),
+  institutionId: z.string().trim().optional(),
   paymentMethod: z.enum(["cash", "bank", "online", "cheque"]).default("cash"),
 });
 
@@ -141,6 +142,14 @@ export async function recordFinanceTransaction(request: Request, input: Transact
   const prefix = input.type === "income" ? "INC" : "EXP";
   const voucherNo = `${prefix}-VCH-${year}${String(month).padStart(2, "0")}-${Date.now().toString().slice(-4)}`;
 
+  const institutionId =
+    input.institutionId ||
+    (input.system === "school"
+      ? "al_qasim_academy"
+      : input.system === "madrassa"
+        ? "jamia_qasmia_baneen"
+        : "al_qasim_integrated");
+
   const systemLabel =
     input.system === "school"
       ? "Al-Qasim Academy (School)"
@@ -154,7 +163,7 @@ export async function recordFinanceTransaction(request: Request, input: Transact
       ? (canonicalCat.startsWith("donation") ? "Donor" : "Student")
       : (canonicalCat.startsWith("salary") ? "Teacher" : "Vendor");
 
-  const transactionRecord: ComprehensiveTransaction = {
+  const transactionRecord: ComprehensiveTransaction & { institutionId?: string } = {
     id,
     voucherNo,
     date: input.date,
@@ -167,6 +176,7 @@ export async function recordFinanceTransaction(request: Request, input: Transact
     description: input.description?.trim() || `${meta.label} · ${partyName}`,
     system: input.system,
     systemLabel,
+    institutionId,
     partyName,
     partyRole: partyRole as any,
     paymentMethod: input.paymentMethod || "cash",
@@ -198,41 +208,22 @@ export async function recordFinanceTransaction(request: Request, input: Transact
       transactionRecord.reference = donResult.receiptNo;
     }
 
-    // Save to fee payments file
-    syncPaymentToFile(transactionRecord);
-
-    // Persist to PostgreSQL if available
-    try {
-      await db
-        .insert(feePayments)
-        .values({
-          id,
-          receiptNo: voucherNo,
-          amountPaisa: Math.round(input.amount * 100),
-          method: input.paymentMethod === "bank" ? "bank" : input.paymentMethod === "online" ? "online" : "cash",
-          receivedAt: new Date(input.date),
-          status: "posted",
-          payerName: partyName,
-          notes: input.description || null,
-        })
-        .onConflictDoNothing()
-        .catch(() => {});
-    } catch {
-      // Database offline or sandboxed
-    }
+    // Save to fee payments / income file for zero-loss offline resilience
+    syncPaymentToFile(transactionRecord as ComprehensiveTransaction);
   } else {
     // 2. If Expense
-    syncExpenseToFile(transactionRecord);
+    syncExpenseToFile(transactionRecord as ComprehensiveTransaction);
   }
 
   // 3. Record Audit Trail
   await recordAuditLog({
     userId: user?.id || "system",
     userName: user?.name || "Admin",
-    action: "create",
-    entity: "finance",
+    action: "finance.create",
+    entity: input.type === "income" ? "IncomeTransaction" : "ExpenseTransaction",
     entityId: voucherNo,
     module: "finance",
+    details: `Financial Transaction Recorded: ${input.type.toUpperCase()} PKR ${input.amount.toLocaleString()} (${meta.label}) [${voucherNo}]`,
     message: `Financial Transaction Recorded: ${input.type.toUpperCase()} PKR ${input.amount.toLocaleString()} (${meta.label}) [${voucherNo}]`,
     messageUrdu: `مالیاتی لین دین درج ہوا: ${meta.labelUrdu} ${input.amount.toLocaleString()} روپے (رسید: ${voucherNo})`,
   }).catch(() => {});

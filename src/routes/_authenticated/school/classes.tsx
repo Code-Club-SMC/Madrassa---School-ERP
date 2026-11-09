@@ -44,6 +44,7 @@ type Klass = {
 };
 
 const emptyClassForm = {
+  institutionId: "al_qasim_academy",
   code: "",
   name: "",
   nameUrdu: "",
@@ -70,14 +71,17 @@ function ClassesPage() {
   const { gender } = useSystem();
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
-  const institutionId = gender === "male" ? "al_qasim_academy" : "jamia_zainab_banat";
+  const [selectedInstitution, setSelectedInstitution] = useState<string>(
+    gender === "female" ? "jamia_zainab_banat" : "al_qasim_academy",
+  );
+  const institutionId = selectedInstitution;
   const [classes, setClasses] = useState<Klass[]>([]);
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [selectedYearId, setSelectedYearId] = useState<string>("active");
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState(false);
   const [classOpen, setClassOpen] = useState(false);
-  const [cf, setCf] = useState(emptyClassForm);
+  const [cf, setCf] = useState({ ...emptyClassForm, institutionId: selectedInstitution });
   const [confirmAction, setConfirmAction] = useState<SchoolConfirmAction | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Klass | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -152,7 +156,7 @@ function ClassesPage() {
         headers: { "content-type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          institutionId: institutionId || undefined,
+          institutionId: cf.institutionId || institutionId || undefined,
           code: cf.code.trim() || undefined,
           name: finalName,
           nameUrdu: finalNameUrdu,
@@ -163,7 +167,7 @@ function ClassesPage() {
       if (!response.ok) throw new Error(payload.error || "Could not add class");
       await loadClasses();
       toast.success(isUrdu ? "کلاس کامیابی سے شامل کر دی گئی" : "Class added successfully");
-      setCf(emptyClassForm);
+      setCf({ ...emptyClassForm, institutionId: selectedInstitution });
       setClassOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not add class");
@@ -284,7 +288,33 @@ function ClassesPage() {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="rounded-lg border border-border p-3.5 flex-1 min-w-[200px]">
+        {/* Campus Switcher Tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl border border-border">
+          <Button
+            size="sm"
+            variant={selectedInstitution === "al_qasim_academy" ? "default" : "ghost"}
+            className="text-xs h-8 font-medium gap-1.5"
+            onClick={() => {
+              setSelectedInstitution("al_qasim_academy");
+              setCf((prev) => ({ ...prev, institutionId: "al_qasim_academy" }));
+            }}
+          >
+            <span>{isUrdu ? "القاسم اکیڈمی (بنین)" : "Al-Qasim Academy (Boys School)"}</span>
+          </Button>
+          <Button
+            size="sm"
+            variant={selectedInstitution === "jamia_zainab_banat" ? "default" : "ghost"}
+            className="text-xs h-8 font-medium gap-1.5"
+            onClick={() => {
+              setSelectedInstitution("jamia_zainab_banat");
+              setCf((prev) => ({ ...prev, institutionId: "jamia_zainab_banat" }));
+            }}
+          >
+            <span>{isUrdu ? "جامعہ زینب (بنات سکول)" : "Jamia Zainab (Girls School)"}</span>
+          </Button>
+        </div>
+
+        <div className="rounded-lg border border-border p-3.5 flex-1 min-w-[160px]">
           <p className="text-xs text-muted-foreground font-urdu">{isUrdu ? "کل جماعتیں" : "Classes · جماعتیں"}</p>
           <p className="font-heading text-2xl font-bold mt-1">{totals.classes}</p>
         </div>
@@ -408,6 +438,25 @@ function ClassesPage() {
         className="max-w-md"
       >
         <div className="grid gap-4">
+          <BilingualLabel urdu="ادارہ / کیمپس" english="Institution / Campus" required>
+            <Select
+              value={cf.institutionId}
+              onValueChange={(val) => setCf({ ...cf, institutionId: val })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Campus" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="al_qasim_academy">
+                  {isUrdu ? "القاسم اکیڈمی (بنین سکول)" : "Al-Qasim Academy (Boys School)"}
+                </SelectItem>
+                <SelectItem value="jamia_zainab_banat">
+                  {isUrdu ? "جامعہ زینب (بنات سکول)" : "Jamia Zainab (Girls School)"}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </BilingualLabel>
+
           <div className="grid grid-cols-2 gap-3">
             <BilingualLabel urdu="جماعت کا نام" english="Name (Urdu)" required>
               <Input

@@ -48,6 +48,23 @@ import {
   toDateLedgerInput,
   updateFeePaymentStatusInFile,
 } from "./fee-store";
+import {
+  isOfflineEligibleError,
+  storeListFeeStudents,
+  storeGetStudentFeeLedger,
+  storeCreateFeeCharge,
+  storeCollectFeePayment,
+  storeChargeAndCollect,
+  storeCollectCollectiveFeePayment,
+  storeReverseFeeCharge,
+  storeReverseFeePayment,
+  storeRefundFeePayment,
+  storeDailyCollectionReport,
+  storeOutstandingDuesReport,
+  storeStudentLedgerReport,
+  storeInstitutionSummaryReport,
+  storeReversalRefundAuditReport,
+} from "./fee-offline-service";
 
 const paymentMethods = ["cash", "bank", "online", "cheque", "other"] as const;
 const chargeTypes = ["monthly", "admission", "exam", "transport", "custom"] as const;
@@ -455,39 +472,44 @@ export async function createFeeCharge(
   const context = await getActiveEnrollmentContext(input.studentId);
   const actor = await requirePermission(request, feeModuleForSystem(context.system), "create");
 
-  return db.transaction(async (tx) => {
-    const [charge] = await tx
-      .insert(feeCharges)
-      .values({
-        id: randomUUID(),
+  try {
+    return await db.transaction(async (tx) => {
+      const [charge] = await tx
+        .insert(feeCharges)
+        .values({
+          id: randomUUID(),
+          studentId: context.studentId,
+          enrollmentId: context.enrollmentId,
+          institutionId: context.institutionId,
+          programId: context.programId,
+          schoolClassId: context.schoolClassId,
+          madrassaSubcategoryId: context.madrassaSubcategoryId,
+          type: input.type as FeeChargeType,
+          label: input.label,
+          period: input.period || null,
+          amountPaisa: input.amountPaisa,
+          dueDate: parseOptionalDate(input.dueDate),
+          status: "open",
+          notes: input.notes || null,
+          createdByUserId: actor.id,
+        })
+        .returning();
+
+      await insertStudentEvent(tx, {
         studentId: context.studentId,
         enrollmentId: context.enrollmentId,
-        institutionId: context.institutionId,
-        programId: context.programId,
-        schoolClassId: context.schoolClassId,
-        madrassaSubcategoryId: context.madrassaSubcategoryId,
-        type: input.type as FeeChargeType,
-        label: input.label,
-        period: input.period || null,
-        amountPaisa: input.amountPaisa,
-        dueDate: parseOptionalDate(input.dueDate),
-        status: "open",
-        notes: input.notes || null,
-        createdByUserId: actor.id,
-      })
-      .returning();
+        type: "fee_charge_created",
+        message: `Fee charge created: ${input.label}`,
+        metadata: { chargeId: charge.id, amountPaisa: charge.amountPaisa, type: charge.type },
+        actorUserId: actor.id,
+      });
 
-    await insertStudentEvent(tx, {
-      studentId: context.studentId,
-      enrollmentId: context.enrollmentId,
-      type: "fee_charge_created",
-      message: `Fee charge created: ${input.label}`,
-      metadata: { chargeId: charge.id, amountPaisa: charge.amountPaisa, type: charge.type },
-      actorUserId: actor.id,
+      return { charge: serializeCharge(charge) };
     });
-
-    return { charge: serializeCharge(charge) };
-  });
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeCreateFeeCharge(context, input, actor);
+  }
 }
 
 export async function collectFeePayment(
@@ -497,117 +519,122 @@ export async function collectFeePayment(
   const context = await getActiveEnrollmentContext(input.studentId);
   const actor = await requirePermission(request, feeModuleForSystem(context.system), "create");
 
-  return db.transaction(async (tx) => {
-    const chargeIds = uniqueStrings(input.allocations.map((item) => item.chargeId));
-    if (chargeIds.length !== input.allocations.length) {
-      throw new HttpError("A charge can only be allocated once per payment", 400);
-    }
+  try {
+    return await db.transaction(async (tx) => {
+      const chargeIds = uniqueStrings(input.allocations.map((item) => item.chargeId));
+      if (chargeIds.length !== input.allocations.length) {
+        throw new HttpError("A charge can only be allocated once per payment", 400);
+      }
 
-    const ledgerData = await loadLedgerDataForChargeIds(tx, chargeIds);
-    if (ledgerData.charges.length !== chargeIds.length)
-      throw new HttpError("One or more charges were not found", 404);
-    if (ledgerData.charges.some((charge) => charge.studentId !== context.studentId)) {
-      throw new HttpError("All charges must belong to the selected student", 400);
-    }
-    if (ledgerData.charges.some((charge) => charge.status === "reversed")) {
-      throw new HttpError("Cannot collect payment against reversed charges", 400);
-    }
+      const ledgerData = await loadLedgerDataForChargeIds(tx, chargeIds);
+      if (ledgerData.charges.length !== chargeIds.length)
+        throw new HttpError("One or more charges were not found", 404);
+      if (ledgerData.charges.some((charge) => charge.studentId !== context.studentId)) {
+        throw new HttpError("All charges must belong to the selected student", 400);
+      }
+      if (ledgerData.charges.some((charge) => charge.status === "reversed")) {
+        throw new HttpError("Cannot collect payment against reversed charges", 400);
+      }
 
-    const ledgerRows = buildChargeLedger(ledgerData);
-    const balanceByCharge = new Map(ledgerRows.map((row) => [row.chargeId, row.balancePaisa]));
+      const ledgerRows = buildChargeLedger(ledgerData);
+      const balanceByCharge = new Map(ledgerRows.map((row) => [row.chargeId, row.balancePaisa]));
 
-    for (const allocation of input.allocations) {
-      const balance = balanceByCharge.get(allocation.chargeId) ?? 0;
-      if (allocation.amountPaisa > balance)
-        throw new HttpError("Payment cannot exceed outstanding charge balance", 400);
-    }
+      for (const allocation of input.allocations) {
+        const balance = balanceByCharge.get(allocation.chargeId) ?? 0;
+        if (allocation.amountPaisa > balance)
+          throw new HttpError("Payment cannot exceed outstanding charge balance", 400);
+      }
 
-    const amountPaisa = input.allocations.reduce(
-      (sum, allocation) => sum + allocation.amountPaisa,
-      0,
-    );
-    const receiptNo = await nextFinanceNumber(tx, {
-      type: "fee_receipt",
-      institutionId: context.institutionId,
-      prefix: "FR",
-    });
-    const [payment] = await tx
-      .insert(feePayments)
-      .values({
+      const amountPaisa = input.allocations.reduce(
+        (sum, allocation) => sum + allocation.amountPaisa,
+        0,
+      );
+      const receiptNo = await nextFinanceNumber(tx, {
+        type: "fee_receipt",
+        institutionId: context.institutionId,
+        prefix: "FR",
+      });
+      const [payment] = await tx
+        .insert(feePayments)
+        .values({
+          id: randomUUID(),
+          receiptNo,
+          studentId: context.studentId,
+          enrollmentId: context.enrollmentId,
+          institutionId: context.institutionId,
+          amountPaisa,
+          method: input.method as FeePaymentMethod,
+          receivedAt: parseReceivedAt(input.receivedAt),
+          receivedByUserId: actor.id,
+          payerName: input.payerName || null,
+          payerPhone: input.payerPhone || null,
+          notes: input.notes || null,
+        })
+        .returning();
+
+      const allocations = input.allocations.map((allocation) => ({
         id: randomUUID(),
-        receiptNo,
+        paymentId: payment.id,
+        chargeId: allocation.chargeId,
+        amountPaisa: allocation.amountPaisa,
+        createdAt: new Date(),
+      }));
+
+      await tx.insert(feePaymentAllocations).values(allocations);
+      await refreshChargeStatuses(tx, chargeIds);
+
+      await insertStudentEvent(tx, {
         studentId: context.studentId,
         enrollmentId: context.enrollmentId,
-        institutionId: context.institutionId,
-        amountPaisa,
-        method: input.method as FeePaymentMethod,
-        receivedAt: parseReceivedAt(input.receivedAt),
-        receivedByUserId: actor.id,
-        payerName: input.payerName || null,
-        payerPhone: input.payerPhone || null,
-        notes: input.notes || null,
-      })
-      .returning();
+        type: "fee_payment_recorded",
+        message: `Fee payment received: ${receiptNo}`,
+        metadata: { paymentId: payment.id, receiptNo, amountPaisa, method: payment.method },
+        actorUserId: actor.id,
+      });
 
-    const allocations = input.allocations.map((allocation) => ({
-      id: randomUUID(),
-      paymentId: payment.id,
-      chargeId: allocation.chargeId,
-      amountPaisa: allocation.amountPaisa,
-      createdAt: new Date(),
-    }));
+      const isMadrassa = context.system === "madrassa";
+      const studentEn = context.studentName || input.payerName || "Student";
+      const rollPart = context.rollNo ? ` (${context.rollNo})` : "";
+      const recAt = parseReceivedAt(input.receivedAt);
 
-    await tx.insert(feePaymentAllocations).values(allocations);
-    await refreshChargeStatuses(tx, chargeIds);
+      syncPaymentToFile({
+        id: payment.id,
+        voucherNo: receiptNo,
+        date: recAt.toISOString().slice(0, 10),
+        month: recAt.getMonth() + 1,
+        year: recAt.getFullYear(),
+        type: "income",
+        category: "tuition_fee",
+        categoryLabel: "Tuition Fee",
+        categoryLabelUrdu: "ماہانہ تعلیمی فیس",
+        description: `Fee Payment: ${receiptNo} · ${studentEn}${rollPart}`,
+        system: isMadrassa ? "madrassa" : "school",
+        systemLabel: isMadrassa ? "Jamia Qasimia (Madrassa)" : "Al-Qasim Academy (School)",
+        partyName: input.payerName || studentEn,
+        partyRole: "Student",
+        paymentMethod: (payment.method || "cash") as any,
+        amount: Math.round(payment.amountPaisa / 100),
+        status: "posted",
+        reference: receiptNo,
+      });
 
-    await insertStudentEvent(tx, {
-      studentId: context.studentId,
-      enrollmentId: context.enrollmentId,
-      type: "fee_payment_recorded",
-      message: `Fee payment received: ${receiptNo}`,
-      metadata: { paymentId: payment.id, receiptNo, amountPaisa, method: payment.method },
-      actorUserId: actor.id,
+      recordAuditLog({
+        userId: actor.id,
+        userName: actor.name,
+        action: "create",
+        entity: "fee_payment",
+        entityId: receiptNo,
+        module: "finance",
+        message: `Fee payment received: PKR ${Math.round(amountPaisa / 100).toLocaleString()} (Receipt #${receiptNo})`,
+        messageUrdu: `فیس وصولی: ${Math.round(amountPaisa / 100).toLocaleString()} روپے (رسید #${receiptNo})`,
+      }).catch(() => {});
+
+      return { payment: serializePayment(payment, allocations) };
     });
-
-    const isMadrassa = context.system === "madrassa";
-    const studentEn = context.studentName || input.payerName || "Student";
-    const rollPart = context.rollNo ? ` (${context.rollNo})` : "";
-    const recAt = parseReceivedAt(input.receivedAt);
-
-    syncPaymentToFile({
-      id: payment.id,
-      voucherNo: receiptNo,
-      date: recAt.toISOString().slice(0, 10),
-      month: recAt.getMonth() + 1,
-      year: recAt.getFullYear(),
-      type: "income",
-      category: "tuition_fee",
-      categoryLabel: "Tuition Fee",
-      categoryLabelUrdu: "ماہانہ تعلیمی فیس",
-      description: `Fee Payment: ${receiptNo} · ${studentEn}${rollPart}`,
-      system: isMadrassa ? "madrassa" : "school",
-      systemLabel: isMadrassa ? "Jamia Qasimia (Madrassa)" : "Al-Qasim Academy (School)",
-      partyName: input.payerName || studentEn,
-      partyRole: "Student",
-      paymentMethod: (payment.method || "cash") as any,
-      amount: Math.round(payment.amountPaisa / 100),
-      status: "posted",
-      reference: receiptNo,
-    });
-
-    recordAuditLog({
-      userId: actor.id,
-      userName: actor.name,
-      action: "create",
-      entity: "fee_payment",
-      entityId: receiptNo,
-      module: "finance",
-      message: `Fee payment received: PKR ${Math.round(amountPaisa / 100).toLocaleString()} (Receipt #${receiptNo})`,
-      messageUrdu: `فیس وصولی: ${Math.round(amountPaisa / 100).toLocaleString()} روپے (رسید #${receiptNo})`,
-    }).catch(() => {});
-
-    return { payment: serializePayment(payment, allocations) };
-  });
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeCollectFeePayment(context, input, actor);
+  }
 }
 
 export async function chargeAndCollect(
@@ -617,124 +644,129 @@ export async function chargeAndCollect(
   const context = await getActiveEnrollmentContext(input.studentId);
   const actor = await requirePermission(request, feeModuleForSystem(context.system), "create");
 
-  return db.transaction(async (tx) => {
-    const [charge] = await tx
-      .insert(feeCharges)
-      .values({
-        id: randomUUID(),
-        studentId: context.studentId,
-        enrollmentId: context.enrollmentId,
+  try {
+    return await db.transaction(async (tx) => {
+      const [charge] = await tx
+        .insert(feeCharges)
+        .values({
+          id: randomUUID(),
+          studentId: context.studentId,
+          enrollmentId: context.enrollmentId,
+          institutionId: context.institutionId,
+          programId: context.programId,
+          schoolClassId: context.schoolClassId,
+          madrassaSubcategoryId: context.madrassaSubcategoryId,
+          type: input.type as FeeChargeType,
+          label: input.label,
+          period: input.period || null,
+          amountPaisa: input.amountPaisa,
+          dueDate: parseOptionalDate(input.dueDate),
+          status: "paid",
+          notes: input.notes || null,
+          createdByUserId: actor.id,
+        })
+        .returning();
+
+      const receiptNo = await nextFinanceNumber(tx, {
+        type: "fee_receipt",
         institutionId: context.institutionId,
-        programId: context.programId,
-        schoolClassId: context.schoolClassId,
-        madrassaSubcategoryId: context.madrassaSubcategoryId,
-        type: input.type as FeeChargeType,
-        label: input.label,
-        period: input.period || null,
-        amountPaisa: input.amountPaisa,
-        dueDate: parseOptionalDate(input.dueDate),
-        status: "paid",
-        notes: input.notes || null,
-        createdByUserId: actor.id,
-      })
-      .returning();
+        prefix: "FR",
+      });
+      const [payment] = await tx
+        .insert(feePayments)
+        .values({
+          id: randomUUID(),
+          receiptNo,
+          studentId: context.studentId,
+          enrollmentId: context.enrollmentId,
+          institutionId: context.institutionId,
+          amountPaisa: input.amountPaisa,
+          method: input.method as FeePaymentMethod,
+          receivedAt: parseReceivedAt(input.receivedAt),
+          receivedByUserId: actor.id,
+          payerName: input.payerName || null,
+          payerPhone: input.payerPhone || null,
+          notes: input.notes || null,
+        })
+        .returning();
 
-    const receiptNo = await nextFinanceNumber(tx, {
-      type: "fee_receipt",
-      institutionId: context.institutionId,
-      prefix: "FR",
-    });
-    const [payment] = await tx
-      .insert(feePayments)
-      .values({
+      const allocation = {
         id: randomUUID(),
-        receiptNo,
-        studentId: context.studentId,
-        enrollmentId: context.enrollmentId,
-        institutionId: context.institutionId,
-        amountPaisa: input.amountPaisa,
-        method: input.method as FeePaymentMethod,
-        receivedAt: parseReceivedAt(input.receivedAt),
-        receivedByUserId: actor.id,
-        payerName: input.payerName || null,
-        payerPhone: input.payerPhone || null,
-        notes: input.notes || null,
-      })
-      .returning();
-
-    const allocation = {
-      id: randomUUID(),
-      paymentId: payment.id,
-      chargeId: charge.id,
-      amountPaisa: input.amountPaisa,
-      createdAt: new Date(),
-    };
-    await tx.insert(feePaymentAllocations).values(allocation);
-
-    await insertStudentEvent(tx, {
-      studentId: context.studentId,
-      enrollmentId: context.enrollmentId,
-      type: "fee_charge_created",
-      message: `Fee charge created: ${input.label}`,
-      metadata: { chargeId: charge.id, amountPaisa: charge.amountPaisa, type: charge.type },
-      actorUserId: actor.id,
-    });
-    await insertStudentEvent(tx, {
-      studentId: context.studentId,
-      enrollmentId: context.enrollmentId,
-      type: "fee_payment_recorded",
-      message: `Fee payment received: ${receiptNo}`,
-      metadata: {
         paymentId: payment.id,
-        receiptNo,
-        amountPaisa: payment.amountPaisa,
-        method: payment.method,
-      },
-      actorUserId: actor.id,
+        chargeId: charge.id,
+        amountPaisa: input.amountPaisa,
+        createdAt: new Date(),
+      };
+      await tx.insert(feePaymentAllocations).values(allocation);
+
+      await insertStudentEvent(tx, {
+        studentId: context.studentId,
+        enrollmentId: context.enrollmentId,
+        type: "fee_charge_created",
+        message: `Fee charge created: ${input.label}`,
+        metadata: { chargeId: charge.id, amountPaisa: charge.amountPaisa, type: charge.type },
+        actorUserId: actor.id,
+      });
+      await insertStudentEvent(tx, {
+        studentId: context.studentId,
+        enrollmentId: context.enrollmentId,
+        type: "fee_payment_recorded",
+        message: `Fee payment received: ${receiptNo}`,
+        metadata: {
+          paymentId: payment.id,
+          receiptNo,
+          amountPaisa: payment.amountPaisa,
+          method: payment.method,
+        },
+        actorUserId: actor.id,
+      });
+
+      const isMadrassa = context.system === "madrassa";
+      const studentEn = context.studentName || input.payerName || "Student";
+      const rollPart = context.rollNo ? ` (${context.rollNo})` : "";
+      const recAt = parseReceivedAt(input.receivedAt);
+
+      syncPaymentToFile({
+        id: payment.id,
+        voucherNo: receiptNo,
+        date: recAt.toISOString().slice(0, 10),
+        month: recAt.getMonth() + 1,
+        year: recAt.getFullYear(),
+        type: "income",
+        category: "tuition_fee",
+        categoryLabel: "Tuition Fee",
+        categoryLabelUrdu: "ماہانہ تعلیمی فیس",
+        description: `Fee Payment: ${receiptNo} · ${studentEn}${rollPart} (${input.label})`,
+        system: isMadrassa ? "madrassa" : "school",
+        systemLabel: isMadrassa ? "Jamia Qasimia (Madrassa)" : "Al-Qasim Academy (School)",
+        partyName: input.payerName || studentEn,
+        partyRole: "Student",
+        paymentMethod: (payment.method || "cash") as any,
+        amount: Math.round(payment.amountPaisa / 100),
+        status: "posted",
+        reference: receiptNo,
+      });
+
+      recordAuditLog({
+        userId: actor.id,
+        userName: actor.name,
+        action: "create",
+        entity: "fee_payment",
+        entityId: receiptNo,
+        module: "finance",
+        message: `Fee charge and collected: PKR ${Math.round(payment.amountPaisa / 100).toLocaleString()} (Receipt #${receiptNo})`,
+        messageUrdu: `فیس وصولی مکمل: ${Math.round(payment.amountPaisa / 100).toLocaleString()} روپے (رسید #${receiptNo})`,
+      }).catch(() => {});
+
+      return {
+        charge: serializeCharge(charge),
+        payment: serializePayment(payment, [allocation]),
+      };
     });
-
-    const isMadrassa = context.system === "madrassa";
-    const studentEn = context.studentName || input.payerName || "Student";
-    const rollPart = context.rollNo ? ` (${context.rollNo})` : "";
-    const recAt = parseReceivedAt(input.receivedAt);
-
-    syncPaymentToFile({
-      id: payment.id,
-      voucherNo: receiptNo,
-      date: recAt.toISOString().slice(0, 10),
-      month: recAt.getMonth() + 1,
-      year: recAt.getFullYear(),
-      type: "income",
-      category: "tuition_fee",
-      categoryLabel: "Tuition Fee",
-      categoryLabelUrdu: "ماہانہ تعلیمی فیس",
-      description: `Fee Payment: ${receiptNo} · ${studentEn}${rollPart} (${input.label})`,
-      system: isMadrassa ? "madrassa" : "school",
-      systemLabel: isMadrassa ? "Jamia Qasimia (Madrassa)" : "Al-Qasim Academy (School)",
-      partyName: input.payerName || studentEn,
-      partyRole: "Student",
-      paymentMethod: (payment.method || "cash") as any,
-      amount: Math.round(payment.amountPaisa / 100),
-      status: "posted",
-      reference: receiptNo,
-    });
-
-    recordAuditLog({
-      userId: actor.id,
-      userName: actor.name,
-      action: "create",
-      entity: "fee_payment",
-      entityId: receiptNo,
-      module: "finance",
-      message: `Fee charge and collected: PKR ${Math.round(payment.amountPaisa / 100).toLocaleString()} (Receipt #${receiptNo})`,
-      messageUrdu: `فیس وصولی مکمل: ${Math.round(payment.amountPaisa / 100).toLocaleString()} روپے (رسید #${receiptNo})`,
-    }).catch(() => {});
-
-    return {
-      charge: serializeCharge(charge),
-      payment: serializePayment(payment, [allocation]),
-    };
-  });
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeChargeAndCollect(context, input, actor);
+  }
 }
 
 export async function collectCollectiveFeePayment(
@@ -747,8 +779,9 @@ export async function collectCollectiveFeePayment(
     });
   });
 
-  return db.transaction(async (tx) => {
-    const results: Array<{
+  try {
+    return await db.transaction(async (tx) => {
+      const results: Array<{
       studentId: string;
       studentName: string;
       studentNameUrdu: string;
@@ -923,6 +956,10 @@ export async function collectCollectiveFeePayment(
       results,
     };
   });
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeCollectCollectiveFeePayment(input, actor, getActiveEnrollmentContext);
+  }
 }
 
 export async function getOutstandingBalanceByStudentIds(
@@ -1003,138 +1040,150 @@ export async function listFeeStudents(
 ) {
   await requirePermission(request, feeModuleForSystem(query.system), "view");
 
-  const clauses = compactSql([
-    systemCondition(query.system),
-    isNull(studentEnrollments.endedAt),
-    eq(studentEnrollments.status, "active"),
-    query.status ? eq(students.status, query.status) : undefined,
-    query.institutionId ? eq(studentEnrollments.institutionId, query.institutionId) : undefined,
-    query.programId ? eq(studentEnrollments.programId, query.programId) : undefined,
-    query.classId ? eq(studentEnrollments.schoolClassId, query.classId) : undefined,
-    query.subcategoryId
-      ? eq(studentEnrollments.madrassaSubcategoryId, query.subcategoryId)
-      : undefined,
-    query.categoryId
-      ? eq(madrassaCategories.id, query.categoryId)
-      : undefined,
-    query.q
-      ? or(
-          ilike(students.name, `%${query.q}%`),
-          ilike(students.nameUrdu, `%${query.q}%`),
-          ilike(students.fatherName, `%${query.q}%`),
-          ilike(studentEnrollments.rollNo, `%${query.q}%`),
-          ilike(studentEnrollments.admissionNo, `%${query.q}%`),
-          ilike(guardians.phone, `%${query.q}%`),
-        )
-      : undefined,
-  ]);
+  const isAllParam = (v?: string) => !v || v === "all";
 
-  const rows = await db
-    .select(studentSearchSelection())
-    .from(students)
-    .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, students.id))
-    .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
-    .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
-    .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
-    .leftJoin(
-      madrassaSubcategories,
-      eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
-    )
-    .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
-    .leftJoin(
-      studentGuardians,
-      and(eq(studentGuardians.studentId, students.id), eq(studentGuardians.isPrimary, true)),
-    )
-    .leftJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
-    .where(and(...clauses))
-    .orderBy(desc(studentEnrollments.startedAt), desc(students.createdAt))
-    .limit(50);
+  try {
+    const clauses = compactSql([
+      systemCondition(query.system),
+      isNull(studentEnrollments.endedAt),
+      eq(studentEnrollments.status, "active"),
+      query.status ? eq(students.status, query.status) : undefined,
+      !isAllParam(query.institutionId) ? eq(studentEnrollments.institutionId, query.institutionId!) : undefined,
+      !isAllParam(query.programId) ? eq(studentEnrollments.programId, query.programId!) : undefined,
+      !isAllParam(query.classId) ? eq(studentEnrollments.schoolClassId, query.classId!) : undefined,
+      !isAllParam(query.subcategoryId)
+        ? eq(studentEnrollments.madrassaSubcategoryId, query.subcategoryId!)
+        : undefined,
+      !isAllParam(query.categoryId)
+        ? eq(madrassaCategories.id, query.categoryId!)
+        : undefined,
+      query.q
+        ? or(
+            ilike(students.name, `%${query.q}%`),
+            ilike(students.nameUrdu, `%${query.q}%`),
+            ilike(students.fatherName, `%${query.q}%`),
+            ilike(studentEnrollments.rollNo, `%${query.q}%`),
+            ilike(studentEnrollments.admissionNo, `%${query.q}%`),
+            ilike(guardians.phone, `%${query.q}%`),
+          )
+        : undefined,
+    ]);
 
-  const summaries = await summarizeByStudentIds(rows.map((row) => row.studentId));
+    const rows = await db
+      .select(studentSearchSelection())
+      .from(students)
+      .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, students.id))
+      .innerJoin(institutions, eq(institutions.id, studentEnrollments.institutionId))
+      .innerJoin(programs, eq(programs.id, studentEnrollments.programId))
+      .leftJoin(schoolClasses, eq(schoolClasses.id, studentEnrollments.schoolClassId))
+      .leftJoin(
+        madrassaSubcategories,
+        eq(madrassaSubcategories.id, studentEnrollments.madrassaSubcategoryId),
+      )
+      .leftJoin(madrassaCategories, eq(madrassaCategories.id, madrassaSubcategories.categoryId))
+      .leftJoin(
+        studentGuardians,
+        and(eq(studentGuardians.studentId, students.id), eq(studentGuardians.isPrimary, true)),
+      )
+      .leftJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
+      .where(and(...clauses))
+      .orderBy(desc(studentEnrollments.startedAt), desc(students.createdAt))
+      .limit(50);
 
-  // Calculate sibling count for each student based on father/guardian CNIC and student_siblings table
-  const cnicCounts = new Map<string, number>();
-  const explicitSiblingCounts = new Map<string, number>();
+    if (rows.length === 0) {
+      const storeRes = storeListFeeStudents(query);
+      if (storeRes.students.length > 0) return storeRes;
+    }
 
-  const studentIds = rows.map((r) => r.studentId);
-  if (studentIds.length > 0) {
-    const cleanCnics = rows
-      .map((r) => r.guardianCnic?.trim().replace(/[^0-9]/g, ""))
-      .filter((c): c is string => Boolean(c && c.length >= 5));
+    const summaries = await summarizeByStudentIds(rows.map((row) => row.studentId));
 
-    if (cleanCnics.length > 0) {
-      const counts = await db
+    // Calculate sibling count for each student based on father/guardian CNIC and student_siblings table
+    const cnicCounts = new Map<string, number>();
+    const explicitSiblingCounts = new Map<string, number>();
+
+    const studentIds = rows.map((r) => r.studentId);
+    if (studentIds.length > 0) {
+      const cleanCnics = rows
+        .map((r) => r.guardianCnic?.trim().replace(/[^0-9]/g, ""))
+        .filter((c): c is string => Boolean(c && c.length >= 5));
+
+      if (cleanCnics.length > 0) {
+        const counts = await db
+          .select({
+            cleanCnic: sql<string>`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '')`,
+            totalStudents: sql<number>`count(DISTINCT ${studentGuardians.studentId})::int`,
+          })
+          .from(studentGuardians)
+          .innerJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
+          .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, studentGuardians.studentId))
+          .where(
+            and(
+              isNull(studentEnrollments.endedAt),
+              eq(studentEnrollments.status, "active"),
+              inArray(sql`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '')`, cleanCnics),
+            ),
+          )
+          .groupBy(sql`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '')`);
+
+        for (const c of counts) {
+          cnicCounts.set(c.cleanCnic, c.totalStudents);
+        }
+      }
+
+      const explicitLinks = await db
         .select({
-          cleanCnic: sql<string>`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '')`,
-          totalStudents: sql<number>`count(DISTINCT ${studentGuardians.studentId})::int`,
+          studentId: studentSiblings.studentId,
+          siblingId: studentSiblings.siblingId,
         })
-        .from(studentGuardians)
-        .innerJoin(guardians, eq(guardians.id, studentGuardians.guardianId))
-        .innerJoin(studentEnrollments, eq(studentEnrollments.studentId, studentGuardians.studentId))
-        .where(
-          and(
-            isNull(studentEnrollments.endedAt),
-            eq(studentEnrollments.status, "active"),
-            inArray(sql`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '')`, cleanCnics),
-          ),
-        )
-        .groupBy(sql`REPLACE(REPLACE(${guardians.cnic}, '-', ''), ' ', '')`);
+        .from(studentSiblings)
+        .where(or(inArray(studentSiblings.studentId, studentIds), inArray(studentSiblings.siblingId, studentIds)));
 
-      for (const c of counts) {
-        cnicCounts.set(c.cleanCnic, c.totalStudents);
+      for (const link of explicitLinks) {
+        if (studentIds.includes(link.studentId)) {
+          explicitSiblingCounts.set(link.studentId, (explicitSiblingCounts.get(link.studentId) ?? 0) + 1);
+        }
+        if (studentIds.includes(link.siblingId)) {
+          explicitSiblingCounts.set(link.siblingId, (explicitSiblingCounts.get(link.siblingId) ?? 0) + 1);
+        }
       }
     }
 
-    const explicitLinks = await db
-      .select({
-        studentId: studentSiblings.studentId,
-        siblingId: studentSiblings.siblingId,
-      })
-      .from(studentSiblings)
-      .where(or(inArray(studentSiblings.studentId, studentIds), inArray(studentSiblings.siblingId, studentIds)));
-
-    for (const link of explicitLinks) {
-      if (studentIds.includes(link.studentId)) {
-        explicitSiblingCounts.set(link.studentId, (explicitSiblingCounts.get(link.studentId) ?? 0) + 1);
-      }
-      if (studentIds.includes(link.siblingId)) {
-        explicitSiblingCounts.set(link.siblingId, (explicitSiblingCounts.get(link.siblingId) ?? 0) + 1);
-      }
-    }
+    return {
+      students: rows.map((row) => ({
+        id: row.studentId,
+        name: row.studentName,
+        nameUrdu: row.studentNameUrdu,
+        fatherName: row.fatherName,
+        rollNo: row.rollNo,
+        admissionNo: row.admissionNo,
+        system: row.programSystem === "madrassa" ? "madrassa" : "school",
+        institutionId: row.institutionId,
+        institutionName: row.institutionName,
+        institutionNameUrdu: row.institutionNameUrdu,
+        programId: row.programId,
+        classId: row.schoolClassId ?? undefined,
+        subcategoryId: row.madrassaSubcategoryId ?? undefined,
+        categoryId: row.madrassaCategoryId ?? undefined,
+        categoryName: row.madrassaCategoryName ?? undefined,
+        groupLabel: groupLabelForRow(row),
+        guardianName: row.guardianName,
+        guardianPhone: row.guardianPhone,
+        guardianCnic: row.guardianCnic ?? null,
+        siblingCount: (() => {
+          const clean = row.guardianCnic?.trim().replace(/[^0-9]/g, "");
+          const byCnic = clean && cnicCounts.has(clean) ? (cnicCounts.get(clean)! - 1) : 0;
+          const byExplicit = explicitSiblingCounts.get(row.studentId) ?? 0;
+          return Math.max(0, byCnic, byExplicit);
+        })(),
+        monthlyFee: row.programSystem === "madrassa" ? (row.madrassaSubcategoryFee ?? 0) : (row.schoolClassFee ?? 0),
+        monthlyFeePaisa: ((row.programSystem === "madrassa" ? (row.madrassaSubcategoryFee ?? 0) : (row.schoolClassFee ?? 0)) * 100),
+        summary: summaries.get(row.studentId) ?? emptySummary,
+      })),
+    };
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeListFeeStudents(query);
   }
-
-  return {
-    students: rows.map((row) => ({
-      id: row.studentId,
-      name: row.studentName,
-      nameUrdu: row.studentNameUrdu,
-      fatherName: row.fatherName,
-      rollNo: row.rollNo,
-      admissionNo: row.admissionNo,
-      system: row.programSystem === "madrassa" ? "madrassa" : "school",
-      institutionId: row.institutionId,
-      institutionName: row.institutionName,
-      institutionNameUrdu: row.institutionNameUrdu,
-      programId: row.programId,
-      classId: row.schoolClassId ?? undefined,
-      subcategoryId: row.madrassaSubcategoryId ?? undefined,
-      categoryId: row.madrassaCategoryId ?? undefined,
-      categoryName: row.madrassaCategoryName ?? undefined,
-      groupLabel: groupLabelForRow(row),
-      guardianName: row.guardianName,
-      guardianPhone: row.guardianPhone,
-      guardianCnic: row.guardianCnic ?? null,
-      siblingCount: (() => {
-        const clean = row.guardianCnic?.trim().replace(/[^0-9]/g, "");
-        const byCnic = clean && cnicCounts.has(clean) ? (cnicCounts.get(clean)! - 1) : 0;
-        const byExplicit = explicitSiblingCounts.get(row.studentId) ?? 0;
-        return Math.max(0, byCnic, byExplicit);
-      })(),
-      monthlyFee: row.programSystem === "madrassa" ? (row.madrassaSubcategoryFee ?? 0) : (row.schoolClassFee ?? 0),
-      monthlyFeePaisa: ((row.programSystem === "madrassa" ? (row.madrassaSubcategoryFee ?? 0) : (row.schoolClassFee ?? 0)) * 100),
-      summary: summaries.get(row.studentId) ?? emptySummary,
-    })),
-  };
 }
 
 async function findSiblingStudents(studentId: string, guardianCnic?: string | null) {
@@ -1306,151 +1355,169 @@ export async function getStudentFeeLedger(
   assertSystemMatches(query.system, context.system);
   await requirePermission(request, feeModuleForSystem(query.system), "view");
 
-  const siblings = await findSiblingStudents(studentId, context.guardianCnic);
-  const siblingIds = siblings.map((s) => s.studentId);
-  const allStudentIds = [studentId, ...siblingIds];
+  try {
+    const siblings = await findSiblingStudents(studentId, context.guardianCnic);
+    const siblingIds = siblings.map((s) => s.studentId);
+    const allStudentIds = [studentId, ...siblingIds];
 
-  const allLedgerData = await loadLedgerDataForStudentIds(db, allStudentIds);
-  const allLedgerRows = buildChargeLedger(allLedgerData);
-  const ledgerByCharge = new Map(allLedgerRows.map((row) => [row.chargeId, row]));
-  const allocationsByPayment = groupAllocationsByPayment(allLedgerData.allocations);
+    const allLedgerData = await loadLedgerDataForStudentIds(db, allStudentIds);
 
-  const studentCharges = allLedgerData.charges
-    .filter((c) => c.studentId === studentId)
-    .slice()
-    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
-    .map((charge) => ({
-      ...serializeCharge(charge),
-      ledger: ledgerByCharge.get(charge.id) ?? emptyChargeLedger(charge),
-    }));
+    if (allLedgerData.charges.length === 0 && allLedgerData.payments.length === 0) {
+      try {
+        const storeRes = storeGetStudentFeeLedger(studentId, (c, m) =>
+          generateAdvanceMonths(c as any, m, null),
+        );
+        if (storeRes) return storeRes;
+      } catch {}
+    }
 
-  const studentPayments = allLedgerData.payments
-    .filter((p) => p.studentId === studentId)
-    .slice()
-    .sort((left, right) => right.receivedAt.getTime() - left.receivedAt.getTime())
-    .map((payment) => serializePayment(payment, allocationsByPayment.get(payment.id) ?? []));
+    const allLedgerRows = buildChargeLedger(allLedgerData);
+    const ledgerByCharge = new Map(allLedgerRows.map((row) => [row.chargeId, row]));
+    const allocationsByPayment = groupAllocationsByPayment(allLedgerData.allocations);
 
-  const studentAdjustments = allLedgerData.adjustments
-    .filter((a) => a.studentId === studentId)
-    .slice()
-    .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
-    .map(serializeAdjustment);
-
-  const primarySummary = summarizeStudentLedger({
-    charges: allLedgerData.charges.filter((c) => c.studentId === studentId),
-    payments: allLedgerData.payments.filter((p) => p.studentId === studentId),
-    allocations: allLedgerData.allocations.filter((a) =>
-      allLedgerData.charges.some((c) => c.id === a.chargeId && c.studentId === studentId),
-    ),
-    adjustments: allLedgerData.adjustments.filter((a) => a.studentId === studentId),
-  });
-
-  const primaryMonthlyFeePaisa =
-    context.system === "madrassa"
-      ? (context.madrassaSubcategoryFee ?? 0) * 100
-      : (context.schoolClassFee ?? 0) * 100;
-
-  let academicYearEndDate: string | null = null;
-  if (context.academicYearId) {
-    const [ay] = await db
-      .select({ endDate: academicYears.endDate })
-      .from(academicYears)
-      .where(eq(academicYears.id, context.academicYearId))
-      .limit(1);
-    if (ay) academicYearEndDate = ay.endDate;
-  }
-
-  const primaryAdvanceMonths = generateAdvanceMonths(
-    studentCharges,
-    primaryMonthlyFeePaisa,
-    academicYearEndDate,
-  );
-
-  const siblingDetails = siblings.map((sibRow) => {
-    const sibSystem: FeeSystem = sibRow.programSystem === "madrassa" ? "madrassa" : "school";
-    const sibMonthlyFeePaisa =
-      sibSystem === "madrassa"
-        ? (sibRow.madrassaSubcategoryFee ?? 0) * 100
-        : (sibRow.schoolClassFee ?? 0) * 100;
-
-    const sibCharges = allLedgerData.charges
-      .filter((c) => c.studentId === sibRow.studentId)
+    const studentCharges = allLedgerData.charges
+      .filter((c) => c.studentId === studentId)
+      .slice()
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
       .map((charge) => ({
         ...serializeCharge(charge),
         ledger: ledgerByCharge.get(charge.id) ?? emptyChargeLedger(charge),
       }));
 
-    const sibOutstandingCharges = sibCharges.filter(
-      (c) => c.ledger.balancePaisa > 0 && c.status !== "reversed",
-    );
+    const studentPayments = allLedgerData.payments
+      .filter((p) => p.studentId === studentId)
+      .slice()
+      .sort((left, right) => right.receivedAt.getTime() - left.receivedAt.getTime())
+      .map((payment) => serializePayment(payment, allocationsByPayment.get(payment.id) ?? []));
 
-    const sibSummary = summarizeStudentLedger({
-      charges: allLedgerData.charges.filter((c) => c.studentId === sibRow.studentId),
-      payments: allLedgerData.payments.filter((p) => p.studentId === sibRow.studentId),
+    const studentAdjustments = allLedgerData.adjustments
+      .filter((a) => a.studentId === studentId)
+      .slice()
+      .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+      .map(serializeAdjustment);
+
+    const primarySummary = summarizeStudentLedger({
+      charges: allLedgerData.charges.filter((c) => c.studentId === studentId),
+      payments: allLedgerData.payments.filter((p) => p.studentId === studentId),
       allocations: allLedgerData.allocations.filter((a) =>
-        allLedgerData.charges.some((c) => c.id === a.chargeId && c.studentId === sibRow.studentId),
+        allLedgerData.charges.some((c) => c.id === a.chargeId && c.studentId === studentId),
       ),
-      adjustments: allLedgerData.adjustments.filter((a) => a.studentId === sibRow.studentId),
+      adjustments: allLedgerData.adjustments.filter((a) => a.studentId === studentId),
     });
 
-    const sibAdvanceMonths = generateAdvanceMonths(
-      sibCharges,
-      sibMonthlyFeePaisa,
-      null,
+    const primaryMonthlyFeePaisa =
+      context.system === "madrassa"
+        ? (context.madrassaSubcategoryFee ?? 0) * 100
+        : (context.schoolClassFee ?? 0) * 100;
+
+    let academicYearEndDate: string | null = null;
+    if (context.academicYearId) {
+      const [ay] = await db
+        .select({ endDate: academicYears.endDate })
+        .from(academicYears)
+        .where(eq(academicYears.id, context.academicYearId))
+        .limit(1)
+        .catch(() => []);
+      if (ay) academicYearEndDate = ay.endDate;
+    }
+
+    const primaryAdvanceMonths = generateAdvanceMonths(
+      studentCharges,
+      primaryMonthlyFeePaisa,
+      academicYearEndDate,
     );
 
-    return {
-      id: sibRow.studentId,
-      name: sibRow.studentName,
-      nameUrdu: sibRow.studentNameUrdu,
-      fatherName: sibRow.fatherName,
-      rollNo: sibRow.rollNo,
-      admissionNo: sibRow.admissionNo,
-      system: sibSystem,
-      institutionId: sibRow.institutionId,
-      institutionName: sibRow.institutionName,
-      institutionNameUrdu: sibRow.institutionNameUrdu,
-      groupLabel: groupLabelForRow(sibRow),
-      monthlyFee: Math.round(sibMonthlyFeePaisa / 100),
-      monthlyFeePaisa: sibMonthlyFeePaisa,
-      summary: sibSummary,
-      outstandingCharges: sibOutstandingCharges,
-      advanceMonths: sibAdvanceMonths,
-    };
-  });
+    const siblingDetails = siblings.map((sibRow) => {
+      const sibSystem: FeeSystem = sibRow.programSystem === "madrassa" ? "madrassa" : "school";
+      const sibMonthlyFeePaisa =
+        sibSystem === "madrassa"
+          ? (sibRow.madrassaSubcategoryFee ?? 0) * 100
+          : (sibRow.schoolClassFee ?? 0) * 100;
 
-  return {
-    student: {
-      id: context.studentId,
-      name: context.studentName,
-      nameUrdu: context.studentNameUrdu,
-      fatherName: context.fatherName,
-      rollNo: context.rollNo,
-      admissionNo: context.admissionNo,
-      system: context.system,
-      institutionId: context.institutionId,
-      institutionName: context.institutionName,
-      institutionNameUrdu: context.institutionNameUrdu,
-      programId: context.programId,
-      classId: context.schoolClassId ?? undefined,
-      subcategoryId: context.madrassaSubcategoryId ?? undefined,
-      groupLabel: groupLabelForRow(context),
-      guardianName: context.guardianName,
-      guardianPhone: context.guardianPhone,
-      guardianCnic: context.guardianCnic,
-      siblingCount: siblingDetails.length,
-      monthlyFee: Math.round(primaryMonthlyFeePaisa / 100),
-      monthlyFeePaisa: primaryMonthlyFeePaisa,
+      const sibCharges = allLedgerData.charges
+        .filter((c) => c.studentId === sibRow.studentId)
+        .map((charge) => ({
+          ...serializeCharge(charge),
+          ledger: ledgerByCharge.get(charge.id) ?? emptyChargeLedger(charge),
+        }));
+
+      const sibOutstandingCharges = sibCharges.filter(
+        (c) => c.ledger.balancePaisa > 0 && c.status !== "reversed",
+      );
+
+      const sibSummary = summarizeStudentLedger({
+        charges: allLedgerData.charges.filter((c) => c.studentId === sibRow.studentId),
+        payments: allLedgerData.payments.filter((p) => p.studentId === sibRow.studentId),
+        allocations: allLedgerData.allocations.filter((a) =>
+          allLedgerData.charges.some((c) => c.id === a.chargeId && c.studentId === sibRow.studentId),
+        ),
+        adjustments: allLedgerData.adjustments.filter((a) => a.studentId === sibRow.studentId),
+      });
+
+      const sibAdvanceMonths = generateAdvanceMonths(
+        sibCharges,
+        sibMonthlyFeePaisa,
+        null,
+      );
+
+      return {
+        id: sibRow.studentId,
+        name: sibRow.studentName,
+        nameUrdu: sibRow.studentNameUrdu,
+        fatherName: sibRow.fatherName,
+        rollNo: sibRow.rollNo,
+        admissionNo: sibRow.admissionNo,
+        system: sibSystem,
+        institutionId: sibRow.institutionId,
+        institutionName: sibRow.institutionName,
+        institutionNameUrdu: sibRow.institutionNameUrdu,
+        groupLabel: groupLabelForRow(sibRow),
+        monthlyFee: Math.round(sibMonthlyFeePaisa / 100),
+        monthlyFeePaisa: sibMonthlyFeePaisa,
+        summary: sibSummary,
+        outstandingCharges: sibOutstandingCharges,
+        advanceMonths: sibAdvanceMonths,
+      };
+    });
+
+    return {
+      student: {
+        id: context.studentId,
+        name: context.studentName,
+        nameUrdu: context.studentNameUrdu,
+        fatherName: context.fatherName,
+        rollNo: context.rollNo,
+        admissionNo: context.admissionNo,
+        system: context.system,
+        institutionId: context.institutionId,
+        institutionName: context.institutionName,
+        institutionNameUrdu: context.institutionNameUrdu,
+        programId: context.programId,
+        classId: context.schoolClassId ?? undefined,
+        subcategoryId: context.madrassaSubcategoryId ?? undefined,
+        groupLabel: groupLabelForRow(context),
+        guardianName: context.guardianName,
+        guardianPhone: context.guardianPhone,
+        guardianCnic: context.guardianCnic,
+        siblingCount: siblingDetails.length,
+        monthlyFee: Math.round(primaryMonthlyFeePaisa / 100),
+        monthlyFeePaisa: primaryMonthlyFeePaisa,
+        summary: primarySummary,
+      },
+      charges: studentCharges,
+      payments: studentPayments,
+      adjustments: studentAdjustments,
       summary: primarySummary,
-    },
-    charges: studentCharges,
-    payments: studentPayments,
-    adjustments: studentAdjustments,
-    summary: primarySummary,
-    advanceMonths: primaryAdvanceMonths,
-    siblings: siblingDetails,
-    guardianCnic: context.guardianCnic,
-  };
+      advanceMonths: primaryAdvanceMonths,
+      siblings: siblingDetails,
+      guardianCnic: context.guardianCnic,
+    };
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeGetStudentFeeLedger(studentId, (c, m) =>
+      generateAdvanceMonths(c as any, m, null),
+    );
+  }
 }
 
 export async function reverseFeeCharge(
@@ -1458,66 +1525,76 @@ export async function reverseFeeCharge(
   chargeId: string,
   input: z.infer<typeof reverseChargeSchema>,
 ) {
-  return db.transaction(async (tx) => {
-    const chargeContext = await getChargePermissionContext(tx, chargeId);
-    const actor = await requirePermission(
-      request,
-      feeModuleForSystem(chargeContext.system),
-      "edit",
-    );
+  try {
+    return await db.transaction(async (tx) => {
+      const chargeContext = await getChargePermissionContext(tx, chargeId);
+      const actor = await requirePermission(
+        request,
+        feeModuleForSystem(chargeContext.system),
+        "edit",
+      );
 
-    if (chargeContext.charge.status === "reversed")
-      throw new HttpError("Fee charge is already reversed", 400);
+      if (chargeContext.charge.status === "reversed")
+        throw new HttpError("Fee charge is already reversed", 400);
 
-    const ledgerData = await loadLedgerDataForChargeIds(tx, [chargeId]);
-    const [ledger] = buildChargeLedger(ledgerData);
-    if (!ledger) throw new HttpError("Fee charge not found", 404);
-    if (ledger.paidPaisa !== 0) {
-      throw new HttpError("Cannot reverse a charge with posted payments", 400);
-    }
+      const ledgerData = await loadLedgerDataForChargeIds(tx, [chargeId]);
+      const [ledger] = buildChargeLedger(ledgerData);
+      if (!ledger) throw new HttpError("Fee charge not found", 404);
+      if (ledger.paidPaisa !== 0) {
+        throw new HttpError("Cannot reverse a charge with posted payments", 400);
+      }
 
-    const [adjustment] = await tx
-      .insert(feeAdjustments)
-      .values({
-        id: randomUUID(),
-        studentId: chargeContext.charge.studentId,
-        enrollmentId: chargeContext.charge.enrollmentId,
-        chargeId: chargeContext.charge.id,
-        type: "charge_reversal",
-        amountPaisa: chargeContext.charge.amountPaisa,
-        reason: input.reason,
+      const [adjustment] = await tx
+        .insert(feeAdjustments)
+        .values({
+          id: randomUUID(),
+          studentId: chargeContext.charge.studentId,
+          enrollmentId: chargeContext.charge.enrollmentId,
+          chargeId: chargeContext.charge.id,
+          type: "charge_reversal",
+          amountPaisa: chargeContext.charge.amountPaisa,
+          reason: input.reason,
+          actorUserId: actor.id,
+          metadata: { chargeLabel: chargeContext.charge.label },
+        })
+        .returning();
+
+      const [charge] = await tx
+        .update(feeCharges)
+        .set({
+          status: "reversed",
+          reversedAt: new Date(),
+          reversedByUserId: actor.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(feeCharges.id, chargeId))
+        .returning();
+
+      await insertStudentEvent(tx, {
+        studentId: charge.studentId,
+        enrollmentId: charge.enrollmentId,
+        type: "fee_charge_reversed",
+        message: `Fee charge reversed: ${charge.label}`,
+        metadata: {
+          chargeId,
+          adjustmentId: adjustment.id,
+          amountPaisa: adjustment.amountPaisa,
+          reason: input.reason,
+        },
         actorUserId: actor.id,
-        metadata: { chargeLabel: chargeContext.charge.label },
-      })
-      .returning();
+      });
 
-    const [charge] = await tx
-      .update(feeCharges)
-      .set({
-        status: "reversed",
-        reversedAt: new Date(),
-        reversedByUserId: actor.id,
-        updatedAt: new Date(),
-      })
-      .where(eq(feeCharges.id, chargeId))
-      .returning();
-
-    await insertStudentEvent(tx, {
-      studentId: charge.studentId,
-      enrollmentId: charge.enrollmentId,
-      type: "fee_charge_reversed",
-      message: `Fee charge reversed: ${charge.label}`,
-      metadata: {
-        chargeId,
-        adjustmentId: adjustment.id,
-        amountPaisa: adjustment.amountPaisa,
-        reason: input.reason,
-      },
-      actorUserId: actor.id,
+      return { charge: serializeCharge(charge), adjustment: serializeAdjustment(adjustment) };
     });
-
-    return { charge: serializeCharge(charge), adjustment: serializeAdjustment(adjustment) };
-  });
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    const actor = await requirePermission(request, "finance", "edit").catch(async () => {
+      return await requirePermission(request, "school_fees", "edit").catch(async () => {
+        return await requirePermission(request, "madrassa_fees", "edit");
+      });
+    });
+    return storeReverseFeeCharge(chargeId, input, actor);
+  }
 }
 
 export async function reverseFeePayment(
@@ -1525,76 +1602,88 @@ export async function reverseFeePayment(
   paymentId: string,
   input: z.infer<typeof reversePaymentSchema>,
 ) {
-  return db.transaction(async (tx) => {
-    const paymentContext = await getPaymentPermissionContext(tx, paymentId);
-    const actor = await requirePermission(
-      request,
-      feeModuleForSystem(paymentContext.system),
-      "edit",
-    );
+  try {
+    return await db.transaction(async (tx) => {
+      const paymentContext = await getPaymentPermissionContext(tx, paymentId);
+      const actor = await requirePermission(
+        request,
+        feeModuleForSystem(paymentContext.system),
+        "edit",
+      );
 
-    if (!["posted", "partially_refunded"].includes(paymentContext.payment.status)) {
-      throw new HttpError("Only posted or partially refunded payments can be reversed", 400);
-    }
+      if (!["posted", "partially_refunded"].includes(paymentContext.payment.status)) {
+        throw new HttpError("Only posted or partially refunded payments can be reversed", 400);
+      }
 
-    const previousRefunds = await sumPaymentAdjustments(tx, paymentId, "refund");
-    const reversalAmountPaisa = Math.max(0, paymentContext.payment.amountPaisa - previousRefunds);
+      const previousRefunds = await sumPaymentAdjustments(tx, paymentId, "refund");
+      const reversalAmountPaisa = Math.max(0, paymentContext.payment.amountPaisa - previousRefunds);
 
-    const [adjustment] = await tx
-      .insert(feeAdjustments)
-      .values({
-        id: randomUUID(),
-        studentId: paymentContext.payment.studentId,
-        enrollmentId: paymentContext.payment.enrollmentId,
-        paymentId: paymentContext.payment.id,
-        type: "payment_reversal",
-        amountPaisa: reversalAmountPaisa,
-        reason: input.reason,
+      const [adjustment] = await tx
+        .insert(feeAdjustments)
+        .values({
+          id: randomUUID(),
+          studentId: paymentContext.payment.studentId,
+          enrollmentId: paymentContext.payment.enrollmentId,
+          paymentId: paymentContext.payment.id,
+          type: "payment_reversal",
+          amountPaisa: reversalAmountPaisa,
+          reason: input.reason,
+          actorUserId: actor.id,
+          metadata: { receiptNo: paymentContext.payment.receiptNo },
+        })
+        .returning();
+
+      const [payment] = await tx
+        .update(feePayments)
+        .set({
+          status: "reversed",
+          reversedAt: new Date(),
+          reversedByUserId: actor.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(feePayments.id, paymentId))
+        .returning();
+
+      const allocations = await tx
+        .select()
+        .from(feePaymentAllocations)
+        .where(eq(feePaymentAllocations.paymentId, paymentId));
+      await refreshChargeStatuses(
+        tx,
+        allocations.map((allocation) => allocation.chargeId),
+      );
+
+      await insertStudentEvent(tx, {
+        studentId: payment.studentId,
+        enrollmentId: payment.enrollmentId,
+        type: "fee_payment_reversed",
+        message: `Fee payment reversed: ${payment.receiptNo}`,
+        metadata: {
+          paymentId,
+          receiptNo: payment.receiptNo,
+          adjustmentId: adjustment.id,
+          amountPaisa: reversalAmountPaisa,
+          reason: input.reason,
+        },
         actorUserId: actor.id,
-        metadata: { receiptNo: paymentContext.payment.receiptNo },
-      })
-      .returning();
+      });
 
-    const [payment] = await tx
-      .update(feePayments)
-      .set({
-        status: "reversed",
-        reversedAt: new Date(),
-        reversedByUserId: actor.id,
-        updatedAt: new Date(),
-      })
-      .where(eq(feePayments.id, paymentId))
-      .returning();
+      updateFeePaymentStatusInFile(payment.receiptNo, "cancelled");
 
-    const allocations = await tx
-      .select()
-      .from(feePaymentAllocations)
-      .where(eq(feePaymentAllocations.paymentId, paymentId));
-    await refreshChargeStatuses(
-      tx,
-      allocations.map((allocation) => allocation.chargeId),
-    );
-
-    await insertStudentEvent(tx, {
-      studentId: payment.studentId,
-      enrollmentId: payment.enrollmentId,
-      type: "fee_payment_reversed",
-      message: `Fee payment reversed: ${payment.receiptNo}`,
-      metadata: {
-        paymentId,
-        receiptNo: payment.receiptNo,
-        adjustmentId: adjustment.id,
-        amountPaisa: reversalAmountPaisa,
-        reason: input.reason,
-      },
-      actorUserId: actor.id,
+      return {
+        payment: serializePayment(payment, allocations),
+        adjustment: serializeAdjustment(adjustment),
+      };
     });
-
-    return {
-      payment: serializePayment(payment, allocations),
-      adjustment: serializeAdjustment(adjustment),
-    };
-  });
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    const actor = await requirePermission(request, "finance", "edit").catch(async () => {
+      return await requirePermission(request, "school_fees", "edit").catch(async () => {
+        return await requirePermission(request, "madrassa_fees", "edit");
+      });
+    });
+    return storeReverseFeePayment(paymentId, input, actor);
+  }
 }
 
 export async function refundFeePayment(
@@ -1602,365 +1691,420 @@ export async function refundFeePayment(
   paymentId: string,
   input: z.infer<typeof refundPaymentSchema>,
 ) {
-  return db.transaction(async (tx) => {
-    const paymentContext = await getPaymentPermissionContext(tx, paymentId);
-    const actor = await requirePermission(
-      request,
-      feeModuleForSystem(paymentContext.system),
-      "edit",
-    );
+  try {
+    return await db.transaction(async (tx) => {
+      const paymentContext = await getPaymentPermissionContext(tx, paymentId);
+      const actor = await requirePermission(
+        request,
+        feeModuleForSystem(paymentContext.system),
+        "edit",
+      );
 
-    if (paymentContext.payment.status === "reversed") {
-      throw new HttpError("Cannot refund a reversed payment", 400);
-    }
+      if (paymentContext.payment.status === "reversed") {
+        throw new HttpError("Cannot refund a reversed payment", 400);
+      }
 
-    const previousRefunds = await sumPaymentAdjustments(tx, paymentId, "refund");
-    const refundablePaisa = paymentContext.payment.amountPaisa - previousRefunds;
-    if (input.amountPaisa > refundablePaisa) {
-      throw new HttpError("Refund cannot exceed remaining payment amount", 400);
-    }
+      const previousRefunds = await sumPaymentAdjustments(tx, paymentId, "refund");
+      const refundablePaisa = paymentContext.payment.amountPaisa - previousRefunds;
+      if (input.amountPaisa > refundablePaisa) {
+        throw new HttpError("Refund cannot exceed remaining payment amount", 400);
+      }
 
-    const refundNo = await nextFinanceNumber(tx, {
-      type: "refund_receipt",
-      institutionId: paymentContext.payment.institutionId,
-      prefix: "RF",
-    });
-    const refundedPaisa = previousRefunds + input.amountPaisa;
-    const nextStatus: FeePaymentStatus =
-      refundedPaisa >= paymentContext.payment.amountPaisa ? "refunded" : "partially_refunded";
+      const refundNo = await nextFinanceNumber(tx, {
+        type: "refund_receipt",
+        institutionId: paymentContext.payment.institutionId,
+        prefix: "RF",
+      });
+      const refundedPaisa = previousRefunds + input.amountPaisa;
+      const nextStatus: FeePaymentStatus =
+        refundedPaisa >= paymentContext.payment.amountPaisa ? "refunded" : "partially_refunded";
 
-    const [adjustment] = await tx
-      .insert(feeAdjustments)
-      .values({
-        id: randomUUID(),
-        studentId: paymentContext.payment.studentId,
-        enrollmentId: paymentContext.payment.enrollmentId,
-        paymentId: paymentContext.payment.id,
-        type: "refund",
-        amountPaisa: input.amountPaisa,
-        method: input.method as FeePaymentMethod,
-        reason: input.reason,
+      const [adjustment] = await tx
+        .insert(feeAdjustments)
+        .values({
+          id: randomUUID(),
+          studentId: paymentContext.payment.studentId,
+          enrollmentId: paymentContext.payment.enrollmentId,
+          paymentId: paymentContext.payment.id,
+          type: "refund",
+          amountPaisa: input.amountPaisa,
+          method: input.method as FeePaymentMethod,
+          reason: input.reason,
+          actorUserId: actor.id,
+          metadata: { receiptNo: paymentContext.payment.receiptNo, refundNo },
+        })
+        .returning();
+
+      const [payment] = await tx
+        .update(feePayments)
+        .set({ status: nextStatus, updatedAt: new Date() })
+        .where(eq(feePayments.id, paymentId))
+        .returning();
+
+      const allocations = await tx
+        .select()
+        .from(feePaymentAllocations)
+        .where(eq(feePaymentAllocations.paymentId, paymentId));
+      await refreshChargeStatuses(
+        tx,
+        allocations.map((allocation) => allocation.chargeId),
+      );
+
+      await insertStudentEvent(tx, {
+        studentId: payment.studentId,
+        enrollmentId: payment.enrollmentId,
+        type: "fee_refund_recorded",
+        message: `Fee refund recorded: ${refundNo}`,
+        metadata: {
+          paymentId,
+          receiptNo: payment.receiptNo,
+          refundNo,
+          adjustmentId: adjustment.id,
+          amountPaisa: input.amountPaisa,
+          method: input.method,
+          reason: input.reason,
+        },
         actorUserId: actor.id,
-        metadata: { receiptNo: paymentContext.payment.receiptNo, refundNo },
-      })
-      .returning();
+      });
 
-    const [payment] = await tx
-      .update(feePayments)
-      .set({ status: nextStatus, updatedAt: new Date() })
-      .where(eq(feePayments.id, paymentId))
-      .returning();
+      updateFeePaymentStatusInFile(payment.receiptNo, nextStatus);
 
-    const allocations = await tx
-      .select()
-      .from(feePaymentAllocations)
-      .where(eq(feePaymentAllocations.paymentId, paymentId));
-    await refreshChargeStatuses(
-      tx,
-      allocations.map((allocation) => allocation.chargeId),
-    );
-
-    await insertStudentEvent(tx, {
-      studentId: payment.studentId,
-      enrollmentId: payment.enrollmentId,
-      type: "fee_refund_recorded",
-      message: `Fee refund recorded: ${refundNo}`,
-      metadata: {
-        paymentId,
-        receiptNo: payment.receiptNo,
-        refundNo,
-        adjustmentId: adjustment.id,
-        amountPaisa: input.amountPaisa,
-        method: input.method,
-        reason: input.reason,
-      },
-      actorUserId: actor.id,
+      return {
+        payment: serializePayment(payment, allocations),
+        adjustment: serializeAdjustment(adjustment),
+      };
     });
-
-    return {
-      payment: serializePayment(payment, allocations),
-      adjustment: serializeAdjustment(adjustment),
-    };
-  });
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    const actor = await requirePermission(request, "finance", "edit").catch(async () => {
+      return await requirePermission(request, "school_fees", "edit").catch(async () => {
+        return await requirePermission(request, "madrassa_fees", "edit");
+      });
+    });
+    return storeRefundFeePayment(paymentId, input, actor);
+  }
 }
 
 export async function getDailyCollectionReport(request: Request, query: ReportQuery) {
   await requireFinanceReportPermission(request);
 
-  const payments = await fetchPaymentReportRows(query);
-  const adjustments = await fetchAdjustmentReportRows(query, ["payment_reversal", "refund"]);
-  const refundByPayment = sumReportAdjustmentsByPayment(adjustments, "refund");
-  const reversalByPayment = sumReportAdjustmentsByPayment(adjustments, "payment_reversal");
+  try {
+    const payments = await fetchPaymentReportRows(query);
+    const adjustments = await fetchAdjustmentReportRows(query, ["payment_reversal", "refund"]);
+    if (payments.length === 0 && adjustments.length === 0) {
+      return storeDailyCollectionReport(query);
+    }
+    const refundByPayment = sumReportAdjustmentsByPayment(adjustments, "refund");
+    const reversalByPayment = sumReportAdjustmentsByPayment(adjustments, "payment_reversal");
 
-  const rows = payments.map((payment) => {
-    const refundedPaisa = refundByPayment.get(payment.id) ?? 0;
-    const reversedPaisa = reversalByPayment.get(payment.id) ?? 0;
+    const rows = payments.map((payment) => {
+      const refundedPaisa = refundByPayment.get(payment.id) ?? 0;
+      const reversedPaisa = reversalByPayment.get(payment.id) ?? 0;
+      return {
+        receiptNo: payment.receiptNo,
+        date: safeIsoDate(payment.receivedAt),
+        studentId: payment.studentId,
+        studentName: payment.studentName,
+        studentNameUrdu: payment.studentNameUrdu,
+        rollNo: payment.rollNo,
+        institutionName: payment.institutionName,
+        method: payment.method,
+        status: payment.status,
+        grossAmountPaisa: payment.amountPaisa,
+        refundedPaisa,
+        reversedPaisa,
+        netAmountPaisa: payment.amountPaisa - refundedPaisa - reversedPaisa,
+        receivedByName: payment.receivedByName,
+      };
+    });
+
+    const grossCollectedPaisa = rows.reduce((sum, row) => sum + row.grossAmountPaisa, 0);
+    const refundPaisa = adjustments
+      .filter((adjustment) => adjustment.type === "refund")
+      .reduce((sum, adjustment) => sum + adjustment.amountPaisa, 0);
+    const reversalPaisa = adjustments
+      .filter((adjustment) => adjustment.type === "payment_reversal")
+      .reduce((sum, adjustment) => sum + adjustment.amountPaisa, 0);
+
     return {
-      receiptNo: payment.receiptNo,
-      date: safeIsoDate(payment.receivedAt),
-      studentId: payment.studentId,
-      studentName: payment.studentName,
-      studentNameUrdu: payment.studentNameUrdu,
-      rollNo: payment.rollNo,
-      institutionName: payment.institutionName,
-      method: payment.method,
-      status: payment.status,
-      grossAmountPaisa: payment.amountPaisa,
-      refundedPaisa,
-      reversedPaisa,
-      netAmountPaisa: payment.amountPaisa - refundedPaisa - reversedPaisa,
-      receivedByName: payment.receivedByName,
+      summary: {
+        grossCollectedPaisa,
+        reversalPaisa,
+        refundPaisa,
+        netCollectedPaisa: grossCollectedPaisa - reversalPaisa - refundPaisa,
+        receiptCount: rows.length,
+      },
+      rows,
     };
-  });
-
-  const grossCollectedPaisa = rows.reduce((sum, row) => sum + row.grossAmountPaisa, 0);
-  const refundPaisa = adjustments
-    .filter((adjustment) => adjustment.type === "refund")
-    .reduce((sum, adjustment) => sum + adjustment.amountPaisa, 0);
-  const reversalPaisa = adjustments
-    .filter((adjustment) => adjustment.type === "payment_reversal")
-    .reduce((sum, adjustment) => sum + adjustment.amountPaisa, 0);
-
-  return {
-    summary: {
-      grossCollectedPaisa,
-      reversalPaisa,
-      refundPaisa,
-      netCollectedPaisa: grossCollectedPaisa - reversalPaisa - refundPaisa,
-      receiptCount: rows.length,
-    },
-    rows,
-  };
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeDailyCollectionReport(query);
+  }
 }
 
 export async function getOutstandingDuesReport(request: Request, query: ReportQuery) {
   await requireFinanceReportPermission(request);
 
-  const asOf = parseReportEndDate(query.dateTo) ?? new Date();
-  const chargeRows = await fetchChargeContextRows(query, { includeChargeDateRange: false });
-  const ledgerData = await loadLedgerDataForChargeIds(
-    db,
-    chargeRows.map((row) => row.chargeId),
-    asOf,
-  );
-  const ledgerByCharge = new Map(
-    buildChargeLedger({ ...ledgerData, asOf }).map((row) => [row.chargeId, row]),
-  );
-  const rowsByStudent = new Map<
-    string,
-    {
-      studentId: string;
-      studentName: string;
-      studentNameUrdu: string;
-      rollNo: string;
-      admissionNo: string;
-      institutionName: string;
-      institutionNameUrdu: string;
-      groupLabel: string | null;
-      currentPaisa: number;
-      bucket30Paisa: number;
-      bucket60Paisa: number;
-      bucket90Paisa: number;
-      totalOutstandingPaisa: number;
+  try {
+    const asOf = parseReportEndDate(query.dateTo) ?? new Date();
+    const chargeRows = await fetchChargeContextRows(query, { includeChargeDateRange: false });
+    if (chargeRows.length === 0) {
+      return storeOutstandingDuesReport(query);
     }
-  >();
+    const ledgerData = await loadLedgerDataForChargeIds(
+      db,
+      chargeRows.map((row) => row.chargeId),
+      asOf,
+    );
+    const ledgerByCharge = new Map(
+      buildChargeLedger({ ...ledgerData, asOf }).map((row) => [row.chargeId, row]),
+    );
+    const rowsByStudent = new Map<
+      string,
+      {
+        studentId: string;
+        studentName: string;
+        studentNameUrdu: string;
+        rollNo: string;
+        admissionNo: string;
+        institutionName: string;
+        institutionNameUrdu: string;
+        groupLabel: string | null;
+        currentPaisa: number;
+        bucket30Paisa: number;
+        bucket60Paisa: number;
+        bucket90Paisa: number;
+        totalOutstandingPaisa: number;
+      }
+    >();
 
-  for (const charge of chargeRows) {
-    const ledger = ledgerByCharge.get(charge.chargeId);
-    if (!ledger || ledger.balancePaisa <= 0) continue;
+    for (const charge of chargeRows) {
+      const ledger = ledgerByCharge.get(charge.chargeId);
+      if (!ledger || ledger.balancePaisa <= 0) continue;
 
-    const row = rowsByStudent.get(charge.studentId) ?? {
-      studentId: charge.studentId,
-      studentName: charge.studentName,
-      studentNameUrdu: charge.studentNameUrdu,
-      rollNo: charge.rollNo,
-      admissionNo: charge.admissionNo,
-      institutionName: charge.institutionName,
-      institutionNameUrdu: charge.institutionNameUrdu,
-      groupLabel: groupLabelForRow(charge),
-      currentPaisa: 0,
-      bucket30Paisa: 0,
-      bucket60Paisa: 0,
-      bucket90Paisa: 0,
-      totalOutstandingPaisa: 0,
+      const row = rowsByStudent.get(charge.studentId) ?? {
+        studentId: charge.studentId,
+        studentName: charge.studentName,
+        studentNameUrdu: charge.studentNameUrdu,
+        rollNo: charge.rollNo,
+        admissionNo: charge.admissionNo,
+        institutionName: charge.institutionName,
+        institutionNameUrdu: charge.institutionNameUrdu,
+        groupLabel: groupLabelForRow(charge),
+        currentPaisa: 0,
+        bucket30Paisa: 0,
+        bucket60Paisa: 0,
+        bucket90Paisa: 0,
+        totalOutstandingPaisa: 0,
+      };
+
+      if (ledger.agingBucket === "90") row.bucket90Paisa += ledger.balancePaisa;
+      else if (ledger.agingBucket === "60") row.bucket60Paisa += ledger.balancePaisa;
+      else if (ledger.agingBucket === "30") row.bucket30Paisa += ledger.balancePaisa;
+      else row.currentPaisa += ledger.balancePaisa;
+      row.totalOutstandingPaisa += ledger.balancePaisa;
+      rowsByStudent.set(charge.studentId, row);
+    }
+
+    const rows = Array.from(rowsByStudent.values()).sort(
+      (left, right) => right.totalOutstandingPaisa - left.totalOutstandingPaisa,
+    );
+
+    return {
+      asOf: safeIsoDate(asOf),
+      summary: {
+        currentPaisa: rows.reduce((sum, row) => sum + row.currentPaisa, 0),
+        bucket30Paisa: rows.reduce((sum, row) => sum + row.bucket30Paisa, 0),
+        bucket60Paisa: rows.reduce((sum, row) => sum + row.bucket60Paisa, 0),
+        bucket90Paisa: rows.reduce((sum, row) => sum + row.bucket90Paisa, 0),
+        totalOutstandingPaisa: rows.reduce((sum, row) => sum + row.totalOutstandingPaisa, 0),
+        studentCount: rows.length,
+      },
+      rows,
     };
-
-    if (ledger.agingBucket === "90") row.bucket90Paisa += ledger.balancePaisa;
-    else if (ledger.agingBucket === "60") row.bucket60Paisa += ledger.balancePaisa;
-    else if (ledger.agingBucket === "30") row.bucket30Paisa += ledger.balancePaisa;
-    else row.currentPaisa += ledger.balancePaisa;
-    row.totalOutstandingPaisa += ledger.balancePaisa;
-    rowsByStudent.set(charge.studentId, row);
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeOutstandingDuesReport(query);
   }
-
-  const rows = Array.from(rowsByStudent.values()).sort(
-    (left, right) => right.totalOutstandingPaisa - left.totalOutstandingPaisa,
-  );
-
-  return {
-    asOf: safeIsoDate(asOf),
-    summary: {
-      currentPaisa: rows.reduce((sum, row) => sum + row.currentPaisa, 0),
-      bucket30Paisa: rows.reduce((sum, row) => sum + row.bucket30Paisa, 0),
-      bucket60Paisa: rows.reduce((sum, row) => sum + row.bucket60Paisa, 0),
-      bucket90Paisa: rows.reduce((sum, row) => sum + row.bucket90Paisa, 0),
-      totalOutstandingPaisa: rows.reduce((sum, row) => sum + row.totalOutstandingPaisa, 0),
-      studentCount: rows.length,
-    },
-    rows,
-  };
 }
 
 export async function getStudentLedgerReport(request: Request, query: ReportQuery) {
   await requireFinanceReportPermission(request);
 
-  const chargeRows = await fetchChargeContextRows(query, { includeChargeDateRange: true });
-  const ledgerData = await loadLedgerDataForChargeIds(
-    db,
-    chargeRows.map((row) => row.chargeId),
-  );
-  const ledgerByCharge = new Map(buildChargeLedger(ledgerData).map((row) => [row.chargeId, row]));
-  const rows = chargeRows.map((charge) => {
-    const ledger =
-      ledgerByCharge.get(charge.chargeId) ??
-      emptyChargeLedger({
-        id: charge.chargeId,
-        amountPaisa: charge.amountPaisa,
-        dueDate: charge.dueDate,
-        status: "open",
-      });
+  try {
+    const chargeRows = await fetchChargeContextRows(query, { includeChargeDateRange: true });
+    if (chargeRows.length === 0) {
+      return storeStudentLedgerReport(query);
+    }
+    const ledgerData = await loadLedgerDataForChargeIds(
+      db,
+      chargeRows.map((row) => row.chargeId),
+    );
+    const ledgerByCharge = new Map(buildChargeLedger(ledgerData).map((row) => [row.chargeId, row]));
+    const rows = chargeRows.map((charge) => {
+      const ledger =
+        ledgerByCharge.get(charge.chargeId) ??
+        emptyChargeLedger({
+          id: charge.chargeId,
+          amountPaisa: charge.amountPaisa,
+          dueDate: charge.dueDate,
+          status: "open",
+        });
+
+      return {
+        studentId: charge.studentId,
+        studentName: charge.studentName,
+        studentNameUrdu: charge.studentNameUrdu,
+        rollNo: charge.rollNo,
+        admissionNo: charge.admissionNo,
+        institutionName: charge.institutionName,
+        groupLabel: groupLabelForRow(charge),
+        chargeId: charge.chargeId,
+        chargeLabel: charge.label,
+        chargeType: charge.type,
+        chargeDate: safeIsoDate(charge.createdAt),
+        dueDate: safeIsoDateOrNull(charge.dueDate),
+        chargedPaisa: charge.amountPaisa,
+        paidPaisa: ledger.paidPaisa,
+        refundedPaisa: ledger.refundedPaisa,
+        concessionPaisa: ledger.concessionPaisa,
+        reversedPaisa: ledger.reversedPaisa,
+        outstandingPaisa: ledger.balancePaisa,
+        status: ledger.status,
+        agingBucket: ledger.agingBucket,
+      };
+    });
 
     return {
-      studentId: charge.studentId,
-      studentName: charge.studentName,
-      studentNameUrdu: charge.studentNameUrdu,
-      rollNo: charge.rollNo,
-      admissionNo: charge.admissionNo,
-      institutionName: charge.institutionName,
-      groupLabel: groupLabelForRow(charge),
-      chargeId: charge.chargeId,
-      chargeLabel: charge.label,
-      chargeType: charge.type,
-      chargeDate: safeIsoDate(charge.createdAt),
-      dueDate: safeIsoDateOrNull(charge.dueDate),
-      chargedPaisa: charge.amountPaisa,
-      paidPaisa: ledger.paidPaisa,
-      refundedPaisa: ledger.refundedPaisa,
-      concessionPaisa: ledger.concessionPaisa,
-      reversedPaisa: ledger.reversedPaisa,
-      outstandingPaisa: ledger.balancePaisa,
-      status: ledger.status,
-      agingBucket: ledger.agingBucket,
+      summary: {
+        chargedPaisa: rows.reduce((sum, row) => sum + row.chargedPaisa, 0),
+        paidPaisa: rows.reduce((sum, row) => sum + row.paidPaisa, 0),
+        refundedPaisa: rows.reduce((sum, row) => sum + row.refundedPaisa, 0),
+        concessionPaisa: rows.reduce((sum, row) => sum + row.concessionPaisa, 0),
+        reversedPaisa: rows.reduce((sum, row) => sum + row.reversedPaisa, 0),
+        outstandingPaisa: rows.reduce((sum, row) => sum + row.outstandingPaisa, 0),
+        rowCount: rows.length,
+      },
+      rows,
     };
-  });
-
-  return {
-    summary: {
-      chargedPaisa: rows.reduce((sum, row) => sum + row.chargedPaisa, 0),
-      paidPaisa: rows.reduce((sum, row) => sum + row.paidPaisa, 0),
-      refundedPaisa: rows.reduce((sum, row) => sum + row.refundedPaisa, 0),
-      concessionPaisa: rows.reduce((sum, row) => sum + row.concessionPaisa, 0),
-      reversedPaisa: rows.reduce((sum, row) => sum + row.reversedPaisa, 0),
-      outstandingPaisa: rows.reduce((sum, row) => sum + row.outstandingPaisa, 0),
-      rowCount: rows.length,
-    },
-    rows,
-  };
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeStudentLedgerReport(query);
+  }
 }
 
 export async function getInstitutionSummaryReport(request: Request, query: ReportQuery) {
   await requireFinanceReportPermission(request);
 
-  const chargeRows = await fetchChargeContextRows(query, { includeChargeDateRange: true });
-  const outstandingRows = await fetchChargeContextRows(query, { includeChargeDateRange: false });
-  const payments = await fetchPaymentReportRows(query);
-  const adjustments = await fetchAdjustmentReportRows(query, [
-    "charge_reversal",
-    "payment_reversal",
-    "refund",
-  ]);
-  const outstandingLedger = await loadLedgerDataForChargeIds(
-    db,
-    outstandingRows.map((row) => row.chargeId),
-  );
-  const ledgerByCharge = new Map(
-    buildChargeLedger(outstandingLedger).map((row) => [row.chargeId, row]),
-  );
-  const byInstitution = new Map<
-    string,
-    {
-      institutionId: string;
-      institutionName: string;
-      institutionNameUrdu: string;
-      chargedPaisa: number;
-      collectedPaisa: number;
-      reversedPaisa: number;
-      refundedPaisa: number;
-      outstandingPaisa: number;
+  try {
+    const chargeRows = await fetchChargeContextRows(query, { includeChargeDateRange: true });
+    const outstandingRows = await fetchChargeContextRows(query, { includeChargeDateRange: false });
+    const payments = await fetchPaymentReportRows(query);
+    const adjustments = await fetchAdjustmentReportRows(query, [
+      "charge_reversal",
+      "payment_reversal",
+      "refund",
+    ]);
+
+    if (chargeRows.length === 0 && outstandingRows.length === 0 && payments.length === 0) {
+      return storeInstitutionSummaryReport(query);
     }
-  >();
 
-  for (const charge of [...chargeRows, ...outstandingRows]) {
-    ensureInstitutionSummaryRow(byInstitution, charge);
+    const outstandingLedger = await loadLedgerDataForChargeIds(
+      db,
+      outstandingRows.map((row) => row.chargeId),
+    );
+    const ledgerByCharge = new Map(
+      buildChargeLedger(outstandingLedger).map((row) => [row.chargeId, row]),
+    );
+    const byInstitution = new Map<
+      string,
+      {
+        institutionId: string;
+        institutionName: string;
+        institutionNameUrdu: string;
+        chargedPaisa: number;
+        collectedPaisa: number;
+        reversedPaisa: number;
+        refundedPaisa: number;
+        outstandingPaisa: number;
+      }
+    >();
+
+    for (const charge of [...chargeRows, ...outstandingRows]) {
+      ensureInstitutionSummaryRow(byInstitution, charge);
+    }
+
+    for (const charge of chargeRows) {
+      const row = ensureInstitutionSummaryRow(byInstitution, charge);
+      row.chargedPaisa += charge.amountPaisa;
+    }
+
+    for (const charge of outstandingRows) {
+      const row = ensureInstitutionSummaryRow(byInstitution, charge);
+      const ledger = ledgerByCharge.get(charge.chargeId);
+      if (ledger) row.outstandingPaisa += ledger.balancePaisa;
+    }
+
+    for (const payment of payments) {
+      const row = ensureInstitutionSummaryRow(byInstitution, payment);
+      row.collectedPaisa += payment.amountPaisa;
+    }
+
+    for (const adjustment of adjustments) {
+      const row = ensureInstitutionSummaryRow(byInstitution, adjustment);
+      if (adjustment.type === "refund") row.refundedPaisa += adjustment.amountPaisa;
+      else row.reversedPaisa += adjustment.amountPaisa;
+    }
+
+    return {
+      rows: Array.from(byInstitution.values()).sort((left, right) =>
+        left.institutionName.localeCompare(right.institutionName),
+      ),
+    };
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeInstitutionSummaryReport(query);
   }
-
-  for (const charge of chargeRows) {
-    const row = ensureInstitutionSummaryRow(byInstitution, charge);
-    row.chargedPaisa += charge.amountPaisa;
-  }
-
-  for (const charge of outstandingRows) {
-    const row = ensureInstitutionSummaryRow(byInstitution, charge);
-    const ledger = ledgerByCharge.get(charge.chargeId);
-    if (ledger) row.outstandingPaisa += ledger.balancePaisa;
-  }
-
-  for (const payment of payments) {
-    const row = ensureInstitutionSummaryRow(byInstitution, payment);
-    row.collectedPaisa += payment.amountPaisa;
-  }
-
-  for (const adjustment of adjustments) {
-    const row = ensureInstitutionSummaryRow(byInstitution, adjustment);
-    if (adjustment.type === "refund") row.refundedPaisa += adjustment.amountPaisa;
-    else row.reversedPaisa += adjustment.amountPaisa;
-  }
-
-  return {
-    rows: Array.from(byInstitution.values()).sort((left, right) =>
-      left.institutionName.localeCompare(right.institutionName),
-    ),
-  };
 }
 
 export async function getReversalRefundAuditReport(request: Request, query: ReportQuery) {
   await requireFinanceReportPermission(request);
 
-  const rows = await fetchAdjustmentReportRows(query, [
-    "charge_reversal",
-    "payment_reversal",
-    "refund",
-  ]);
+  try {
+    const rows = await fetchAdjustmentReportRows(query, [
+      "charge_reversal",
+      "payment_reversal",
+      "refund",
+    ]);
 
-  return {
-    rows: rows.map((row) => ({
-      id: row.id,
-      date: safeIsoDate(row.createdAt),
-      actorUserId: row.actorUserId,
-      actorName: row.actorName,
-      actorEmail: row.actorEmail,
-      type: row.type,
-      studentId: row.studentId,
-      studentName: row.studentName,
-      studentNameUrdu: row.studentNameUrdu,
-      institutionName: row.institutionName,
-      originalReference: row.receiptNo ?? row.chargeLabel ?? metadataReference(row.metadata),
-      amountPaisa: row.amountPaisa,
-      method: row.method,
-      reason: row.reason,
-      metadata: row.metadata,
-    })),
-  };
+    if (rows.length === 0) {
+      return storeReversalRefundAuditReport(query);
+    }
+
+    return {
+      rows: rows.map((row) => ({
+        id: row.id,
+        date: safeIsoDate(row.createdAt),
+        actorUserId: row.actorUserId,
+        actorName: row.actorName,
+        actorEmail: row.actorEmail,
+        type: row.type,
+        studentId: row.studentId,
+        studentName: row.studentName,
+        studentNameUrdu: row.studentNameUrdu,
+        institutionName: row.institutionName,
+        originalReference: row.receiptNo ?? row.chargeLabel ?? metadataReference(row.metadata),
+        amountPaisa: row.amountPaisa,
+        method: row.method,
+        reason: row.reason,
+        metadata: row.metadata,
+      })),
+    };
+  } catch (error) {
+    if (!isOfflineEligibleError(error)) throw error;
+    return storeReversalRefundAuditReport(query);
+  }
 }
 
 function studentSearchSelection() {

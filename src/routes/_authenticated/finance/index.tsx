@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/finance/")({
 const COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--primary)"];
 const tooltipStyle = { background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)" } as const;
 
-type Scope = "both" | "school" | "madrassa";
+type Scope = "both" | "school" | "madrassa" | "jamia_qasmia_baneen" | "al_qasim_academy" | "jamia_zainab_banat" | "zainab_school";
 
 function FinanceDashboard() {
   const { lang } = useLanguage();
@@ -111,18 +111,42 @@ function FinanceDashboard() {
   };
 
   const records = useMemo(() => {
-    const localIds = new Set(localRecords.map((r) => r.id));
-    const uniqueServer = serverTransactions.filter((r) => !localIds.has(r.id));
-    return [...localRecords, ...uniqueServer];
+    const serverIds = new Set(serverTransactions.map((r) => r.id));
+    const uniqueLocal = localRecords.filter((r) => !serverIds.has(r.id));
+    return [...uniqueLocal, ...serverTransactions];
   }, [localRecords, serverTransactions]);
 
-  const scoped = useMemo(
-    () => (scope === "both" ? records : records.filter((r) => r.system === scope || r.system === "both")),
-    [records, scope],
-  );
+  const scoped = useMemo(() => {
+    if (scope === "both") return records;
+    if (scope === "school") return records.filter((r) => r.system === "school" || r.system === "both");
+    if (scope === "madrassa") return records.filter((r) => r.system === "madrassa" || r.system === "both");
+    if (scope === "jamia_qasmia_baneen") {
+      return records.filter((r) => (r as any).institutionId === "jamia_qasmia_baneen" || r.system === "madrassa");
+    }
+    if (scope === "al_qasim_academy") {
+      return records.filter((r) => (r as any).institutionId === "al_qasim_academy" || r.system === "school");
+    }
+    if (scope === "jamia_zainab_banat") {
+      return records.filter((r) => (r as any).institutionId === "jamia_zainab_banat");
+    }
+    if (scope === "zainab_school") {
+      return records.filter((r) => (r as any).institutionId === "zainab_school");
+    }
+    return records;
+  }, [records, scope]);
 
-  const incomeKey = scope === "school" ? "schoolIncome" : scope === "madrassa" ? "madrassaIncome" : "income";
-  const expenseKey = scope === "school" ? "schoolExpense" : scope === "madrassa" ? "madrassaExpense" : "expense";
+  const incomeKey =
+    scope === "school" || scope === "al_qasim_academy" || scope === "zainab_school"
+      ? "schoolIncome"
+      : scope === "madrassa" || scope === "jamia_qasmia_baneen" || scope === "jamia_zainab_banat"
+      ? "madrassaIncome"
+      : "income";
+  const expenseKey =
+    scope === "school" || scope === "al_qasim_academy" || scope === "zainab_school"
+      ? "schoolExpense"
+      : scope === "madrassa" || scope === "jamia_qasmia_baneen" || scope === "jamia_zainab_banat"
+      ? "madrassaExpense"
+      : "expense";
 
   const dailyIncomeVsExpense = useMemo(() => {
     const now = new Date();
@@ -136,7 +160,11 @@ function FinanceDashboard() {
     const recordMadrassaIncomeByDay = new Map<number, number>();
     const recordMadrassaExpenseByDay = new Map<number, number>();
 
-    localRecords.forEach((r) => {
+    // Only apply pending local records that are not already baked into serverDaily
+    const serverIds = new Set(serverTransactions.map((r) => r.id));
+    const pendingLocal = localRecords.filter((r) => !serverIds.has(r.id));
+
+    pendingLocal.forEach((r) => {
       const d = new Date(r.date);
       if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
         const day = d.getDate();
@@ -189,7 +217,7 @@ function FinanceDashboard() {
         madrassaExpense,
       };
     });
-  }, [serverDaily, localRecords]);
+  }, [serverDaily, serverTransactions, localRecords]);
 
   const totals = useMemo(() => {
     const rate = serverKpis?.recoveryRate ?? 0;
@@ -199,9 +227,9 @@ function FinanceDashboard() {
       let expense = serverMonthly.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
       if (serverKpis) {
         const kpiAnnual =
-          scope === "school"
+          scope === "school" || scope === "al_qasim_academy"
             ? serverKpis.schoolAnnualIncome
-            : scope === "madrassa"
+            : scope === "madrassa" || scope === "jamia_qasmia_baneen"
               ? serverKpis.madrassaAnnualIncome
               : serverKpis.annualIncome;
         if (kpiAnnual > 0) income = kpiAnnual;
@@ -213,9 +241,9 @@ function FinanceDashboard() {
     let expense = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
     if (serverKpis) {
       const kpiMonthly =
-        scope === "school"
+        scope === "school" || scope === "al_qasim_academy"
           ? serverKpis.schoolMonthlyIncome
-          : scope === "madrassa"
+          : scope === "madrassa" || scope === "jamia_qasmia_baneen"
             ? serverKpis.madrassaMonthlyIncome
             : serverKpis.monthlyIncome;
       if (kpiMonthly > 0) income = kpiMonthly;
@@ -223,27 +251,26 @@ function FinanceDashboard() {
     return { income, expense, net: income - expense, rate };
   }, [period, incomeKey, expenseKey, dailyIncomeVsExpense, serverMonthly, serverKpis, scope]);
 
+  // Actual Historical Breakdown without artificial multipliers
   const incomeBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; nameUrdu: string; value: number }>();
-    const mult = period === "yearly" ? 12 : 1;
     scoped.filter((r) => r.type === "income").forEach((r) => {
       const cur = map.get(r.category) ?? { name: r.category, nameUrdu: r.categoryUrdu, value: 0 };
-      cur.value += r.amount * mult;
+      cur.value += r.amount;
       map.set(r.category, cur);
     });
     return Array.from(map.values());
-  }, [scoped, period]);
+  }, [scoped]);
 
   const expenseBreakdown = useMemo(() => {
     const map = new Map<string, { name: string; nameUrdu: string; value: number }>();
-    const mult = period === "yearly" ? 12 : 1;
     scoped.filter((r) => r.type === "expense").forEach((r) => {
       const cur = map.get(r.category) ?? { name: r.category, nameUrdu: r.categoryUrdu, value: 0 };
-      cur.value += r.amount * mult;
+      cur.value += r.amount;
       map.set(r.category, cur);
     });
     return Array.from(map.values());
-  }, [scoped, period]);
+  }, [scoped]);
 
   return (
     <div>
@@ -274,22 +301,53 @@ function FinanceDashboard() {
                 />
               </DialogContent>
             </Dialog>
-            <Button variant="outline" size="sm" className="gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                if (scoped.length === 0) {
+                  toast.error(isUrdu ? "کوئی ڈیٹا برآمد کرنے کے لیے موجود نہیں" : "No records to export");
+                  return;
+                }
+                const headers = ["Date", "Type", "Category", "Amount (PKR)", "Party", "System", "Voucher"];
+                const rows = scoped.map((r) => [
+                  r.date,
+                  r.type,
+                  r.category,
+                  r.amount,
+                  r.source || "",
+                  r.system,
+                  (r as any).voucherNo || r.id,
+                ]);
+                const csv = [headers.join(","), ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `finance-${scope}-${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success(isUrdu ? "مالیاتی ڈیٹا ایکسل/سی ایس وی فائل میں محفوظ ہو گیا" : "Finance data exported to CSV");
+              }}
+            >
               <Download className="h-4 w-4" />
-              {isUrdu ? "برآمد کریں" : "Export"}
+              {isUrdu ? "ایکسل برآمد" : "Export CSV"}
             </Button>
-            <AddTxnDialog open={open} onOpenChange={setOpen} onAdd={handleAddTxn} onSuccess={loadOverview} defaultSystem={scope === "both" ? "both" : scope} />
+            <AddTxnDialog open={open} onOpenChange={setOpen} onAdd={handleAddTxn} onSuccess={loadOverview} defaultSystem={scope === "both" || scope.includes("_") ? "both" : (scope as any)} />
           </div>
         }
       />
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <Card className="p-2 inline-flex">
+        <Card className="p-2 inline-flex overflow-x-auto max-w-full">
           <Tabs value={scope} onValueChange={(v) => setScope(v as Scope)}>
-            <TabsList>
-              <TabsTrigger value="both">{isUrdu ? "مشترکہ" : "Combined"}</TabsTrigger>
-              <TabsTrigger value="school">{isUrdu ? "اسکول" : "School"}</TabsTrigger>
-              <TabsTrigger value="madrassa">{isUrdu ? "مدرسہ" : "Madrassa"}</TabsTrigger>
+            <TabsList className="h-8">
+              <TabsTrigger value="both" className="text-xs">{isUrdu ? "مشترکہ (All)" : "Combined"}</TabsTrigger>
+              <TabsTrigger value="jamia_qasmia_baneen" className="text-xs">{isUrdu ? "جامعہ قاسمیہ" : "Qasimia Madrassa"}</TabsTrigger>
+              <TabsTrigger value="al_qasim_academy" className="text-xs">{isUrdu ? "القاسم اکیڈمی" : "Qasim School"}</TabsTrigger>
+              <TabsTrigger value="jamia_zainab_banat" className="text-xs">{isUrdu ? "جامعہ زینب" : "Zainab Madrassa"}</TabsTrigger>
+              <TabsTrigger value="zainab_school" className="text-xs">{isUrdu ? "زینب سکول" : "Zainab School"}</TabsTrigger>
             </TabsList>
           </Tabs>
         </Card>

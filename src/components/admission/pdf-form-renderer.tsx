@@ -266,20 +266,31 @@ export function PdfFormRenderer({
     const targetGender = variant.category === "female" ? "female" : "male";
     setLoadingCls(true);
 
-    getAdmissionSchoolClasses({ data: { gender: targetGender } })
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setCls(data);
+    // Public REST route handles online admission forms without auth barriers
+    fetch(`/api/admission/classes?gender=${targetGender}`)
+      .then((r) => r.json().catch(() => ({})))
+      .then((payload) => {
+        const list = (payload.classes ?? []) as any[];
+        if (Array.isArray(list) && list.length > 0) {
+          setCls(list);
           return;
         }
-        setCls(CANONICAL_SCHOOL_CLASSES);
+        return getAdmissionSchoolClasses({ data: { gender: targetGender } }).then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setCls(data);
+          } else {
+            setCls(CANONICAL_SCHOOL_CLASSES);
+          }
+        });
       })
       .catch(() => {
-        fetch(`/api/academic/school/classes?gender=${targetGender}`, { credentials: "include" })
-          .then((r) => r.json().catch(() => ({})))
-          .then((payload) => {
-            const list = (payload.classes ?? []) as any[];
-            setCls(list.length > 0 ? list : CANONICAL_SCHOOL_CLASSES);
+        getAdmissionSchoolClasses({ data: { gender: targetGender } })
+          .then((data) => {
+            if (Array.isArray(data) && data.length > 0) {
+              setCls(data);
+            } else {
+              setCls(CANONICAL_SCHOOL_CLASSES);
+            }
           })
           .catch(() => {
             setCls(CANONICAL_SCHOOL_CLASSES);

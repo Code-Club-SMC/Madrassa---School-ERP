@@ -29,6 +29,7 @@ import {
   DEFAULT_SCHOOL_CLASSES,
 } from "./seed";
 import { buildMadrassaCategories } from "@/lib/madrassa-grade-catalog";
+import { recordAuditLog } from "@/lib/server/audit/audit-service";
 
 export const schoolClassInputSchema = z.object({
   institutionId: z.string().trim().min(1).optional(),
@@ -422,11 +423,32 @@ export async function createSchoolClass(request: Request, input: z.infer<typeof 
       .returning();
 
     if (created) {
+      const user = await getRequestUser(request);
+      await recordAuditLog({
+        userId: user?.id || "system",
+        userName: user?.name || "Admin",
+        action: "academic.class_create",
+        entity: "SchoolClass",
+        entityId: created.id,
+        module: "academic",
+        details: `School class created: ${created.name} (${created.nameUrdu}) [${created.code}]`,
+      }).catch(() => {});
       return created;
     }
   } catch (err) {
     console.warn("[createSchoolClass] DB insert deferred (file persistence active):", err);
   }
+
+  const user = await getRequestUser(request);
+  await recordAuditLog({
+    userId: user?.id || "system",
+    userName: user?.name || "Admin",
+    action: "academic.class_create",
+    entity: "SchoolClass",
+    entityId: newClass.id,
+    module: "academic",
+    details: `School class created: ${newClass.name} (${newClass.nameUrdu}) [${newClass.code}]`,
+  }).catch(() => {});
 
   return newClass;
 }

@@ -116,7 +116,29 @@ function AdmissionProgressDashboard() {
   // Scoped Applications based on Campus Filter
   const scopedApps = useMemo(() => {
     if (campusFilter === "all") return applicationsList;
-    return applicationsList.filter((a) => a.system === campusFilter);
+    if (campusFilter === "madrassa") return applicationsList.filter((a) => a.system === "madrassa");
+    if (campusFilter === "school") return applicationsList.filter((a) => a.system === "school");
+    if (campusFilter === "jamia_qasmia_baneen") {
+      return applicationsList.filter(
+        (a) => a.institutionId === "jamia_qasmia_baneen" || (a.system === "madrassa" && a.gender === "male"),
+      );
+    }
+    if (campusFilter === "al_qasim_academy") {
+      return applicationsList.filter(
+        (a) => a.institutionId === "al_qasim_academy" || (a.system === "school" && a.gender === "male"),
+      );
+    }
+    if (campusFilter === "jamia_zainab_banat") {
+      return applicationsList.filter(
+        (a) => a.institutionId === "jamia_zainab_banat" || (a.system === "madrassa" && a.gender === "female"),
+      );
+    }
+    if (campusFilter === "zainab_school") {
+      return applicationsList.filter(
+        (a) => a.programId === "zainab_school_support" || (a.system === "school" && a.gender === "female"),
+      );
+    }
+    return applicationsList;
   }, [applicationsList, campusFilter]);
 
   // Aggregated Pipeline Metrics
@@ -154,15 +176,15 @@ function AdmissionProgressDashboard() {
     };
   }, [scopedApps]);
 
-  // Stage Progression Chart Data
+  // Stage Progression Chart Data (Stage 1 is pending/received, Stage 2 is under review)
   const stageChartData = useMemo(() => {
     return [
       {
         stageKey: "pending",
         name: isUrdu ? "موصولہ" : "Received",
         fullName: isUrdu ? "1. نئی موصولہ درخواستیں" : "1. Intake Received",
-        count: metrics.activeProcessing,
-        pct: metrics.total > 0 ? Math.round((metrics.activeProcessing / metrics.total) * 100) : 0,
+        count: metrics.pending,
+        pct: metrics.total > 0 ? Math.round((metrics.pending / metrics.total) * 100) : 0,
         fill: "#f59e0b",
       },
       {
@@ -208,16 +230,26 @@ function AdmissionProgressDashboard() {
     ];
   }, [metrics, isUrdu]);
 
-  // 6-Month Intake History Trend
+  // Dynamic 6-Month Intake History Trend
   const monthlyTrendData = useMemo(() => {
-    const monthNamesEn = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov"];
-    const monthNamesUr = ["جون", "جولائی", "اگست", "ستمبر", "اکتوبر", "نومبر"];
+    const monthFormatterEn = new Intl.DateTimeFormat("en", { month: "short" });
+    const monthFormatterUr = new Intl.DateTimeFormat("ur", { month: "long" });
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        year: d.getFullYear(),
+        monthIndex: d.getMonth(),
+        labelEn: monthFormatterEn.format(d),
+        labelUr: monthFormatterUr.format(d),
+      });
+    }
 
-    return monthNamesEn.map((mName, idx) => {
-      const monthNum = idx + 6; // June (6) to November (11)
+    return months.map((m) => {
       const inMonth = scopedApps.filter((a) => {
         const d = new Date(a.submittedAt);
-        return !isNaN(d.getTime()) && d.getMonth() + 1 === monthNum;
+        return !isNaN(d.getTime()) && d.getFullYear() === m.year && d.getMonth() === m.monthIndex;
       });
 
       const rec = inMonth.length;
@@ -226,7 +258,7 @@ function AdmissionProgressDashboard() {
       const int = inMonth.filter((a) => a.status === "interview_scheduled" || a.status === "documents_pending").length;
 
       return {
-        month: isUrdu ? monthNamesUr[idx] : mName,
+        month: isUrdu ? m.labelUr : m.labelEn,
         received: rec,
         evaluation: int,
         accepted: acc,
@@ -416,8 +448,8 @@ function AdmissionProgressDashboard() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {/* Campus Selector Toggle */}
-          <div className="flex items-center rounded-lg border border-border p-0.5 bg-muted/40 text-xs shadow-xs">
+          {/* 4-Institution Campus Selector Toggle */}
+          <div className="flex flex-wrap items-center rounded-lg border border-border p-0.5 bg-muted/40 text-xs shadow-xs gap-0.5">
             <button
               type="button"
               onClick={() => setCampusFilter("all")}
@@ -430,25 +462,47 @@ function AdmissionProgressDashboard() {
             </button>
             <button
               type="button"
-              onClick={() => setCampusFilter("madrassa")}
+              onClick={() => setCampusFilter("jamia_qasmia_baneen")}
               className={cn(
                 "px-2.5 py-1 rounded-md font-medium transition-colors select-none flex items-center gap-1",
-                campusFilter === "madrassa" ? "bg-emerald-500 text-white font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground",
+                campusFilter === "jamia_qasmia_baneen" ? "bg-emerald-600 text-white font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground",
               )}
             >
               <BookOpen className="h-3 w-3" />
-              <span>{isUrdu ? "مدرسہ" : "Madrassa"}</span>
+              <span>{isUrdu ? "جامعہ قاسمیہ (بنین)" : "Qasimia Madrassa"}</span>
             </button>
             <button
               type="button"
-              onClick={() => setCampusFilter("school")}
+              onClick={() => setCampusFilter("al_qasim_academy")}
               className={cn(
                 "px-2.5 py-1 rounded-md font-medium transition-colors select-none flex items-center gap-1",
-                campusFilter === "school" ? "bg-sky-600 text-white font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground",
+                campusFilter === "al_qasim_academy" ? "bg-sky-600 text-white font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground",
               )}
             >
               <School className="h-3 w-3" />
-              <span>{isUrdu ? "سکول" : "School"}</span>
+              <span>{isUrdu ? "القاسم اکیڈمی (سکول)" : "Qasim Academy"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCampusFilter("jamia_zainab_banat")}
+              className={cn(
+                "px-2.5 py-1 rounded-md font-medium transition-colors select-none flex items-center gap-1",
+                campusFilter === "jamia_zainab_banat" ? "bg-purple-600 text-white font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <BookOpen className="h-3 w-3" />
+              <span>{isUrdu ? "جامعہ زینب (بنات)" : "Zainab Madrassa"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCampusFilter("zainab_school")}
+              className={cn(
+                "px-2.5 py-1 rounded-md font-medium transition-colors select-none flex items-center gap-1",
+                campusFilter === "zainab_school" ? "bg-pink-600 text-white font-semibold shadow-xs" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <School className="h-3 w-3" />
+              <span>{isUrdu ? "زینب سکول (بنات)" : "Zainab School"}</span>
             </button>
           </div>
 

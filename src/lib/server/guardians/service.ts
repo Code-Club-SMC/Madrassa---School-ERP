@@ -25,7 +25,8 @@ import {
   students,
 } from "@/db/schema/students";
 import { summarizeStudentLedger } from "@/lib/server/finance/ledger";
-import { getRequestUser, requirePermission } from "@/lib/server/authz";
+import { getRequestUser, requirePermission, effectivePermissions } from "@/lib/server/authz";
+import { can } from "@/lib/permissions/utils";
 import { HttpError } from "@/lib/server/http";
 import { listNotifications } from "@/lib/server/notifications/service";
 
@@ -106,20 +107,42 @@ export async function getMyGuardianDashboard(request: Request) {
       .orderBy(desc(guardians.createdAt));
   }
 
-  if (guardianRows.length === 0) {
-    guardianRows = await db
-      .select({
-        id: guardians.id,
-        name: guardians.name,
-        nameUrdu: guardians.nameUrdu,
-        phone: guardians.phone,
-        email: guardians.email,
-        cnic: guardians.cnic,
-        address: guardians.address,
-        status: guardians.status,
-      })
-      .from(guardians)
-      .limit(1);
+  if (guardianRows.length === 0 && (actor as any).phone) {
+    try {
+      guardianRows = await db
+        .select({
+          id: guardians.id,
+          name: guardians.name,
+          nameUrdu: guardians.nameUrdu,
+          phone: guardians.phone,
+          email: guardians.email,
+          cnic: guardians.cnic,
+          address: guardians.address,
+          status: guardians.status,
+        })
+        .from(guardians)
+        .where(eq(guardians.phone, (actor as any).phone))
+        .orderBy(desc(guardians.createdAt));
+    } catch {}
+  }
+
+  if (guardianRows.length === 0 && (actor as any).cnic) {
+    try {
+      guardianRows = await db
+        .select({
+          id: guardians.id,
+          name: guardians.name,
+          nameUrdu: guardians.nameUrdu,
+          phone: guardians.phone,
+          email: guardians.email,
+          cnic: guardians.cnic,
+          address: guardians.address,
+          status: guardians.status,
+        })
+        .from(guardians)
+        .where(eq(guardians.cnic, (actor as any).cnic))
+        .orderBy(desc(guardians.createdAt));
+    } catch {}
   }
 
   if (guardianRows.length === 0) {
@@ -208,7 +231,19 @@ export async function listGuardianAccounts(
   request: Request,
   query: z.infer<typeof guardianAccountListQuerySchema>,
 ) {
-  await requirePermission(request, "admission_queue", "view");
+  const actor = await getRequestUser(request);
+  if (!actor) throw new HttpError("Authentication required", 401);
+  if (actor.role !== "super_admin") {
+    const perms = effectivePermissions(actor);
+    const hasAccess =
+      can(perms, "admission_queue", "view") ||
+      can(perms, "madrassa_students", "view") ||
+      can(perms, "school_students", "view") ||
+      can(perms, "users", "view");
+    if (!hasAccess) {
+      throw new HttpError("You do not have permission for this action", 403);
+    }
+  }
 
   const clauses = compactSql([
     query.status === "linked" ? isNotNull(guardians.userId) : undefined,

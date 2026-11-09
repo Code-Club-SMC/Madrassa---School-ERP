@@ -150,8 +150,9 @@ export function TeacherAssignmentManager({ teacher, onChange }: Props) {
       toast.error("Institution and program are required");
       return;
     }
-    if (system === "school" && (!schoolClassId || !schoolSectionId)) {
-      toast.error("Class and section are required");
+    const hasSections = (selectedClass?.sections ?? []).length > 0;
+    if (system === "school" && (!schoolClassId || (hasSections && !schoolSectionId))) {
+      toast.error(hasSections ? "Class and section are required" : "Class is required");
       return;
     }
     if (system === "madrassa" && (!madrassaCategoryId || !madrassaSubcategoryId)) {

@@ -42,7 +42,7 @@ export function FeeWorkspace({ system, institutionId }: { system: FeeSystem; ins
     setLoading(true);
     try {
       const payload = await listFeeStudents(system, query, {
-        categoryId: categoryId || undefined,
+        categoryId: categoryId && categoryId !== "all" ? categoryId : undefined,
         status: feeStatus === "all" ? undefined : "active",
         institutionId: institutionId || undefined,
       });
@@ -107,8 +107,10 @@ export function FeeWorkspace({ system, institutionId }: { system: FeeSystem; ins
   const uniqueCategories = useMemo(() => {
     const map = new Map<string, { id: string; name: string; nameUrdu: string }>();
     students.forEach((s) => {
-      if (s.categoryId && s.categoryName) {
-        map.set(s.categoryId, { id: s.categoryId, name: s.categoryName, nameUrdu: s.categoryName });
+      const id = s.categoryId || s.classId;
+      const name = s.categoryName || s.groupLabel;
+      if (id && name) {
+        map.set(id, { id, name, nameUrdu: name });
       }
     });
     return Array.from(map.values());

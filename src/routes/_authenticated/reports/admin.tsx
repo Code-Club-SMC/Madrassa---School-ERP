@@ -203,11 +203,14 @@ function AdminReport() {
     const mod = action.split(".")[0];
     switch (mod) {
       case "donation":
+      case "finance":
         return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30";
       case "leave":
+      case "hr":
         return "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30";
       case "student":
       case "admission":
+      case "academic":
         return "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30";
       case "fee":
         return "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
@@ -215,6 +218,7 @@ function AdminReport() {
         return "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30";
       case "auth":
       case "user":
+      case "security":
         return "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30";
       default:
         return "bg-muted text-muted-foreground border-border";

@@ -168,6 +168,70 @@ function extractLiveSystemEvents(): AuditEntry[] {
     }
   }
 
+  // 5. Finance Fee Payments & Collections
+  const feePaymentsPath = path.join(process.cwd(), "public", "finance-fee-payments.json");
+  const rawPayments = safeReadJson<any[]>(feePaymentsPath);
+  if (Array.isArray(rawPayments)) {
+    for (const p of rawPayments) {
+      if (p.id || p.voucherNo) {
+        const id = p.id || p.voucherNo;
+        const amt = Number(p.amount || 0);
+        events.push({
+          id: `audit-fee-${id}`,
+          at: p.date ? `${p.date}T11:00:00.000Z` : new Date().toISOString(),
+          userId: "u-accountant",
+          userName: "Finance Officer",
+          action: "finance.fee_collect",
+          entity: "FeePayment",
+          entityId: p.voucherNo || id,
+          details: `Fee collected: Rs ${amt.toLocaleString()} (${p.categoryLabel || "Fee"}) from ${p.partyName || "Student"} [${p.paymentMethod || "cash"}]`,
+        });
+      }
+    }
+  }
+
+  // 6. Finance Operational Expenses & Disbursements
+  const expensesPath = path.join(process.cwd(), "public", "finance-expenses.json");
+  const rawExpenses = safeReadJson<any[]>(expensesPath);
+  if (Array.isArray(rawExpenses)) {
+    for (const e of rawExpenses) {
+      if (e.id || e.voucherNo) {
+        const id = e.id || e.voucherNo;
+        const amt = Number(e.amount || 0);
+        events.push({
+          id: `audit-exp-${id}`,
+          at: e.date ? `${e.date}T12:00:00.000Z` : new Date().toISOString(),
+          userId: "u-accountant",
+          userName: "Finance Officer",
+          action: "finance.expense",
+          entity: "Expense",
+          entityId: e.voucherNo || id,
+          details: `Operational expense paid: Rs ${amt.toLocaleString()} (${e.categoryLabel || "Expense"}) to ${e.partyName || "Vendor"}`,
+        });
+      }
+    }
+  }
+
+  // 7. Online Admission Applications
+  const applicationsPath = path.join(process.cwd(), "public", "admission-applications.json");
+  const rawApplications = safeReadJson<any[]>(applicationsPath);
+  if (Array.isArray(rawApplications)) {
+    for (const app of rawApplications) {
+      if (app.id || app.refNo) {
+        events.push({
+          id: `audit-app-${app.id || app.refNo}`,
+          at: app.submittedAt || new Date().toISOString(),
+          userId: "u-online-applicant",
+          userName: app.name || "Online Applicant",
+          action: "admission.apply",
+          entity: "Application",
+          entityId: app.refNo || app.id,
+          details: `New online application submitted: ${app.name} (${app.nameUrdu || ""}) for ${app.categoryOrClass || app.system} [Ref: ${app.refNo}]`,
+        });
+      }
+    }
+  }
+
   return events;
 }
 
@@ -204,21 +268,39 @@ export async function listAuditLogs(): Promise<AuditEntry[]> {
 }
 
 /**
- * Records a new audit log entry.
+ * Records a new audit log entry with automatic module namespacing and detail formatting.
  */
 export async function recordAuditLog(
-  entry: Omit<AuditEntry, "id" | "at"> & { at?: string },
+  entry: Omit<AuditEntry, "id" | "at" | "details"> & {
+    at?: string;
+    details?: string;
+    module?: string;
+    message?: string;
+    messageUrdu?: string;
+  },
 ): Promise<AuditEntry> {
   const stored = loadStoredLogs();
+
+  let action = entry.action;
+  if (entry.module && !action.includes(".")) {
+    action = `${entry.module}.${action}`;
+  }
+
+  const details =
+    entry.details ||
+    entry.message ||
+    entry.messageUrdu ||
+    `${action} performed on ${entry.entity} (${entry.entityId})`;
+
   const newEntry: AuditEntry = {
     id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     at: entry.at || new Date().toISOString(),
     userId: entry.userId,
     userName: entry.userName,
-    action: entry.action,
+    action,
     entity: entry.entity,
     entityId: entry.entityId,
-    details: entry.details,
+    details,
   };
 
   stored.unshift(newEntry);

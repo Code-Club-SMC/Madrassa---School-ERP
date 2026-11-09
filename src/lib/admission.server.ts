@@ -29,18 +29,18 @@ export type AdmissionSchoolClassOption = {
 };
 
 export const CANONICAL_SCHOOL_CLASSES: AdmissionSchoolClassOption[] = [
-  { id: "demo_sc_nursery", code: "NUR", name: "Nursery", nameUrdu: "نرسری", level: "pre-primary", gender: "mixed", displayOrder: 10 },
-  { id: "demo_sc_kg", code: "KG", name: "KG", nameUrdu: "کی جی", level: "pre-primary", gender: "mixed", displayOrder: 20 },
-  { id: "demo_sc_1", code: "I", name: "Class 1", nameUrdu: "جماعت اول", level: "primary", gender: "mixed", displayOrder: 30 },
-  { id: "demo_sc_2", code: "II", name: "Class 2", nameUrdu: "جماعت دوم", level: "primary", gender: "mixed", displayOrder: 40 },
-  { id: "demo_sc_3", code: "III", name: "Class 3", nameUrdu: "جماعت سوم", level: "primary", gender: "mixed", displayOrder: 50 },
-  { id: "demo_sc_4", code: "IV", name: "Class 4", nameUrdu: "جماعت چہارم", level: "primary", gender: "mixed", displayOrder: 60 },
-  { id: "demo_sc_5", code: "V", name: "Class 5", nameUrdu: "جماعت پنجم", level: "primary", gender: "mixed", displayOrder: 70 },
-  { id: "demo_sc_6", code: "VI", name: "Class 6", nameUrdu: "جماعت ششم", level: "middle", gender: "mixed", displayOrder: 80 },
-  { id: "demo_sc_7", code: "VII", name: "Class 7", nameUrdu: "جماعت ہفتم", level: "middle", gender: "mixed", displayOrder: 90 },
-  { id: "demo_sc_8", code: "VIII", name: "Class 8", nameUrdu: "جماعت ہشتم", level: "middle", gender: "mixed", displayOrder: 100 },
-  { id: "demo_sc_9", code: "IX", name: "Class 9", nameUrdu: "جماعت نہم", level: "secondary", gender: "mixed", displayOrder: 110 },
-  { id: "demo_sc_10", code: "X", name: "Class 10", nameUrdu: "جماعت دہم", level: "secondary", gender: "mixed", displayOrder: 120 },
+  { id: "class_nursery", code: "NUR", name: "Nursery", nameUrdu: "نرسری", level: "pre-primary", gender: "mixed", displayOrder: 1 },
+  { id: "class_kg", code: "KG", name: "KG", nameUrdu: "کی جی", level: "pre-primary", gender: "mixed", displayOrder: 2 },
+  { id: "class_1", code: "I", name: "Class 1", nameUrdu: "جماعت اول", level: "primary", gender: "mixed", displayOrder: 3 },
+  { id: "class_2", code: "II", name: "Class 2", nameUrdu: "جماعت دوم", level: "primary", gender: "mixed", displayOrder: 4 },
+  { id: "class_3", code: "III", name: "Class 3", nameUrdu: "جماعت سوم", level: "primary", gender: "mixed", displayOrder: 5 },
+  { id: "class_4", code: "IV", name: "Class 4", nameUrdu: "جماعت چہارم", level: "primary", gender: "mixed", displayOrder: 6 },
+  { id: "class_5", code: "V", name: "Class 5", nameUrdu: "جماعت پنجم", level: "primary", gender: "mixed", displayOrder: 7 },
+  { id: "class_6", code: "VI", name: "Class 6", nameUrdu: "جماعت ششم", level: "middle", gender: "mixed", displayOrder: 8 },
+  { id: "class_7", code: "VII", name: "Class 7", nameUrdu: "جماعت ہفتم", level: "middle", gender: "mixed", displayOrder: 9 },
+  { id: "class_8", code: "VIII", name: "Class 8", nameUrdu: "جماعت ہشتم", level: "middle", gender: "mixed", displayOrder: 10 },
+  { id: "class_9", code: "IX", name: "Class 9", nameUrdu: "جماعت نہم", level: "secondary", gender: "mixed", displayOrder: 11 },
+  { id: "class_10", code: "X", name: "Class 10", nameUrdu: "جماعت دہم", level: "secondary", gender: "mixed", displayOrder: 12 },
 ];
 
 /**

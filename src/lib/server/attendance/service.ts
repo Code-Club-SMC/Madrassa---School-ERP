@@ -829,7 +829,9 @@ async function loadRoster(
     eq(students.status, "active"),
     eq(studentEnrollments.status, "active"),
     isNull(studentEnrollments.endedAt),
-    eq(programs.system, system),
+    system === "school"
+      ? or(eq(programs.system, "school"), eq(programs.system, "school_support"))
+      : eq(programs.system, "madrassa"),
     schoolFilters ? eq(studentEnrollments.schoolClassId, schoolFilters.classId) : undefined,
     madrassaFilters ? eq(studentEnrollments.institutionId, madrassaFilters.institutionId) : undefined,
     madrassaFilters ? eq(studentEnrollments.madrassaSubcategoryId, madrassaFilters.subcategoryId) : undefined,
