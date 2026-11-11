@@ -35,7 +35,6 @@ import {
 } from "@/lib/server/teachers/domain";
 import { teachers as mockTeachers } from "@/mock/teachers";
 import { assertTeacherTimetableConflictWithClassTimetables, normalizeTimeToHHMM } from "@/lib/server/academic/timetable-conflict";
-import { teachers as mockTeachers } from "@/mock/teachers";
 
 const systemScopeSchema = z.enum(["school", "madrassa", "all", "qasmia-both", "qasmia-madrassa", "qasmia-school", "zainab-both", "zainab-madrassa", "zainab-school"]);
 const paymentMethodSchema = z.enum(["cash", "bank"]);

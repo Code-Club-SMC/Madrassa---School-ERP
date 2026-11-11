@@ -375,9 +375,48 @@ function QueuePage() {
       <Dialog open={!!accepting} onOpenChange={(v) => { if (!v) setAccepting(null); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-urdu">درخواست منظور کریں</DialogTitle>
-            <DialogDescription className="font-urdu">داخلہ منظور کرنے سے طالب علم، داخلہ ریکارڈ، اور سرپرست لنک بنے گا۔</DialogDescription>
+            <DialogTitle className="font-urdu">درخواست کی منظوری و مرحلہ انتخاب</DialogTitle>
+            <DialogDescription className="font-urdu">
+              آن لائن موصولہ درخواست کو انٹرویو و دستاویزات کے لیے بھیجیں یا براہِ راست داخلہ منظور کریں۔
+            </DialogDescription>
           </DialogHeader>
+
+          {/* Pathway Option: Recommend Interview & Docs for Online Applications */}
+          <div className="rounded-lg border border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-urdu text-xs font-semibold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                <CalendarClock className="h-4 w-4 text-blue-600" />
+                مرحلہ وار داخلہ (تجویز کردہ)
+              </span>
+              <span className="text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 px-1.5 py-0.5 rounded font-urdu">
+                آن لائن درخواستیں
+              </span>
+            </div>
+            <p className="font-urdu text-xs text-muted-foreground leading-relaxed">
+              آن لائن درخواست گزار کا پہلے انٹرویو شیڈول کریں اور دستاویزات کی جانچ مکمل کریں، پھر ممتحن کی توثیق کے بعد رول نمبر جاری کریں۔
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full border-blue-500/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 font-urdu gap-1.5 text-xs"
+              onClick={() => {
+                if (accepting) {
+                  const target = accepting;
+                  setAccepting(null);
+                  void handleScheduleInterview(target);
+                }
+              }}
+            >
+              <CalendarClock className="h-3.5 w-3.5" />
+              <span>انٹرویو و دستاویزات کے مرحلے میں منتقل کریں</span>
+            </Button>
+          </div>
+
+          <div className="relative my-1">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border/60" /></div>
+            <div className="relative flex justify-center text-[11px]"><span className="bg-background px-2 text-muted-foreground font-urdu">یا براہِ راست فوری داخلہ منظور کریں</span></div>
+          </div>
           {guardianSuggestions.length > 0 && (
             <div className="space-y-2">
               <p className="font-urdu text-xs font-medium text-muted-foreground">ممکنہ سرپرست</p>

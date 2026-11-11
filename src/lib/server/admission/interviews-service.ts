@@ -261,7 +261,6 @@ function saveDataToFile(data: InterviewStorageData) {
 }
 
 async function syncInterviewsWithDb(data: InterviewStorageData): Promise<InterviewStorageData> {
-  if (dbSyncAttempted) return data;
   try {
     const rows = await db.select().from(admissionInterviews);
     if (rows && rows.length > 0) {
@@ -289,7 +288,7 @@ async function syncInterviewsWithDb(data: InterviewStorageData): Promise<Intervi
       // Database is authoritative
       data.slots = dbSlots;
       saveDataToFile(data);
-    } else if (data.slots.length > 0) {
+    } else if (data.slots.length > 0 && !dbSyncAttempted) {
       for (const s of data.slots) {
         try {
           await db
@@ -368,49 +367,6 @@ export async function listInterviews(): Promise<InterviewStorageData> {
     loadedApps = [...DEFAULT_SEED_APPLICATIONS];
   }
 
-  // If memory slots are empty, try auto-seeding upcoming interview slots from applications
-  if (data.slots.length === 0) {
-    const interviewers = staff.map((s) => s.name);
-    const rooms = ["Conference Room A", "Principal's Office", "Library Room 2"];
-
-    const candidates = loadedApps.slice(0, 3);
-    const seededSlots: InterviewSlot[] = candidates.map((a, i) => {
-      const slotDate = new Date(Date.now() + (i + 1) * 86400e3).toISOString().slice(0, 10);
-      return {
-        id: `slot_${a.id}`,
-        appId: a.id,
-        applicantName: a.name,
-        applicantNameUrdu: a.nameUrdu,
-        refNo: a.refNo,
-        system: (a.system === "madrassa" ? "madrassa" : "school") as "madrassa" | "school",
-        categoryOrClass: a.categoryOrClass || "Class 1",
-        source: a.source,
-        date: slotDate,
-        time: ["10:00", "11:30", "14:00", "15:30"][i] ?? "10:00",
-        interviewer: interviewers[i % interviewers.length] || "Maulana Imran Hussain",
-        room: rooms[i % rooms.length],
-        status: (i === 1 ? "passed" : "scheduled") as InterviewSlot["status"],
-        marks: i === 0 ? 80 : i === 1 ? 85 : null,
-        notes: i === 1 ? "Passed oral & written test" : null,
-        guardianPhone: a.guardianPhone ?? a.phone ?? undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-    });
-
-    data.slots = seededSlots;
-    if (data.waitlist.length === 0 && loadedApps.length > 3) {
-      data.waitlist = loadedApps.slice(3, 5).map((a, i) => ({
-        id: `wl_${a.id}`,
-        appId: a.id,
-        rank: i + 1,
-        reason: i === 0 ? "Awaiting seat in selected grade" : "Pending document verification",
-        createdAt: new Date().toISOString(),
-      }));
-    }
-    saveDataToFile(data);
-  }
-
   return {
     ...data,
     applications: loadedApps,
@@ -438,7 +394,8 @@ export async function createOrUpdateSlot(slot: {
 }): Promise<InterviewSlot> {
   const data = loadStoredData();
   const now = new Date().toISOString();
-  const id = slot.id || `slot_${slot.appId}_${Date.now()}`;
+  const existingIdx = data.slots.findIndex((s) => s.id === (slot.id || "") || s.appId === slot.appId);
+  const id = slot.id || (existingIdx >= 0 ? data.slots[existingIdx].id : `slot_${slot.appId}_${Date.now()}`);
   const status = slot.status || "scheduled";
 
   const newSlot: InterviewSlot = {
@@ -458,17 +415,14 @@ export async function createOrUpdateSlot(slot: {
     marks: slot.marks ?? null,
     notes: slot.notes ?? null,
     guardianPhone: slot.guardianPhone,
-    createdAt: now,
+    createdAt: existingIdx >= 0 ? data.slots[existingIdx].createdAt : now,
     updatedAt: now,
   };
 
-  const existingIdx = data.slots.findIndex((s) => s.id === id || s.appId === slot.appId);
   if (existingIdx >= 0) {
     data.slots[existingIdx] = {
       ...data.slots[existingIdx],
       ...newSlot,
-      createdAt: data.slots[existingIdx].createdAt,
-      updatedAt: now,
     };
   } else {
     data.slots.push(newSlot);
@@ -479,54 +433,36 @@ export async function createOrUpdateSlot(slot: {
   // Sync with admission_interviews in DB
   try {
     await db
-      .insert(admissionInterviews)
-      .values({
-        id: newSlot.id,
-        appId: newSlot.appId,
-        applicantName: newSlot.applicantName,
-        applicantNameUrdu: newSlot.applicantNameUrdu,
-        refNo: newSlot.refNo,
-        system: newSlot.system,
-        categoryOrClass: newSlot.categoryOrClass,
-        source: newSlot.source,
-        date: newSlot.date,
-        time: newSlot.time,
-        interviewer: newSlot.interviewer,
-        room: newSlot.room,
-        status: newSlot.status,
-        marks: newSlot.marks ?? null,
-        notes: newSlot.notes ?? null,
-        guardianPhone: newSlot.guardianPhone,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: admissionInterviews.id,
-        set: {
-          applicantName: newSlot.applicantName,
-          applicantNameUrdu: newSlot.applicantNameUrdu,
-          refNo: newSlot.refNo,
-          system: newSlot.system,
-          categoryOrClass: newSlot.categoryOrClass,
-          source: newSlot.source,
-          date: newSlot.date,
-          time: newSlot.time,
-          interviewer: newSlot.interviewer,
-          room: newSlot.room,
-          status: newSlot.status,
-          marks: newSlot.marks ?? null,
-          notes: newSlot.notes ?? null,
-          guardianPhone: newSlot.guardianPhone,
-          updatedAt: new Date(),
-        },
-      });
-  } catch {
-    // ignore DB offline
+      .delete(admissionInterviews)
+      .where(or(eq(admissionInterviews.id, newSlot.id), eq(admissionInterviews.appId, newSlot.appId)));
+
+    await db.insert(admissionInterviews).values({
+      id: newSlot.id,
+      appId: newSlot.appId,
+      applicantName: newSlot.applicantName,
+      applicantNameUrdu: newSlot.applicantNameUrdu,
+      refNo: newSlot.refNo,
+      system: newSlot.system,
+      categoryOrClass: newSlot.categoryOrClass,
+      source: newSlot.source,
+      date: newSlot.date,
+      time: newSlot.time,
+      interviewer: newSlot.interviewer,
+      room: newSlot.room,
+      status: newSlot.status,
+      marks: newSlot.marks ?? null,
+      notes: newSlot.notes ?? null,
+      guardianPhone: newSlot.guardianPhone,
+      updatedAt: new Date(),
+    });
+  } catch (err) {
+    console.error("[interviews] DB insert error:", err);
   }
 
   // Sync with stored application and admission_applications in DB
-  const targetStatus =
+  const targetStatus: StoredAdmissionApplication["status"] =
     status === "completed" || status === "passed"
-      ? "interview_completed"
+      ? "under_review"
       : status === "failed"
         ? "rejected"
         : "interview_scheduled";
@@ -591,9 +527,9 @@ export async function updateSlot(
 
     // Sync with stored application and admissionApplications
     if (updates.status) {
-      const targetStatus =
+      const targetStatus: StoredAdmissionApplication["status"] =
         updates.status === "completed" || updates.status === "passed"
-          ? "interview_completed"
+          ? "under_review"
           : updates.status === "failed"
             ? "rejected"
             : updates.status === "scheduled"
