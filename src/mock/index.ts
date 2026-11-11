@@ -519,6 +519,7 @@ export type FinanceRecord = {
   source: string;
   sourceUrdu?: string;
   system: System;
+  institutionId?: string;
 };
 
 const financeCats: { c: FinanceCategory; u: string }[] = [

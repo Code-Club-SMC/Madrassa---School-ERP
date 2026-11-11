@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { db } from "@/db";
-import { feePayments } from "@/db/schema/finance";
+import { feePayments, financeTransactions } from "@/db/schema/finance";
 import { students, studentEnrollments } from "@/db/schema/students";
 import { institutions, programs } from "@/db/schema/academic";
 import { desc, eq } from "drizzle-orm";
@@ -545,22 +545,82 @@ async function loadFeePaymentTransactions(): Promise<ComprehensiveTransaction[]>
 }
 
 // Load Institutional Expenses (Salaries, Utilities, Mess, Maintenance)
-function loadExpenseTransactions(): ComprehensiveTransaction[] {
+async function loadExpenseTransactions(): Promise<ComprehensiveTransaction[]> {
+  let dbExpenses: ComprehensiveTransaction[] = [];
+  try {
+    const rows = await db
+      .select()
+      .from(financeTransactions)
+      .where(eq(financeTransactions.type, "expense"))
+      .orderBy(desc(financeTransactions.date));
+
+    if (rows && rows.length > 0) {
+      dbExpenses = rows.map((e) => {
+        const d = new Date(e.date);
+        const year = isNaN(d.getFullYear()) ? 2026 : d.getFullYear();
+        const month = isNaN(d.getMonth()) ? 5 : d.getMonth() + 1;
+        const cat = (e.category || "misc_expense") as TransactionCategory;
+        const meta = CATEGORY_META[cat] || {
+          label: "Operational Expense",
+          labelUrdu: "اخراجات",
+        };
+        const sys = (e.system || "both") as "school" | "madrassa" | "both";
+        const sysLabel =
+          sys === "school"
+            ? "Al-Qasim Academy (School)"
+            : sys === "madrassa"
+            ? "Jamia Qasimia (Madrassa)"
+            : "Al-Qasim Integrated Network";
+
+        return {
+          id: e.id,
+          voucherNo: e.voucherNo || `EXP-${e.id.slice(0, 8)}`,
+          date: e.date,
+          month,
+          year,
+          type: "expense" as const,
+          category: cat,
+          categoryLabel: meta.label,
+          categoryLabelUrdu: meta.labelUrdu,
+          description: e.description || meta.label,
+          system: sys,
+          systemLabel: sysLabel,
+          partyName: e.partyName || "Vendor / Supplier",
+          partyRole: (e.partyRole || "Vendor") as any,
+          paymentMethod: (e.paymentMethod || "cash") as any,
+          amount: e.amount,
+          status: "posted" as const,
+          reference: e.reference || e.voucherNo,
+        };
+      });
+    }
+  } catch (err) {
+    console.warn("[ReportsService] DB expenses query failed or offline, loading file backup:", err);
+  }
+
+  let fileExpenses: ComprehensiveTransaction[] = [];
   try {
     if (fs.existsSync(EXPENSES_FILE)) {
       const content = fs.readFileSync(EXPENSES_FILE, "utf-8");
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) fileExpenses = parsed;
     }
   } catch (err) {
     console.error("[ReportsService] Error reading finance-expenses.json:", err);
   }
 
-  const seeded = generateInitialExpenses();
-  try {
-    fs.writeFileSync(EXPENSES_FILE, JSON.stringify(seeded, null, 2), "utf-8");
-  } catch {}
-  return seeded;
+  if (fileExpenses.length === 0 && dbExpenses.length === 0) {
+    const seeded = generateInitialExpenses();
+    try {
+      fs.writeFileSync(EXPENSES_FILE, JSON.stringify(seeded, null, 2), "utf-8");
+    } catch {}
+    fileExpenses = seeded;
+  }
+
+  const map = new Map<string, ComprehensiveTransaction>();
+  fileExpenses.forEach((e) => map.set(e.id || e.voucherNo, e));
+  dbExpenses.forEach((e) => map.set(e.id || e.voucherNo, e));
+  return Array.from(map.values());
 }
 
 // Map inventory purchases to expense transactions
@@ -618,7 +678,7 @@ export async function getComprehensiveReportTransactions(): Promise<Comprehensiv
   const donationTxs = donations.map(donationToTransaction);
 
   // 3. Operational Expenses (salaries, utilities, food, maintenance)
-  const expenseTxs = loadExpenseTransactions();
+  const expenseTxs = await loadExpenseTransactions();
 
   // 4. Inventory purchases (textbooks, uniforms, hardware)
   const inventoryTxs = loadInventoryExpenseTransactions();

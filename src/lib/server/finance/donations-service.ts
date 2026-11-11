@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { db } from "@/db";
-import { donations as dbDonations } from "@/db/schema/finance";
+import { donations as dbDonations, financeTransactions } from "@/db/schema/finance";
 import { desc, eq } from "drizzle-orm";
 
 export type DonationType = "zakat" | "sadqa" | "general" | "khairat" | "fitra";
@@ -213,7 +213,7 @@ export function listDonations(): Donation[] {
 }
 
 export function saveDonation(
-  input: Omit<Donation, "id" | "receiptNo"> & { id?: string; receiptNo?: string },
+  input: Omit<Donation, "id" | "receiptNo" | "date"> & { id?: string; receiptNo?: string; date?: string },
 ): Donation {
   const current = listDonations();
   const year = new Date().getFullYear();
@@ -284,6 +284,53 @@ export function saveDonation(
       );
     });
 
+  // Concurrently mirror to financeTransactions
+  const pLower = (newDonation.purpose || "").toLowerCase();
+  const isSchool = pLower.includes("school") || pLower.includes("اکیڈمی");
+  const instId = isSchool ? "al_qasim_academy" : "jamia_qasmia_baneen";
+  const donCat =
+    newDonation.type === "zakat"
+      ? "donation_zakat"
+      : newDonation.type === "sadqa"
+        ? "donation_sadqa"
+        : newDonation.type === "fitra"
+          ? "donation_fitra"
+          : "donation_general";
+  const donCatUr = newDonation.type === "zakat" ? "زکوٰۃ فنڈ" : "صدقات و خیرات";
+
+  db.insert(financeTransactions)
+    .values({
+      id: `tx-don-${newDonation.id}`,
+      voucherNo: newDonation.receiptNo,
+      date: newDonation.date,
+      type: "income",
+      category: donCat,
+      categoryUrdu: donCatUr,
+      amount: Math.round(newDonation.amountPaisa / 100),
+      system: isSchool ? "school" : "madrassa",
+      institutionId: instId,
+      description: newDonation.purpose ? `Donation: ${newDonation.purpose}` : `Donation receipt from ${newDonation.donor}`,
+      descriptionUrdu: `عطیہ رسید #${newDonation.receiptNo} · ${newDonation.donorUrdu || newDonation.donor}`,
+      partyName: newDonation.donor,
+      partyRole: "Donor",
+      paymentMethod: newDonation.method || "cash",
+      reference: newDonation.receiptNo,
+      status: "posted",
+    })
+    .onConflictDoUpdate({
+      target: financeTransactions.id,
+      set: {
+        voucherNo: newDonation.receiptNo,
+        date: newDonation.date,
+        amount: Math.round(newDonation.amountPaisa / 100),
+        category: donCat,
+        categoryUrdu: donCatUr,
+        partyName: newDonation.donor,
+        updatedAt: new Date(),
+      },
+    })
+    .catch(() => {});
+
   return newDonation;
 }
 
@@ -301,6 +348,10 @@ export function deleteDonation(id: string): boolean {
         err?.message || err,
       );
     });
+
+  db.delete(financeTransactions)
+    .where(eq(financeTransactions.id, `tx-don-${id}`))
+    .catch(() => {});
 
   return true;
 }

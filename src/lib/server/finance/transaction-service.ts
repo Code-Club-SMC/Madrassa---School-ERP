@@ -3,7 +3,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/db";
-import { feePayments } from "@/db/schema/finance";
+import { feePayments, financeTransactions } from "@/db/schema/finance";
 import { saveDonation, type DonationType } from "@/lib/server/finance/donations-service";
 import { recordAuditLog } from "@/lib/server/audit/audit-service";
 import { getRequestUser } from "@/lib/server/authz";
@@ -215,7 +215,51 @@ export async function recordFinanceTransaction(request: Request, input: Transact
     syncExpenseToFile(transactionRecord as ComprehensiveTransaction);
   }
 
-  // 3. Record Audit Trail
+  // 3. Persist to PostgreSQL database
+  try {
+    await db
+      .insert(financeTransactions)
+      .values({
+        id,
+        voucherNo: transactionRecord.voucherNo,
+        date: input.date,
+        type: input.type,
+        category: canonicalCat,
+        categoryUrdu: meta.labelUrdu,
+        amount: input.amount,
+        system: input.system,
+        institutionId,
+        description: transactionRecord.description,
+        descriptionUrdu: input.descriptionUrdu || transactionRecord.description,
+        partyName,
+        partyRole: partyRole as string,
+        paymentMethod: input.paymentMethod || "cash",
+        reference: transactionRecord.reference || transactionRecord.voucherNo,
+        status: "posted",
+      })
+      .onConflictDoUpdate({
+        target: financeTransactions.id,
+        set: {
+          voucherNo: transactionRecord.voucherNo,
+          date: input.date,
+          type: input.type,
+          category: canonicalCat,
+          categoryUrdu: meta.labelUrdu,
+          amount: input.amount,
+          system: input.system,
+          institutionId,
+          description: transactionRecord.description,
+          partyName,
+          partyRole: partyRole as string,
+          paymentMethod: input.paymentMethod || "cash",
+          updatedAt: new Date(),
+        },
+      });
+  } catch (err) {
+    console.error("[TransactionService] Could not persist transaction to DB:", err);
+  }
+
+  // 4. Record Audit Trail
   await recordAuditLog({
     userId: user?.id || "system",
     userName: user?.name || "Admin",
@@ -243,6 +287,7 @@ export async function recordFinanceTransaction(request: Request, input: Transact
       source: partyName,
       sourceUrdu: input.sourceUrdu || partyName,
       system: input.system,
+      institutionId,
     },
   };
 }

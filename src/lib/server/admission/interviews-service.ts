@@ -6,7 +6,11 @@ import { admissionApplications, admissionEvents, admissionInterviews } from "@/d
 import { user as authUser } from "@/db/schema/auth";
 import { teacherProfiles } from "@/db/schema/teachers";
 import { teachers as mockTeachers } from "@/mock/teachers";
-import { loadStoredApplications, updateStoredApplicationStatus } from "./applications-store";
+import {
+  loadStoredApplications,
+  updateStoredApplicationStatus,
+  type StoredAdmissionApplication,
+} from "./applications-store";
 import { eq, or } from "drizzle-orm";
 
 export type InterviewSlot = {

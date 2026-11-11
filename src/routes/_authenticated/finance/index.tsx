@@ -72,6 +72,12 @@ function FinanceDashboard() {
     annualIncome: number;
     schoolAnnualIncome: number;
     madrassaAnnualIncome: number;
+    monthlyExpense?: number;
+    schoolMonthlyExpense?: number;
+    madrassaMonthlyExpense?: number;
+    annualExpense?: number;
+    schoolAnnualExpense?: number;
+    madrassaAnnualExpense?: number;
     openArrears: number;
     recoveryRate: number;
   } | null>(null);
@@ -121,16 +127,24 @@ function FinanceDashboard() {
     if (scope === "school") return records.filter((r) => r.system === "school" || r.system === "both");
     if (scope === "madrassa") return records.filter((r) => r.system === "madrassa" || r.system === "both");
     if (scope === "jamia_qasmia_baneen") {
-      return records.filter((r) => (r as any).institutionId === "jamia_qasmia_baneen" || r.system === "madrassa");
+      return records.filter(
+        (r) =>
+          r.institutionId === "jamia_qasmia_baneen" ||
+          (!r.institutionId && (r.system === "madrassa" || r.system === "both")),
+      );
     }
     if (scope === "al_qasim_academy") {
-      return records.filter((r) => (r as any).institutionId === "al_qasim_academy" || r.system === "school");
+      return records.filter(
+        (r) =>
+          r.institutionId === "al_qasim_academy" ||
+          (!r.institutionId && (r.system === "school" || r.system === "both")),
+      );
     }
     if (scope === "jamia_zainab_banat") {
-      return records.filter((r) => (r as any).institutionId === "jamia_zainab_banat");
+      return records.filter((r) => r.institutionId === "jamia_zainab_banat");
     }
     if (scope === "zainab_school") {
-      return records.filter((r) => (r as any).institutionId === "zainab_school");
+      return records.filter((r) => r.institutionId === "zainab_school");
     }
     return records;
   }, [records, scope]);
@@ -165,13 +179,24 @@ function FinanceDashboard() {
     const pendingLocal = localRecords.filter((r) => !serverIds.has(r.id));
 
     pendingLocal.forEach((r) => {
-      const d = new Date(r.date);
-      if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
-        const day = d.getDate();
+      const parts = r.date.split("-").map(Number);
+      const rYear = parts[0];
+      const rMonth = parts[1] - 1; // 0-based
+      const day = parts[2];
+      if (rYear === curYear && rMonth === curMonth) {
+        const isSchool =
+          r.system === "school" ||
+          r.institutionId === "al_qasim_academy" ||
+          r.institutionId === "zainab_school";
+        const isMadrassa =
+          r.system === "madrassa" ||
+          r.institutionId === "jamia_qasmia_baneen" ||
+          r.institutionId === "jamia_zainab_banat";
+
         if (r.type === "income") {
-          if (r.system === "school") {
+          if (isSchool) {
             recordSchoolIncomeByDay.set(day, (recordSchoolIncomeByDay.get(day) ?? 0) + r.amount);
-          } else if (r.system === "madrassa") {
+          } else if (isMadrassa) {
             recordMadrassaIncomeByDay.set(day, (recordMadrassaIncomeByDay.get(day) ?? 0) + r.amount);
           } else {
             const sAmt = Math.round(r.amount * 0.5);
@@ -179,9 +204,9 @@ function FinanceDashboard() {
             recordMadrassaIncomeByDay.set(day, (recordMadrassaIncomeByDay.get(day) ?? 0) + (r.amount - sAmt));
           }
         } else {
-          if (r.system === "school") {
+          if (isSchool) {
             recordSchoolExpenseByDay.set(day, (recordSchoolExpenseByDay.get(day) ?? 0) + r.amount);
-          } else if (r.system === "madrassa") {
+          } else if (isMadrassa) {
             recordMadrassaExpenseByDay.set(day, (recordMadrassaExpenseByDay.get(day) ?? 0) + r.amount);
           } else {
             const sAmt = Math.round(r.amount * 0.5);
@@ -226,13 +251,21 @@ function FinanceDashboard() {
       let income = serverMonthly.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
       let expense = serverMonthly.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
       if (serverKpis) {
-        const kpiAnnual =
+        const kpiAnnualInc =
           scope === "school" || scope === "al_qasim_academy"
             ? serverKpis.schoolAnnualIncome
             : scope === "madrassa" || scope === "jamia_qasmia_baneen"
               ? serverKpis.madrassaAnnualIncome
               : serverKpis.annualIncome;
-        if (kpiAnnual > 0) income = kpiAnnual;
+        if (kpiAnnualInc > 0) income = kpiAnnualInc;
+
+        const kpiAnnualExp =
+          scope === "school" || scope === "al_qasim_academy"
+            ? serverKpis.schoolAnnualExpense
+            : scope === "madrassa" || scope === "jamia_qasmia_baneen"
+              ? serverKpis.madrassaAnnualExpense
+              : serverKpis.annualExpense;
+        if (kpiAnnualExp && kpiAnnualExp > 0) expense = kpiAnnualExp;
       }
       return { income, expense, net: income - expense, rate };
     }
@@ -240,13 +273,21 @@ function FinanceDashboard() {
     let income = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[incomeKey] ?? curr.income), 0);
     let expense = dailyIncomeVsExpense.reduce((acc, curr) => acc + ((curr as any)[expenseKey] ?? curr.expense), 0);
     if (serverKpis) {
-      const kpiMonthly =
+      const kpiMonthlyInc =
         scope === "school" || scope === "al_qasim_academy"
           ? serverKpis.schoolMonthlyIncome
           : scope === "madrassa" || scope === "jamia_qasmia_baneen"
             ? serverKpis.madrassaMonthlyIncome
             : serverKpis.monthlyIncome;
-      if (kpiMonthly > 0) income = kpiMonthly;
+      if (kpiMonthlyInc > 0) income = kpiMonthlyInc;
+
+      const kpiMonthlyExp =
+        scope === "school" || scope === "al_qasim_academy"
+          ? serverKpis.schoolMonthlyExpense
+          : scope === "madrassa" || scope === "jamia_qasmia_baneen"
+            ? serverKpis.madrassaMonthlyExpense
+            : serverKpis.monthlyExpense;
+      if (kpiMonthlyExp && kpiMonthlyExp > 0) expense = kpiMonthlyExp;
     }
     return { income, expense, net: income - expense, rate };
   }, [period, incomeKey, expenseKey, dailyIncomeVsExpense, serverMonthly, serverKpis, scope]);
@@ -334,7 +375,13 @@ function FinanceDashboard() {
               <Download className="h-4 w-4" />
               {isUrdu ? "ایکسل برآمد" : "Export CSV"}
             </Button>
-            <AddTxnDialog open={open} onOpenChange={setOpen} onAdd={handleAddTxn} onSuccess={loadOverview} defaultSystem={scope === "both" || scope.includes("_") ? "both" : (scope as any)} />
+            <AddTxnDialog
+              open={open}
+              onOpenChange={setOpen}
+              onAdd={handleAddTxn}
+              onSuccess={loadOverview}
+              currentScope={scope}
+            />
           </div>
         }
       />
@@ -500,7 +547,7 @@ function FinanceDashboard() {
                 </TableCell>
               </TableRow>
             ) : (
-              scoped.slice(0, 14).map((r) => {
+              scoped.slice(0, 30).map((r) => {
                 const categoryDisplay = isUrdu
                   ? (r.categoryUrdu || r.category)
                   : (r.category.charAt(0).toUpperCase() + r.category.slice(1));
@@ -804,26 +851,47 @@ function AddTxnDialog({
   onOpenChange,
   onAdd,
   onSuccess,
-  defaultSystem,
+  currentScope,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onAdd: (r: FinanceRecord) => void;
   onSuccess?: () => void;
-  defaultSystem: System;
+  currentScope: Scope;
 }) {
   const { lang } = useLanguage();
   const isUrdu = lang === "ur";
   const [submitting, setSubmitting] = useState(false);
+
+  const initialCampus =
+    currentScope === "jamia_qasmia_baneen"
+      ? "jamia_qasmia_baneen"
+      : currentScope === "al_qasim_academy"
+        ? "al_qasim_academy"
+        : currentScope === "jamia_zainab_banat"
+          ? "jamia_zainab_banat"
+          : currentScope === "zainab_school"
+            ? "zainab_school"
+            : "al_qasim_integrated";
+
+  const initialSystem: System =
+    initialCampus === "jamia_qasmia_baneen" || initialCampus === "jamia_zainab_banat"
+      ? "madrassa"
+      : initialCampus === "al_qasim_academy" || initialCampus === "zainab_school"
+        ? "school"
+        : "both";
+
   const [form, setForm] = useState({
     type: "income" as "income" | "expense",
     category: "fees",
+    campus: initialCampus,
     amount: "",
     description: "",
     source: "",
-    system: defaultSystem,
+    system: initialSystem,
     date: new Date().toISOString().slice(0, 10),
   });
+
   const cats: Record<string, { en: string; ur: string }> = {
     fees: { en: "Student Fees", ur: "فیس طلباء" },
     donation: { en: "Donations", ur: "عطیات" },
@@ -831,6 +899,23 @@ function AddTxnDialog({
     inventory: { en: "Inventory & Supplies", ur: "سامان و اسٹاک" },
     salary: { en: "Salaries & Payroll", ur: "تنخواہیں" },
     misc: { en: "Miscellaneous", ur: "متفرق" },
+  };
+
+  const campuses = [
+    { id: "al_qasim_integrated", en: "Combined / Integrated (All)", ur: "مشترکہ / تمام کیمپس", sys: "both" as System },
+    { id: "jamia_qasmia_baneen", en: "Jamia Qasimia (Boys Madrassa)", ur: "جامعہ قاسمیہ (بنین)", sys: "madrassa" as System },
+    { id: "al_qasim_academy", en: "Al-Qasim Academy (Boys School)", ur: "القاسم اکیڈمی (بنین)", sys: "school" as System },
+    { id: "jamia_zainab_banat", en: "Jamia Zainab (Girls Madrassa)", ur: "جامعہ زینب (بنات)", sys: "madrassa" as System },
+    { id: "zainab_school", en: "Zainab School for Girls", ur: "زینب گرلز اسکول", sys: "school" as System },
+  ];
+
+  const handleCampusChange = (cId: string) => {
+    const selected = campuses.find((c) => c.id === cId);
+    setForm((prev) => ({
+      ...prev,
+      campus: cId,
+      system: selected ? selected.sys : prev.system,
+    }));
   };
 
   const handleSubmit = async () => {
@@ -842,6 +927,13 @@ function AddTxnDialog({
     const selectedCat = cats[form.category];
     setSubmitting(true);
     try {
+      const derivedSystem =
+        form.campus === "jamia_qasmia_baneen" || form.campus === "jamia_zainab_banat"
+          ? "madrassa"
+          : form.campus === "al_qasim_academy" || form.campus === "zainab_school"
+            ? "school"
+            : form.system;
+
       const res = await fetch("/api/finance/transactions", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -856,7 +948,8 @@ function AddTxnDialog({
           sourceUrdu: form.source || undefined,
           description: form.description || undefined,
           descriptionUrdu: form.description || undefined,
-          system: form.system,
+          system: derivedSystem,
+          institutionId: form.campus,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -874,10 +967,11 @@ function AddTxnDialog({
       setForm({
         type: "income",
         category: "fees",
+        campus: initialCampus,
         amount: "",
         description: "",
         source: "",
-        system: defaultSystem,
+        system: initialSystem,
         date: new Date().toISOString().slice(0, 10),
       });
       onOpenChange(false);
@@ -915,13 +1009,15 @@ function AddTxnDialog({
               </Select>
             </div>
             <div>
-              <Label className={cn(isUrdu && "font-urdu")}>{isUrdu ? "نظام" : "System"}</Label>
-              <Select value={form.system} onValueChange={(v) => setForm({ ...form, system: v as System })}>
+              <Label className={cn(isUrdu && "font-urdu")}>{isUrdu ? "کیمپس / ادارہ" : "Campus / Institution"}</Label>
+              <Select value={form.campus} onValueChange={handleCampusChange}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="school">{isUrdu ? "اسکول" : "School"}</SelectItem>
-                  <SelectItem value="madrassa">{isUrdu ? "مدرسہ" : "Madrassa"}</SelectItem>
-                  <SelectItem value="both">{isUrdu ? "مشترکہ" : "Combined"}</SelectItem>
+                  {campuses.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className={cn(isUrdu && "font-urdu")}>{isUrdu ? c.ur : c.en}</span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

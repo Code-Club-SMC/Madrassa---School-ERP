@@ -243,3 +243,38 @@ export const donations = pgTable(
     index("donations_receipt_no_idx").on(table.receiptNo),
   ],
 );
+
+export const financeTransactions = pgTable(
+  "finance_transactions",
+  {
+    id: text("id").primaryKey(),
+    voucherNo: text("voucher_no").notNull(),
+    date: text("date").notNull(), // YYYY-MM-DD
+    type: text("type").$type<"income" | "expense">().notNull(),
+    category: text("category").notNull(),
+    categoryUrdu: text("category_urdu"),
+    amount: integer("amount").notNull(), // PKR
+    system: text("system").$type<"school" | "madrassa" | "both">().default("both").notNull(),
+    institutionId: text("institution_id"),
+    description: text("description"),
+    descriptionUrdu: text("description_urdu"),
+    partyName: text("party_name"),
+    partyRole: text("party_role"),
+    paymentMethod: text("payment_method").$type<"cash" | "bank" | "online" | "cheque">().default("cash").notNull(),
+    reference: text("reference"),
+    status: text("status").default("posted").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("finance_transactions_date_idx").on(table.date),
+    index("finance_transactions_type_idx").on(table.type),
+    index("finance_transactions_system_idx").on(table.system),
+    index("finance_transactions_institution_idx").on(table.institutionId),
+    index("finance_transactions_category_idx").on(table.category),
+    index("finance_transactions_voucher_idx").on(table.voucherNo),
+  ],
+);
