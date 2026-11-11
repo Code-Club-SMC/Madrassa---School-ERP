@@ -148,6 +148,26 @@ export const teachers: Teacher[] = [
     joinedAt: "2024-01-15", monthlySalaryPaisa: 28_000_00,
     active: true,
   },
+  {
+    id: "T16", name: "Mufti Tariq Saeed", nameUrdu: "مفتی طارق سعید",
+    designation: "mudarris", qualification: "Alimiyyah (Wifaq), Takhassus fi al-Hadith",
+    qualificationUrdu: "عالمیہ (وفاق)، تخصص فی الحدیث",
+    subjects: ["sub-hadith", "sub-fiqh"], system: "madrassa", phone: "0301-8889900",
+    cnic: "35202-0066006-6", address: "Model Town, Lahore",
+    joinedAt: "2021-03-01", monthlySalaryPaisa: 68_000_00,
+    bankName: "Meezan Bank", bankAccount: "PK36MEZN0000006600660066",
+    active: true,
+  },
+  {
+    id: "T17", name: "Mrs. Saira Tariq", nameUrdu: "مسز سائرہ طارق",
+    designation: "subject_teacher", qualification: "MSc Physics, B.Ed",
+    qualificationUrdu: "ایم ایس سی فزکس، بی ایڈ",
+    subjects: ["sub-physics", "sub-science"], system: "school", phone: "0303-7778899",
+    cnic: "35202-0077007-7", address: "Garden Town, Lahore",
+    joinedAt: "2022-02-15", monthlySalaryPaisa: 58_000_00,
+    bankName: "Bank Alfalah", bankAccount: "PK24BAFL0000007700770077",
+    active: true,
+  },
 ];
 
 export const teachersById = Object.fromEntries(teachers.map((t) => [t.id, t]));

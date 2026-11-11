@@ -3,6 +3,10 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { db } from "@/db";
 import { admissionApplications, admissionEvents, admissionInterviews } from "@/db/schema/admission";
+import { user as authUser } from "@/db/schema/auth";
+import { teacherProfiles } from "@/db/schema/teachers";
+import { teachers as mockTeachers } from "@/mock/teachers";
+import { loadStoredApplications, updateStoredApplicationStatus } from "./applications-store";
 import { eq, or } from "drizzle-orm";
 
 export type InterviewSlot = {
@@ -64,13 +68,57 @@ export const DEFAULT_CHECKLIST: DocType[] = [
   { key: "address", en: "Address Proof (Bill copy)", ur: "پتہ تصدیق (بل کاپی)", required: true },
 ];
 
+export type StaffMember = {
+  id: string;
+  name: string;
+  nameUrdu?: string;
+  designation?: string;
+  systemScope?: string;
+};
+
 export type InterviewStorageData = {
   slots: InterviewSlot[];
   docStates: DocChecklistState;
   waitlist: WaitlistEntry[];
   docTypes: DocType[];
   applications?: any[];
+  staff?: StaffMember[];
 };
+
+export async function listStaffMembers(): Promise<StaffMember[]> {
+  try {
+    const rows = await db
+      .select({
+        id: teacherProfiles.id,
+        name: authUser.name,
+        nameUrdu: authUser.nameUrdu,
+        designation: teacherProfiles.designation,
+        systemScope: teacherProfiles.systemScope,
+      })
+      .from(teacherProfiles)
+      .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
+      .where(eq(authUser.role, "teacher"));
+    if (rows && rows.length > 0) {
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        nameUrdu: r.nameUrdu || undefined,
+        designation: r.designation || undefined,
+        systemScope: r.systemScope || undefined,
+      }));
+    }
+  } catch {
+    // DB offline
+  }
+
+  return mockTeachers.map((t) => ({
+    id: t.id,
+    name: t.name,
+    nameUrdu: t.nameUrdu,
+    designation: t.designation ? t.designation.replace(/_/g, " ").toUpperCase() : undefined,
+    systemScope: t.system === "madrassa" ? "qasmia-madrassa" : "qasmia-school",
+  }));
+}
 
 export const DEFAULT_SEED_APPLICATIONS = [
   {
@@ -238,10 +286,8 @@ async function syncInterviewsWithDb(data: InterviewStorageData): Promise<Intervi
         updatedAt: r.updatedAt ? r.updatedAt.toISOString() : new Date().toISOString(),
       }));
 
-      const slotMap = new Map<string, InterviewSlot>();
-      for (const s of data.slots) slotMap.set(s.id, s);
-      for (const s of dbSlots) slotMap.set(s.id, s);
-      data.slots = Array.from(slotMap.values());
+      // Database is authoritative
+      data.slots = dbSlots;
       saveDataToFile(data);
     } else if (data.slots.length > 0) {
       for (const s of data.slots) {
@@ -283,12 +329,14 @@ export async function listInterviews(): Promise<InterviewStorageData> {
   const data = loadStoredData();
   await syncInterviewsWithDb(data);
 
+  const staff = await listStaffMembers();
+
   let loadedApps: any[] = [];
   try {
     const pendingApps = await db
       .select()
       .from(admissionApplications)
-      .limit(50);
+      .limit(100);
     if (pendingApps && pendingApps.length > 0) {
       loadedApps = pendingApps.map((a) => ({
         id: a.id,
@@ -307,8 +355,14 @@ export async function listInterviews(): Promise<InterviewStorageData> {
       }));
     }
   } catch {
-    // DB query error or offline - fallback to seed applications
+    // DB query error or offline - fallback to stored applications
   }
+
+  const storedApps = loadStoredApplications();
+  const appMap = new Map<string, any>();
+  storedApps.forEach((a) => appMap.set(a.id, a));
+  loadedApps.forEach((a) => appMap.set(a.id, a));
+  loadedApps = Array.from(appMap.values());
 
   if (loadedApps.length === 0) {
     loadedApps = [...DEFAULT_SEED_APPLICATIONS];
@@ -316,12 +370,7 @@ export async function listInterviews(): Promise<InterviewStorageData> {
 
   // If memory slots are empty, try auto-seeding upcoming interview slots from applications
   if (data.slots.length === 0) {
-    const interviewers = [
-      "Maulana Imran Hussain",
-      "Mufti Tariq Saeed",
-      "Mrs. Saira Tariq",
-      "Principal — Hafiz Bilal",
-    ];
+    const interviewers = staff.map((s) => s.name);
     const rooms = ["Conference Room A", "Principal's Office", "Library Room 2"];
 
     const candidates = loadedApps.slice(0, 3);
@@ -333,17 +382,17 @@ export async function listInterviews(): Promise<InterviewStorageData> {
         applicantName: a.name,
         applicantNameUrdu: a.nameUrdu,
         refNo: a.refNo,
-        system: a.system,
-        categoryOrClass: a.categoryOrClass,
+        system: (a.system === "madrassa" ? "madrassa" : "school") as "madrassa" | "school",
+        categoryOrClass: a.categoryOrClass || "Class 1",
         source: a.source,
         date: slotDate,
         time: ["10:00", "11:30", "14:00", "15:30"][i] ?? "10:00",
-        interviewer: interviewers[i % interviewers.length],
+        interviewer: interviewers[i % interviewers.length] || "Maulana Imran Hussain",
         room: rooms[i % rooms.length],
-        status: (i === 0 ? "scheduled" : i === 1 ? "passed" : "scheduled") as InterviewSlot["status"],
-        marks: i === 1 ? 85 : null,
+        status: (i === 1 ? "passed" : "scheduled") as InterviewSlot["status"],
+        marks: i === 0 ? 80 : i === 1 ? 85 : null,
         notes: i === 1 ? "Passed oral & written test" : null,
-        guardianPhone: a.guardianPhone ?? undefined,
+        guardianPhone: a.guardianPhone ?? a.phone ?? undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -365,6 +414,7 @@ export async function listInterviews(): Promise<InterviewStorageData> {
   return {
     ...data,
     applications: loadedApps,
+    staff,
   };
 }
 
@@ -473,15 +523,19 @@ export async function createOrUpdateSlot(slot: {
     // ignore DB offline
   }
 
-  // Sync with admission_applications in DB
-  try {
-    const targetStatus =
-      status === "completed" || status === "passed"
-        ? "interview_completed"
-        : status === "failed"
-          ? "rejected"
-          : "interview_scheduled";
+  // Sync with stored application and admission_applications in DB
+  const targetStatus =
+    status === "completed" || status === "passed"
+      ? "interview_completed"
+      : status === "failed"
+        ? "rejected"
+        : "interview_scheduled";
 
+  try {
+    updateStoredApplicationStatus(slot.appId, targetStatus);
+  } catch {}
+
+  try {
     await db
       .update(admissionApplications)
       .set({ status: targetStatus, updatedAt: new Date() })
@@ -535,18 +589,22 @@ export async function updateSlot(
       // ignore DB offline
     }
 
-    // Sync with admissionApplications
-    try {
-      if (updates.status) {
-        const targetStatus =
-          updates.status === "completed" || updates.status === "passed"
-            ? "interview_completed"
-            : updates.status === "failed"
-              ? "rejected"
-              : updates.status === "scheduled"
-                ? "interview_scheduled"
-                : "under_review";
+    // Sync with stored application and admissionApplications
+    if (updates.status) {
+      const targetStatus =
+        updates.status === "completed" || updates.status === "passed"
+          ? "interview_completed"
+          : updates.status === "failed"
+            ? "rejected"
+            : updates.status === "scheduled"
+              ? "interview_scheduled"
+              : "under_review";
 
+      try {
+        updateStoredApplicationStatus(updated.appId, targetStatus);
+      } catch {}
+
+      try {
         await db
           .update(admissionApplications)
           .set({ status: targetStatus, updatedAt: new Date() })
@@ -559,9 +617,9 @@ export async function updateSlot(
           toStatus: targetStatus,
           message: `Interview status updated to: ${updates.status}. Score: ${updated.marks ?? "N/A"}. Remarks: ${updated.notes || "None"}`,
         });
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
 
     return updated;
@@ -571,18 +629,31 @@ export async function updateSlot(
 
 export async function deleteSlot(id: string): Promise<boolean> {
   const data = loadStoredData();
-  const prevCount = data.slots.length;
-  data.slots = data.slots.filter((s) => s.id !== id);
-  if (data.slots.length !== prevCount) {
-    saveDataToFile(data);
-    try {
-      await db.delete(admissionInterviews).where(eq(admissionInterviews.id, id));
-    } catch {
-      // ignore
-    }
-    return true;
+  const targetSlot = data.slots.find((s) => s.id === id || s.appId === id);
+  const targetAppId = targetSlot?.appId;
+
+  data.slots = data.slots.filter((s) => s.id !== id && s.appId !== id);
+  saveDataToFile(data);
+
+  try {
+    await db
+      .delete(admissionInterviews)
+      .where(or(eq(admissionInterviews.id, id), eq(admissionInterviews.appId, id)));
+  } catch (err) {
+    console.error("[interviews] deleteSlot db error:", err);
   }
-  return false;
+
+  if (targetAppId) {
+    try {
+      updateStoredApplicationStatus(targetAppId, "under_review", "Interview slot removed");
+      await db
+        .update(admissionApplications)
+        .set({ status: "under_review", updatedAt: new Date() })
+        .where(eq(admissionApplications.id, targetAppId));
+    } catch {}
+  }
+
+  return true;
 }
 
 export async function saveDocState(

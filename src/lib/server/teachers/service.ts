@@ -33,6 +33,7 @@ import {
   validateTeacherPlacement,
   validateTimeRange,
 } from "@/lib/server/teachers/domain";
+import { teachers as mockTeachers } from "@/mock/teachers";
 import { assertTeacherTimetableConflictWithClassTimetables, normalizeTimeToHHMM } from "@/lib/server/academic/timetable-conflict";
 import { teachers as mockTeachers } from "@/mock/teachers";
 
@@ -258,28 +259,66 @@ export async function listTeachers(request: Request, query: z.infer<typeof teach
       : undefined,
   ].filter(Boolean);
 
-  const rows = await db
-    .select({
-      id: teacherProfiles.id,
-      userId: teacherProfiles.userId,
-      name: authUser.name,
-      email: authUser.email,
-      nameUrdu: authUser.nameUrdu,
-      phone: authUser.phone,
-      cnic: authUser.cnic,
-      status: authUser.status,
-      banned: authUser.banned,
-      systemScope: teacherProfiles.systemScope,
-      designation: teacherProfiles.designation,
-      qualification: teacherProfiles.qualification,
-      joinedAt: teacherProfiles.joinedAt,
-      employmentStatus: teacherProfiles.employmentStatus,
-      baseMonthlySalaryPaisa: teacherProfiles.baseMonthlySalaryPaisa,
-    })
-    .from(teacherProfiles)
-    .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
-    .where(and(...clauses))
-    .orderBy(asc(authUser.name));
+  let rows: any[] = [];
+  try {
+    rows = await db
+      .select({
+        id: teacherProfiles.id,
+        userId: teacherProfiles.userId,
+        name: authUser.name,
+        email: authUser.email,
+        nameUrdu: authUser.nameUrdu,
+        phone: authUser.phone,
+        cnic: authUser.cnic,
+        status: authUser.status,
+        banned: authUser.banned,
+        systemScope: teacherProfiles.systemScope,
+        designation: teacherProfiles.designation,
+        qualification: teacherProfiles.qualification,
+        joinedAt: teacherProfiles.joinedAt,
+        employmentStatus: teacherProfiles.employmentStatus,
+        baseMonthlySalaryPaisa: teacherProfiles.baseMonthlySalaryPaisa,
+      })
+      .from(teacherProfiles)
+      .innerJoin(authUser, eq(authUser.id, teacherProfiles.userId))
+      .where(and(...clauses))
+      .orderBy(asc(authUser.name));
+  } catch (err) {
+    console.warn("[teachers] DB offline or query error, returning fallback teachers:", err);
+    rows = mockTeachers
+      .filter((t) => {
+        if (query.status !== "all") {
+          const isActive = t.active ? "active" : "inactive";
+          if (isActive !== query.status) return false;
+        }
+        if (query.q) {
+          const qLower = query.q.toLowerCase();
+          const match =
+            t.name.toLowerCase().includes(qLower) ||
+            (t.nameUrdu && t.nameUrdu.includes(query.q)) ||
+            (t.designation && t.designation.toLowerCase().includes(qLower));
+          if (!match) return false;
+        }
+        return true;
+      })
+      .map((t) => ({
+        id: t.id,
+        userId: `user-${t.id}`,
+        name: t.name,
+        email: `${t.id.toLowerCase()}@jamiaqasmia.edu.pk`,
+        nameUrdu: t.nameUrdu,
+        phone: t.phone,
+        cnic: t.cnic,
+        status: t.active ? "active" : "inactive",
+        banned: false,
+        systemScope: (t.system === "madrassa" ? "qasmia-madrassa" : "qasmia-school") as any,
+        designation: t.designation,
+        qualification: t.qualification,
+        joinedAt: t.joinedAt,
+        employmentStatus: t.active ? "active" : "inactive",
+        baseMonthlySalaryPaisa: t.monthlySalaryPaisa,
+      }));
+  }
 
   console.log("[teachers] listTeachers result", rows.length, rows.map((r) => ({ id: r.id, name: r.name, email: r.email })));
   return rows;

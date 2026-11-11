@@ -176,6 +176,13 @@
       "when": 1792061504597,
       "tag": "0024_hot_the_hand",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794399627371,
+      "tag": "0025_funny_impossible_man",
+      "breakpoints": true
     }
   ]
 }

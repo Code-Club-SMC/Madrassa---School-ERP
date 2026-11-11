@@ -63,6 +63,11 @@ import { useLanguage } from "@/components/language-context";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admission/interviews")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    appId: typeof search.appId === "string" ? search.appId : undefined,
+    refNo: typeof search.refNo === "string" ? search.refNo : undefined,
+    autoOpen: search.autoOpen === "true" || search.autoOpen === true,
+  }),
   component: InterviewsPage,
 });
 
@@ -98,13 +103,24 @@ const DEFAULT_CHECKLIST: Doc[] = [
   { key: "address", en: "Address Proof (Bill copy)", ur: "پتہ تصدیق (بل کاپی)", required: true },
 ];
 
-const INTERVIEWERS = [
-  "Maulana Imran Hussain",
-  "Mufti Tariq Saeed",
-  "Mrs. Saira Tariq",
-  "Principal — Hafiz Bilal",
+export type StaffMember = {
+  id: string;
+  name: string;
+  nameUrdu?: string;
+  designation?: string;
+};
+
+export const DEFAULT_INTERVIEWERS: StaffMember[] = [
+  { id: "T2", name: "Maulana Imran Hussain", nameUrdu: "مولانا عمران حسین", designation: "Mudarris / مدرّس" },
+  { id: "T16", name: "Mufti Tariq Saeed", nameUrdu: "مفتی طارق سعید", designation: "Mudarris / مدرّس" },
+  { id: "T17", name: "Mrs. Saira Tariq", nameUrdu: "مسز سائرہ طارق", designation: "Senior Teacher / سینئر معلمہ" },
+  { id: "T1", name: "Principal — Hafiz Bilal", nameUrdu: "پرنسپل — حافظ بلال احمد", designation: "Principal / پرنسپل" },
+  { id: "T3", name: "Sir Adeel Akhtar", nameUrdu: "سر عدیل اختر", designation: "Mathematics / ریاضی" },
+  { id: "T4", name: "Miss Ayesha Tariq", nameUrdu: "مس عائشہ طارق", designation: "English / انگریزی" },
+  { id: "T5", name: "Qari Saleem Raza", nameUrdu: "قاری سلیم رضا", designation: "Qari / قاری" },
 ];
-const ROOMS = ["Conference Room A", "Principal's Office", "Library Room 2"];
+
+const ROOMS = ["Conference Room A", "Principal's Office", "Library Room 2", "Committee Room", "Academic Hall"];
 
 type AdmissionApplication = {
   id: string;
@@ -246,8 +262,10 @@ function saveLocalData(partial: {
 
 function InterviewsPage() {
   const { lang } = useLanguage();
+  const searchParams = Route.useSearch();
   const isUrdu = lang === "ur";
   const [applications, setApplications] = useState<AdmissionApplication[]>([]);
+  const [staffList, setStaffList] = useState<StaffMember[]>(DEFAULT_INTERVIEWERS);
   const [slots, setSlots] = useState<Slot[]>(() => {
     const local = getLocalData();
     return local?.slots && Array.isArray(local.slots) ? local.slots : [];
@@ -281,7 +299,7 @@ function InterviewsPage() {
     return d.toISOString().slice(0, 10);
   });
   const [newTime, setNewTime] = useState("10:00");
-  const [newInterviewer, setNewInterviewer] = useState(INTERVIEWERS[0]);
+  const [newInterviewer, setNewInterviewer] = useState("Maulana Imran Hussain");
   const [newRoom, setNewRoom] = useState(ROOMS[0]);
   const [candidateFilter, setCandidateFilter] = useState<"all" | "website">("all");
   const [candidateSearch, setCandidateSearch] = useState("");
@@ -343,24 +361,8 @@ function InterviewsPage() {
 
       if (interviewsData) {
         if (Array.isArray(interviewsData.slots)) {
-          setSlots((prev) => {
-            const map = new Map<string, Slot>();
-            interviewsData.slots.forEach((s: Slot) => map.set(s.id, s));
-            prev.forEach((s: Slot) => {
-              if (!map.has(s.id)) {
-                map.set(s.id, s);
-                fetch("/api/admission/interviews", {
-                  method: "POST",
-                  headers: { "content-type": "application/json" },
-                  credentials: "include",
-                  body: JSON.stringify(s),
-                }).catch(() => {});
-              }
-            });
-            const merged = Array.from(map.values());
-            saveLocalData({ slots: merged });
-            return merged;
-          });
+          setSlots(interviewsData.slots);
+          saveLocalData({ slots: interviewsData.slots });
 
           // If any applicant in slots is missing from appsList, synthesize it so counts & lists are complete
           const existingIds = new Set(appsList.map((a) => a.id));
@@ -413,7 +415,34 @@ function InterviewsPage() {
           setDocTypes(interviewsData.docTypes);
           saveLocalData({ docTypes: interviewsData.docTypes });
         }
+        if (Array.isArray(interviewsData.staff) && interviewsData.staff.length > 0) {
+          setStaffList(interviewsData.staff);
+        }
       }
+
+      // Also dynamically fetch current teachers / staff directory
+      fetch("/api/teachers?all=true", { credentials: "include" })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setStaffList((prev) => {
+              const map = new Map<string, StaffMember>();
+              prev.forEach((s) => map.set(s.name, s));
+              data.forEach((t: any) => {
+                if (t.name) {
+                  map.set(t.name, {
+                    id: t.id || t.userId,
+                    name: t.name,
+                    nameUrdu: t.nameUrdu,
+                    designation: t.designation,
+                  });
+                }
+              });
+              return Array.from(map.values());
+            });
+          }
+        })
+        .catch(() => {});
 
       setApplications(appsList);
       if (appsList.length > 0) {
@@ -428,6 +457,19 @@ function InterviewsPage() {
     void loadData(false);
   }, [loadData]);
 
+  // Pre-select applicant and auto-open new interview modal if navigated with query params
+  useEffect(() => {
+    if (searchParams.appId || searchParams.refNo) {
+      const candidate = applications.find(
+        (a) => a.id === searchParams.appId || a.refNo === (searchParams.refNo || searchParams.appId),
+      );
+      if (candidate) {
+        setSelectedAppId(candidate.id);
+        setNewSlotOpen(true);
+      }
+    }
+  }, [searchParams.appId, searchParams.refNo, applications]);
+
   const accepted = useMemo(
     () => applications.filter((a) => a.status === "accepted"),
     [applications],
@@ -439,7 +481,8 @@ function InterviewsPage() {
         (a) =>
           a.status === "pending" ||
           a.status === "interview_scheduled" ||
-          a.status === "under_review",
+          a.status === "under_review" ||
+          a.status === "documents_pending",
       ),
     [applications],
   );
@@ -987,6 +1030,10 @@ function InterviewsPage() {
   // Candidates available for scheduling in modal
   const candidatesForDialog = useMemo(() => {
     let list = pending;
+    if (selectedAppId && !list.some((a) => a.id === selectedAppId)) {
+      const selected = applications.find((a) => a.id === selectedAppId);
+      if (selected) list = [selected, ...list];
+    }
     if (candidateFilter === "website") {
       list = list.filter((a) => a.source === "public");
     }
@@ -1001,7 +1048,7 @@ function InterviewsPage() {
       );
     }
     return list;
-  }, [pending, candidateFilter, candidateSearch]);
+  }, [pending, applications, selectedAppId, candidateFilter, candidateSearch]);
 
   // Filtered slots for table
   const filteredSlots = useMemo(() => {
@@ -1327,11 +1374,17 @@ function InterviewsPage() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {INTERVIEWERS.map((i) => (
-                                    <SelectItem key={i} value={i}>
-                                      {i}
-                                    </SelectItem>
-                                  ))}
+                                  {(() => {
+                                    const hasCurrent = staffList.some((m) => m.name === s.interviewer);
+                                    const list = hasCurrent
+                                      ? staffList
+                                      : [{ id: s.interviewer, name: s.interviewer, nameUrdu: s.interviewer }, ...staffList];
+                                    return list.map((i) => (
+                                      <SelectItem key={i.id || i.name} value={i.name}>
+                                        {isUrdu && i.nameUrdu ? i.nameUrdu : i.name}
+                                      </SelectItem>
+                                    ));
+                                  })()}
                                 </SelectContent>
                               </Select>
                             </TableCell>
@@ -1918,18 +1971,36 @@ function InterviewsPage() {
                         </div>
 
                         <div className="flex justify-between items-center gap-2 mt-4 pt-4 border-t flex-wrap">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5"
-                            onClick={() => {
-                              setSelectedAppId(a.id);
-                              setNewSlotOpen(true);
-                            }}
-                          >
-                            <CalendarClock className="h-3.5 w-3.5" />
-                            <span>{isUrdu ? "انٹرویو شیڈول کریں" : "Schedule Interview"}</span>
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => {
+                                setSelectedAppId(a.id);
+                                setNewSlotOpen(true);
+                              }}
+                            >
+                              <CalendarClock className="h-3.5 w-3.5 text-primary" />
+                              <span>{isUrdu ? "انٹرویو شیڈول کریں" : "Schedule Interview"}</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                              onClick={async () => {
+                                await handleUpdateApplicationStatus(a.id, "documents_pending");
+                                toast.info(
+                                  isUrdu
+                                    ? "امیدوار کو دستاویزات کی جانچ پڑتال کے عمل میں رکھا گیا ہے"
+                                    : "Applicant placed in document verification process",
+                                );
+                              }}
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              <span>{isUrdu ? "دستاویزات کی کمی / جانچ میں رکھیں" : "Place in Docs Verification"}</span>
+                            </Button>
+                          </div>
 
                           <div className="flex gap-2">
                             {a.status === "accepted" ? (
@@ -1963,38 +2034,21 @@ function InterviewsPage() {
                                 </Button>
                                 <Button
                                   size="sm"
+                                  className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
                                   disabled={!verified}
                                   onClick={async () => {
-                                    try {
-                                      const res = await fetch(
-                                        `/api/admission/applications/${a.id}/status`,
-                                        {
-                                          method: "PATCH",
-                                          headers: { "content-type": "application/json" },
-                                          credentials: "include",
-                                          body: JSON.stringify({ status: "interview_scheduled" }),
-                                        },
-                                      );
-                                      if (res.ok) {
-                                        setApplications((prev) =>
-                                          prev.map((item) =>
-                                            item.id === a.id
-                                              ? { ...item, status: "interview_scheduled" }
-                                              : item,
-                                          ),
-                                        );
-                                      }
-                                    } catch {
-                                      // fallback
-                                    }
+                                    await handleUpdateApplicationStatus(a.id, "interview_scheduled");
+                                    setSelectedAppId(a.id);
+                                    setNewSlotOpen(true);
                                     toast.success(
                                       isUrdu
-                                        ? `${a.nameUrdu || a.name} کے دستاویزات منظور ہو گئے اور محفوظ ہیں`
-                                        : `${a.name} cleared for admission and saved`,
+                                        ? "دستاویزات کی تصدیق مکمل! اب انٹرویو سلاٹ اور ممتحن تفویض کریں۔"
+                                        : "Documents verified! Now allocate interviewer and slot.",
                                     );
                                   }}
                                 >
-                                  {isUrdu ? "دستاویزات منظور کریں" : "Approve Documents"}
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  <span>{isUrdu ? "دستاویزات مکمل — انٹرویو کے لیے بھیجیں" : "Documents Complete — Schedule Interview"}</span>
                                 </Button>
                               </>
                             )}
@@ -2225,16 +2279,21 @@ function InterviewsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-xs font-medium text-foreground">
-                  {isUrdu ? "انٹرویو لینے والا ممتحن" : "Interviewer"} *
+                  {isUrdu ? "انٹرویو لینے والا ممتحن (اسٹاف)" : "Staff Interviewer"} *
                 </label>
                 <Select value={newInterviewer} onValueChange={setNewInterviewer}>
                   <SelectTrigger className="h-9 text-xs">
-                    <SelectValue />
+                    <SelectValue placeholder={isUrdu ? "اسٹاف سے ممتحن منتخب کریں" : "Select interviewer from staff"} />
                   </SelectTrigger>
-                  <SelectContent>
-                    {INTERVIEWERS.map((i) => (
-                      <SelectItem key={i} value={i}>
-                        {i}
+                  <SelectContent className="max-h-[220px]">
+                    {staffList.map((i) => (
+                      <SelectItem key={i.id || i.name} value={i.name}>
+                        <div className="flex items-center justify-between gap-3 w-full">
+                          <span className="font-urdu font-medium">{isUrdu && i.nameUrdu ? i.nameUrdu : i.name}</span>
+                          {i.designation && (
+                            <span className="text-[10px] text-muted-foreground">({i.designation})</span>
+                          )}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -2454,6 +2513,51 @@ function InterviewsPage() {
                   className="text-xs resize-none"
                 />
               </div>
+              {/* Pipeline Quick Advance for Passed candidates */}
+              {evalStatus === "passed" && (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>{isUrdu ? "اگلا مرحلہ: داخلہ پائپ لائن میں پیشرفت" : "Next Intake Pipeline Stage"}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {isUrdu
+                      ? "انٹرویو کامیاب ہونے کے بعد امیدوار کو دستاویزات کی تصدیق یا براہِ راست داخلہ میں منتقل کریں:"
+                      : "Candidate has passed. Select pipeline progression stage:"}
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7 border-emerald-600/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/40"
+                      onClick={async () => {
+                        await handleSaveEvaluation();
+                        if (evaluationSlot) {
+                          await handleUpdateApplicationStatus(evaluationSlot.appId, "documents_pending");
+                        }
+                      }}
+                    >
+                      <FileCheck2 className="h-3.5 w-3.5 me-1" />
+                      {isUrdu ? "دستاویزات کی تصدیق پر منتقل کریں" : "Move to Document Verification"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="text-xs h-7 bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={async () => {
+                        await handleSaveEvaluation();
+                        if (evaluationSlot) {
+                          await handleUpdateApplicationStatus(evaluationSlot.appId, "accepted");
+                        }
+                      }}
+                    >
+                      <Check className="h-3.5 w-3.5 me-1" />
+                      {isUrdu ? "حتمی داخلہ منظور کریں (رول نمبر جاری)" : "Approve Official Enrollment"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

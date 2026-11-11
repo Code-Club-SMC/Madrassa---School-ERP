@@ -146,7 +146,8 @@ function AdmissionProgressDashboard() {
     const total = scopedApps.length;
     const pending = scopedApps.filter((a) => a.status === "pending").length;
     const underReview = scopedApps.filter((a) => a.status === "under_review").length;
-    const interviews = scopedApps.filter((a) => a.status === "interview_scheduled").length;
+    const intakeReceived = pending + underReview;
+    const interviews = scopedApps.filter((a) => a.status === "interview_scheduled" || a.status === "interview_completed").length;
     const docsPending = scopedApps.filter((a) => a.status === "documents_pending").length;
     const waitlisted = scopedApps.filter((a) => a.status === "waitlisted").length;
     const accepted = scopedApps.filter((a) => a.status === "accepted").length;
@@ -155,7 +156,7 @@ function AdmissionProgressDashboard() {
     const madrassaCount = scopedApps.filter((a) => a.system === "madrassa").length;
     const schoolCount = scopedApps.filter((a) => a.system === "school").length;
 
-    const activeProcessing = pending + underReview;
+    const activeProcessing = intakeReceived;
     const inEvaluation = interviews + docsPending;
     const conversionRate = total > 0 ? Math.round((accepted / total) * 100) : 0;
 
@@ -163,6 +164,7 @@ function AdmissionProgressDashboard() {
       total,
       pending,
       underReview,
+      intakeReceived,
       interviews,
       docsPending,
       waitlisted,
@@ -176,53 +178,45 @@ function AdmissionProgressDashboard() {
     };
   }, [scopedApps]);
 
-  // Stage Progression Chart Data (Stage 1 is pending/received, Stage 2 is under review)
+  // Stage Progression Chart Data (5 Core Stages matching pipeline workflow)
   const stageChartData = useMemo(() => {
     return [
       {
-        stageKey: "pending",
-        name: isUrdu ? "موصولہ" : "Received",
-        fullName: isUrdu ? "1. نئی موصولہ درخواستیں" : "1. Intake Received",
-        count: metrics.pending,
-        pct: metrics.total > 0 ? Math.round((metrics.pending / metrics.total) * 100) : 0,
+        stageKey: "intake_received",
+        name: isUrdu ? "موصولہ / زیر جائزہ" : "Intake Received",
+        fullName: isUrdu ? "1. Intake Received (Pending / Under Review)" : "1. Intake Received (Pending / Under Review)",
+        count: metrics.intakeReceived,
+        pct: metrics.total > 0 ? Math.round((metrics.intakeReceived / metrics.total) * 100) : 0,
         fill: "#f59e0b",
       },
       {
-        stageKey: "review",
-        name: isUrdu ? "زیرِ جائزہ" : "In Review",
-        fullName: isUrdu ? "2. زیرِ جائزہ درخواستیں" : "2. In Review",
-        count: metrics.underReview,
-        pct: metrics.total > 0 ? Math.round((metrics.underReview / metrics.total) * 100) : 0,
-        fill: "#f97316",
-      },
-      {
         stageKey: "interview",
-        name: isUrdu ? "انٹرویو" : "Interview",
-        fullName: isUrdu ? "3. انٹرویو اور امتحانی مرحلہ" : "3. Interview & Assessment",
+        name: isUrdu ? "انٹرویو و اسسمنٹ" : "Interview Stage",
+        fullName: isUrdu ? "2. Interview & Assessment Stage" : "2. Interview & Assessment Stage",
         count: metrics.interviews,
         pct: metrics.total > 0 ? Math.round((metrics.interviews / metrics.total) * 100) : 0,
         fill: "#3b82f6",
       },
       {
         stageKey: "docs",
-        name: isUrdu ? "دستاویزات" : "Docs",
-        fullName: isUrdu ? "4. دستاویزات کی تصدیق" : "4. Document Verification",
+        name: isUrdu ? "دستاویزات کی تصدیق" : "Document Verification",
+        fullName: isUrdu ? "3. Document Verification" : "3. Document Verification",
         count: metrics.docsPending,
         pct: metrics.total > 0 ? Math.round((metrics.docsPending / metrics.total) * 100) : 0,
         fill: "#a855f7",
       },
       {
         stageKey: "waitlist",
-        name: isUrdu ? "ویٹ لسٹ" : "Waitlist",
-        fullName: isUrdu ? "5. نشستوں کے منتظر (ویٹ لسٹ)" : "5. Waitlisted Applicants",
+        name: isUrdu ? "ویٹ لسٹ" : "Waitlisted",
+        fullName: isUrdu ? "4. Waitlisted Applicants" : "4. Waitlisted Applicants",
         count: metrics.waitlisted,
         pct: metrics.total > 0 ? Math.round((metrics.waitlisted / metrics.total) * 100) : 0,
         fill: "#fb7185",
       },
       {
         stageKey: "accepted",
-        name: isUrdu ? "داخلہ منظور" : "Enrolled",
-        fullName: isUrdu ? "6. باضابطہ داخلہ (رول نمبر جاری)" : "6. Officially Enrolled",
+        name: isUrdu ? "باضابطہ داخلہ" : "Official Enrollment",
+        fullName: isUrdu ? "5. Official Enrollment (Roll # Issued)" : "5. Official Enrollment (Roll # Issued)",
         count: metrics.accepted,
         pct: metrics.conversionRate,
         fill: "#10b981",
@@ -635,19 +629,19 @@ function AdmissionProgressDashboard() {
               <div>
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-primary" />
-                  <span>{isUrdu ? "داخلہ مراحل کا فلو چارٹ" : "Intake Pipeline Stage Progression"}</span>
+                  <span>{isUrdu ? "داخلہ مراحل کا فلو چارٹ" : "Intake Pipeline Progress"}</span>
                 </CardTitle>
                 <CardDescription className="text-xs">
                   {isUrdu
-                    ? "درخواست جمع کرانے سے حتمی داخلہ تک ہر مرحلے کے درست اعداد و شمار"
-                    : "Stage-by-stage intake counts, conversion ratios, and pipeline movement"}
+                    ? "درخواست جمع کرانے سے باضابطہ داخلہ تک مرحلہ وار پیشرفت"
+                    : "Stage-by-stage progression from submission to official enrollment"}
                 </CardDescription>
               </div>
 
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="gap-1 font-mono text-xs">
                   <TrendingUp className="h-3 w-3 text-emerald-500" />
-                  {metrics.conversionRate}% {isUrdu ? "کامیابی شرح" : "Enrollment Rate"}
+                  {metrics.conversionRate}% {isUrdu ? "کامیابی شرح" : "Success"}
                 </Badge>
 
                 {/* View Mode Toggle */}
@@ -709,7 +703,7 @@ function AdmissionProgressDashboard() {
                 </div>
 
                 {/* Stage Legend Indicators */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 border-t border-border/50 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2 border-t border-border/50 text-center">
                   {stageChartData.map((s) => (
                     <div key={s.stageKey} className="p-1.5 rounded-md bg-muted/30 border border-border/40">
                       <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-muted-foreground">

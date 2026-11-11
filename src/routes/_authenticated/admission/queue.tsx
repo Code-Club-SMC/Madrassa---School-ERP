@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Check, X, Eye, Inbox, Loader2 } from "lucide-react";
+import { Search, Check, X, Eye, Inbox, Loader2, CalendarClock } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -83,6 +83,7 @@ const openStatuses: ApplicationStatus[] = [
 ];
 
 function QueuePage() {
+  const navigate = useNavigate();
   const [list, setList] = useState<Application[]>([]);
   const [tab, setTab] = useState<QueueTab>("pending");
   const [q, setQ] = useState("");
@@ -97,6 +98,29 @@ function QueuePage() {
   const [reject, setReject] = useState<Application | null>(null);
   const [reason, setReason] = useState("");
   const [creds, setCreds] = useState<ParentCreds | null>(null);
+
+  const handleScheduleInterview = async (application: Application) => {
+    try {
+      await fetch(`/api/admission/applications/${application.id}/status`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          status: "interview_scheduled",
+          message: "Moved from queue to interview and assessment stage",
+        }),
+      });
+      toast.success(`${application.nameUrdu || application.name} کو انٹرویو مرحلے میں منتقل کر دیا گیا — ممتحن اور وقت مختص کریں`);
+      setView(null);
+      setAccepting(null);
+      navigate({
+        to: "/admission/interviews",
+        search: { appId: application.id, refNo: application.refNo, autoOpen: true },
+      });
+    } catch {
+      toast.error("انٹرویو مرحلے میں منتقل کرنے میں ناکامی");
+    }
+  };
 
   const loadApplications = useCallback(async () => {
     setLoading(true);
@@ -291,9 +315,25 @@ function QueuePage() {
                 <TableCell className="text-end" onClick={(e) => e.stopPropagation()}>
                   {openStatuses.includes(a.status) ? (
                     <div className="flex justify-end gap-1">
-                      <Button size="sm" variant="outline" className="h-8" onClick={() => setView(a)}><Eye className="h-3.5 w-3.5" /></Button>
-                      <Button size="sm" className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => void openAcceptDialog(a)}><Check className="h-3.5 w-3.5" />منظور</Button>
-                      <Button size="sm" variant="outline" className="h-8 gap-1 text-destructive border-destructive/30" onClick={() => setReject(a)}><X className="h-3.5 w-3.5" />مسترد</Button>
+                      <Button size="sm" variant="outline" className="h-8" onClick={() => setView(a)} title="تفصیل دیکھیں">
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-1 border-blue-500/40 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-urdu"
+                        onClick={() => void handleScheduleInterview(a)}
+                        title="انٹرویو شیڈول کریں"
+                      >
+                        <CalendarClock className="h-3.5 w-3.5" />
+                        <span>انٹرویو</span>
+                      </Button>
+                      <Button size="sm" className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-urdu" onClick={() => void openAcceptDialog(a)}>
+                        <Check className="h-3.5 w-3.5" />منظور
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1 text-destructive border-destructive/30 font-urdu" onClick={() => setReject(a)}>
+                        <X className="h-3.5 w-3.5" />مسترد
+                      </Button>
                     </div>
                   ) : (
                     <StatusBadge status={a.status} />
