@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
   ensureInventoryLoaded,
+  getInventoryItems,
   listInventoryItems,
   getInventorySummary,
   saveInventoryItem,
@@ -10,6 +11,12 @@ import {
 describe("Inventory Service Persistence and Summary", () => {
   it("loads inventory items with default seed or persisted data", async () => {
     const items = await ensureInventoryLoaded();
+    expect(Array.isArray(items)).toBe(true);
+    expect(items.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it("fetches async inventory items cleanly", async () => {
+    const items = await getInventoryItems();
     expect(Array.isArray(items)).toBe(true);
     expect(items.length).toBeGreaterThanOrEqual(8);
   });

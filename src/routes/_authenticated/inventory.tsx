@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { Search, Package, AlertTriangle, PackagePlus, Pencil, History, Trash2, X, Loader2 } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Search, Package, AlertTriangle, PackagePlus, Pencil, History, Trash2, X, Loader2, RefreshCw, Wallet, LayoutDashboard } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,63 +45,36 @@ function InventoryPage() {
     return inventoryItems;
   });
 
-  // Fetch persistent inventory from server on mount
-  useEffect(() => {
-    let mounted = true;
-    async function fetchInventory() {
-      try {
-        setLoading(true);
-        const res = await fetch("/api/inventory", { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          if (mounted && Array.isArray(data.items)) {
-            setItems((prevItems) => {
-              const serverIds = new Set(data.items.map((it: InventoryItem) => it.id));
-              // Preserve any items added locally that the server may not have seen yet
-              const localOnly = prevItems.filter((p) => !serverIds.has(p.id));
-              if (localOnly.length > 0) {
-                // Sync unsaved local items to server in background
-                localOnly.forEach((localItem) => {
-                  fetch("/api/inventory", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify(localItem),
-                  }).catch(() => {});
-                });
-                const combined = [...data.items, ...localOnly];
-                if (typeof window !== "undefined") {
-                  try {
-                    localStorage.setItem("inventory_items", JSON.stringify(combined));
-                  } catch {}
-                }
-                return combined;
-              }
-
-              if (typeof window !== "undefined") {
-                try {
-                  localStorage.setItem("inventory_items", JSON.stringify(data.items));
-                } catch {}
-              }
-              return data.items;
-            });
+  // Fetch persistent inventory from server
+  const fetchInventory = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/inventory", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.items)) {
+          setItems(data.items);
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem("inventory_items", JSON.stringify(data.items));
+            } catch {}
           }
         }
-      } catch (err) {
-        console.error("Error loading inventory from server:", err);
-      } finally {
-        if (mounted) setLoading(false);
       }
+    } catch (err) {
+      console.error("Error loading inventory from server:", err);
+    } finally {
+      setLoading(false);
     }
-    fetchInventory();
-    return () => {
-      mounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    fetchInventory();
+  }, [fetchInventory]);
 
   // Sync to local storage
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && items.length > 0) {
       try {
         localStorage.setItem("inventory_items", JSON.stringify(items));
       } catch {}
@@ -190,9 +163,11 @@ function InventoryPage() {
       } else {
         const errJson = await res.json().catch(() => null);
         toast.error(errJson?.error || "Failed to save inventory item on server");
+        fetchInventory();
       }
     } catch {
       toast.error("Network error while saving inventory item");
+      fetchInventory();
     }
   }
 
@@ -216,9 +191,11 @@ function InventoryPage() {
         toast.success("Item deleted · آئٹم حذف کر دیا گیا");
       } else {
         toast.error("Failed to delete inventory item on server");
+        fetchInventory();
       }
     } catch {
       toast.error("Network error while deleting inventory item");
+      fetchInventory();
     }
   }
 
@@ -234,7 +211,34 @@ function InventoryPage() {
         titleUrdu="انوینٹری"
         description="Books, stationery, mosque and classroom assets."
         actions={
-          <Button size="sm" className="gap-1.5" onClick={recordStock}><PackagePlus className="h-3.5 w-3.5" />Record Stock</Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchInventory()}
+              disabled={loading}
+              className="gap-1.5"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+              <span>Refresh</span>
+            </Button>
+            <Button variant="outline" size="sm" asChild className="gap-1.5">
+              <Link to="/finance">
+                <Wallet className="h-3.5 w-3.5" />
+                <span>Finance · مالیات</span>
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild className="gap-1.5">
+              <Link to="/dashboard">
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                <span>Dashboard · ڈیش بورڈ</span>
+              </Link>
+            </Button>
+            <Button size="sm" className="gap-1.5" onClick={recordStock}>
+              <PackagePlus className="h-3.5 w-3.5" />
+              <span>Record Stock</span>
+            </Button>
+          </div>
         }
       />
 

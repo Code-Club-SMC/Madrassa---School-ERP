@@ -71,8 +71,9 @@ export async function ensureInventoryLoaded(): Promise<InventoryItem[]> {
       return mapped;
     }
 
-    // Database table is empty: seed default items
-    const seeded = [...defaultItems];
+    // Database table is empty: seed default items into DB and files
+    const fromFile = readFromFile();
+    const seeded = fromFile && fromFile.length > 0 ? fromFile : [...defaultItems];
     for (const item of seeded) {
       await db
         .insert(dbInventoryItems)
@@ -125,12 +126,44 @@ function loadStoredItemsSync(): InventoryItem[] {
   return memoryInventory;
 }
 
+export async function getInventoryItems(): Promise<InventoryItem[]> {
+  try {
+    const rows = await db
+      .select()
+      .from(dbInventoryItems)
+      .orderBy(desc(dbInventoryItems.createdAt));
+
+    if (rows && rows.length > 0) {
+      const mapped: InventoryItem[] = rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        nameUrdu: r.nameUrdu,
+        category: r.category,
+        quantity: r.quantity,
+        unit: r.unit,
+        type: r.type as InventoryItem["type"],
+        value: r.value,
+        lowStockThreshold: r.lowStockThreshold,
+      }));
+      memoryInventory = mapped;
+      writeToFile(mapped);
+      return mapped;
+    }
+
+    // Table is empty, seed and return
+    return await ensureInventoryLoaded();
+  } catch (err) {
+    console.warn("[InventoryService] Failed to query items from DB, falling back to cache/file:", err);
+    return loadStoredItemsSync();
+  }
+}
+
 export function listInventoryItems(): InventoryItem[] {
   return loadStoredItemsSync();
 }
 
-export function getInventorySummary() {
-  const items = loadStoredItemsSync();
+export function getInventorySummary(customItems?: InventoryItem[]) {
+  const items = customItems ?? loadStoredItemsSync();
   const totalValue = items.reduce((acc, it) => acc + (it.value || 0), 0);
   const purchasedValue = items
     .filter((it) => it.type === "purchased")
@@ -164,21 +197,7 @@ export function getInventorySummary() {
 }
 
 export async function saveInventoryItem(item: InventoryItem): Promise<InventoryItem> {
-  if (!memoryInventory) {
-    await ensureInventoryLoaded().catch(() => {});
-  }
-  const current = loadStoredItemsSync();
-  const index = current.findIndex((i) => i.id === item.id);
-  let updated: InventoryItem[];
-  if (index >= 0) {
-    updated = current.map((x) => (x.id === item.id ? item : x));
-  } else {
-    updated = [item, ...current];
-  }
-  memoryInventory = updated;
-  writeToFile(updated);
-
-  // Persist to database
+  // 1. Persist directly to PostgreSQL database
   try {
     await db
       .insert(dbInventoryItems)
@@ -209,26 +228,32 @@ export async function saveInventoryItem(item: InventoryItem): Promise<InventoryI
         },
       });
   } catch (err) {
-    console.warn("[InventoryService] Could not persist item to db (file backup preserved):", err);
+    console.error("[InventoryService] Failed to persist item to DB:", err);
   }
+
+  // 2. Concurrently update memory and file backup
+  const current = loadStoredItemsSync();
+  const index = current.findIndex((i) => i.id === item.id);
+  const updated = index >= 0 ? current.map((x) => (x.id === item.id ? item : x)) : [item, ...current];
+  memoryInventory = updated;
+  writeToFile(updated);
 
   return item;
 }
 
 export async function deleteInventoryItem(id: string): Promise<boolean> {
-  if (!memoryInventory) {
-    await ensureInventoryLoaded().catch(() => {});
+  // 1. Delete from PostgreSQL database
+  try {
+    await db.delete(dbInventoryItems).where(eq(dbInventoryItems.id, id));
+  } catch (err) {
+    console.error("[InventoryService] Failed to delete item from DB:", err);
   }
+
+  // 2. Concurrently update memory and file backup
   const current = loadStoredItemsSync();
   const updated = current.filter((i) => i.id !== id);
   memoryInventory = updated;
   writeToFile(updated);
-
-  try {
-    await db.delete(dbInventoryItems).where(eq(dbInventoryItems.id, id));
-  } catch (err) {
-    console.warn("[InventoryService] Could not delete item from db (file backup preserved):", err);
-  }
 
   return true;
 }

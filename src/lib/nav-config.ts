@@ -51,7 +51,7 @@ const SUPER_ADMINS: UserRole[] = ["super_admin"];
 const ADMINS: UserRole[] = ["super_admin", "admin"];
 const ADMISSION_ROLES: UserRole[] = ["super_admin", "admin", "admission_admin"];
 const ACADEMIC_ROLES: UserRole[] = ["super_admin", "admin", "academic_admin", "principal"];
-const FINANCE_ROLES: UserRole[] = ["super_admin", "admin", "finance_admin", "accountant"];
+const FINANCE_ROLES: UserRole[] = ["super_admin", "admin", "finance_admin", "accountant", "principal"];
 const HR_ROLES: UserRole[] = ["super_admin", "admin", "hr_admin", "hr_manager", "principal"];
 const REPORTS_ROLES: UserRole[] = [
   "super_admin",

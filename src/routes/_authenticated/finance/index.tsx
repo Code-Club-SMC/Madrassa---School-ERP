@@ -1,6 +1,6 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download, Printer, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download, Printer, Loader2, Package } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -374,6 +374,12 @@ function FinanceDashboard() {
             >
               <Download className="h-4 w-4" />
               {isUrdu ? "ایکسل برآمد" : "Export CSV"}
+            </Button>
+            <Button variant="outline" size="sm" asChild className="gap-1.5">
+              <Link to="/inventory">
+                <Package className="h-4 w-4" />
+                <span>{isUrdu ? "انوینٹری اسٹاک" : "Inventory"}</span>
+              </Link>
             </Button>
             <AddTxnDialog
               open={open}

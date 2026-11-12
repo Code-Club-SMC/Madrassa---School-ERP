@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   deleteInventoryItem,
-  ensureInventoryLoaded,
+  getInventoryItems,
   getInventorySummary,
-  listInventoryItems,
   saveInventoryItem,
 } from "@/lib/server/inventory/service";
 import { errorResponse } from "@/lib/server/http";
@@ -14,9 +13,8 @@ export const Route = createFileRoute("/api/inventory")({
     handlers: {
       GET: async () => {
         try {
-          await ensureInventoryLoaded();
-          const items = listInventoryItems();
-          const summary = getInventorySummary();
+          const items = await getInventoryItems();
+          const summary = getInventorySummary(items);
           return json({ items, summary });
         } catch (error) {
           return errorResponse(error, "Could not load inventory");
@@ -48,7 +46,8 @@ export const Route = createFileRoute("/api/inventory")({
           };
 
           const saved = await saveInventoryItem(item);
-          const summary = getInventorySummary();
+          const currentItems = await getInventoryItems();
+          const summary = getInventorySummary(currentItems);
           return json({ success: true, item: saved, summary }, 201);
         } catch (error) {
           return errorResponse(error, "Could not save inventory item");
@@ -60,7 +59,8 @@ export const Route = createFileRoute("/api/inventory")({
           const id = url.searchParams.get("id");
           if (!id) return json({ error: "Missing item id" }, 400);
           await deleteInventoryItem(id);
-          const summary = getInventorySummary();
+          const currentItems = await getInventoryItems();
+          const summary = getInventorySummary(currentItems);
           return json({ success: true, summary });
         } catch (error) {
           return errorResponse(error, "Could not delete inventory item");
