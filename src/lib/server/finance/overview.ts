@@ -597,6 +597,11 @@ export async function getFinanceOverview(request: Request) {
     b.date > a.date ? 1 : b.date < a.date ? -1 : 0,
   );
 
+  const totalDonationsReceived = Math.round(donationList.reduce((s, d) => s + d.amountPaisa, 0) / 100);
+  const totalZakat = Math.round(donationList.filter((d) => d.type === "zakat" || d.type === "fitra").reduce((s, d) => s + d.amountPaisa, 0) / 100);
+  const totalSadqa = Math.round(donationList.filter((d) => d.type === "sadqa" || d.type === "khairat").reduce((s, d) => s + d.amountPaisa, 0) / 100);
+  const totalGeneral = Math.round(donationList.filter((d) => d.type === "general").reduce((s, d) => s + d.amountPaisa, 0) / 100);
+
   return {
     kpis: {
       monthlyIncome,
@@ -613,6 +618,15 @@ export async function getFinanceOverview(request: Request) {
       madrassaAnnualExpense,
       openArrears,
       recoveryRate,
+      donationsTotal: totalDonationsReceived,
+    },
+    donationsSummary: {
+      totalReceived: totalDonationsReceived,
+      receiptsCount: donationList.length,
+      zakat: totalZakat,
+      sadqa: totalSadqa,
+      general: totalGeneral,
+      items: donationList.slice(0, 10),
     },
     dailyHistory,
     monthlyHistory,

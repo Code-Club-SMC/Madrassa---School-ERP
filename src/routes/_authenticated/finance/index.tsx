@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download, Printer, Loader2, Package, HandCoins } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download, Printer, Loader2, Package, HandCoins, Receipt, HeartHandshake } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -80,6 +81,15 @@ function FinanceDashboard() {
     madrassaAnnualExpense?: number;
     openArrears: number;
     recoveryRate: number;
+    donationsTotal?: number;
+  } | null>(null);
+
+  const [donationsSummary, setDonationsSummary] = useState<{
+    totalReceived: number;
+    receiptsCount: number;
+    zakat: number;
+    sadqa: number;
+    general: number;
   } | null>(null);
 
   const [scope, setScope] = useState<Scope>("both");
@@ -96,6 +106,7 @@ function FinanceDashboard() {
         if (Array.isArray(d.monthlyHistory)) setServerMonthly(d.monthlyHistory);
         if (Array.isArray(d.dailyHistory)) setServerDaily(d.dailyHistory);
         if (d.kpis) setServerKpis(d.kpis);
+        if (d.donationsSummary) setDonationsSummary(d.donationsSummary);
       }
     } catch {}
   }, []);
@@ -376,6 +387,12 @@ function FinanceDashboard() {
               {isUrdu ? "ایکسل برآمد" : "Export CSV"}
             </Button>
             <Button variant="outline" size="sm" asChild className="gap-1.5">
+              <Link to="/finance/donations">
+                <Receipt className="h-4 w-4" />
+                <span>{isUrdu ? "عطیات و زکوٰۃ" : "Donations"}</span>
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild className="gap-1.5">
               <Link to="/inventory">
                 <Package className="h-4 w-4" />
                 <span>{isUrdu ? "انوینٹری اسٹاک" : "Inventory"}</span>
@@ -457,6 +474,68 @@ function FinanceDashboard() {
           isUrdu={isUrdu}
         />
       </div>
+
+      {/* Donations, Zakat & Charity Fund Snapshot */}
+      {donationsSummary && (
+        <Card className="p-4 mb-4 border-emerald-500/25 bg-emerald-500/5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-emerald-500/20">
+            <div className="flex items-center gap-2">
+              <HeartHandshake className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div>
+                <h4 className={cn("font-heading font-semibold text-sm sm:text-base text-foreground", isUrdu && "font-urdu")}>
+                  {isUrdu ? "عطیات، زکوٰۃ و صدقات فنڈ — مالیاتی جائزہ" : "Donations, Zakat & Charity Fund Overview"}
+                </h4>
+                <p className={cn("text-xs text-muted-foreground", isUrdu && "font-urdu")}>
+                  {isUrdu
+                    ? `${donationsSummary.receiptsCount} رسیدات جاری ہوئیں · کل وصول شدہ عطیات: ${formatPKR(donationsSummary.totalReceived)}`
+                    : `${donationsSummary.receiptsCount} receipts issued · Total Received: ${formatPKR(donationsSummary.totalReceived)}`}
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" asChild className="gap-1.5 text-xs h-7 self-start sm:self-auto bg-background/90 hover:bg-background">
+              <Link to="/finance/donations">
+                <Receipt className="h-3.5 w-3.5" />
+                <span>{isUrdu ? "مکمل رسیدیں دیکھیں" : "View All Receipts"}</span>
+              </Link>
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-3">
+            <div className="p-2.5 rounded-lg bg-background/80 border border-emerald-500/20">
+              <span className="text-[11px] text-muted-foreground block truncate">
+                {isUrdu ? "کل موصولی" : "Total Received"}
+              </span>
+              <p className="font-heading font-bold text-sm sm:text-base text-emerald-600 dark:text-emerald-400 mt-0.5 tabular-nums">
+                {formatPKR(donationsSummary.totalReceived)}
+              </p>
+            </div>
+            <div className="p-2.5 rounded-lg bg-background/80 border border-blue-500/20">
+              <span className="text-[11px] text-blue-700 dark:text-blue-400 block truncate">
+                {isUrdu ? "زکوٰۃ فنڈ" : "Zakat Fund"}
+              </span>
+              <p className="font-heading font-bold text-sm sm:text-base text-blue-700 dark:text-blue-400 mt-0.5 tabular-nums">
+                {formatPKR(donationsSummary.zakat)}
+              </p>
+            </div>
+            <div className="p-2.5 rounded-lg bg-background/80 border border-border">
+              <span className="text-[11px] text-foreground block truncate">
+                {isUrdu ? "عمومی عطیات" : "General Donations"}
+              </span>
+              <p className="font-heading font-bold text-sm sm:text-base text-foreground mt-0.5 tabular-nums">
+                {formatPKR(donationsSummary.general)}
+              </p>
+            </div>
+            <div className="p-2.5 rounded-lg bg-background/80 border border-amber-500/20">
+              <span className="text-[11px] text-amber-700 dark:text-amber-400 block truncate">
+                {isUrdu ? "صدقات و خیرات" : "Sadqa & Khairat"}
+              </span>
+              <p className="font-heading font-bold text-sm sm:text-base text-amber-700 dark:text-amber-400 mt-0.5 tabular-nums">
+                {formatPKR(donationsSummary.sadqa)}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="p-5 mb-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
@@ -595,7 +674,14 @@ function FinanceDashboard() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className={cn("text-xs", isUrdu && "font-urdu")}>{categoryDisplay}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={cn("text-xs font-medium", isUrdu && "font-urdu")}>{categoryDisplay}</span>
+                        {r.id.startsWith("don-") && (
+                          <Badge variant="outline" className="text-[10px] py-0 px-1 border-emerald-500/30 text-emerald-700 bg-emerald-500/10 dark:text-emerald-400 font-mono">
+                            {isUrdu ? "عطیہ" : "Donation"}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className={cn("text-xs text-muted-foreground max-w-xs truncate", isUrdu && "font-urdu")}>
                       {descDisplay}
