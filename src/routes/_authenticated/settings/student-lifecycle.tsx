@@ -11,6 +11,7 @@ import {
   ExternalLink,
   FileText,
   GraduationCap,
+  HandCoins,
   History,
   IdCard,
   MapPin,
@@ -1009,9 +1010,18 @@ function StudentLifecyclePage() {
                   </div>
 
                   <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
-                    <span className="text-purple-700 dark:text-purple-400 block text-[11px]">
-                      {isUrdu ? "کل رعایات / معافی:" : "Total Concessions / Waived:"}
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-purple-700 dark:text-purple-400 block text-[11px]">
+                        {isUrdu ? "کل رعایات / معافی:" : "Total Concessions / Waived:"}
+                      </span>
+                      <Link
+                        to="/settings/concessions"
+                        className="text-purple-600 hover:text-purple-800 text-[10px] underline flex items-center gap-0.5"
+                        title={isUrdu ? "فیس رعایات کا انتظام کریں" : "Manage concessions"}
+                      >
+                        <HandCoins className="h-3 w-3" />
+                      </Link>
+                    </div>
                     <p className="font-bold text-sm font-mono mt-0.5 text-purple-700 dark:text-purple-300">
                       {formatPKR(archive.finance.summary.totalWaivedPaisa / 100)}
                     </p>

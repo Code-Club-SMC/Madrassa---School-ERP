@@ -96,6 +96,7 @@ import { Route as ApiFeesChargeAndCollectRouteImport } from './routes/api/fees/c
 import { Route as ApiFeesChargesRouteImport } from './routes/api/fees/charges'
 import { Route as ApiFeesPaymentsRouteImport } from './routes/api/fees/payments'
 import { Route as ApiFeesStudentsRouteImport } from './routes/api/fees/students'
+import { Route as ApiFinanceConcessionsRouteImport } from './routes/api/finance/concessions'
 import { Route as ApiFinanceDonationsRouteImport } from './routes/api/finance/donations'
 import { Route as ApiFinanceOverviewRouteImport } from './routes/api/finance/overview'
 import { Route as ApiFinanceReportsRouteImport } from './routes/api/finance/reports'
@@ -673,6 +674,11 @@ const ApiFeesPaymentsRoute = ApiFeesPaymentsRouteImport.update({
 const ApiFeesStudentsRoute = ApiFeesStudentsRouteImport.update({
   id: '/api/fees/students',
   path: '/api/fees/students',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFinanceConcessionsRoute = ApiFinanceConcessionsRouteImport.update({
+  id: '/api/finance/concessions',
+  path: '/api/finance/concessions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFinanceDonationsRoute = ApiFinanceDonationsRouteImport.update({
@@ -1348,6 +1354,7 @@ export interface FileRoutesByFullPath {
   '/api/fees/charges': typeof ApiFeesChargesRouteWithChildren
   '/api/fees/payments': typeof ApiFeesPaymentsRouteWithChildren
   '/api/fees/students': typeof ApiFeesStudentsRouteWithChildren
+  '/api/finance/concessions': typeof ApiFinanceConcessionsRoute
   '/api/finance/donations': typeof ApiFinanceDonationsRoute
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/finance/reports': typeof ApiFinanceReportsRoute
@@ -1532,6 +1539,7 @@ export interface FileRoutesByTo {
   '/api/fees/charges': typeof ApiFeesChargesRouteWithChildren
   '/api/fees/payments': typeof ApiFeesPaymentsRouteWithChildren
   '/api/fees/students': typeof ApiFeesStudentsRouteWithChildren
+  '/api/finance/concessions': typeof ApiFinanceConcessionsRoute
   '/api/finance/donations': typeof ApiFinanceDonationsRoute
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/finance/reports': typeof ApiFinanceReportsRoute
@@ -1727,6 +1735,7 @@ export interface FileRoutesById {
   '/api/fees/charges': typeof ApiFeesChargesRouteWithChildren
   '/api/fees/payments': typeof ApiFeesPaymentsRouteWithChildren
   '/api/fees/students': typeof ApiFeesStudentsRouteWithChildren
+  '/api/finance/concessions': typeof ApiFinanceConcessionsRoute
   '/api/finance/donations': typeof ApiFinanceDonationsRoute
   '/api/finance/overview': typeof ApiFinanceOverviewRoute
   '/api/finance/reports': typeof ApiFinanceReportsRoute
@@ -1922,6 +1931,7 @@ export interface FileRouteTypes {
     | '/api/fees/charges'
     | '/api/fees/payments'
     | '/api/fees/students'
+    | '/api/finance/concessions'
     | '/api/finance/donations'
     | '/api/finance/overview'
     | '/api/finance/reports'
@@ -2106,6 +2116,7 @@ export interface FileRouteTypes {
     | '/api/fees/charges'
     | '/api/fees/payments'
     | '/api/fees/students'
+    | '/api/finance/concessions'
     | '/api/finance/donations'
     | '/api/finance/overview'
     | '/api/finance/reports'
@@ -2300,6 +2311,7 @@ export interface FileRouteTypes {
     | '/api/fees/charges'
     | '/api/fees/payments'
     | '/api/fees/students'
+    | '/api/finance/concessions'
     | '/api/finance/donations'
     | '/api/finance/overview'
     | '/api/finance/reports'
@@ -2442,6 +2454,7 @@ export interface RootRouteChildren {
   ApiFeesChargesRoute: typeof ApiFeesChargesRouteWithChildren
   ApiFeesPaymentsRoute: typeof ApiFeesPaymentsRouteWithChildren
   ApiFeesStudentsRoute: typeof ApiFeesStudentsRouteWithChildren
+  ApiFinanceConcessionsRoute: typeof ApiFinanceConcessionsRoute
   ApiFinanceDonationsRoute: typeof ApiFinanceDonationsRoute
   ApiFinanceOverviewRoute: typeof ApiFinanceOverviewRoute
   ApiFinanceReportsRoute: typeof ApiFinanceReportsRoute
@@ -3098,6 +3111,13 @@ declare module '@tanstack/react-router' {
       path: '/api/fees/students'
       fullPath: '/api/fees/students'
       preLoaderRoute: typeof ApiFeesStudentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/finance/concessions': {
+      id: '/api/finance/concessions'
+      path: '/api/finance/concessions'
+      fullPath: '/api/finance/concessions'
+      preLoaderRoute: typeof ApiFinanceConcessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/finance/donations': {
@@ -4572,6 +4592,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFeesChargesRoute: ApiFeesChargesRouteWithChildren,
   ApiFeesPaymentsRoute: ApiFeesPaymentsRouteWithChildren,
   ApiFeesStudentsRoute: ApiFeesStudentsRouteWithChildren,
+  ApiFinanceConcessionsRoute: ApiFinanceConcessionsRoute,
   ApiFinanceDonationsRoute: ApiFinanceDonationsRoute,
   ApiFinanceOverviewRoute: ApiFinanceOverviewRoute,
   ApiFinanceReportsRoute: ApiFinanceReportsRoute,

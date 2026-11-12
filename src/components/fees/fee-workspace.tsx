@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle2, HandCoins, Phone, RefreshCw, Search, User, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -123,15 +124,23 @@ export function FeeWorkspace({ system, institutionId }: { system: FeeSystem; ins
         titleUrdu={titleUrdu}
         description="Collect and manage student fees"
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => void loadStudents()}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <Link to="/settings/concessions">
+                <HandCoins className="h-4 w-4" />
+                <span>{isUrdu ? "فیس رعایات" : "Fee Concessions"}</span>
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => void loadStudents()}
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>{isUrdu ? "تازہ کریں" : "Refresh"}</span>
+            </Button>
+          </div>
         }
       />
 

@@ -1,17 +1,24 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Award,
+  BookOpen,
   Building2,
   Check,
+  ExternalLink,
   Filter,
   GraduationCap,
+  HandCoins,
   HeartHandshake,
+  History,
   Loader2,
   Plus,
+  RefreshCw,
+  School,
   Search,
   Trash2,
   User,
+  Wallet,
   X,
 } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
@@ -263,27 +270,88 @@ function ConcessionsPage() {
   const isUrdu = lang === "ur";
   const [searchQuery, setSearchQuery] = useState("");
   const [systemFilter, setSystemFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
 
   const [items, setItems] = useState<Concession[]>(() => {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("fee_concessions");
-        if (saved) {
+        if (saved !== null) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed)) return parsed;
         }
       } catch {}
     }
-    return DEFAULT_CONCESSIONS;
+    return [];
   });
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("fee_concessions", JSON.stringify(items));
-      } catch {}
+  const loadConcessions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/finance/concessions", { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data?.concessions)) {
+          setItems(data.concessions);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("fee_concessions", JSON.stringify(data.concessions));
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch concessions:", err);
+    } finally {
+      setLoading(false);
     }
-  }, [items]);
+  }, []);
+
+  useEffect(() => {
+    loadConcessions();
+  }, [loadConcessions]);
+
+  const handleDelete = async (id: string) => {
+    const next = items.filter((x) => x.id !== id);
+    setItems(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("fee_concessions", JSON.stringify(next));
+    }
+    toast.success(isUrdu ? "رعایت ختم کر دی گئی" : "Concession removed");
+
+    try {
+      await fetch(`/api/finance/concessions?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Failed to delete concession on server:", err);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (
+      !window.confirm(
+        isUrdu
+          ? "کیا آپ واقعی تمام رعایات ختم کرنا چاہتے ہیں؟"
+          : "Are you sure you want to delete all concessions?",
+      )
+    ) {
+      return;
+    }
+    setItems([]);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("fee_concessions", JSON.stringify([]));
+    }
+    toast.success(isUrdu ? "تمام رعایات صاف کر دی گئیں" : "All concessions deleted");
+
+    try {
+      await fetch("/api/finance/concessions?all=true", {
+        method: "DELETE",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Failed to clear concessions on server:", err);
+    }
+  };
 
   const filteredItems = useMemo(() => {
     return items.filter((c) => {
@@ -320,12 +388,66 @@ function ConcessionsPage() {
             : "Manage fee waivers for orphans, hardship cases, sibling discounts and scholarships."
         }
         actions={
-          <AddConcessionDialog
-            onSave={(c) => {
-              setItems((p) => [c, ...p]);
-              toast.success(isUrdu ? "رعایت کامیابی سے شامل کر دی گئی" : "Concession added successfully");
-            }}
-          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button asChild variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Link to="/school/fees">
+                <School className="h-3.5 w-3.5" />
+                {isUrdu ? "اسکول فیس" : "School Fees"}
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Link to="/madrassa/fees">
+                <BookOpen className="h-3.5 w-3.5" />
+                {isUrdu ? "مدرسہ فیس" : "Madrassa Fees"}
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Link to="/finance">
+                <Wallet className="h-3.5 w-3.5" />
+                {isUrdu ? "مالیات" : "Finance"}
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Link to="/settings/student-lifecycle">
+                <History className="h-3.5 w-3.5" />
+                {isUrdu ? "سوانحِ طلبہ" : "Lifecycle"}
+              </Link>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => void loadConcessions()}
+              disabled={loading}
+              title={isUrdu ? "تازہ ترین ڈیٹا ریفریش کریں" : "Refresh data"}
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+              {isUrdu ? "تازہ کریں" : "Refresh"}
+            </Button>
+
+            {items.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={handleClearAll}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {isUrdu ? "تمام صاف کریں" : "Clear All"}
+              </Button>
+            )}
+
+            <AddConcessionDialog
+              onSave={(c) => {
+                setItems((p) => [c, ...p]);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("fee_concessions", JSON.stringify([c, ...items]));
+                }
+                toast.success(isUrdu ? "رعایت کامیابی سے شامل کر دی گئی" : "Concession added successfully");
+              }}
+            />
+          </div>
         }
       />
 
@@ -420,7 +542,16 @@ function ConcessionsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredItems.length === 0 ? (
+            {loading && items.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <span>{isUrdu ? "فیس رعایات لوڈ ہو رہی ہیں..." : "Loading fee concessions..."}</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : filteredItems.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                   {isUrdu
@@ -432,14 +563,21 @@ function ConcessionsPage() {
               filteredItems.map((c) => {
                 const waived = Math.round(((c.monthlyFeePaisa ?? 200000) * c.percent) / 100);
                 const reasonMeta = REASONS.find((r) => r.v === c.reason);
+                const isMadrassa = c.systemKey?.includes("madrassa") || c.systemName?.toLowerCase().includes("madrassa");
                 return (
                   <TableRow key={c.id}>
                     <TableCell>
                       <div className="space-y-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-sm">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Link
+                            to="/students/$id"
+                            params={{ id: c.studentId }}
+                            className="font-semibold text-sm hover:text-primary hover:underline transition-colors flex items-center gap-1"
+                            title={isUrdu ? "طالب علم کا پروفائل دیکھیں" : "View student profile"}
+                          >
                             {c.studentName ?? c.studentId}
-                          </span>
+                            <ExternalLink className="h-3 w-3 opacity-60" />
+                          </Link>
                           {c.rollNo && (
                             <Badge variant="secondary" className="text-[10px] py-0 px-1 font-mono">
                               {c.rollNo}
@@ -461,12 +599,40 @@ function ConcessionsPage() {
 
                     <TableCell>
                       <div className="space-y-0.5">
-                        <p className="text-xs font-medium">
-                          {isUrdu ? c.systemNameUrdu ?? c.systemName : c.systemName ?? "General"}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {isUrdu ? c.classNameUrdu ?? c.className : c.className ?? "—"}
-                        </p>
+                        {isMadrassa ? (
+                          <Link
+                            to="/madrassa/fees"
+                            className="text-xs font-medium hover:text-primary hover:underline block"
+                            title={isUrdu ? "مدرسہ فیس سیکشن دیکھیں" : "Open Madrassa Fees"}
+                          >
+                            {isUrdu ? c.systemNameUrdu ?? c.systemName : c.systemName ?? "General"}
+                          </Link>
+                        ) : (
+                          <Link
+                            to="/school/fees"
+                            className="text-xs font-medium hover:text-primary hover:underline block"
+                            title={isUrdu ? "اسکول فیس سیکشن دیکھیں" : "Open School Fees"}
+                          >
+                            {isUrdu ? c.systemNameUrdu ?? c.systemName : c.systemName ?? "General"}
+                          </Link>
+                        )}
+                        {isMadrassa ? (
+                          <Link
+                            to="/madrassa/categories"
+                            className="text-[11px] text-muted-foreground hover:text-foreground hover:underline block"
+                            title={isUrdu ? "مدرسہ کے زمرے دیکھیں" : "View Madrassa Categories"}
+                          >
+                            {isUrdu ? c.classNameUrdu ?? c.className : c.className ?? "—"}
+                          </Link>
+                        ) : (
+                          <Link
+                            to="/school/classes"
+                            className="text-[11px] text-muted-foreground hover:text-foreground hover:underline block"
+                            title={isUrdu ? "اسکول کلاسز دیکھیں" : "View School Classes"}
+                          >
+                            {isUrdu ? c.classNameUrdu ?? c.className : c.className ?? "—"}
+                          </Link>
+                        )}
                       </div>
                     </TableCell>
 
@@ -517,10 +683,8 @@ function ConcessionsPage() {
                         size="sm"
                         variant="ghost"
                         className="text-destructive hover:bg-destructive/10"
-                        onClick={() => {
-                          setItems((p) => p.filter((x) => x.id !== c.id));
-                          toast.success(isUrdu ? "رعایت ختم کر دی گئی" : "Concession removed");
-                        }}
+                        title={isUrdu ? "رعایت ختم کریں" : "Delete concession"}
+                        onClick={() => handleDelete(c.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -790,7 +954,7 @@ function AddConcessionDialog({ onSave }: { onSave: (c: Concession) => void }) {
     }));
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!form.studentId) {
       toast.error(isUrdu ? "طالب علم کا انتخاب لازمی ہے" : "Please select or enter a student");
       return;
@@ -798,8 +962,8 @@ function AddConcessionDialog({ onSave }: { onSave: (c: Concession) => void }) {
 
     const reasonMeta = REASONS.find((x) => x.v === form.reason) ?? REASONS[0];
 
-    onSave({
-      id: `c${Date.now()}`,
+    const newConcession: Concession = {
+      id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       studentId: form.studentId,
       studentName: selectedStudent?.name ?? form.studentId,
       studentNameUrdu: selectedStudent?.nameUrdu,
@@ -819,9 +983,21 @@ function AddConcessionDialog({ onSave }: { onSave: (c: Concession) => void }) {
       active: true,
       notes: form.notes,
       createdAt: new Date().toISOString(),
-    });
+    };
 
+    onSave(newConcession);
     setOpen(false);
+
+    try {
+      await fetch("/api/finance/concessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(newConcession),
+      });
+    } catch (err) {
+      console.error("Failed to save concession on server:", err);
+    }
   };
 
   return (

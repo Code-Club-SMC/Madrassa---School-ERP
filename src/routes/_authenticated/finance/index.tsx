@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download, Printer, Loader2, Package } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Percent, Plus, Download, Printer, Loader2, Package, HandCoins } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -379,6 +379,12 @@ function FinanceDashboard() {
               <Link to="/inventory">
                 <Package className="h-4 w-4" />
                 <span>{isUrdu ? "انوینٹری اسٹاک" : "Inventory"}</span>
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild className="gap-1.5">
+              <Link to="/settings/concessions">
+                <HandCoins className="h-4 w-4" />
+                <span>{isUrdu ? "فیس رعایات" : "Fee Concessions"}</span>
               </Link>
             </Button>
             <AddTxnDialog
