@@ -832,13 +832,11 @@ export async function getDashboardData(request: Request, filter: DashboardFilter
   const totalDonationsAmount = zakatAmount + sadqaAmount + generalAmount;
 
   // Real operational expenses (purchased inventory, payroll, utilities, mess, repairs)
-  const inventoryPurchasedValue = inventorySummary.purchasedValue || 90800;
-
-  let salariesAmount = isSchoolScope ? 151000 : isMadrassaScope ? 117000 : 332000;
-  let utilitiesAmount = isSchoolScope ? 22000 : isMadrassaScope ? 21400 : 43400;
-  let messAmount = isSchoolScope ? 0 : isMadrassaScope ? 90000 : 90000;
-  let maintenanceAmount = isSchoolScope ? 26000 : isMadrassaScope ? 10500 : 36500;
-  let inventoryExpenseAmount = isSchoolScope ? Math.round(inventoryPurchasedValue * 0.7) : isMadrassaScope ? Math.round(inventoryPurchasedValue * 0.3) : inventoryPurchasedValue;
+  let salariesAmount = 0;
+  let utilitiesAmount = 0;
+  let messAmount = 0;
+  let maintenanceAmount = 0;
+  let inventoryExpenseAmount = 0;
 
   let recordedExpenses: any[] = [];
   try {

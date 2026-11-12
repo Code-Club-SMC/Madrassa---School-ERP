@@ -197,37 +197,6 @@ export async function getFinanceOverview(request: Request) {
     }
   } catch {}
 
-  // 5b. Inventory items purchase expense
-  try {
-    const invFile = path.join(process.cwd(), "public", "inventory-items.json");
-    if (fs.existsSync(invFile)) {
-      const invRaw = fs.readFileSync(invFile, "utf-8");
-      const parsedInv = JSON.parse(invRaw);
-      if (Array.isArray(parsedInv)) {
-        parsedInv
-          .filter((it: any) => it.type === "purchased" && (it.value || 0) > 0)
-          .forEach((it: any) => {
-            const invId = `inv-${it.id}`;
-            expenseMap.set(invId, {
-              id: invId,
-              voucherNo: `INV-${it.id.slice(0, 8)}`,
-              date: it.lastRestocked || `${curYear}-${String(curMonth + 1).padStart(2, "0")}-15`,
-              amount: it.value || 0,
-              system: "both",
-              institutionId: "al_qasim_integrated",
-              category: "inventory",
-              categoryLabel: "Inventory Purchase",
-              categoryLabelUrdu: "سامان و اسٹاک کی خریداری",
-              description: `Inventory stock purchase: ${it.name} (${it.quantity} ${it.unit})`,
-              descriptionUrdu: `سامان و اسٹاک کی خریداری: ${it.nameUrdu || it.name}`,
-              partyName: it.name,
-              paymentMethod: "cash",
-            });
-          });
-      }
-    }
-  } catch {}
-
   // 5c. Database expenses (highest authority, overwrites backup copies)
   dbExpenses.forEach((e) => {
     expenseMap.set(e.id, {
