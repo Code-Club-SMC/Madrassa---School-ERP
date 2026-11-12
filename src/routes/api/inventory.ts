@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  deleteAllInventoryItems,
   deleteInventoryItem,
   getInventoryItems,
   getInventorySummary,
+  resetInventoryToDefaults,
   saveInventoryItem,
 } from "@/lib/server/inventory/service";
 import { errorResponse } from "@/lib/server/http";
@@ -23,6 +25,14 @@ export const Route = createFileRoute("/api/inventory")({
       POST: async ({ request }) => {
         try {
           const body = await request.json().catch(() => null);
+
+          // Support restoring default seed items
+          if (body?.action === "reset") {
+            const items = await resetInventoryToDefaults();
+            const summary = getInventorySummary(items);
+            return json({ success: true, items, summary });
+          }
+
           const rawName = body?.name ? String(body.name).trim() : "";
           const rawNameUrdu = body?.nameUrdu ? String(body.nameUrdu).trim() : "";
 
@@ -57,11 +67,18 @@ export const Route = createFileRoute("/api/inventory")({
         try {
           const url = new URL(request.url);
           const id = url.searchParams.get("id");
+          const all = url.searchParams.get("all") === "true" || id === "all";
+
+          if (all) {
+            await deleteAllInventoryItems();
+            return json({ success: true, items: [], summary: getInventorySummary([]) });
+          }
+
           if (!id) return json({ error: "Missing item id" }, 400);
           await deleteInventoryItem(id);
           const currentItems = await getInventoryItems();
           const summary = getInventorySummary(currentItems);
-          return json({ success: true, summary });
+          return json({ success: true, items: currentItems, summary });
         } catch (error) {
           return errorResponse(error, "Could not delete inventory item");
         }

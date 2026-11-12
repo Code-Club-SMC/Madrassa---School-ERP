@@ -6,27 +6,27 @@ import {
   getInventorySummary,
   saveInventoryItem,
   deleteInventoryItem,
+  deleteAllInventoryItems,
+  resetInventoryToDefaults,
 } from "./service";
 
 describe("Inventory Service Persistence and Summary", () => {
   it("loads inventory items with default seed or persisted data", async () => {
     const items = await ensureInventoryLoaded();
     expect(Array.isArray(items)).toBe(true);
-    expect(items.length).toBeGreaterThanOrEqual(8);
   });
 
   it("fetches async inventory items cleanly", async () => {
     const items = await getInventoryItems();
     expect(Array.isArray(items)).toBe(true);
-    expect(items.length).toBeGreaterThanOrEqual(8);
   });
 
   it("calculates inventory summary accurately", () => {
     const summary = getInventorySummary();
-    expect(summary.totalItems).toBeGreaterThanOrEqual(8);
-    expect(summary.totalValue).toBeGreaterThan(0);
-    expect(summary.purchasedValue).toBeGreaterThan(0);
-    expect(summary.totalUnits).toBeGreaterThan(0);
+    expect(typeof summary.totalItems).toBe("number");
+    expect(typeof summary.totalValue).toBe("number");
+    expect(typeof summary.purchasedValue).toBe("number");
+    expect(typeof summary.totalUnits).toBe("number");
   });
 
   it("saves a new inventory item and updates summary", async () => {
@@ -69,5 +69,31 @@ describe("Inventory Service Persistence and Summary", () => {
     const itemsAfterDelete = listInventoryItems();
     expect(itemsAfterDelete.some((i) => i.id === "inv-test-persist-1")).toBe(false);
   });
+
+  it("resets and clears inventory properly without unwanted resurrection", async () => {
+    // Reset to defaults
+    const defaults = await resetInventoryToDefaults();
+    expect(defaults.length).toBe(8);
+
+    const afterReset = await getInventoryItems();
+    expect(afterReset.length).toBe(8);
+
+    // Delete all items
+    const cleared = await deleteAllInventoryItems();
+    expect(cleared).toBe(true);
+
+    // Verify it stays 0 and does NOT re-seed on next query
+    const afterClear = await getInventoryItems();
+    expect(afterClear.length).toBe(0);
+
+    const summary = getInventorySummary(afterClear);
+    expect(summary.totalItems).toBe(0);
+    expect(summary.totalValue).toBe(0);
+
+    // Restore defaults for application usage
+    await resetInventoryToDefaults();
+    const restored = await getInventoryItems();
+    expect(restored.length).toBe(8);
+  }, 15000);
 });
 

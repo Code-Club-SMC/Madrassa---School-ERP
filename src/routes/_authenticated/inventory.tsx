@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Search, Package, AlertTriangle, PackagePlus, Pencil, History, Trash2, X, Loader2, RefreshCw, Wallet, LayoutDashboard } from "lucide-react";
+import { Search, Package, AlertTriangle, PackagePlus, Pencil, History, Trash2, X, Loader2, RefreshCw, Wallet, LayoutDashboard, RotateCcw } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,13 +36,13 @@ function InventoryPage() {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("inventory_items");
-        if (saved) {
+        if (saved !== null) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed)) return parsed;
         }
       } catch {}
     }
-    return inventoryItems;
+    return [];
   });
 
   // Fetch persistent inventory from server
@@ -74,7 +74,7 @@ function InventoryPage() {
 
   // Sync to local storage
   useEffect(() => {
-    if (typeof window !== "undefined" && items.length > 0) {
+    if (typeof window !== "undefined") {
       try {
         localStorage.setItem("inventory_items", JSON.stringify(items));
       } catch {}
@@ -102,8 +102,8 @@ function InventoryPage() {
 
   const totals = useMemo(() => ({
     items: items.length,
-    lowStock: items.filter((i) => i.quantity <= i.lowStockThreshold).length,
-    value: items.reduce((a, i) => a + i.value, 0),
+    lowStock: items.filter((i) => (Number(i.quantity) || 0) <= (Number(i.lowStockThreshold) || 0)).length,
+    value: items.reduce((a, i) => a + (Number(i.value) || 0), 0),
   }), [items]);
 
   function openEdit(it: InventoryItem) { setEditing(it); setDialogOpen(true); }
@@ -199,6 +199,66 @@ function InventoryPage() {
     }
   }
 
+  async function clearAll() {
+    if (!window.confirm("Are you sure you want to delete all inventory items? · کیا آپ تمام اشیاء حذف کرنا چاہتے ہیں؟")) {
+      return;
+    }
+    setItems([]);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("inventory_items", JSON.stringify([]));
+      } catch {}
+    }
+    try {
+      const res = await fetch("/api/inventory?all=true", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        toast.success("All inventory items deleted · تمام اشیاء حذف کر دی گئیں");
+      } else {
+        toast.error("Failed to clear inventory on server");
+        fetchInventory();
+      }
+    } catch {
+      toast.error("Network error while clearing inventory");
+      fetchInventory();
+    }
+  }
+
+  async function resetToDefaults() {
+    if (!window.confirm("Restore default sample inventory items? · کیا آپ ابتدائی نمونہ اشیاء بحال کرنا چاہتے ہیں؟")) {
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "reset" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.items)) {
+          setItems(data.items);
+          if (typeof window !== "undefined") {
+            try {
+              localStorage.setItem("inventory_items", JSON.stringify(data.items));
+            } catch {}
+          }
+        }
+        toast.success("Default sample items restored · نمونہ اشیاء بحال ہو گئیں");
+      } else {
+        toast.error("Failed to restore default sample items");
+      }
+    } catch {
+      toast.error("Network error while restoring sample items");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function recordStock() {
     setEditing({ id: "", name: "", nameUrdu: "", category: "Stationery", quantity: 1, unit: "pcs", type: "purchased", value: 0, lowStockThreshold: 5 });
     setDialogOpen(true);
@@ -222,6 +282,28 @@ function InventoryPage() {
               <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
               <span>Refresh</span>
             </Button>
+            {items.length > 0 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAll}
+                className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Clear All · تمام صاف کریں</span>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetToDefaults}
+                disabled={loading}
+                className="gap-1.5"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span>Sample Data · نمونہ ڈیٹا</span>
+              </Button>
+            )}
             <Button variant="outline" size="sm" asChild className="gap-1.5">
               <Link to="/finance">
                 <Wallet className="h-3.5 w-3.5" />
@@ -308,7 +390,43 @@ function InventoryPage() {
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="py-12"><EmptyState icon={Package} heading="No items" headingUrdu="کوئی اشیاء نہیں" /></TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={7} className="py-12">
+                  <EmptyState
+                    icon={Package}
+                    heading={items.length === 0 ? "No inventory items" : "No matching items"}
+                    headingUrdu={items.length === 0 ? "کوئی اشیاء موجود نہیں" : "کوئی مماثل اشیاء نہیں"}
+                    description={
+                      items.length === 0
+                        ? "All inventory items have been deleted or none recorded yet. You can add new stock or restore default sample items."
+                        : "Try adjusting your search query or filters to find what you are looking for."
+                    }
+                    descriptionUrdu={
+                      items.length === 0
+                        ? "تمام اشیاء حذف کر دی گئی ہیں یا ابھی تک کوئی درج نہیں ہوئی۔ آپ نیا اسٹاک درج کر سکتے ہیں یا نمونہ اشیاء بحال کر سکتے ہیں۔"
+                        : "مطلوبہ اشیاء تلاش کرنے کے لیے اپنے فلٹرز یا تلاش کے الفاظ تبدیل کریں۔"
+                    }
+                    action={
+                      items.length === 0 ? (
+                        <div className="flex items-center justify-center gap-2 mt-4">
+                          <Button size="sm" onClick={recordStock} className="gap-1.5">
+                            <PackagePlus className="h-4 w-4" />
+                            <span>Record Stock · نیا اسٹاک</span>
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={resetToDefaults} className="gap-1.5">
+                            <RotateCcw className="h-4 w-4" />
+                            <span>Sample Items · نمونہ اشیاء</span>
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="outline" onClick={clearFilters} className="mt-4">
+                          Clear Filters · فلٹرز ختم کریں
+                        </Button>
+                      )
+                    }
+                  />
+                </TableCell>
+              </TableRow>
             ) : filtered.map((i) => {
               const low = i.quantity <= i.lowStockThreshold;
               return (
