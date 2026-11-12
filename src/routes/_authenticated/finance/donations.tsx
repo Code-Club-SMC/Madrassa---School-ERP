@@ -56,13 +56,13 @@ function DonationsPage() {
     if (typeof window !== "undefined") {
       try {
         const stored = localStorage.getItem("msmis_donations");
-        if (stored !== null) {
+        if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) return parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
         }
       } catch {}
     }
-    return [];
+    return SEED;
   });
   const [open, setOpen] = useState(false);
   const [printId, setPrintId] = useState<string | null>(null);
@@ -75,10 +75,28 @@ function DonationsPage() {
         if (res.ok) {
           const data = await res.json();
           if (mounted && Array.isArray(data.donations)) {
-            setItems(data.donations);
-            try {
-              localStorage.setItem("msmis_donations", JSON.stringify(data.donations));
-            } catch {}
+            setItems((prev) => {
+              const map = new Map<string, Donation>();
+              // Server items take authoritative priority
+              data.donations.forEach((d: Donation) => map.set(d.id, d));
+              // Preserve any unsynced local items
+              prev.forEach((d: Donation) => {
+                if (!map.has(d.id)) {
+                  map.set(d.id, d);
+                  fetch("/api/finance/donations", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify(d),
+                  }).catch(() => {});
+                }
+              });
+              const merged = Array.from(map.values());
+              try {
+                localStorage.setItem("msmis_donations", JSON.stringify(merged));
+              } catch {}
+              return merged;
+            });
           }
         }
       } catch (err) {

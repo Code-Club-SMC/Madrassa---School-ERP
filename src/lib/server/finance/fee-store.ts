@@ -809,17 +809,83 @@ function buildInitialStoreData(): FeeStoreData {
   const now = new Date();
   const curYear = now.getFullYear();
   const curMonth = now.getMonth() + 1;
+  const prevMonth = curMonth === 1 ? 12 : curMonth - 1;
+  const prevYear = curMonth === 1 ? curYear - 1 : curYear;
+
+  const prevPeriod = `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
   const curPeriod = `${curYear}-${String(curMonth).padStart(2, "0")}`;
 
-  SEED_STUDENTS.forEach((student) => {
+  SEED_STUDENTS.forEach((student, idx) => {
     const monthlyFeePaisa =
       student.system === "madrassa"
         ? (student.madrassaSubcategoryFee ?? 2500) * 100
         : (student.schoolClassFee ?? 4500) * 100;
 
+    // 1. Previous month charge (Paid)
+    const prevChargeId = `chg-prev-${student.studentId}`;
+    const prevPayId = `pay-prev-${student.studentId}`;
+    const prevAllocId = `alc-prev-${student.studentId}`;
+    const prevDate = `${prevPeriod}-05T09:00:00.000Z`;
+    const prevDueDate = `${prevPeriod}-10T00:00:00.000Z`;
+    const receiptNo = `FR-${prevYear}-${String(1001 + idx).padStart(4, "0")}`;
+
+    charges.push({
+      id: prevChargeId,
+      studentId: student.studentId,
+      enrollmentId: student.enrollmentId,
+      institutionId: student.institutionId,
+      programId: student.programId,
+      schoolClassId: student.schoolClassId,
+      madrassaSubcategoryId: student.madrassaSubcategoryId,
+      type: "monthly",
+      label: `Monthly Fee (${prevPeriod})`,
+      period: prevPeriod,
+      amountPaisa: monthlyFeePaisa,
+      dueDate: prevDueDate,
+      status: "paid",
+      notes: "Regular monthly fee",
+      metadata: null,
+      createdByUserId: "super-admin",
+      reversedAt: null,
+      reversedByUserId: null,
+      createdAt: prevDate,
+      updatedAt: prevDate,
+    });
+
+    payments.push({
+      id: prevPayId,
+      receiptNo,
+      studentId: student.studentId,
+      enrollmentId: student.enrollmentId,
+      institutionId: student.institutionId,
+      amountPaisa: monthlyFeePaisa,
+      method: idx % 3 === 0 ? "bank" : idx % 3 === 1 ? "cash" : "online",
+      status: "posted",
+      receivedAt: `${prevPeriod}-08T10:30:00.000Z`,
+      receivedByUserId: "super-admin",
+      payerName: student.guardianName,
+      payerPhone: student.guardianPhone,
+      notes: "Paid on time",
+      metadata: { institutionId: student.institutionId, programId: student.programId },
+      reversedAt: null,
+      reversedByUserId: null,
+      createdAt: `${prevPeriod}-08T10:30:00.000Z`,
+      updatedAt: `${prevPeriod}-08T10:30:00.000Z`,
+    });
+
+    allocations.push({
+      id: prevAllocId,
+      paymentId: prevPayId,
+      chargeId: prevChargeId,
+      amountPaisa: monthlyFeePaisa,
+      createdAt: `${prevPeriod}-08T10:30:00.000Z`,
+    });
+
+    // 2. Current month charge (Paid for even indices, Open/Partial for odd indices so dues & collection can be tested!)
     const curChargeId = `chg-cur-${student.studentId}`;
     const curDate = `${curPeriod}-01T08:00:00.000Z`;
     const curDueDate = `${curPeriod}-10T00:00:00.000Z`;
+    const isPaid = idx % 2 === 0;
 
     charges.push({
       id: curChargeId,
@@ -834,7 +900,7 @@ function buildInitialStoreData(): FeeStoreData {
       period: curPeriod,
       amountPaisa: monthlyFeePaisa,
       dueDate: curDueDate,
-      status: "open", // All fees are initially unpaid
+      status: isPaid ? "paid" : "open",
       notes: "Current month tuition fee",
       metadata: null,
       createdByUserId: "super-admin",
@@ -843,6 +909,38 @@ function buildInitialStoreData(): FeeStoreData {
       createdAt: curDate,
       updatedAt: curDate,
     });
+
+    if (isPaid) {
+      const curPayId = `pay-cur-${student.studentId}`;
+      const curReceiptNo = `FR-${curYear}-${String(2001 + idx).padStart(4, "0")}`;
+      payments.push({
+        id: curPayId,
+        receiptNo: curReceiptNo,
+        studentId: student.studentId,
+        enrollmentId: student.enrollmentId,
+        institutionId: student.institutionId,
+        amountPaisa: monthlyFeePaisa,
+        method: idx % 4 === 0 ? "cash" : "bank",
+        status: "posted",
+        receivedAt: `${curPeriod}-05T11:00:00.000Z`,
+        receivedByUserId: "super-admin",
+        payerName: student.guardianName,
+        payerPhone: student.guardianPhone,
+        notes: "Current month fee received",
+        metadata: { institutionId: student.institutionId, programId: student.programId },
+        reversedAt: null,
+        reversedByUserId: null,
+        createdAt: `${curPeriod}-05T11:00:00.000Z`,
+        updatedAt: `${curPeriod}-05T11:00:00.000Z`,
+      });
+      allocations.push({
+        id: `alc-cur-${student.studentId}`,
+        paymentId: curPayId,
+        chargeId: curChargeId,
+        amountPaisa: monthlyFeePaisa,
+        createdAt: `${curPeriod}-05T11:00:00.000Z`,
+      });
+    }
   });
 
   return {

@@ -524,6 +524,14 @@ async function loadFeePaymentTransactions(): Promise<ComprehensiveTransaction[]>
     console.error("[ReportsService] Error reading finance-fee-payments.json:", err);
   }
 
+  if (filePayments.length === 0 && dbPayments.length === 0) {
+    const seeded = generateInitialFeePayments();
+    try {
+      fs.writeFileSync(FEE_FILE, JSON.stringify(seeded, null, 2), "utf-8");
+    } catch {}
+    filePayments = seeded;
+  }
+
   // Merge DB and file payments without duplicates
   const paymentMap = new Map<string, ComprehensiveTransaction>();
   filePayments.forEach((p) => paymentMap.set(p.id, p));
@@ -601,6 +609,14 @@ async function loadExpenseTransactions(): Promise<ComprehensiveTransaction[]> {
     console.error("[ReportsService] Error reading finance-expenses.json:", err);
   }
 
+  if (fileExpenses.length === 0 && dbExpenses.length === 0) {
+    const seeded = generateInitialExpenses();
+    try {
+      fs.writeFileSync(EXPENSES_FILE, JSON.stringify(seeded, null, 2), "utf-8");
+    } catch {}
+    fileExpenses = seeded;
+  }
+
   const map = new Map<string, ComprehensiveTransaction>();
   fileExpenses.forEach((e) => map.set(e.id || e.voucherNo, e));
   dbExpenses.forEach((e) => map.set(e.id || e.voucherNo, e));
@@ -609,7 +625,47 @@ async function loadExpenseTransactions(): Promise<ComprehensiveTransaction[]> {
 
 // Map inventory purchases to expense transactions
 function loadInventoryExpenseTransactions(): ComprehensiveTransaction[] {
-  return [];
+  try {
+    const items = listInventoryItems();
+    return items
+      .filter((item) => item.type === "purchased" && (item.value || 0) > 0)
+      .map((item) => {
+        const d = item.lastRestocked ? new Date(item.lastRestocked) : new Date();
+        const year = isNaN(d.getFullYear()) ? 2026 : d.getFullYear();
+        const month = isNaN(d.getMonth()) ? 5 : d.getMonth() + 1;
+        const dateStr = item.lastRestocked || `${year}-${String(month).padStart(2, "0")}-15`;
+
+        let category: TransactionCategory = "academic_materials";
+        if (item.category === "mess") category = "mess_kitchen";
+        else if (item.category === "furniture" || item.category === "it_equipment") category = "campus_maintenance";
+
+        const meta = CATEGORY_META[category];
+
+        return {
+          id: `tx-inv-${item.id}`,
+          voucherNo: `INV-PUR-${item.id.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8)}`,
+          date: dateStr,
+          month,
+          year,
+          type: "expense" as const,
+          category,
+          categoryLabel: meta.label,
+          categoryLabelUrdu: meta.labelUrdu,
+          description: `Inventory stock purchase: ${item.name} (${item.quantity} ${item.unit})`,
+          system: "both" as const,
+          systemLabel: "Al-Qasim Integrated Network",
+          partyName: item.name,
+          partyRole: "Vendor" as const,
+          paymentMethod: "cash" as const,
+          amount: item.value || 0,
+          status: "posted" as const,
+          reference: `INV-RESTOCK-${item.id}`,
+        };
+      });
+  } catch (err) {
+    console.error("[ReportsService] Error loading inventory expense items:", err);
+    return [];
+  }
 }
 
 // Master function: Returns all real report transactions

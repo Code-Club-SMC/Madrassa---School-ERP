@@ -75,7 +75,7 @@ function readFromFile(): Donation[] | null {
       if (fs.existsSync(filePath)) {
         const content = fs.readFileSync(filePath, "utf-8");
         const parsed = JSON.parse(content);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed as Donation[];
         }
       }
@@ -107,30 +107,88 @@ export async function ensureDonationsLoaded(): Promise<Donation[]> {
       .from(dbDonations)
       .orderBy(desc(dbDonations.createdAt));
 
-    const mapped: Donation[] = (rows || []).map((r) => ({
-      id: r.id,
-      receiptNo: r.receiptNo,
-      date: r.date,
-      donor: r.donor,
-      donorUrdu: r.donorUrdu || r.donor,
-      phone: r.phone || undefined,
-      cnic: r.cnic || undefined,
-      type: r.type as DonationType,
-      purpose: r.purpose,
-      amountPaisa: r.amountPaisa,
-      method: r.method as "cash" | "bank" | "online",
-    }));
+    if (rows && rows.length > 0) {
+      const mapped: Donation[] = rows.map((r) => ({
+        id: r.id,
+        receiptNo: r.receiptNo,
+        date: r.date,
+        donor: r.donor,
+        donorUrdu: r.donorUrdu || r.donor,
+        phone: r.phone || undefined,
+        cnic: r.cnic || undefined,
+        type: r.type as DonationType,
+        purpose: r.purpose,
+        amountPaisa: r.amountPaisa,
+        method: r.method as "cash" | "bank" | "online",
+      }));
 
-    memoryDonations = mapped;
-    writeToFile(mapped);
-    dbSyncAttempted = true;
-    return mapped;
-  } catch {
-    if (memoryDonations !== null) {
-      return memoryDonations;
+      // Merge with any file donations
+      const fromFile = readFromFile() || [];
+      const idMap = new Map<string, Donation>();
+      mapped.forEach((d) => idMap.set(d.id, d));
+      fromFile.forEach((d) => {
+        if (!idMap.has(d.id)) {
+          idMap.set(d.id, d);
+          db.insert(dbDonations)
+            .values({
+              id: d.id,
+              receiptNo: d.receiptNo,
+              date: d.date,
+              donor: d.donor,
+              donorUrdu: d.donorUrdu,
+              phone: d.phone,
+              cnic: d.cnic,
+              type: d.type,
+              purpose: d.purpose,
+              amountPaisa: d.amountPaisa,
+              method: d.method,
+            })
+            .onConflictDoNothing()
+            .catch(() => {});
+        }
+      });
+
+      const merged = Array.from(idMap.values());
+      memoryDonations = merged;
+      writeToFile(merged);
+      dbSyncAttempted = true;
+      return merged;
     }
+
+    // DB table empty: seed default items into DB and files
     const fromFile = readFromFile();
-    memoryDonations = fromFile ?? [];
+    const seeded = fromFile && fromFile.length > 0 ? fromFile : [...INITIAL_DONATIONS];
+    for (const d of seeded) {
+      await db
+        .insert(dbDonations)
+        .values({
+          id: d.id,
+          receiptNo: d.receiptNo,
+          date: d.date,
+          donor: d.donor,
+          donorUrdu: d.donorUrdu,
+          phone: d.phone,
+          cnic: d.cnic,
+          type: d.type,
+          purpose: d.purpose,
+          amountPaisa: d.amountPaisa,
+          method: d.method,
+        })
+        .onConflictDoNothing()
+        .catch(() => {});
+    }
+    memoryDonations = seeded;
+    writeToFile(seeded);
+    dbSyncAttempted = true;
+    return seeded;
+  } catch {
+    if (!memoryDonations) {
+      const fromFile = readFromFile();
+      memoryDonations = fromFile ?? [...INITIAL_DONATIONS];
+      if (!fromFile) {
+        writeToFile(memoryDonations);
+      }
+    }
     return memoryDonations;
   }
 }
@@ -141,27 +199,17 @@ if (!dbSyncAttempted) {
 }
 
 export function listDonations(): Donation[] {
-  if (memoryDonations !== null) {
+  if (memoryDonations && memoryDonations.length > 0) {
     return memoryDonations;
   }
   const fromFile = readFromFile();
-  if (fromFile !== null) {
+  if (fromFile && fromFile.length > 0) {
     memoryDonations = fromFile;
     return memoryDonations;
   }
-  memoryDonations = [];
+  memoryDonations = [...INITIAL_DONATIONS];
+  writeToFile(memoryDonations);
   return memoryDonations;
-}
-
-export async function deleteAllDonations(): Promise<boolean> {
-  try {
-    await db.delete(dbDonations);
-  } catch (err) {
-    console.error("[DonationsService] Failed to clear donations in DB:", err);
-  }
-  memoryDonations = [];
-  writeToFile([]);
-  return true;
 }
 
 export function saveDonation(

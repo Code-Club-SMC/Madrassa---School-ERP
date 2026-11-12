@@ -10,6 +10,7 @@ describe("Finance Reports & Real Data Aggregation", () => {
   it("loads realistic donations and saves new donations persistently", () => {
     const initial = listDonations();
     expect(Array.isArray(initial)).toBe(true);
+    expect(initial.length).toBeGreaterThan(0);
 
     // Save a new donation
     const created = saveDonation({
@@ -55,56 +56,50 @@ describe("Finance Reports & Real Data Aggregation", () => {
     expect(tx.partyRole).toBe("Donor");
   });
 
-  it("fetches comprehensive report transactions returning an array", async () => {
+  it("fetches comprehensive report transactions combining fees, donations, and expenses", async () => {
     const txs = await getComprehensiveReportTransactions();
     expect(Array.isArray(txs)).toBe(true);
+    expect(txs.length).toBeGreaterThan(0);
+
+    const incomeTxs = txs.filter((t) => t.type === "income");
+    const expenseTxs = txs.filter((t) => t.type === "expense");
+
+    expect(incomeTxs.length).toBeGreaterThan(0);
+    expect(expenseTxs.length).toBeGreaterThan(0);
+
+    // Check income has both student fees and donations
+    const feeTxs = incomeTxs.filter((t) => t.category.includes("fee"));
+    const donationTxs = incomeTxs.filter((t) => t.category.includes("donation"));
+
+    expect(feeTxs.length).toBeGreaterThan(0);
+    expect(donationTxs.length).toBeGreaterThan(0);
+
+    // Verify all transactions have valid required fields
+    for (const tx of txs.slice(0, 30)) {
+      expect(tx.id).toBeDefined();
+      expect(tx.voucherNo).toBeDefined();
+      expect(tx.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(tx.amount).toBeGreaterThan(0);
+      expect(tx.partyName).toBeDefined();
+    }
   });
 
-  it("filters and aggregates transactions by scope, period, and category", () => {
-    const sampleTxs = [
-      {
-        id: "tx-sample-1",
-        voucherNo: "REC-2026-0001",
-        date: "2026-05-10",
-        month: 5,
-        year: 2026,
-        type: "income" as const,
-        category: "school_tuition_fee" as const,
-        categoryLabel: "School Tuition Fee",
-        description: "Tuition",
-        system: "school" as const,
-        partyName: "Student A",
-        amount: 5000,
-      },
-      {
-        id: "tx-sample-2",
-        voucherNo: "REC-2026-0002",
-        date: "2026-05-15",
-        month: 5,
-        year: 2026,
-        type: "income" as const,
-        category: "donation_zakat" as const,
-        categoryLabel: "Zakat",
-        description: "Zakat Donation",
-        system: "madrassa" as const,
-        partyName: "Donor B",
-        amount: 25000,
-      },
-    ];
+  it("filters and aggregates real transactions by scope, period, and category", async () => {
+    const txs = await getComprehensiveReportTransactions();
 
     const schoolAnnual = filterTransactions({
-      transactions: sampleTxs,
+      transactions: txs,
       type: "income",
       scope: "school",
       period: "annually",
       year: 2026,
     });
-    expect(schoolAnnual.length).toBe(1);
+    expect(schoolAnnual.length).toBeGreaterThan(0);
     expect(schoolAnnual.every((t) => t.system === "school" || t.system === "both")).toBe(true);
 
     const categories = aggregateByCategory(schoolAnnual);
     expect(categories.length).toBeGreaterThan(0);
-    expect(categories[0].total).toBe(5000);
+    expect(categories[0].total).toBeGreaterThan(0);
 
     const monthly = aggregateByMonth(schoolAnnual);
     expect(monthly.length).toBe(12);

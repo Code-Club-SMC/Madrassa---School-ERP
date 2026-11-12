@@ -7,9 +7,15 @@ import {
 } from "./donations-service";
 
 describe("Finance Donations Service Persistence", () => {
-  it("loads existing donations cleanly", () => {
+  it("loads existing donations with seed or persisted items", () => {
     const list = listDonations();
     expect(Array.isArray(list)).toBe(true);
+    expect(list.length).toBeGreaterThanOrEqual(3);
+
+    const first = list[0];
+    expect(first.id).toBeDefined();
+    expect(first.receiptNo).toMatch(/^DR-\d{4}-\d+/);
+    expect(first.amountPaisa).toBeGreaterThan(0);
   });
 
   it("saves a new donation and persists it across reloads", () => {
@@ -42,11 +48,11 @@ describe("Finance Donations Service Persistence", () => {
 
   it("calculates donations summary metrics accurately", () => {
     const summary = getDonationsSummary();
-    expect(typeof summary.totalReceived).toBe("number");
-    expect(typeof summary.receiptsCount).toBe("number");
-    expect(typeof summary.zakat).toBe("number");
-    expect(typeof summary.sadqa).toBe("number");
-    expect(typeof summary.general).toBe("number");
+    expect(summary.totalReceived).toBeGreaterThan(0);
+    expect(summary.receiptsCount).toBeGreaterThanOrEqual(3);
+    expect(summary.zakat).toBeGreaterThanOrEqual(0);
+    expect(summary.sadqa).toBeGreaterThanOrEqual(0);
+    expect(summary.general).toBeGreaterThanOrEqual(0);
   });
 
   it("preserves multiple saved donations sequentially without overwriting", () => {
