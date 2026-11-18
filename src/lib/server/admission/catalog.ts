@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { programs, schoolClasses, madrassaSubcategories } from "@/db/schema/academic";
 import type { AdmissionVariantKey } from "@/lib/admission-variants";
