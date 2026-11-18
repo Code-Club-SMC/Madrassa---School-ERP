@@ -272,34 +272,27 @@ export async function seedAcademicCatalog() {
       });
   }
 
-  const existingSubcategoriesCount = await db
-    .select({ count: count() })
-    .from(madrassaSubcategories);
-  const hasSubcategories = Number(existingSubcategoriesCount[0]?.count ?? 0) > 0;
+  const catalogCategories = buildMadrassaCategories();
 
-  if (!hasSubcategories) {
-    const catalogCategories = buildMadrassaCategories();
-
-    for (const cat of catalogCategories) {
-      for (const sub of cat.subcategories) {
-        await db
-          .insert(madrassaSubcategories)
-          .values({
-            id: sub.id,
-            categoryId: cat.id,
-            name: sub.name,
-            nameUrdu: sub.nameUrdu,
-            rollPrefix: sub.rollPrefix,
-            darja: sub.darja ?? null,
-            govtEquivalent: sub.govtEquivalent ?? null,
-            durationYears: sub.durationYears,
-            fee: null,
-            displayOrder: sub.displayOrder ?? 0,
-            active: true,
-            section: sub.section ?? "male",
-          })
-          .onConflictDoNothing();
-      }
+  for (const cat of catalogCategories) {
+    for (const sub of cat.subcategories) {
+      await db
+        .insert(madrassaSubcategories)
+        .values({
+          id: sub.id,
+          categoryId: cat.id,
+          name: sub.name,
+          nameUrdu: sub.nameUrdu,
+          rollPrefix: sub.rollPrefix,
+          darja: sub.darja ?? null,
+          govtEquivalent: sub.govtEquivalent ?? null,
+          durationYears: sub.durationYears,
+          fee: null,
+          displayOrder: sub.displayOrder ?? 0,
+          active: true,
+          section: sub.section ?? "male",
+        })
+        .onConflictDoNothing();
     }
   }
 }

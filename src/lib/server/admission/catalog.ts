@@ -315,7 +315,7 @@ function variantAllowsSchoolClass(target: VariantTarget) {
   );
 }
 
-async function resolveMadrassaSubcategoryId(value: string | undefined, section: Section | null) {
+async function resolveMadrassaSubcategoryId(value: string | undefined, section: Section | null = null) {
   if (!value) return null;
 
   const expectedDbSections =

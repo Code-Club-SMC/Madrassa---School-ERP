@@ -26,7 +26,7 @@ export function useAuth() {
       ]);
       const data =
         response && typeof (response as { json?: unknown }).json === "function"
-          ? await (response as Response).json()
+          ? await (response as unknown as Response).json()
           : (response as { user?: User; error?: string } | null);
       const user = data?.user ? { ...data.user, role: data.user.role as UserRole } : null;
       setState({ user, isLoading: false });
@@ -41,7 +41,7 @@ export function useAuth() {
     const response = await loginServer({ data: { identifier, password } });
     const data =
       response && typeof (response as { json?: unknown }).json === "function"
-        ? await (response as Response).json()
+        ? await (response as unknown as Response).json()
         : (response as { user?: User; error?: string } | null);
     if (!data || data.error) {
       throw new Error(data?.error ?? "Login failed");
@@ -72,7 +72,7 @@ export function useAuth() {
       const response = await changePasswordServer({ data });
       const res =
         response && typeof (response as { json?: unknown }).json === "function"
-          ? await (response as Response).json()
+          ? await (response as unknown as Response).json()
           : (response as { success?: boolean; error?: string; message?: string } | null);
       if (!res || res.error) {
         throw new Error(res?.error ?? "Failed to change password");
@@ -87,7 +87,7 @@ export function useAuth() {
       const response = await updateProfileServer({ data });
       const res =
         response && typeof (response as { json?: unknown }).json === "function"
-          ? await (response as Response).json()
+          ? await (response as unknown as Response).json()
           : (response as { success?: boolean; error?: string; user?: User } | null);
       if (!res || res.error) {
         throw new Error(res?.error ?? "Failed to update profile");

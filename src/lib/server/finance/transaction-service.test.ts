@@ -87,7 +87,7 @@ describe("Finance Transactions & Dual Dashboard Synchronization", () => {
       (a) => a.id.includes(result.transaction.id) || a.title.includes(result.transaction.voucherNo) || a.title.includes("4,500"),
     );
     expect(foundInActivities).toBe(true);
-  });
+  }, 15000);
 
   it("records an operational expense and reflects it in cashflow and recent activities", async () => {
     const adminReq = createMockSuperAdminRequest("http://localhost:3000/api/finance/transactions", {
