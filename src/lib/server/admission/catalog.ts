@@ -50,16 +50,19 @@ export const variantTargets: Record<AdmissionVariantKey, VariantTarget> = {
     institutionId: "jamia_qasmia_baneen",
     programId: "qasmia_nazira",
     requiresMadrassaSubcategory: true,
+    defaultMadrassaSubcategoryId: "bn-nazira-1",
   },
   "madrassa-boys-hifz": {
     institutionId: "jamia_qasmia_baneen",
     programId: "qasmia_hifz",
     requiresMadrassaSubcategory: true,
+    defaultMadrassaSubcategoryId: "bn-hifz-1",
   },
   "madrassa-boys-general": {
     institutionId: "jamia_qasmia_baneen",
     programId: "qasmia_dars_nizami",
     requiresMadrassaSubcategory: true,
+    defaultMadrassaSubcategoryId: "dars_nizami-1-year-c9ff5ae9",
   },
   "madrassa-girls-general": {
     institutionId: "jamia_zainab_banat",
@@ -102,7 +105,7 @@ export async function resolveAdmissionTarget(
       null)
     : null;
 
-  const madrassaSubcategoryId = expectedMadrassaSection
+  let madrassaSubcategoryId = expectedMadrassaSection
     ? ((override.madrassaSubcategoryId
         ? (await resolveMadrassaSubcategoryId(override.madrassaSubcategoryId, expectedMadrassaSection)) ??
           (await resolveMadrassaSubcategoryId(override.madrassaSubcategoryId)) ??
@@ -121,6 +124,23 @@ export async function resolveAdmissionTarget(
 
   if (target.requiresSchoolClass && !schoolClassId) {
     throw new AdmissionError("A school class is required for school admissions · اسکول میں داخلے کے لیے جماعت منتخب کرنا لازمی ہے", 400);
+  }
+
+  if (target.requiresMadrassaSubcategory && !madrassaSubcategoryId) {
+    if (expectedMadrassaSection) {
+      const allowedSections =
+        expectedMadrassaSection === "baneen"
+          ? ["baneen", "male", "both", "all"]
+          : ["banat", "female", "both", "all"];
+      const [firstSubcat] = await db
+        .select({ id: madrassaSubcategories.id })
+        .from(madrassaSubcategories)
+        .where(inArray(madrassaSubcategories.section, allowedSections))
+        .limit(1);
+      if (firstSubcat) {
+        madrassaSubcategoryId = firstSubcat.id;
+      }
+    }
   }
 
   if (target.requiresMadrassaSubcategory && !madrassaSubcategoryId) {

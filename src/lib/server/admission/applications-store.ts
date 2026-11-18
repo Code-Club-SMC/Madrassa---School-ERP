@@ -552,7 +552,7 @@ function readFromFile(): StoredAdmissionApplication[] | null {
       if (fs.existsSync(p)) {
         const raw = fs.readFileSync(p, "utf-8");
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed as StoredAdmissionApplication[];
         }
       }
@@ -572,17 +572,28 @@ function writeToFile(apps: StoredAdmissionApplication[]): void {
 }
 
 export function loadStoredApplications(): StoredAdmissionApplication[] {
-  if (memoryApplications && memoryApplications.length > 0) {
+  if (memoryApplications !== null) {
     return memoryApplications;
   }
   const fromFile = readFromFile();
-  if (fromFile && fromFile.length > 0) {
+  if (fromFile !== null) {
     memoryApplications = fromFile;
     return memoryApplications;
   }
+  memoryApplications = [];
+  writeToFile(memoryApplications);
+  return memoryApplications;
+}
+
+export function seedCanonicalApplications(): StoredAdmissionApplication[] {
   memoryApplications = [...CANONICAL_SEED_APPLICATIONS];
   writeToFile(memoryApplications);
   return memoryApplications;
+}
+
+export function clearStoredApplications(): void {
+  memoryApplications = [];
+  writeToFile(memoryApplications);
 }
 
 export function saveStoredApplication(

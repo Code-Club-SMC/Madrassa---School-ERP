@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   listInterviews,
   createOrUpdateSlot,
+  clearAllSlots,
 } from "@/lib/server/admission/interviews-service";
 import { json, parseJsonBody } from "@/lib/server/super-admin";
 import { errorResponse } from "@/lib/server/http";
@@ -46,6 +47,14 @@ export const Route = createFileRoute("/api/admission/interviews")({
           return json({ slot }, 201);
         } catch (error) {
           return errorResponse(error, "Could not schedule interview");
+        }
+      },
+      DELETE: async () => {
+        try {
+          const success = await clearAllSlots();
+          return json({ success });
+        } catch (error) {
+          return errorResponse(error, "Could not clear interviews");
         }
       },
     },

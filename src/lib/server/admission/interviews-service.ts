@@ -368,7 +368,7 @@ export async function listInterviews(): Promise<InterviewStorageData> {
   loadedApps = Array.from(appMap.values());
 
   if (loadedApps.length === 0) {
-    loadedApps = [...DEFAULT_SEED_APPLICATIONS];
+    loadedApps = [];
   }
 
   return {
@@ -376,6 +376,20 @@ export async function listInterviews(): Promise<InterviewStorageData> {
     applications: loadedApps,
     staff,
   };
+}
+
+export async function clearAllSlots(): Promise<boolean> {
+  const data = loadStoredData();
+  data.slots = [];
+  data.waitlist = [];
+  saveDataToFile(data);
+
+  try {
+    await db.delete(admissionInterviews);
+  } catch (err) {
+    console.error("[interviews] clearAllSlots db error:", err);
+  }
+  return true;
 }
 
 export async function createOrUpdateSlot(slot: {

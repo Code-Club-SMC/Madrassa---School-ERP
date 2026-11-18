@@ -3,10 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, FileSpreadsheet, Printer, RefreshCw } from "lucide-react";
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
-  Cell,
   Legend,
   Line,
   LineChart,
@@ -89,21 +86,6 @@ type DailyTrendRow = {
   attendanceRate: number;
 };
 
-type PlacementTrendRow = {
-  key: string;
-  system: "school" | "madrassa";
-  systemLabel: string;
-  placementLabel: string;
-  institutionName: string;
-  present: number;
-  absent: number;
-  late: number;
-  leave: number;
-  marked: number;
-  total: number;
-  attendanceRate: number;
-};
-
 const emptySummary: AttendanceSummary = {
   total: 0,
   marked: 0,
@@ -140,7 +122,6 @@ function AttendanceReport() {
 
   const report = reportQuery.data ?? emptyReport;
   const dailyTrend = useMemo(() => aggregateDailyRows(report.rows), [report.rows]);
-  const placementTrend = useMemo(() => aggregatePlacementRows(report.rows), [report.rows]);
   const tableRows = useMemo(
     () =>
       [...report.rows].sort(
@@ -307,55 +288,20 @@ function AttendanceReport() {
         <KpiCard label="Avg Late / day" labelUrdu="یومیہ تاخیر" value={avgLate} accent="warning" />
       </div>
 
-      <div className="mb-4 grid gap-4 lg:grid-cols-3">
-        <ChartCard title="Daily Trend" titleUrdu="یومیہ رجحان" className="lg:col-span-2" bodyClassName="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={dailyTrend} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis dataKey="dateLabel" tick={AXIS_TICK} stroke="var(--border)" />
-              <YAxis tick={AXIS_TICK} stroke="var(--border)" />
-              <Tooltip contentStyle={TOOLTIP_STYLE} />
-              <Legend wrapperStyle={{ fontSize: 12, color: "var(--foreground)" }} />
-              <Line dataKey="present" name="Present" stroke={CHART_COLORS[0]} strokeWidth={2} dot={false} />
-              <Line dataKey="late" name="Late" stroke={CHART_COLORS[2]} strokeWidth={2} dot={false} />
-              <Line dataKey="absent" name="Absent" stroke="var(--destructive)" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        <ChartCard title="Placement Rate" titleUrdu="درجہ وار شرح" bodyClassName="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={placementTrend.slice(0, 10)}
-              layout="vertical"
-              margin={{ top: 8, right: 16, left: 84, bottom: 8 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-              <XAxis type="number" domain={[0, 100]} tick={AXIS_TICK} stroke="var(--border)" />
-              <YAxis
-                type="category"
-                dataKey="placementLabel"
-                tick={AXIS_TICK}
-                stroke="var(--border)"
-                width={110}
-              />
-              <Tooltip
-                contentStyle={TOOLTIP_STYLE}
-                formatter={(value: number) => [`${value}%`, "Attendance"]}
-                labelFormatter={(_, payload) => {
-                  const row = payload?.[0]?.payload as PlacementTrendRow | undefined;
-                  return row ? `${row.placementLabel} · ${row.systemLabel}` : "Placement";
-                }}
-              />
-              <Bar dataKey="attendanceRate" name="Attendance %" radius={[0, 6, 6, 0]}>
-                {placementTrend.slice(0, 10).map((row, index) => (
-                  <Cell key={row.key} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
+      <ChartCard title="Daily Trend" titleUrdu="یومیہ رجحان" className="mb-4" bodyClassName="h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={dailyTrend} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+            <XAxis dataKey="dateLabel" tick={AXIS_TICK} stroke="var(--border)" />
+            <YAxis tick={AXIS_TICK} stroke="var(--border)" />
+            <Tooltip contentStyle={TOOLTIP_STYLE} />
+            <Legend wrapperStyle={{ fontSize: 12, color: "var(--foreground)" }} />
+            <Line dataKey="present" name="Present" stroke={CHART_COLORS[0]} strokeWidth={2} dot={false} />
+            <Line dataKey="late" name="Late" stroke={CHART_COLORS[2]} strokeWidth={2} dot={false} />
+            <Line dataKey="absent" name="Absent" stroke="var(--destructive)" strokeWidth={2} dot={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </ChartCard>
 
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-2 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -484,40 +430,6 @@ function aggregateDailyRows(rows: AttendanceDailySummaryRow[]): DailyTrendRow[] 
   }
 
   return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
-}
-
-function aggregatePlacementRows(rows: AttendanceDailySummaryRow[]): PlacementTrendRow[] {
-  const byPlacement = new Map<string, PlacementTrendRow>();
-
-  for (const row of rows) {
-    const key = `${row.system}:${row.institutionId}:${row.programId}:${row.placementLabel}`;
-    const current = byPlacement.get(key) ?? {
-      key,
-      system: row.system,
-      systemLabel: systemLabel(row.system),
-      placementLabel: row.placementLabel,
-      institutionName: row.institutionName,
-      present: 0,
-      absent: 0,
-      late: 0,
-      leave: 0,
-      marked: 0,
-      total: 0,
-      attendanceRate: 0,
-    };
-    current.present += row.summary.present;
-    current.absent += row.summary.absent;
-    current.late += row.summary.late;
-    current.leave += row.summary.leave;
-    current.marked += row.summary.marked;
-    current.total += row.summary.total;
-    current.attendanceRate = calculateAttendanceRate(current);
-    byPlacement.set(key, current);
-  }
-
-  return Array.from(byPlacement.values()).sort(
-    (a, b) => b.marked - a.marked || b.attendanceRate - a.attendanceRate,
-  );
 }
 
 function calculateAttendanceRate(row: Pick<DailyTrendRow, "present" | "late" | "absent">) {

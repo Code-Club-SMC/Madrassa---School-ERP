@@ -38,8 +38,9 @@ import { getGuardianDashboard, listGuardianAccounts, parentKeys } from "./parent
 import type { GuardianAccount, ParentStudent } from "./parent-types";
 
 export function ParentPortal() {
-  const { user } = useAuth();
-  if (user?.role === "parent") return <GuardianSelfPortal />;
+  const { user, isLoading } = useAuth();
+  if (isLoading || !user) return <AppLoader />;
+  if (user.role === "parent") return <GuardianSelfPortal />;
   return <GuardianAccountsWorkspace />;
 }
 

@@ -230,7 +230,7 @@ export const DOC_STATUS_CONFIG: Record<
   },
 };
 
-const LOCAL_STORAGE_KEY = "msmis_admission_interviews_cache";
+const LOCAL_STORAGE_KEY = "msmis_admission_interviews_clean_v2";
 
 function getLocalData(): {
   slots?: Slot[];
@@ -353,7 +353,7 @@ function InterviewsPage() {
       ]);
 
       let appsList: AdmissionApplication[] = [];
-      if (appsData?.applications && Array.isArray(appsData.applications) && appsData.applications.length > 0) {
+      if (appsData?.applications && Array.isArray(appsData.applications)) {
         appsList = appsData.applications;
       } else if (interviewsData?.applications && Array.isArray(interviewsData.applications)) {
         appsList = interviewsData.applications;

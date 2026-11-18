@@ -1,9 +1,11 @@
-import { describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import {
   loadStoredApplications,
   saveStoredApplication,
   updateStoredApplicationStatus,
   getAdmissionDashboardMetrics,
+  seedCanonicalApplications,
+  clearStoredApplications,
 } from "./applications-store";
 import { listAdmissionApplications } from "./service";
 import { createHmac } from "node:crypto";
@@ -30,6 +32,14 @@ function createMockSuperAdminRequest(url: string, init?: RequestInit) {
 }
 
 describe("Admission Applications Store & Progress Dashboard Resilience", () => {
+  beforeAll(() => {
+    seedCanonicalApplications();
+  });
+
+  afterAll(() => {
+    clearStoredApplications();
+  });
+
   it("loads realistic canonical admission applications across school and madrassa", () => {
     const apps = loadStoredApplications();
     expect(Array.isArray(apps)).toBe(true);
