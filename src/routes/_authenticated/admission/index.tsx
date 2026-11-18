@@ -694,8 +694,8 @@ function AdmissionProgressDashboard() {
                         ]}
                       />
                       <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                        {stageChartData.map((entry) => (
-                          <Cell key={entry.stageKey} fill={entry.fill} />
+                        {stageChartData.map((entry, idx) => (
+                          <Cell key={`stage-bar-${entry.stageKey}-${idx}`} fill={entry.fill} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -704,8 +704,8 @@ function AdmissionProgressDashboard() {
 
                 {/* Stage Legend Indicators */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2 border-t border-border/50 text-center">
-                  {stageChartData.map((s) => (
-                    <div key={s.stageKey} className="p-1.5 rounded-md bg-muted/30 border border-border/40">
+                  {stageChartData.map((s, idx) => (
+                    <div key={`stage-legend-${s.stageKey}-${idx}`} className="p-1.5 rounded-md bg-muted/30 border border-border/40">
                       <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-muted-foreground">
                         <span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: s.fill }} />
                         <span className="truncate">{s.name}</span>
@@ -720,7 +720,7 @@ function AdmissionProgressDashboard() {
               /* Funnel Step-by-Step Progress Bars View */
               <div className="space-y-3.5">
                 {stageChartData.map((stage, idx) => (
-                  <div key={stage.stageKey} className="space-y-1">
+                  <div key={`stage-funnel-${stage.stageKey}-${idx}`} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium flex items-center gap-1.5">
                         <span className="h-2.5 w-2.5 rounded-full inline-block" style={{ backgroundColor: stage.fill }} />
@@ -769,8 +769,8 @@ function AdmissionProgressDashboard() {
                     outerRadius={68}
                     paddingAngle={4}
                   >
-                    {campusPieData.map((entry) => (
-                      <Cell key={entry.name} fill={entry.color} />
+                    {campusPieData.map((entry, idx) => (
+                      <Cell key={`campus-pie-${entry.name}-${idx}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Legend
@@ -787,8 +787,8 @@ function AdmissionProgressDashboard() {
               <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                 {isUrdu ? "پروگرامز کے مطابق اعداد و شمار" : "Program Wise Intake"}
               </div>
-              {programBreakdown.map((prog) => (
-                <div key={prog.labelEn} className="space-y-0.5">
+              {programBreakdown.map((prog, idx) => (
+                <div key={`prog-breakdown-${prog.labelEn}-${idx}`} className="space-y-0.5">
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="text-muted-foreground">{isUrdu ? prog.labelUr : prog.labelEn}</span>
                     <span className="font-mono font-medium">
@@ -1019,8 +1019,8 @@ function AdmissionProgressDashboard() {
                     </td>
                   </tr>
                 ) : (
-                  filteredApplications.slice(0, 10).map((app) => (
-                    <tr key={app.id} className="hover:bg-muted/30 transition-colors">
+                  filteredApplications.slice(0, 10).map((app, idx) => (
+                    <tr key={`app-row-${app.id || app.refNo || "item"}-${idx}`} className="hover:bg-muted/30 transition-colors">
                       <td className="py-2.5 px-3 font-mono font-medium text-primary">
                         {app.refNo}
                       </td>

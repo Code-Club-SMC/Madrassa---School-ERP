@@ -21,6 +21,7 @@ export type TransactionCategory =
   | "transport_fee"
   | "donation_zakat"
   | "donation_sadqa"
+  | "donation_khairat"
   | "donation_fitra"
   | "donation_general"
   // Expenses
@@ -67,7 +68,8 @@ export const CATEGORY_META: Record<
   exam_fee: { label: "Examination Fee", labelUrdu: "امتحانی فیس", type: "income", tone: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300" },
   transport_fee: { label: "Transport Fee", labelUrdu: "گاڑی فیس", type: "income", tone: "bg-blue-500/15 text-blue-700 dark:text-blue-300" },
   donation_zakat: { label: "Zakat Fund", labelUrdu: "زکوٰۃ فنڈ", type: "income", tone: "bg-green-600/15 text-green-700 dark:text-green-300" },
-  donation_sadqa: { label: "Sadqa & Khairat", labelUrdu: "صدقات و خیرات", type: "income", tone: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
+  donation_sadqa: { label: "Sadqa", labelUrdu: "صدقہ", type: "income", tone: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
+  donation_khairat: { label: "Khairat", labelUrdu: "خیرات", type: "income", tone: "bg-teal-500/15 text-teal-700 dark:text-teal-300" },
   donation_fitra: { label: "Fitrana", labelUrdu: "فطرانہ", type: "income", tone: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300" },
   donation_general: { label: "General Donation", labelUrdu: "عام عطیات و فنڈ", type: "income", tone: "bg-purple-500/15 text-purple-700 dark:text-purple-300" },
 

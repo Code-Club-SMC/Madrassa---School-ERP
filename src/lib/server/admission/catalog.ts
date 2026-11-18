@@ -103,10 +103,17 @@ export async function resolveAdmissionTarget(
     : null;
 
   const madrassaSubcategoryId = expectedMadrassaSection
-    ? (override.madrassaSubcategoryId ??
+    ? ((override.madrassaSubcategoryId
+        ? (await resolveMadrassaSubcategoryId(override.madrassaSubcategoryId, expectedMadrassaSection)) ??
+          (await resolveMadrassaSubcategoryId(override.madrassaSubcategoryId)) ??
+          override.madrassaSubcategoryId
+        : null) ??
       (await resolveMadrassaSubcategoryId(
         form.shoba || form.req_darja || form.darja,
         expectedMadrassaSection,
+      )) ??
+      (await resolveMadrassaSubcategoryId(
+        form.shoba || form.req_darja || form.darja,
       )) ??
       target.defaultMadrassaSubcategoryId ??
       null)
@@ -136,7 +143,7 @@ export async function resolveAdmissionTarget(
   if (madrassaSubcategoryId) {
     const expectedSection = madrassaSectionForVariant(variantKey);
 
-    const [existingSubcategory] = await db
+    let [existingSubcategory] = await db
       .select({
         id: madrassaSubcategories.id,
         darja: madrassaSubcategories.darja,
@@ -147,6 +154,40 @@ export async function resolveAdmissionTarget(
       .from(madrassaSubcategories)
       .where(eq(madrassaSubcategories.id, madrassaSubcategoryId))
       .limit(1);
+
+    if (!existingSubcategory) {
+      const resolvedId =
+        (await resolveMadrassaSubcategoryId(madrassaSubcategoryId, expectedSection)) ??
+        (await resolveMadrassaSubcategoryId(madrassaSubcategoryId));
+      if (resolvedId) {
+        [existingSubcategory] = await db
+          .select({
+            id: madrassaSubcategories.id,
+            darja: madrassaSubcategories.darja,
+            rollPrefix: madrassaSubcategories.rollPrefix,
+            fee: madrassaSubcategories.fee,
+            section: madrassaSubcategories.section,
+          })
+          .from(madrassaSubcategories)
+          .where(eq(madrassaSubcategories.id, resolvedId))
+          .limit(1);
+      }
+    }
+
+    if (!existingSubcategory && target.defaultMadrassaSubcategoryId) {
+      [existingSubcategory] = await db
+        .select({
+          id: madrassaSubcategories.id,
+          darja: madrassaSubcategories.darja,
+          rollPrefix: madrassaSubcategories.rollPrefix,
+          fee: madrassaSubcategories.fee,
+          section: madrassaSubcategories.section,
+        })
+        .from(madrassaSubcategories)
+        .where(eq(madrassaSubcategories.id, target.defaultMadrassaSubcategoryId))
+        .limit(1);
+    }
+
     if (!existingSubcategory) {
       throw new AdmissionError("منتخب کردہ مدرسہ درجہ موجود نہیں · Selected madrassa class does not exist", 400);
     }

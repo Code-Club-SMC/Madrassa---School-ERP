@@ -936,10 +936,11 @@ function BalanceSheet({
 }
 
 function MiniStat({ label, value, highlight, isUrdu }: { label: string; value: string; highlight?: boolean; isUrdu?: boolean }) {
+  const isNegative = highlight === false;
   return (
-    <div className="border border-border rounded p-3">
+    <div className={cn("border rounded p-3 transition-colors", isNegative ? "border-destructive/40 bg-destructive/5" : "border-border")}>
       <p className={cn("text-[10px] uppercase tracking-wide text-muted-foreground", isUrdu && "font-urdu")}>{label}</p>
-      <p className={cn("font-mono text-base font-bold mt-1", highlight && "text-chart-5 dark:text-chart-1")}>{value}</p>
+      <p className={cn("font-mono text-base font-bold mt-1", highlight === true && "text-chart-5 dark:text-chart-1", isNegative && "text-destructive")}>{value}</p>
     </div>
   );
 }

@@ -8,6 +8,8 @@
  * show up on the Finance Dashboard, Main Dashboard and Finance Reports.
  */
 import { randomUUID } from "node:crypto";
+import { db } from "@/db";
+import { feeCharges, feePayments, feePaymentAllocations } from "@/db/schema/finance";
 import type { FeeChargeStatus, FeeChargeType, FeePaymentMethod, FeePaymentStatus } from "@/db/schema/finance";
 import { HttpError } from "@/lib/server/http";
 import { buildChargeLedger, summarizeStudentLedger, type ChargeLedgerRow } from "./ledger";
@@ -545,11 +547,57 @@ function postStorePayment(store: FeeStoreData, context: FeeContext, input: Payme
   return { payment, allocations };
 }
 
+async function syncStoreAllocationsToDb(
+  context: FeeContext,
+  payment: StoredFeePayment,
+  allocations: Array<{ id: string; paymentId: string; chargeId: string; amountPaisa: number; createdAt: string }>,
+) {
+  try {
+    if (!db) return;
+    await db
+      .insert(feePayments)
+      .values({
+        id: payment.id,
+        receiptNo: payment.receiptNo,
+        studentId: context.studentId,
+        enrollmentId: context.enrollmentId,
+        institutionId: context.institutionId,
+        amountPaisa: payment.amountPaisa,
+        method: (payment.method || "cash") as FeePaymentMethod,
+        receivedAt: new Date(payment.receivedAt),
+        receivedByUserId: payment.receivedByUserId,
+        payerName: payment.payerName,
+        payerPhone: payment.payerPhone,
+        notes: payment.notes,
+        status: (payment.status || "posted") as FeePaymentStatus,
+      })
+      .onConflictDoNothing();
+
+    if (allocations.length > 0) {
+      await db
+        .insert(feePaymentAllocations)
+        .values(
+          allocations.map((a) => ({
+            id: a.id,
+            paymentId: a.paymentId,
+            chargeId: a.chargeId,
+            amountPaisa: a.amountPaisa,
+            createdAt: new Date(a.createdAt),
+          })),
+        )
+        .onConflictDoNothing();
+    }
+  } catch (err) {
+    console.warn("[FeeOfflineService] Database allocation sync skipped (offline store active):", err);
+  }
+}
+
 export function storeCollectFeePayment(context: FeeContext, input: PaymentInput, actor: Actor) {
   const store = loadFeeStore();
   ensureStoreStudent(store, context);
   const { payment, allocations } = postStorePayment(store, context, input, actor);
   saveFeeStore(store);
+  void syncStoreAllocationsToDb(context, payment, allocations);
   return { payment: { ...payment, allocations } };
 }
 
@@ -569,6 +617,33 @@ export function storeChargeAndCollect(
     actor,
   );
   saveFeeStore(store);
+  void (async () => {
+    try {
+      if (db) {
+        await db
+          .insert(feeCharges)
+          .values({
+            id: charge.id,
+            studentId: context.studentId,
+            enrollmentId: context.enrollmentId,
+            institutionId: context.institutionId,
+            programId: context.programId,
+            schoolClassId: context.schoolClassId,
+            madrassaSubcategoryId: context.madrassaSubcategoryId,
+            type: charge.type as FeeChargeType,
+            label: charge.label,
+            period: charge.period,
+            amountPaisa: charge.amountPaisa,
+            dueDate: charge.dueDate ? new Date(charge.dueDate) : null,
+            status: "paid",
+            notes: charge.notes,
+            createdByUserId: actor.id,
+          })
+          .onConflictDoNothing();
+        await syncStoreAllocationsToDb(context, payment, allocations);
+      }
+    } catch {}
+  })();
   const finalCharge = store.charges.find((c) => c.id === charge.id) ?? charge;
   return { charge: finalCharge, payment: { ...payment, allocations } };
 }

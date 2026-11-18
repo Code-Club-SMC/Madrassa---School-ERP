@@ -72,7 +72,11 @@ export const admissionApplications = pgTable(
   (table) => [
     index("admission_applications_status_idx").on(table.status),
     index("admission_applications_variant_idx").on(table.variantKey),
+    index("admission_applications_institution_idx").on(table.institutionId),
     index("admission_applications_program_idx").on(table.programId),
+    index("admission_applications_school_class_idx").on(table.schoolClassId),
+    index("admission_applications_madrassa_subcat_idx").on(table.madrassaSubcategoryId),
+    index("admission_applications_accepted_student_idx").on(table.acceptedStudentId),
     index("admission_applications_guardian_phone_idx").on(table.guardianPhone),
     index("admission_applications_guardian_cnic_idx").on(table.guardianCnic),
     index("admission_applications_submitted_idx").on(table.submittedAt),

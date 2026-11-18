@@ -98,10 +98,11 @@ export function syncExpenseToFile(expenseTx: ComprehensiveTransaction): void {
 function mapToCanonicalCategory(type: "income" | "expense", rawCat: string): TransactionCategory {
   const lower = rawCat.toLowerCase();
   if (type === "income") {
-    if (lower.includes("zakat")) return "donation_zakat";
-    if (lower.includes("sadqa") || lower.includes("charity") || lower.includes("khairat")) return "donation_sadqa";
-    if (lower.includes("fitra")) return "donation_fitra";
-    if (lower.includes("donation") || lower.includes("عطیات")) return "donation_general";
+    if (lower.includes("zakat") || lower.includes("زکوٰۃ") || lower.includes("زکوۃ")) return "donation_zakat";
+    if (lower.includes("khairat") || lower.includes("خیرات")) return "donation_khairat";
+    if (lower.includes("sadqa") || lower.includes("صدقہ") || lower.includes("charity")) return "donation_sadqa";
+    if (lower.includes("fitra") || lower.includes("فطرانہ")) return "donation_fitra";
+    if (lower.includes("donation") || lower.includes("عطیات") || lower.includes("عطیہ")) return "donation_general";
     if (lower.includes("admission") || lower.includes("داخلہ")) return "admission_fee";
     if (lower.includes("exam") || lower.includes("امتحان")) return "exam_fee";
     if (lower.includes("transport") || lower.includes("گاڑی")) return "transport_fee";
@@ -192,7 +193,9 @@ export async function recordFinanceTransaction(request: Request, input: Transact
       let donType: DonationType = "general";
       if (canonicalCat === "donation_zakat") donType = "zakat";
       else if (canonicalCat === "donation_sadqa") donType = "sadqa";
+      else if (canonicalCat === "donation_khairat") donType = "khairat";
       else if (canonicalCat === "donation_fitra") donType = "fitra";
+      else if (canonicalCat === "donation_general") donType = "general";
 
       const donResult = saveDonation({
         id,
@@ -255,8 +258,16 @@ export async function recordFinanceTransaction(request: Request, input: Transact
           updatedAt: new Date(),
         },
       });
-  } catch (err) {
+  } catch (err: any) {
     console.error("[TransactionService] Could not persist transaction to DB:", err);
+    const isOffline =
+      err?.code === "ECONNREFUSED" ||
+      err?.code === "ENOTFOUND" ||
+      err?.message?.includes("fetch failed") ||
+      err?.message?.includes("offline");
+    if (!isOffline && process.env.NODE_ENV !== "test") {
+      throw new HttpError(`Database error persisting transaction: ${err?.message || "Unknown error"}`, 500);
+    }
   }
 
   // 4. Record Audit Trail

@@ -1286,18 +1286,38 @@ function DashboardPage() {
           </div>
 
           {/* Net Cashflow / Surplus */}
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 sm:p-4 flex items-center justify-between gap-3 min-w-0">
+          <div
+            className={cn(
+              "rounded-xl border p-3.5 sm:p-4 flex items-center justify-between gap-3 min-w-0 transition-colors",
+              netSurplus >= 0
+                ? "border-primary/20 bg-primary/5"
+                : "border-destructive/40 bg-destructive/10 dark:bg-destructive/20 shadow-xs",
+            )}
+          >
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground truncate">
-                {lang === "ur"
-                  ? cashflowPeriod === "monthly"
-                    ? "خالص ماہانہ سرپلس / بچت"
-                    : "آج کی خالص بچت"
-                  : cashflowPeriod === "monthly"
-                    ? "Net Monthly Surplus"
-                    : "Today's Net Surplus"}
-              </p>
-              <p className="font-heading text-lg sm:text-xl md:text-2xl font-bold text-primary tabular-nums mt-0.5 truncate" title={formatPKR(netSurplus)}>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground truncate">
+                  {lang === "ur"
+                    ? cashflowPeriod === "monthly"
+                      ? netSurplus >= 0 ? "خالص ماہانہ سرپلس / بچت" : "ماہانہ خسارہ"
+                      : netSurplus >= 0 ? "آج کی خالص بچت" : "آج کا خسارہ"
+                    : cashflowPeriod === "monthly"
+                      ? netSurplus >= 0 ? "Net Monthly Surplus" : "Net Monthly Deficit"
+                      : netSurplus >= 0 ? "Today's Net Surplus" : "Today's Net Deficit"}
+                </p>
+                {netSurplus < 0 && (
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 font-semibold uppercase animate-pulse">
+                    {lang === "ur" ? "خسارہ" : "Deficit"}
+                  </Badge>
+                )}
+              </div>
+              <p
+                className={cn(
+                  "font-heading text-lg sm:text-xl md:text-2xl font-bold tabular-nums mt-0.5 truncate",
+                  netSurplus >= 0 ? "text-primary" : "text-destructive",
+                )}
+                title={formatPKR(netSurplus)}
+              >
                 {formatPKR(netSurplus)}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -1307,18 +1327,29 @@ function DashboardPage() {
                     "text-[10px] px-1.5 py-0 font-medium shrink-0",
                     netSurplus >= 0
                       ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-                      : "border-destructive text-destructive",
+                      : "border-destructive text-destructive font-semibold bg-destructive/10",
                   )}
                 >
-                  {surplusMargin}% {lang === "ur" ? "سرپلس شرح" : "margin"}
+                  {surplusMargin}% {lang === "ur" ? (netSurplus >= 0 ? "سرپلس شرح" : "خسارہ شرح") : (netSurplus >= 0 ? "margin" : "deficit")}
                 </Badge>
                 <span className="text-[10px] text-muted-foreground truncate">
                   {lang === "ur" ? "آمدن منہا اخراجات" : "Income - Expense"}
                 </span>
               </div>
             </div>
-            <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <Wallet className="h-5 w-5 sm:h-6 sm:w-6" />
+            <div
+              className={cn(
+                "h-10 w-10 sm:h-11 sm:w-11 rounded-xl flex items-center justify-center shrink-0",
+                netSurplus >= 0
+                  ? "bg-primary/10 text-primary"
+                  : "bg-destructive/20 text-destructive",
+              )}
+            >
+              {netSurplus >= 0 ? (
+                <Wallet className="h-5 w-5 sm:h-6 sm:w-6" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 animate-bounce" />
+              )}
             </div>
           </div>
         </div>
@@ -1717,11 +1748,17 @@ function DashboardPage() {
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{a.title}</p>
-                    <p className="font-urdu text-xs text-muted-foreground truncate">{a.titleUrdu}</p>
+                    <p className={cn("text-sm font-medium truncate", lang === "ur" ? "font-urdu" : "")}>
+                      {lang === "ur" ? (a.titleUrdu || a.title) : (a.title || a.titleUrdu)}
+                    </p>
+                    {(lang === "ur" ? a.title : a.titleUrdu) && (
+                      <p className={cn("text-xs text-muted-foreground truncate", lang === "ur" ? "" : "font-urdu")}>
+                        {lang === "ur" ? a.title : a.titleUrdu}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-xs text-muted-foreground shrink-0" suppressHydrationWarning>
-                    {relativeTime(a.at)}
+                  <p className={cn("text-xs text-muted-foreground shrink-0", lang === "ur" ? "font-urdu" : "")} suppressHydrationWarning>
+                    {relativeTime(a.at, lang)}
                   </p>
                   <ChevronLeft className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity rtl:rotate-180" />
                 </div>

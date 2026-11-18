@@ -1058,7 +1058,16 @@ export async function suggestGuardians(
   request: Request,
   input: z.infer<typeof guardianSuggestionsSchema>,
 ) {
-  await requireAdmissionPermission(request, "admission_new", "create");
+  // Allow authenticated admission staff OR public applicants looking up by CNIC / Phone
+  try {
+    await requireAdmissionPermission(request, "admission_new", "create");
+  } catch (authErr) {
+    const cnicDigits = input.guardianCnic ? input.guardianCnic.replace(/\D/g, "") : "";
+    const phoneDigits = input.guardianPhone ? input.guardianPhone.replace(/\D/g, "") : "";
+    if (cnicDigits.length < 13 && phoneDigits.length < 10) {
+      return [];
+    }
+  }
 
   const cleanCnic = input.guardianCnic ? input.guardianCnic.replace(/\D/g, "") : null;
   const cleanPhone = input.guardianPhone ? input.guardianPhone.replace(/\D/g, "") : null;

@@ -120,6 +120,9 @@ export const studentEnrollments = pgTable(
       table.studentId,
       table.academicYearId,
     ),
+    index("student_enrollments_school_class_idx").on(table.schoolClassId),
+    index("student_enrollments_madrassa_subcat_idx").on(table.madrassaSubcategoryId),
+    index("student_enrollments_ended_at_idx").on(table.endedAt),
     index("student_enrollments_status_idx").on(table.status),
   ],
 );

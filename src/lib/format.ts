@@ -23,18 +23,20 @@ export function formatDate(d?: string | Date | null, opts?: Intl.DateTimeFormatO
   }
 }
 
-export function relativeTime(d?: string | Date | null): string {
+export function relativeTime(d?: string | Date | null, lang: "ur" | "en" = "en"): string {
   if (!d) return "—";
   try {
     const date = typeof d === "string" ? new Date(d) : d;
     if (isNaN(date.getTime())) return "—";
     const diff = Date.now() - date.getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m ago`;
+    const isUrdu = lang === "ur";
+    if (mins < 1) return isUrdu ? "ابھی" : "just now";
+    if (mins < 60) return isUrdu ? `${mins} منٹ پہلے` : `${mins}m ago`;
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
+    if (hours < 24) return isUrdu ? `${hours} گھنٹے پہلے` : `${hours}h ago`;
     const days = Math.floor(hours / 24);
-    if (days < 30) return `${days}d ago`;
+    if (days < 30) return isUrdu ? `${days} دن پہلے` : `${days}d ago`;
     return formatDate(date);
   } catch {
     return "—";

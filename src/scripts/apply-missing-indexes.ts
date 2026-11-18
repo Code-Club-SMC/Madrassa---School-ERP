@@ -69,6 +69,21 @@ async function main() {
     `CREATE UNIQUE INDEX IF NOT EXISTS guardians_cnic_unique_idx ON public.guardians (cnic);`,
     `CREATE UNIQUE INDEX IF NOT EXISTS student_enrollments_admission_no_idx ON public.student_enrollments (admission_no);`,
     `CREATE UNIQUE INDEX IF NOT EXISTS student_enrollments_roll_no_idx ON public.student_enrollments (roll_no);`,
+    `CREATE INDEX IF NOT EXISTS student_enrollments_school_class_idx ON public.student_enrollments (school_class_id);`,
+    `CREATE INDEX IF NOT EXISTS student_enrollments_madrassa_subcat_idx ON public.student_enrollments (madrassa_subcategory_id);`,
+    `CREATE INDEX IF NOT EXISTS student_enrollments_ended_at_idx ON public.student_enrollments (ended_at);`,
+
+    // Fee Charges FKs
+    `CREATE INDEX IF NOT EXISTS fee_charges_school_class_idx ON public.fee_charges (school_class_id);`,
+    `CREATE INDEX IF NOT EXISTS fee_charges_madrassa_subcat_idx ON public.fee_charges (madrassa_subcategory_id);`,
+    `CREATE INDEX IF NOT EXISTS fee_charges_type_idx ON public.fee_charges (type);`,
+
+    // Admission Applications FKs
+    `CREATE INDEX IF NOT EXISTS admission_applications_institution_idx ON public.admission_applications (institution_id);`,
+    `CREATE INDEX IF NOT EXISTS admission_applications_school_class_idx ON public.admission_applications (school_class_id);`,
+    `CREATE INDEX IF NOT EXISTS admission_applications_madrassa_subcat_idx ON public.admission_applications (madrassa_subcategory_id);`,
+    `CREATE INDEX IF NOT EXISTS admission_applications_accepted_student_idx ON public.admission_applications (accepted_student_id);`,
+
     `CREATE UNIQUE INDEX IF NOT EXISTS user_single_super_admin_idx ON public."user" (role) WHERE role = 'super_admin';`,
     `CREATE UNIQUE INDEX IF NOT EXISTS academic_years_one_active_per_system_idx ON public.academic_years (system, status) WHERE status = 'active';`,
   ];
@@ -80,6 +95,53 @@ async function main() {
     } catch (err: any) {
       console.error(`Failed: ${q}`, err.message);
     }
+  }
+
+  // Deduplicate duplicate student records (same name + dob)
+  console.log("Checking and cleaning up duplicate student records...");
+  try {
+    const dupesResult = await db.execute(sql`
+      SELECT name, dob, array_agg(id ORDER BY created_at ASC) as ids
+      FROM public.students
+      WHERE dob IS NOT NULL
+      GROUP BY name, dob
+      HAVING count(*) > 1;
+    `);
+
+    for (const row of dupesResult.rows as Array<{ name: string; dob: any; ids: string[] }>) {
+      const [primaryId, ...duplicateIds] = row.ids;
+      console.log(`Deduplicating student: "${row.name}" -> Keeping ${primaryId}, removing duplicates: ${duplicateIds.join(", ")}`);
+      
+      const primaryEnrResult = await db.execute(sql`SELECT id FROM public.student_enrollments WHERE student_id = ${primaryId} LIMIT 1;`);
+      const primaryEnrId = (primaryEnrResult.rows[0] as any)?.id;
+
+      for (const dupId of duplicateIds) {
+        const dupEnrsResult = await db.execute(sql`SELECT id FROM public.student_enrollments WHERE student_id = ${dupId};`);
+        for (const enrRow of dupEnrsResult.rows as Array<{ id: string }>) {
+          const dupEnrId = enrRow.id;
+          if (primaryEnrId) {
+            await db.execute(sql`UPDATE public.fee_charges SET student_id = ${primaryId}, enrollment_id = ${primaryEnrId} WHERE enrollment_id = ${dupEnrId};`);
+            await db.execute(sql`UPDATE public.fee_payments SET student_id = ${primaryId}, enrollment_id = ${primaryEnrId} WHERE enrollment_id = ${dupEnrId};`);
+            await db.execute(sql`UPDATE public.fee_adjustments SET student_id = ${primaryId}, enrollment_id = ${primaryEnrId} WHERE enrollment_id = ${dupEnrId};`);
+            await db.execute(sql`UPDATE public.student_attendance SET student_id = ${primaryId}, enrollment_id = ${primaryEnrId} WHERE enrollment_id = ${dupEnrId};`);
+            await db.execute(sql`UPDATE public.exam_marks SET student_id = ${primaryId}, enrollment_id = ${primaryEnrId} WHERE enrollment_id = ${dupEnrId};`);
+            await db.execute(sql`UPDATE public.exam_results SET student_id = ${primaryId}, enrollment_id = ${primaryEnrId} WHERE enrollment_id = ${dupEnrId};`);
+            await db.execute(sql`UPDATE public.exam_seat_assignments SET student_id = ${primaryId}, enrollment_id = ${primaryEnrId} WHERE enrollment_id = ${dupEnrId};`);
+          }
+          await db.execute(sql`DELETE FROM public.student_enrollments WHERE id = ${dupEnrId};`);
+        }
+
+        await db.execute(sql`DELETE FROM public.student_guardians WHERE student_id = ${dupId};`);
+        await db.execute(sql`UPDATE public.fee_charges SET student_id = ${primaryId} WHERE student_id = ${dupId};`);
+        await db.execute(sql`UPDATE public.fee_payments SET student_id = ${primaryId} WHERE student_id = ${dupId};`);
+        await db.execute(sql`UPDATE public.student_attendance SET student_id = ${primaryId} WHERE student_id = ${dupId};`);
+        await db.execute(sql`UPDATE public.admission_applications SET accepted_student_id = ${primaryId} WHERE accepted_student_id = ${dupId};`);
+        await db.execute(sql`DELETE FROM public.students WHERE id = ${dupId};`);
+      }
+    }
+    console.log("Duplicate student cleanup completed.");
+  } catch (err: any) {
+    console.warn("Could not complete student deduplication:", err.message);
   }
 
   console.log("Finished applying indexes.");

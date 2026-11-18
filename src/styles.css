@@ -6,6 +6,27 @@
 @import "@fontsource/noto-nastaliq-urdu/400.css";
 @import "@fontsource/noto-nastaliq-urdu/700.css";
 
+/* Local bundled Noto Nastaliq Urdu woff2 fallbacks for zero-latency offline & production serving */
+@font-face {
+  font-family: 'Noto Nastaliq Urdu';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Noto Nastaliq Urdu'),
+       url('/fonts/noto-nastaliq-urdu-arabic-400-normal.woff2') format('woff2');
+  unicode-range: U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+FB50-FDFF,U+FE70-FEFC;
+}
+
+@font-face {
+  font-family: 'Noto Nastaliq Urdu';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Noto Nastaliq Urdu Bold'),
+       url('/fonts/noto-nastaliq-urdu-arabic-700-normal.woff2') format('woff2');
+  unicode-range: U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+FB50-FDFF,U+FE70-FEFC;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /*
